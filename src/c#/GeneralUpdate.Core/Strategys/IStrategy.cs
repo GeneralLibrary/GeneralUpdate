@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Models;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Update;
 using System;
 
@@ -18,6 +18,6 @@ namespace GeneralUpdate.Core.Strategys
         /// Create a policy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
-        void Create(string platformType,IFile file, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
+        void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
     }
 }

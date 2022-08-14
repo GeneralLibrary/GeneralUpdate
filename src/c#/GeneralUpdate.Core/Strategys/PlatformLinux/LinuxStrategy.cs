@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GeneralUpdate.Core.Strategys.PlatformLinux
 {
-    public class LinuxStrategy : AbstractStrategy
+    public class StrategyLinux : AbstractStrategy
     {
     }
 }

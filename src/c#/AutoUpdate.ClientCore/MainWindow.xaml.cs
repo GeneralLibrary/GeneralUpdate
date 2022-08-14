@@ -1,7 +1,7 @@
 ﻿using GeneralUpdate.ClientCore;
 using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.ClientCore.Strategys;
-using GeneralUpdate.Core.Models;
+using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Update;
 using System;
 using System.Diagnostics;
@@ -46,7 +46,7 @@ namespace AutoUpdate.ClientCore
 
         #region GeneralUpdate Core
 
-        private ClientParameter clientParameter;
+        //private ClientParameter clientParameter;
 
         private void BtnClientTest_Click(object sender, RoutedEventArgs e)
         {
@@ -56,26 +56,26 @@ namespace AutoUpdate.ClientCore
                 var mainVersion = "1.1.1.1";
 
                 //该对象用于主程序客户端与更新组件进程之间交互用的对象
-                clientParameter = new ClientParameter();
+                //clientParameter = new ClientParameter();
 
                 //本机的客户端程序应用地址
-                clientParameter.InstallPath = @"D:\Updatetest_hub\Run_app";
+                //clientParameter.InstallPath = @"D:\Updatetest_hub\Run_app";
                 //更新公告网页
                 //clientParameter.UpdateLogUrl = "https://www.baidu.com/";
 
                 #region update app.
 
-                clientParameter.ClientVersion = "9.1.3.0";//"1.1.1.1";
+                //clientParameter.ClientVersion = "9.1.3.0";//"1.1.1.1";
 
-                //客户端类型：1.主程序客户端 2.更新组件
-                clientParameter.AppType = (int)AppType.UpdateApp;
-                clientParameter.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
-                //更新组件请求验证更新的服务端地址
-                clientParameter.ValidateUrl = $"{baseUrl}/validate/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
-                //更新组件更新包下载地址
-                clientParameter.UpdateUrl = $"{baseUrl}/versions/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
-                //更新程序exe名称
-                clientParameter.AppName = "AutoUpdate.Core";
+                ////客户端类型：1.主程序客户端 2.更新组件
+                //clientParameter.AppType = (int)AppType.UpdateApp;
+                //clientParameter.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
+                ////更新组件请求验证更新的服务端地址
+                //clientParameter.ValidateUrl = $"{baseUrl}/validate/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
+                ////更新组件更新包下载地址
+                //clientParameter.UpdateUrl = $"{baseUrl}/versions/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
+                ////更新程序exe名称
+                //clientParameter.AppName = "AutoUpdate.Core";
                 //指定应用密钥，用于区分客户端应用
                 
                 #endregion update app.
@@ -83,13 +83,13 @@ namespace AutoUpdate.ClientCore
                 #region main app.
 
                 //更新组件的版本号
-                clientParameter.ClientVersion = "1.1.1";
+                //clientParameter.ClientVersion = "1.1.1";
                 //主程序客户端exe名称
-                clientParameter.MainAppName = "AutoUpdate.ClientCore";
+                //clientParameter.MainAppName = "AutoUpdate.ClientCore";
                 //主程序客户端请求验证更新的服务端地址
-                clientParameter.MainValidateUrl = $"{baseUrl}/validate/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
+                //clientParameter.MainValidateUrl = $"{baseUrl}/validate/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
                 //主程序客户端更新包下载地址
-                clientParameter.MainUpdateUrl = $"{baseUrl}/versions/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
+                //clientParameter.MainUpdateUrl = $"{baseUrl}/versions/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
 
                 #endregion main app.
 
@@ -107,13 +107,11 @@ namespace AutoUpdate.ClientCore
                 //整个更新过程出现的任何问题都会通过这个事件通知
                 generalClientBootstrap.Exception += OnException;
                 //ClientStrategy该更新策略将完成1.自动升级组件自更新 2.启动更新组件 3.配置好ClientParameter无需再像之前的版本写args数组进程通讯了。
-                generalClientBootstrap.Config(clientParameter).
+                generalClientBootstrap.Config("","").
                 //generalClientBootstrap.Config(baseUrl,"appsecretkey").
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.Format, "zip").
-                //添加多平台配置
-                Option(UpdateOption.Platform, PlatformType.Windows).
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 SetCustomOption(ShowCustomOption).
                 Strategy<ClientStrategy>();

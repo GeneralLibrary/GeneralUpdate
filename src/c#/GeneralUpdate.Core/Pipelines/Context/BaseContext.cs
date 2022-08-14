@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Models;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Update;
 using System;
 using System.Text;
@@ -14,7 +14,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         private Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
 
-        public UpdateVersion Version { get; set; }
+        public VersionEntity Version { get; set; }
 
         public string ZipfilePath { get; set; }
 
@@ -27,8 +27,8 @@ namespace GeneralUpdate.Core.Pipelines.Context
         public Encoding Encoding { get; set; }
 
         public BaseContext(Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
-            Action<object, ExceptionEventArgs> exceptionEventAction, 
-            UpdateVersion version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
+            Action<object, ExceptionEventArgs> exceptionEventAction,
+            VersionEntity version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
         {
             ProgressEventAction = progressEventAction;
             ExceptionEventAction = exceptionEventAction;
@@ -44,7 +44,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
         {
             if (ProgressEventAction == null) return;
             var eventArgs = 
-                new MutiDownloadProgressChangedEventArgs(new UpdateVersion(Version.MD5, Version.PubTime, Version.Version, null, Version.Name), type, message);
+                new MutiDownloadProgressChangedEventArgs(Version, type, message);
             ProgressEventAction(handle, eventArgs);
         }
 

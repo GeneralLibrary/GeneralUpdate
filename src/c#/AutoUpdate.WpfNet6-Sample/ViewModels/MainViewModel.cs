@@ -29,7 +29,7 @@ namespace AutoUpdate.Core.ViewModels
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Format, "zip").
-                RemoteAddressBase64(args);
+                Remote(args);
                 await bootStrap.LaunchTaskAsync();
             });
         }

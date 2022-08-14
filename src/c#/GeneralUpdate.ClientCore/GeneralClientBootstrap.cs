@@ -1,6 +1,7 @@
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.DTOs;
-using GeneralUpdate.Core.Models;
+using GeneralUpdate.Core.Domain.DTO;
+using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
@@ -13,17 +14,9 @@ namespace GeneralUpdate.ClientCore
 {
     public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
     {
-        #region Private Members
-
         private Func<bool> _customOption;
 
-        #endregion
-
-        #region Constructors
-
         public GeneralClientBootstrap() : base() { }
-
-        #endregion
 
         #region Public Methods
 
@@ -32,7 +25,7 @@ namespace GeneralUpdate.ClientCore
             try
             {
                 //Verify whether 'upgrad' needs to be updated.
-                var respDTO = await HttpUtil.GetTaskAsync<UpdateValidateRespDTO>(Packet.ValidateUrl);
+                var respDTO = await HttpUtil.GetTaskAsync<VersionRespDTO>(Packet.MainUpdateUrl);
                 if (respDTO == null) throw new ArgumentNullException("The verification request is abnormal, please check the network or parameter configuration!");
                 if (respDTO.Code != HttpStatus.OK) throw new Exception($"Request failed , Code :{ respDTO.Code }, Message:{ respDTO.Message } !");
                 if (respDTO.Code == HttpStatus.OK)
@@ -89,12 +82,10 @@ namespace GeneralUpdate.ClientCore
                 string clienVersion = GetFileVersion(Path.Combine(basePath, Packet.AppName + ".exe"));
                 Packet.ClientVersion = clienVersion;
                 Packet.AppType = (int)AppType.UpdateApp;
-                Packet.ValidateUrl = $"{url}/validate/{ Packet.AppType }/{ clienVersion }/{ Packet.AppSecretKey }";
                 Packet.UpdateUrl = $"{url}/versions/{ Packet.AppType }/{ clienVersion }/{ Packet.AppSecretKey }";
                 //main app.
                 string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
                 string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                Packet.MainValidateUrl = $"{url}/validate/{ (int)AppType.ClientApp }/{ mainVersion }/{Packet.AppSecretKey}";
                 Packet.MainUpdateUrl = $"{url}/versions/{ (int)AppType.ClientApp }/{ mainVersion }/{Packet.AppSecretKey}";
                 Packet.MainAppName = mainAppName;
                 return this;
@@ -105,21 +96,18 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
-        public GeneralClientBootstrap Config(ClientParameter clientParameter)
+        public GeneralClientBootstrap Config(ProcessEntity entity)
         {
-            ValidateConfig(clientParameter);
-            Packet.ClientVersion = clientParameter.ClientVersion;
-            Packet.AppType = clientParameter.AppType;
-            Packet.ValidateUrl = clientParameter.ValidateUrl;
-            Packet.UpdateUrl = clientParameter.UpdateUrl;
-            Packet.MainValidateUrl = clientParameter.MainValidateUrl;
-            Packet.MainUpdateUrl = clientParameter.MainUpdateUrl;
-            Packet.AppName = clientParameter.AppName;
-            Packet.MainAppName = clientParameter.MainAppName;
-            Packet.InstallPath = clientParameter.InstallPath;
-            Packet.UpdateLogUrl = clientParameter.UpdateLogUrl;
-            Packet.IsUpdate = clientParameter.IsUpdate;
-            Packet.AppSecretKey = clientParameter.AppSecretKey;
+            Packet.ClientVersion = entity.ClientVersion;
+            Packet.AppType = entity.AppType;
+            Packet.UpdateUrl = entity.UpdateUrl;
+            Packet.MainUpdateUrl = entity.MainUpdateUrl;
+            Packet.AppName = entity.AppName;
+            Packet.MainAppName = entity.MainAppName;
+            Packet.InstallPath = entity.InstallPath;
+            Packet.UpdateLogUrl = entity.UpdateLogUrl;
+            Packet.IsUpdate = entity.IsUpdate;
+            Packet.AppSecretKey = entity.AppSecretKey;
             return this;
         }
 
@@ -130,6 +118,7 @@ namespace GeneralUpdate.ClientCore
         /// <returns></returns>
         public GeneralClientBootstrap SetCustomOption(Func<bool> func)
         {
+            if (func == null) throw new ArgumentNullException(nameof(func));
             _customOption = func;
             return this;
         }
@@ -137,36 +126,6 @@ namespace GeneralUpdate.ClientCore
         #endregion
 
         #region Private Methods
-
-        private void ValidateConfig(ClientParameter clientParameter)
-        {
-            if (clientParameter == null) throw new NullReferenceException("Client parameter not set.");
-
-            if (string.IsNullOrEmpty(clientParameter.ClientVersion)) throw new NullReferenceException("Client version not set.");
-
-            if (string.IsNullOrEmpty(clientParameter.InstallPath)) throw new NullReferenceException("Install path not set.");
-
-            if (string.IsNullOrEmpty(clientParameter.UpdateUrl))
-            {
-                throw new NullReferenceException("Update url not set.");
-            }
-            else if (!DataValidateUtil.IsURL(clientParameter.UpdateUrl))
-            {
-                throw new NullReferenceException("Illegal url address.");
-            }
-
-            if (string.IsNullOrEmpty(clientParameter.ValidateUrl))
-            {
-                throw new NullReferenceException("Update url not set.");
-            }
-            else if (!DataValidateUtil.IsURL(clientParameter.ValidateUrl))
-            {
-                throw new NullReferenceException("Illegal url address.");
-            }
-
-            if (string.IsNullOrEmpty(clientParameter.AppName)) throw new NullReferenceException("Main app name not set.");
-            if (string.IsNullOrEmpty(clientParameter.AppSecretKey)) throw new NullReferenceException("You need to specify any unique string as the APP key !");
-        }
 
         private string GetFileVersion(string filePath)
         {
