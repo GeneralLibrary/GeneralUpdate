@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> options;
         private volatile Func<TStrategy> strategyFactory;
-        private PacketEntity _packet;
+        private Packet _packet;
         private IStrategy strategy;
         private const string DefaultFormat = "zip";
 
@@ -60,9 +60,9 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Public Properties
 
-        public PacketEntity Packet
+        public Packet Packet
         {
-            get { return _packet ?? (_packet = new PacketEntity()); }
+            get { return _packet ?? (_packet = new Packet()); }
             set { _packet = value; }
         }
 
@@ -86,13 +86,13 @@ namespace GeneralUpdate.Core.Bootstrap
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
                 Packet.AppName = Packet.AppName ?? GetOption(UpdateOption.MainApp);
                 Packet.TempPath = $"{ FileUtil.GetTempDirectory(Packet.LastVersion) }\\";
-                var manager = new DownloadManager<VersionEntity>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
+                var manager = new DownloadManager<VersionInfo>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
                 manager.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
                 manager.MutiDownloadCompleted += OnMutiDownloadCompleted;
                 manager.MutiDownloadError += OnMutiDownloadError;
                 manager.MutiDownloadProgressChanged += OnMutiDownloadProgressChanged;
                 manager.MutiDownloadStatistics += OnMutiDownloadStatistics;
-                Packet.UpdateVersions.ForEach((v) => manager.Add(new DownloadTask<VersionEntity>(manager, v)));
+                Packet.UpdateVersions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, v)));
                 manager.LaunchTaskAsync();
             }
             catch (Exception ex)

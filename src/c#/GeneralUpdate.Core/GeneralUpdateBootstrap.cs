@@ -19,10 +19,10 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var entity = SerializeUtil.Deserialize<ProcessEntity>(base64);
+                var entity = SerializeUtil.Deserialize<ProcessInfo>(base64);
                 var tempPath = $"{FileUtil.GetTempDirectory(entity.LastVersion)}\\";
                 var encoding = ConvertUtil.ToEncoding(entity.CompressEncoding);
-                Packet = new PacketEntity(
+                Packet = new Packet(
                     entity.MainUpdateUrl, entity.AppType, entity.UpdateUrl, 
                     entity.AppName, entity.MainAppName, entity.CompressFormat, 
                     entity.IsUpdate, entity.UpdateLogUrl, encoding,entity.DownloadTimeOut,

@@ -96,7 +96,7 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
-        public GeneralClientBootstrap Config(ProcessEntity entity)
+        public GeneralClientBootstrap Config(ProcessInfo entity)
         {
             Packet.ClientVersion = entity.ClientVersion;
             Packet.AppType = entity.AppType;

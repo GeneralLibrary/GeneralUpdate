@@ -18,7 +18,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         private const string PATCHS = "patchs";
 
-        protected PacketEntity Packet { get; set; }
+        protected Packet Packet { get; set; }
         protected Action<object, MutiDownloadProgressChangedEventArgs> ProgressEventAction { get; set; }
         protected Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
 
@@ -29,7 +29,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         public override void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
     Action<object, ExceptionEventArgs> exceptionEventAction)
         {
-            Packet = (PacketEntity)packet;
+            Packet = (Packet)packet;
             ProgressEventAction = progressEventAction;
             ExceptionEventAction = exceptionEventAction;
         }

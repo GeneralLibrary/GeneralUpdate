@@ -14,7 +14,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         private Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
 
-        public VersionEntity Version { get; set; }
+        public VersionInfo Version { get; set; }
 
         public string ZipfilePath { get; set; }
 
@@ -28,7 +28,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         public BaseContext(Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
             Action<object, ExceptionEventArgs> exceptionEventAction,
-            VersionEntity version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
+            VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
         {
             ProgressEventAction = progressEventAction;
             ExceptionEventAction = exceptionEventAction;
