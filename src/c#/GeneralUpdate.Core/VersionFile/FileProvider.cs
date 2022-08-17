@@ -2,10 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace GeneralUpdate.Core.VersionFile
+namespace GeneralUpdate.Core.Versionfile
 {
     public class FileProvider 
     { 
-
     }
 }
