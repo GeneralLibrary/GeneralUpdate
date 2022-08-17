@@ -1,5 +1,4 @@
 ﻿using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Update;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Diagnostics;

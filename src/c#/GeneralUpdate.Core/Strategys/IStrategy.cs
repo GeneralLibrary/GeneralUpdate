@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.Entity;
 using System;
 
 namespace GeneralUpdate.Core.Strategys

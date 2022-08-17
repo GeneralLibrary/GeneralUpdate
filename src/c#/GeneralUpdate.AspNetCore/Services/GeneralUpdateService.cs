@@ -61,30 +61,6 @@ namespace GeneralUpdate.AspNetCore.Services
             return JsonConvert.SerializeObject(respDTO);
         }
 
-        /// <summary>
-        /// Return all updated version information.
-        /// </summary>
-        /// <param name="getUrlsAction">Each version update (Query the latest version information in the database according to the client version number).</param>
-        /// <returns></returns>
-        //public async Task<string> UpdateVersionsTaskAsync(int clientType, string clientVersion, string clientAppkey, string appSecretKey, Func<int, string, Task<List<UpdateVersionDTO>>> getUrlsAction)
-        //{
-        //    ParameterVerification(clientType, clientVersion, "skip", clientAppkey, appSecretKey, getUrlsAction);
-        //    if (!clientAppkey.Equals(appSecretKey)) throw new Exception("App key does not exist or is incorrect !");
-        //    var respDTO = new VersionRespDTO();
-        //    try
-        //    {
-        //        respDTO.Code = HttpStatus.OK;
-        //        respDTO.Message = RespMessage.RequestSucceeded;
-        //        respDTO.Body = new VersionRespDTO { Versions = await getUrlsAction(clientType, clientVersion) };
-        //    }
-        //    catch (Exception)
-        //    {
-        //        respDTO.Code = HttpStatus.SERVICE_UNAVAILABLE;
-        //        respDTO.Message = RespMessage.ServerException;
-        //    }
-        //    return JsonConvert.SerializeObject(respDTO);
-        //}
-
         private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, Func<int, string, Task<List<VersionDTO>>> getUrlsAction)
         {
             if (clientType <= 0) throw new Exception(@"'clientType' cannot be less than or equal to 0 !");

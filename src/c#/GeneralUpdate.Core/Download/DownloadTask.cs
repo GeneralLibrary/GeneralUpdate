@@ -1,5 +1,6 @@
-﻿using GeneralUpdate.Core.CustomAwaiter;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.CustomAwaiter;
+using GeneralUpdate.Core.Domain.Enum;
 using System;
 using System.Globalization;
 using System.Reflection;

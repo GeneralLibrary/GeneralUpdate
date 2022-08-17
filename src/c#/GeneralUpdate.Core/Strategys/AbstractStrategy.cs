@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.Entity;
 using System;
 
 namespace GeneralUpdate.Core.Strategys
@@ -12,5 +12,7 @@ namespace GeneralUpdate.Core.Strategys
         public virtual void Excute() => throw new NotImplementedException();
 
         protected virtual bool StartApp(string appName) => throw new NotImplementedException();
+
+        protected virtual string GetPlatform() => throw new NotImplementedException();
     }
 }

@@ -1,8 +1,9 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
-using GeneralUpdate.Core.Update;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Diagnostics;
@@ -115,5 +116,10 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         }
 
         #endregion Private Methods
+
+        protected override string GetPlatform()
+        {
+            return PlatformType.Windows;
+        }
     }
 }

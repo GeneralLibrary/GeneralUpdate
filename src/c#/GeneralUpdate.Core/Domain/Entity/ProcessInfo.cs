@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
 
 namespace GeneralUpdate.Core.Domain.Entity
 {
     public class ProcessInfo : Entity
     {
-        public ProcessInfo(int appType, string appName, string mainAppName, string installPath, string clientVersion, string lastVersion, string updateLogUrl, bool isUpdate, string updateUrl, string validateUrl, string mainUpdateUrl, string mainValidateUrl, int compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionInfo> updateVersions)
+        public ProcessInfo(int appType, string appName, string mainAppName, string installPath, string clientVersion, string lastVersion, string updateLogUrl, bool isUpdate, string updateUrl, string mainUpdateUrl, int compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey)
         {
             AppType = appType;
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
@@ -18,14 +16,13 @@ namespace GeneralUpdate.Core.Domain.Entity
             UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
             IsUpdate = isUpdate;
             UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
-            ValidateUrl = validateUrl ?? throw new ArgumentNullException(nameof(validateUrl));
+            if(IsURL(UpdateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
             MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(mainUpdateUrl));
-            MainValidateUrl = mainValidateUrl ?? throw new ArgumentNullException(nameof(mainValidateUrl));
+            if (IsURL(MainUpdateUrl)) throw new Exception($"Illegal url {nameof(MainUpdateUrl)}");
             CompressEncoding = compressEncoding;
             CompressFormat = compressFormat ?? throw new ArgumentNullException(nameof(compressFormat));
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
-            UpdateVersions = updateVersions ?? throw new ArgumentNullException(nameof(updateVersions));
         }
 
         /// <summary>

@@ -30,6 +30,11 @@ namespace GeneralUpdate.Core.Domain.Enum
         public const string Android = "ANDROID_PLATFORM";
 
         /// <summary>
+        /// Update on linux platform.
+        /// </summary>
+        public const string Linux = "LINUX_PLATFORM";
+
+        /// <summary>
         /// Update on IoT platform.
         /// </summary>
         //public const string IoT = "IOT_PLATFORM";

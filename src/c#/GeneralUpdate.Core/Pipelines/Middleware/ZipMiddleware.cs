@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Pipelines.Context;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Differential.Config;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;

@@ -4,7 +4,6 @@ using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Update;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Concurrent;
@@ -20,10 +19,10 @@ namespace GeneralUpdate.Core.Bootstrap
     {
         #region Private Members
 
-        private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> options;
-        private volatile Func<TStrategy> strategyFactory;
+        private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
+        private volatile Func<TStrategy> _strategyFactory;
         private Packet _packet;
-        private IStrategy strategy;
+        private IStrategy _strategy;
         private const string DefaultFormat = "zip";
 
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
@@ -54,7 +53,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Constructors
 
-        protected internal AbstractBootstrap() => this.options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
+        protected internal AbstractBootstrap() => this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         #endregion Constructors
 
@@ -134,13 +133,13 @@ namespace GeneralUpdate.Core.Bootstrap
 
         protected IStrategy InitStrategy()
         {
-            if (strategy == null)
+            if (_strategy == null)
             {
                 Validate();
-                strategy = this.strategyFactory();
-                strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
+                _strategy = this._strategyFactory();
+                _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
             }
-            return strategy;
+            return _strategy;
         }
 
         protected IStrategy ExcuteStrategy()
@@ -152,7 +151,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         public virtual TBootstrap Validate()
         {
-            if (this.strategyFactory == null) throw new InvalidOperationException("Strategy or strategy factory not set.");
+            if (this._strategyFactory == null) throw new InvalidOperationException("Strategy or strategy factory not set.");
             return (TBootstrap)this;
         }
 
@@ -160,7 +159,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         public TBootstrap StrategyFactory(Func<TStrategy> strategyFactory)
         {
-            this.strategyFactory = strategyFactory;
+            this._strategyFactory = strategyFactory;
             return (TBootstrap)this;
         }
 
@@ -180,19 +179,19 @@ namespace GeneralUpdate.Core.Bootstrap
             Contract.Requires(option != null);
             if (value == null)
             {
-                this.options.TryRemove(option, out UpdateOptionValue removed);
+                this._options.TryRemove(option, out UpdateOptionValue removed);
             }
             else
             {
-                this.options[option] = new UpdateOptionValue<T>(option, value);
+                this._options[option] = new UpdateOptionValue<T>(option, value);
             }
             return (TBootstrap)this;
         }
 
         public virtual T GetOption<T>(UpdateOption<T> option)
         {
-            if (options == null || options.Count == 0) return default(T);
-            var val = options[option];
+            if (_options == null || _options.Count == 0) return default(T);
+            var val = _options[option];
             if (val != null) return (T)val.GetValue();
             return default(T);
         }

@@ -48,12 +48,13 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="Domain\DTO\VersionDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="Domain\DTO\VersionRespDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\PacketEntity.cs" Link="Domain\Entity\PacketEntity.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessEntity.cs" Link="Domain\Entity\ProcessEntity.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionEntity.cs" Link="Domain\Entity\VersionEntity.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\VO\FileVO.cs" Link="Domain\VO\FileVO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\AbstractTask.cs" Link="Download\AbstractTask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\AbstractTaskManager.cs" Link="Download\AbstractTaskManager.cs" />
@@ -152,7 +153,6 @@
     <Folder Include="Domain\Enum\" />
     <Folder Include="Domain\VO\" />
     <Folder Include="Download\" />
-    <Folder Include="Bootstrap\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
     <Folder Include="Pipelines\MiddlewareResolver\" />
@@ -185,9 +185,7 @@
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
-    <Folder Include="Bootstrap\" />
     <Folder Include="Utils\" />
-    <Folder Include="Bootstrap\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
     <Folder Include="Utils\" />
@@ -195,7 +193,6 @@
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
-    <Folder Include="Bootstrap\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
     <Folder Include="Utils\" />
@@ -203,7 +200,6 @@
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
-    <Folder Include="Bootstrap\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Differential\" />
     <Folder Include="Download\" />

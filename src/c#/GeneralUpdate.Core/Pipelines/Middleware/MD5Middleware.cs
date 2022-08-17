@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Pipelines.Context;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Threading.Tasks;

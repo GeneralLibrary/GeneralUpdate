@@ -1,5 +1,6 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
 using System;
 using System.Text;
 

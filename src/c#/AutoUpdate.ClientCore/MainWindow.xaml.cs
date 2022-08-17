@@ -2,13 +2,11 @@
 using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.ClientCore.Strategys;
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Update;
 using System;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using ExceptionEventArgs = GeneralUpdate.Core.Update.ExceptionEventArgs;
 
 namespace AutoUpdate.ClientCore
 {
