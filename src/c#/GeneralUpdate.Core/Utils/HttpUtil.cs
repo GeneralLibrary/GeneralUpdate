@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Utils
 {
-    public class HttpUtil
+    public sealed class HttpUtil
     {
         public static async Task<T> GetTaskAsync<T>(string http_url, string header_key = null, string header_value = null)
         {

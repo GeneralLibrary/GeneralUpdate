@@ -136,7 +136,7 @@ namespace GeneralUpdate.Core.Bootstrap
             if (_strategy == null)
             {
                 Validate();
-                _strategy = this._strategyFactory();
+                _strategy = _strategyFactory();
                 _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
             }
             return _strategy;
