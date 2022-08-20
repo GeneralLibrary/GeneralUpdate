@@ -1,7 +1,4 @@
-﻿using GeneralUpdate.Core.Domain.DTO;
-using GeneralUpdate.Core.Domain.DTO.Assembler;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
@@ -9,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.Contracts;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Bootstrap
 {
@@ -23,7 +19,7 @@ namespace GeneralUpdate.Core.Bootstrap
         private volatile Func<TStrategy> _strategyFactory;
         private Packet _packet;
         private IStrategy _strategy;
-        private const string DefaultFormat = "zip";
+        protected const string DefaultFormat = "zip";
 
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
@@ -73,13 +69,10 @@ namespace GeneralUpdate.Core.Bootstrap
         /// Launch udpate.
         /// </summary>
         /// <returns></returns>
-        public virtual async Task<TBootstrap> LaunchTaskAsync()
+        public virtual TBootstrap LaunchAsync()
         {
             try
             {
-                MutiDownloadProgressChanged.Invoke(this,
-                    new MutiDownloadProgressChangedEventArgs(null, ProgressType.Check, "Update checking..."));
-                await ValidationVersion();
                 Packet.Format = $".{GetOption(UpdateOption.Format) ?? DefaultFormat}";
                 Packet.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
@@ -102,33 +95,6 @@ namespace GeneralUpdate.Core.Bootstrap
             return (TBootstrap)this;
         }
 
-        public virtual void Launch0() 
-        {
-            ExcuteStrategy();
-        }
-
-        private async Task ValidationVersion() 
-        {
-            var url = Packet.AppType == AppType.ClientApp ? Packet.MainUpdateUrl : Packet.UpdateUrl;
-            var updateResp = await HttpUtil.GetTaskAsync<VersionRespDTO>(url);
-            if (updateResp == null) throw new NullReferenceException(nameof(updateResp));
-            if (updateResp.Code != HttpStatus.OK) throw new Exception($"Request failed , Code :{updateResp.Code}, Message:{updateResp.Message} !");
-            if (updateResp.Code == HttpStatus.OK)
-            {
-                var body = updateResp.Body;
-                //If it is empty and the status code is OK, no update is required.
-                if (body == null) return;
-                Packet.UpdateVersions = VersionAssembler.ToEntitys(body.Versions);
-                if (Packet.UpdateVersions != null && Packet.UpdateVersions.Count != 0)
-                    Packet.LastVersion = Packet.UpdateVersions[Packet.UpdateVersions.Count - 1].Version;
-            }
-            else
-            {
-                MutiDownloadProgressChanged.Invoke(this,
-                    new MutiDownloadProgressChangedEventArgs(null, ProgressType.Check, $"Check update failed : code {updateResp.Code} , meesage {updateResp.Message} !"));
-            }
-        }
-
         #region Strategy
 
         protected IStrategy InitStrategy()
@@ -138,6 +104,7 @@ namespace GeneralUpdate.Core.Bootstrap
                 Validate();
                 _strategy = _strategyFactory();
                 _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
+                Packet.Platform = _strategy.GetPlatform();
             }
             return _strategy;
         }

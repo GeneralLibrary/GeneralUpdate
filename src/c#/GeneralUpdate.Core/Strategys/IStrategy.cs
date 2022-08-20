@@ -19,5 +19,7 @@ namespace GeneralUpdate.Core.Strategys
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
         void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
+
+        string GetPlatform();
     }
 }

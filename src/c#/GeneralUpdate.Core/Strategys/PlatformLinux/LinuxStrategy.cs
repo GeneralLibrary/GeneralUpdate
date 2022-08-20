@@ -5,9 +5,9 @@ using System.Text;
 
 namespace GeneralUpdate.Core.Strategys.PlatformLinux
 {
-    public class StrategyLinux : AbstractStrategy
+    public class LinuxStrategy : AbstractStrategy
     {
-        protected override string GetPlatform()
+        public override string GetPlatform()
         {
             return PlatformType.Linux;
         }

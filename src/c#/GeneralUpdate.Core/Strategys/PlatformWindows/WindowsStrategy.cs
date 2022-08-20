@@ -17,8 +17,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
     {
         #region Private Members
 
-        private const string PATCHS = "patchs";
-
         protected Packet Packet { get; set; }
         protected Action<object, MutiDownloadProgressChangedEventArgs> ProgressEventAction { get; set; }
         protected Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
@@ -117,7 +115,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         #endregion Private Methods
 
-        protected override string GetPlatform()
+        public override string GetPlatform()
         {
             return PlatformType.Windows;
         }

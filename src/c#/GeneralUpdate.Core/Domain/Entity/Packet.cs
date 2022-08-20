@@ -10,16 +10,16 @@ namespace GeneralUpdate.Core.Domain.Entity
 
         public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, Encoding encoding, int downloadTimeOut, string appSecretKey, string tempPath)
         {
-            if (MainUpdateUrl == null) throw new ArgumentNullException(nameof(MainUpdateUrl));
-            if (!IsURL(MainUpdateUrl)) throw new Exception($"Illegal url {nameof(MainUpdateUrl)}");
+            if (!IsURL(mainUpdateUrl)) throw new Exception($"Illegal url {nameof(mainUpdateUrl)}");
+            MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(MainUpdateUrl));
+            if (!IsURL(updateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
+            UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
+            UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
             AppType = appType;
-            if (UpdateUrl == null) throw new ArgumentNullException(nameof(updateUrl));
-            if (!IsURL(UpdateUrl)) throw new Exception($"Illegal url { nameof(UpdateUrl) }");
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             MainAppName = mainAppName ?? throw new ArgumentNullException(nameof(mainAppName));
             Format = format ?? throw new ArgumentNullException(nameof(format));
             IsUpdate = isUpdate;
-            UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
             Encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
@@ -57,6 +57,8 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// Whether to force update.
         /// </summary>
         public bool IsUpdate { get; set; }
+
+        public bool IsMainUpdate { get; set; }
 
         /// <summary>
         /// Update log web address.
@@ -97,5 +99,8 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string TempPath { get; set; }
 
+        public string ProcessBase64 { get; set; }
+
+        public string Platform { get; set; }
     }
 }

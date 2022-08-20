@@ -47,6 +47,8 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="Domain\DTO\BaseResponseDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="Domain\DTO\VersionDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="Domain\DTO\VersionRespDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Assembler\ProcessAssembler.cs" Link="Domain\Entity\Assembler\ProcessAssembler.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Configinfo.cs" Link="Domain\Entity\Configinfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
@@ -55,6 +57,7 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Service\VersionService.cs" Link="Domain\Service\VersionService.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\VO\FileVO.cs" Link="Domain\VO\FileVO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\AbstractTask.cs" Link="Download\AbstractTask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\AbstractTaskManager.cs" Link="Download\AbstractTaskManager.cs" />
@@ -149,8 +152,9 @@
     <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Domain\DTO\Assembler\" />
-    <Folder Include="Domain\Entity\" />
+    <Folder Include="Domain\Entity\Assembler\" />
     <Folder Include="Domain\Enum\" />
+    <Folder Include="Domain\Service\" />
     <Folder Include="Domain\VO\" />
     <Folder Include="Download\" />
     <Folder Include="CustomAwaiter\" />

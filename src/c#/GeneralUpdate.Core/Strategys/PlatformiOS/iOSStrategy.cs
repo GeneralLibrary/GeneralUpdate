@@ -7,7 +7,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformiOS
 {
     public class iOSStrategy : AbstractStrategy
     {
-        protected override string GetPlatform()
+        public override string GetPlatform()
         {
             return PlatformType.iOS;
         }

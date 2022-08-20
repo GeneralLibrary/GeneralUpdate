@@ -1,28 +1,34 @@
-﻿using System;
+﻿using GeneralUpdate.Core.Domain.DTO;
+using GeneralUpdate.Core.Domain.DTO.Assembler;
+using GeneralUpdate.Core.Utils;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace GeneralUpdate.Core.Domain.Entity
 {
     public class ProcessInfo : Entity
     {
-        public ProcessInfo(int appType, string appName, string mainAppName, string installPath, string clientVersion, string lastVersion, string updateLogUrl, bool isUpdate, string updateUrl, string mainUpdateUrl, int compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey)
+        public ProcessInfo() { }
+
+        public ProcessInfo(int appType, string appName, string installPath, string currentVersion, string lastVersion, string logUrl, bool isUpdate,Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
         {
             AppType = appType;
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
-            MainAppName = mainAppName ?? throw new ArgumentNullException(nameof(mainAppName));
+            if(!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! { installPath }." );
             InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
-            ClientVersion = clientVersion ?? throw new ArgumentNullException(nameof(clientVersion));
+            CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
-            UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
+            LogUrl = logUrl ?? throw new ArgumentNullException(nameof(logUrl));
             IsUpdate = isUpdate;
-            UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
-            if(IsURL(UpdateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
-            MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(mainUpdateUrl));
-            if (IsURL(MainUpdateUrl)) throw new Exception($"Illegal url {nameof(MainUpdateUrl)}");
-            CompressEncoding = compressEncoding;
+            CompressEncoding = ConvertUtil.ToEncodingType(compressEncoding);
             CompressFormat = compressFormat ?? throw new ArgumentNullException(nameof(compressFormat));
+            if (downloadTimeOut <= 0) throw new ArgumentException("Timeout must be greater than 0 !");
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
+            if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
+            UpdateVersions = VersionAssembler.ToEntitys(updateVersions);
         }
 
         /// <summary>
@@ -35,40 +41,24 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string AppName { get; set; }
 
-        public string MainAppName { get; set; }
-
         /// <summary>
         /// Installation directory (the path where the update package is decompressed).
         /// </summary>
         public string InstallPath { get; set; }
 
-        public string ClientVersion { get; set; }
+        public string CurrentVersion { get; set; }
 
         public string LastVersion { get; set; }
 
         /// <summary>
         /// Update log web address.
         /// </summary>
-        public string UpdateLogUrl { get; set; }
+        public string LogUrl { get; set; }
 
         /// <summary>
         /// Whether to update.
         /// </summary>
         public bool IsUpdate { get; set; }
-
-        /// <summary>
-        /// Update check api address.
-        /// </summary>
-        public string UpdateUrl { get; set; }
-
-        /// <summary>
-        /// Validate update url.
-        /// </summary>
-        public string ValidateUrl { get; set; }
-
-        public string MainUpdateUrl { get; set; }
-
-        public string MainValidateUrl { get; set; }
 
         public int CompressEncoding { get; set; }
 

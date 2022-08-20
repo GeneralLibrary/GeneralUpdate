@@ -7,7 +7,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformAndroid
 {
     public class AndroidStrategy : AbstractStrategy
     {
-        protected override string GetPlatform()
+        public override string GetPlatform()
         {
             return PlatformType.Android;
         }

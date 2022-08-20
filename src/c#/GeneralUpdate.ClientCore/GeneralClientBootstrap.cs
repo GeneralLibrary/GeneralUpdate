@@ -1,12 +1,14 @@
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.DTO;
+using GeneralUpdate.Core.Domain.DTO.Assembler;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Domain.Service;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Utils;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -20,45 +22,33 @@ namespace GeneralUpdate.ClientCore
 
         #region Public Methods
 
-        public override async Task<GeneralClientBootstrap> LaunchTaskAsync()
+        public override GeneralClientBootstrap LaunchAsync()
         {
-            try
-            {
-                //Verify whether 'upgrad' needs to be updated.
-                var respDTO = await HttpUtil.GetTaskAsync<VersionRespDTO>(Packet.MainUpdateUrl);
-                if (respDTO == null) throw new ArgumentNullException("The verification request is abnormal, please check the network or parameter configuration!");
-                if (respDTO.Code != HttpStatus.OK) throw new Exception($"Request failed , Code :{ respDTO.Code }, Message:{ respDTO.Message } !");
-                if (respDTO.Code == HttpStatus.OK)
-                {
-                    var body = respDTO.Body;
-                    if (body.IsForcibly || body.IsUpdate) Packet.IsUpdate = body.IsForcibly;
+            Task.Run(() => BaseLaunch());
+            return this;
+        }
 
-                    if (Packet.IsUpdate)
-                    {
-                        //Do you need to force an update.
-                        if (body.IsForcibly)
-                        {
-                            await base.LaunchTaskAsync();
-                        }
-                        else if (body.IsUpdate)//Does it need to be updated.
-                        {
-                            bool isSkip = false;
-                            //User decides if update is required.
-                            if (_customOption != null) isSkip = _customOption.Invoke();
-                            if (isSkip) await base.LaunchTaskAsync();
-                        }
-                    }
-                    else 
-                    {
-                        base.Launch0();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            return await Task.FromResult(this);
+        public Task<GeneralClientBootstrap> LaunchTaskAsync() => BaseLaunch();
+
+        private async Task<GeneralClientBootstrap> BaseLaunch() 
+        {
+            var versionService = new VersionService();
+            var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
+            var upgradResp = await versionService.ValidationVersion(Packet.UpdateUrl);
+            //No need to update, return directly.
+            if ((!mainResp.IsUpdate) && (!upgradResp.IsUpdate)) return this;
+            //If the main program needs to be forced to update, the skip will not take effect.
+            if (IsSkip(mainResp.IsForcibly)) return this;
+            var processInfo = new ProcessInfo(AppType.ClientApp, Packet.MainAppName, Packet.InstallPath,
+                    Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
+                    mainResp.IsUpdate, Packet.Encoding, Packet.Format,
+                    Packet.DownloadTimeOut, Packet.AppSecretKey, mainResp.Versions);
+            Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
+            Packet.LastVersion = Packet.UpdateVersions.Last().Version;
+            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Versions);
+            Packet.IsUpdate = true;
+            Packet.IsMainUpdate = true;
+            return base.LaunchAsync();
         }
 
         /// <summary>
@@ -75,18 +65,17 @@ namespace GeneralUpdate.ClientCore
             {
                 string basePath = Environment.CurrentDirectory;
                 Packet.InstallPath = basePath;
-                Packet.IsUpdate = true;
                 Packet.AppSecretKey = appSecretKey;
                 //update app.
                 Packet.AppName = appName;
-                string clienVersion = GetFileVersion(Path.Combine(basePath, Packet.AppName + ".exe"));
+                string clienVersion = GetFileVersion(Path.Combine(basePath, Packet.AppName));
                 Packet.ClientVersion = clienVersion;
-                Packet.AppType = (int)AppType.UpdateApp;
+                Packet.AppType = AppType.UpdateApp;
                 Packet.UpdateUrl = $"{url}/versions/{ Packet.AppType }/{ clienVersion }/{ Packet.AppSecretKey }";
                 //main app.
                 string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
                 string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                Packet.MainUpdateUrl = $"{url}/versions/{ (int)AppType.ClientApp }/{ mainVersion }/{Packet.AppSecretKey}";
+                Packet.MainUpdateUrl = $"{url}/versions/{ AppType.ClientApp }/{ mainVersion }/{Packet.AppSecretKey}";
                 Packet.MainAppName = mainAppName;
                 return this;
             }
@@ -96,18 +85,17 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
-        public GeneralClientBootstrap Config(ProcessInfo entity)
+        public GeneralClientBootstrap Config(Configinfo info)
         {
-            Packet.ClientVersion = entity.ClientVersion;
-            Packet.AppType = entity.AppType;
-            Packet.UpdateUrl = entity.UpdateUrl;
-            Packet.MainUpdateUrl = entity.MainUpdateUrl;
-            Packet.AppName = entity.AppName;
-            Packet.MainAppName = entity.MainAppName;
-            Packet.InstallPath = entity.InstallPath;
-            Packet.UpdateLogUrl = entity.UpdateLogUrl;
-            Packet.IsUpdate = entity.IsUpdate;
-            Packet.AppSecretKey = entity.AppSecretKey;
+            Packet.AppType = info.AppType;
+            Packet.AppName = info.AppName;
+            Packet.AppSecretKey = info.AppSecretKey;
+            Packet.ClientVersion = info.ClientVersion;
+            Packet.UpdateUrl = info.UpdateUrl;
+            Packet.MainUpdateUrl = info.MainUpdateUrl;
+            Packet.MainAppName = info.MainAppName;
+            Packet.InstallPath = info.InstallPath;
+            Packet.UpdateLogUrl = info.UpdateLogUrl;
             return this;
         }
 
@@ -133,12 +121,24 @@ namespace GeneralUpdate.ClientCore
             {
                 var fileInfo = new FileInfo(filePath);
                 if (fileInfo != null && fileInfo.Exists) return FileVersionInfo.GetVersionInfo(filePath).FileVersion;
-                throw new Exception($"Failed to obtain file '{ filePath }' version. Procedure.");
+                throw new Exception($"Failed to obtain file '{filePath}' version. Procedure.");
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to obtain file '{ filePath }' version. Procedure. Eorr message : { ex.Message } .", ex.InnerException);
+                throw new Exception($"Failed to obtain file '{filePath}' version. Procedure. Eorr message : {ex.Message} .", ex.InnerException);
             }
+        }
+
+        /// <summary>
+        /// User decides if update is required.
+        /// </summary>
+        /// <returns>is false to continue execution.</returns>
+        private bool IsSkip(bool isForcibly) 
+        {
+            bool isSkip = false;
+            if (isForcibly) return false;
+            if (_customOption != null) isSkip = _customOption.Invoke();
+            return isSkip;
         }
 
         #endregion

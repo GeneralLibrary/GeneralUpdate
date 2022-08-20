@@ -1,8 +1,11 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core
 {
@@ -19,14 +22,9 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var entity = SerializeUtil.Deserialize<ProcessInfo>(base64);
-                var tempPath = $"{FileUtil.GetTempDirectory(entity.LastVersion)}\\";
-                var encoding = ConvertUtil.ToEncoding(entity.CompressEncoding);
-                Packet = new Packet(
-                    entity.MainUpdateUrl, entity.AppType, entity.UpdateUrl, 
-                    entity.AppName, entity.MainAppName, entity.CompressFormat, 
-                    entity.IsUpdate, entity.UpdateLogUrl, encoding,entity.DownloadTimeOut,
-                    entity.AppSecretKey, tempPath);
+                var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
+                Packet = ProcessAssembler.ToPacket(processInfo);
+                Packet.TempPath = $"{FileUtil.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}";
             }
             catch (Exception ex)
             {
@@ -34,5 +32,7 @@ namespace GeneralUpdate.Core
             }
             return this;
         }
+
+        public Task<GeneralUpdateBootstrap> LaunchTaskAsync() => Task.Run(() => base.LaunchAsync());
     }
 }
