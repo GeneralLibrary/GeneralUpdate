@@ -4,7 +4,6 @@ using GeneralUpdate.Core.Domain.Enum;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.AspNetCore.Services
 {
@@ -19,10 +18,10 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="isForce">Do you need to force an update.</param>
         /// <param name="getUrlsAction">Each version update (Query the latest version information in the database according to the client version number).</param>
         /// <returns></returns>
-        public async Task<string> UpdateValidateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
-            bool isForce, Func<int, string, Task<List<VersionDTO>>> getUrlsAction)
+        public string UpdateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
+            bool isForce, List<VersionDTO> versions)
         {
-            ParameterVerification(clientType, clientVersion, serverLastVersion, clientAppkey, appSecretKey, getUrlsAction);
+            ParameterVerification(clientType, clientVersion, serverLastVersion, clientAppkey, appSecretKey, versions);
             if (!clientAppkey.Equals(appSecretKey)) throw new Exception("App key does not exist or is incorrect !");
             Version clientLastVersion;
             var respDTO = new VersionRespDTO();
@@ -37,18 +36,13 @@ namespace GeneralUpdate.AspNetCore.Services
                 var lastVersion = new Version(serverLastVersion);
                 if (clientLastVersion < lastVersion)
                 {
-                    respDTO.Body = new VersionRespDTO();
-                    var body = respDTO.Body;
-                    body.ClientType = clientType;
-                    body.Versions = await getUrlsAction(clientType, clientVersion);
-                    body.IsForcibly = isForce;
-                    body.IsUpdate = true;
+                    respDTO.Body = new VersionBodyDTO() { ClientType = clientType, Versions = versions, IsUpdate = true, IsForcibly = isForce };
                     respDTO.Code = HttpStatus.OK;
                     respDTO.Message = RespMessage.RequestSucceeded;
                 }
                 else
                 {
-                    //respDTO.Body = new UpdateValidateDTO() { UpdateVersions = new List<UpdateVersionDTO>() , ClientType = clientType };
+                    respDTO.Body = new VersionBodyDTO() { ClientType = clientType, Versions = versions, IsUpdate = false, IsForcibly = false };
                     respDTO.Code = HttpStatus.OK;
                     respDTO.Message = RespMessage.RequestNone;
                 }
@@ -61,12 +55,12 @@ namespace GeneralUpdate.AspNetCore.Services
             return JsonConvert.SerializeObject(respDTO);
         }
 
-        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, Func<int, string, Task<List<VersionDTO>>> getUrlsAction)
+        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, List<VersionDTO> versions)
         {
             if (clientType <= 0) throw new Exception(@"'clientType' cannot be less than or equal to 0 !");
             if (string.IsNullOrWhiteSpace(clientVersion)) throw new ArgumentNullException(@"'clientVersion' cannot be null !");
             if (string.IsNullOrWhiteSpace(serverLastVersion)) throw new ArgumentNullException(@"'serverLastVersion' cannot be null !");
-            if (getUrlsAction == null) throw new ArgumentNullException(@"'getUrlsAction' cannot be null!");
+            if (versions == null) throw new ArgumentNullException(@"versions cannot be null !");
             if (string.IsNullOrEmpty(clientAppkey) || string.IsNullOrEmpty(appSecretKey)) throw new NullReferenceException("The APP key does not exist !");
         }
     }

@@ -36,16 +36,16 @@ namespace GeneralUpdate.ClientCore
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
             var upgradResp = await versionService.ValidationVersion(Packet.UpdateUrl);
             //No need to update, return directly.
-            if ((!mainResp.IsUpdate) && (!upgradResp.IsUpdate)) return this;
+            if ((!mainResp.Body.IsUpdate) && (!upgradResp.Body.IsUpdate)) return this;
             //If the main program needs to be forced to update, the skip will not take effect.
-            if (IsSkip(mainResp.IsForcibly)) return this;
+            if (IsSkip(mainResp.Body.IsForcibly)) return this;
             var processInfo = new ProcessInfo(AppType.ClientApp, Packet.MainAppName, Packet.InstallPath,
                     Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
-                    mainResp.IsUpdate, Packet.Encoding, Packet.Format,
-                    Packet.DownloadTimeOut, Packet.AppSecretKey, mainResp.Versions);
+                    mainResp.Body.IsUpdate, Packet.Encoding, Packet.Format,
+                    Packet.DownloadTimeOut, Packet.AppSecretKey, mainResp.Body.Versions);
             Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
             Packet.LastVersion = Packet.UpdateVersions.Last().Version;
-            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Versions);
+            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Body.Versions);
             Packet.IsUpdate = true;
             Packet.IsMainUpdate = true;
             return base.LaunchAsync();

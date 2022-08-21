@@ -1,7 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.DTO;
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.AspNetCore.Services
 {
@@ -17,8 +15,8 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="clientAppkey">The appkey agreed by the client and server.</param>
         /// <param name="appSecretKey">Appkey is stored in the database.</param>
         /// <param name="isForce">Whether to force all versions to be updated.</param>
-        /// <param name="getUrlsAction"></param>
+        /// <param name="versions"></param>
         /// <returns>Json object.</returns>
-        Task<string> UpdateValidateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, bool isForce, Func<int, string, Task<List<VersionDTO>>> getUrlsAction);
+        string UpdateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, bool isForce, List<VersionDTO> versions);
     }
 }

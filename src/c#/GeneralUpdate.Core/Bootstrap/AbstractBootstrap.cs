@@ -103,8 +103,8 @@ namespace GeneralUpdate.Core.Bootstrap
             {
                 Validate();
                 _strategy = _strategyFactory();
-                _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
                 Packet.Platform = _strategy.GetPlatform();
+                _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
             }
             return _strategy;
         }
