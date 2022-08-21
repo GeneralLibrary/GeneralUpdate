@@ -9,10 +9,11 @@
     <PackageIcon>Snipaste_2022-03-23_20-48-50.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
-    <Folder Include="Models\" />
-    <Folder Include="Models\" />
+    <AvaloniaXaml Remove="Models\**" />
+    <Compile Remove="Models\**" />
+    <EmbeddedResource Remove="Models\**" />
+    <None Remove="Models\**" />
     <None Remove=".gitignore" />
     <None Remove="imgs\GeneralUpdate.ico" />
   </ItemGroup>

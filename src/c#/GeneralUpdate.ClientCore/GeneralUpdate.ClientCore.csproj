@@ -151,6 +151,10 @@
     <Folder Include="Differential\Binary\" />
     <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
+    <Folder Include="Differential\Binary\" />
+    <Folder Include="Differential\Common\" />
+    <Folder Include="Differential\Config\" />
+    <Folder Include="Differential\GStream\" />
     <Folder Include="Domain\DTO\Assembler\" />
     <Folder Include="Domain\Entity\Assembler\" />
     <Folder Include="Domain\Enum\" />
@@ -164,11 +168,21 @@
     <Folder Include="Pipelines\Context\" />
     <Folder Include="Pipelines\Attributes\" />
     <Folder Include="Pipelines\Pipeline\" />
+    <Folder Include="Pipelines\Attributes\" />
+    <Folder Include="Pipelines\Context\" />
+    <Folder Include="Pipelines\Middleware\" />
+    <Folder Include="Pipelines\MiddlewareResolver\" />
+    <Folder Include="Pipelines\Pipeline\" />
     <Folder Include="Strategys\PlatformAndroid\" />
     <Folder Include="Strategys\PlatformWindows\" />
     <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformiOS\" />
+    <Folder Include="Strategys\PlatformAndroid\" />
+    <Folder Include="Strategys\PlatformiOS\" />
+    <Folder Include="Strategys\PlatformLinux\" />
+    <Folder Include="Strategys\PlatformMac\" />
+    <Folder Include="Strategys\PlatformWindows\" />
     <Folder Include="Utils\" />
     <Folder Include="Pipelines\Attributes\" />
     <Folder Include="Pipelines\Context\" />
@@ -205,11 +219,12 @@
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
     <Folder Include="CustomAwaiter\" />
-    <Folder Include="Differential\" />
     <Folder Include="Download\" />
-    <Folder Include="Pipelines\" />
     <Folder Include="Utils\" />
-    <Folder Include="ZipFactory\" />
+    <Folder Include="ZipFactory\Events\" />
+    <Folder Include="ZipFactory\Factory\" />
+    <Folder Include="ZipFactory\G7z\" />
+    <Folder Include="ZipFactory\GZip\" />
   </ItemGroup>
 
   <ItemGroup>
