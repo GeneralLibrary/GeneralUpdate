@@ -17,6 +17,6 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="isForce">Whether to force all versions to be updated.</param>
         /// <param name="versions"></param>
         /// <returns>Json object.</returns>
-        string UpdateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, bool isForce, List<VersionDTO> versions);
+        string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, bool isForce, List<VersionDTO> versions);
     }
 }

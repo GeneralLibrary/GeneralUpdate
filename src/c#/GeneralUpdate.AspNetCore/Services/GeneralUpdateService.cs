@@ -18,7 +18,7 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="isForce">Do you need to force an update.</param>
         /// <param name="getUrlsAction">Each version update (Query the latest version information in the database according to the client version number).</param>
         /// <returns></returns>
-        public string UpdateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
+        public string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
             bool isForce, List<VersionDTO> versions)
         {
             ParameterVerification(clientType, clientVersion, serverLastVersion, clientAppkey, appSecretKey, versions);
