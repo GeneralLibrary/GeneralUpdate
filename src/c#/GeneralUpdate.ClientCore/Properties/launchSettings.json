@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "GeneralUpdate.ClientCore": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:65352;http://localhost:65362"
+    }
+  }
+}
