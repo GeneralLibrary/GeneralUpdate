@@ -7,9 +7,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformMac
 {
     public class MacStrategy : AbstractStrategy
     {
-        public override string GetPlatform()
-        {
-            return PlatformType.Mac;
-        }
+        public override string GetPlatform()=> PlatformType.Mac;
     }
 }

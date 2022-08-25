@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Events;
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -224,6 +225,7 @@ namespace GeneralUpdate.Core.Download
                 if (state == null || state.FileStream == null) break;
                 lock (state.FileStream)
                 {
+                    //EventManager.Instance.Dispatch<DownloadProgressChangedEventHandlerEx>(this,new EventArgs());
                     if (DownloadProgressChangedEx != null)
                         DownloadProgressChangedEx(this, new DownloadProgressChangedEventArgsEx(bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
                     state.FileStream.Write(bytes, 0, readSize);

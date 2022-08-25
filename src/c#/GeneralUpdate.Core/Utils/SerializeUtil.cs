@@ -4,8 +4,16 @@ using System.Text;
 
 namespace GeneralUpdate.Core.Utils
 {
+    /// <summary>
+    /// Arbitrary object serialization.
+    /// </summary>
     public class SerializeUtil
     {
+        /// <summary>
+        /// Convert object to base64 string.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public static string Serialize(object obj)
         {
             if (obj == null) return string.Empty;
@@ -15,6 +23,12 @@ namespace GeneralUpdate.Core.Utils
             return base64str;
         }
 
+        /// <summary>
+        /// Convert base64 object to string.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="str"></param>
+        /// <returns></returns>
         public static T Deserialize<T>(string str)
         {
             var obj = default(T);

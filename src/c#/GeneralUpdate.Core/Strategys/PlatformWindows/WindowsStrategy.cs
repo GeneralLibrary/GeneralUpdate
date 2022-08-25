@@ -115,9 +115,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         #endregion Private Methods
 
-        public override string GetPlatform()
-        {
-            return PlatformType.Windows;
-        }
+        public override string GetPlatform()=> PlatformType.Windows;
     }
 }

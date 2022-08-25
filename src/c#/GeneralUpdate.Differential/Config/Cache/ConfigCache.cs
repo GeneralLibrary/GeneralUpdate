@@ -55,23 +55,16 @@ namespace GeneralUpdate.Differential.Config.Cache
 
         public void Dispose()
         {
-            try
+            if (Cache != null)
             {
-                if (Cache != null)
-                {
-                    Cache.Clear();
-                    Cache = null;
-                }
-
-                if (_cacheBuilder != null)
-                {
-                    _cacheBuilder.Clear();
-                    _cacheBuilder = null;
-                }
+                Cache.Clear();
+                Cache = null;
             }
-            catch (Exception ex)
+
+            if (_cacheBuilder != null)
             {
-                throw new Exception($"Configuration file cache release failed  : { ex.Message } .", ex.InnerException);
+                _cacheBuilder.Clear();
+                _cacheBuilder = null;
             }
         }
 
