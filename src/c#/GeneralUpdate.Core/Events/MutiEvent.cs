@@ -13,9 +13,9 @@ namespace GeneralUpdate.Core.Events
 
         public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
 
-        public delegate void MutiAsyncCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
+        public delegate void MutiCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
 
-        public event MutiAsyncCompletedEventHandler MutiDownloadCompleted;
+        public event MutiCompletedEventHandler MutiDownloadCompleted;
 
         public delegate void MutiDownloadErrorEventHandler(object sender, MutiDownloadErrorEventArgs e);
 
