@@ -1,5 +1,4 @@
 ﻿using GeneralUpdate.Core.Utils;
-using GeneralUpdate.Differential.ContentProvider.FileTree;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +16,8 @@ namespace GeneralUpdate.Differential.ContentProvider
         {
             var leftFilenodes = ReadAsync(leftPath);
             var rightFilenodes = ReadAsync(rightPath);
-            //FileTree left = new FileTree();
+            var leftTree = new FileTree(leftFilenodes);
+            var rightTree = new FileTree(rightFilenodes);
         }
 
         private IEnumerable<FileNode> ReadAsync(string path)
