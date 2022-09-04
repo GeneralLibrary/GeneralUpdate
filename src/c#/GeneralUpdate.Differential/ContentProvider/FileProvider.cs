@@ -25,8 +25,8 @@ namespace GeneralUpdate.Differential.ContentProvider
             var resultFiles = new List<FileNode>();
             Parallel.ForEach(Directory.GetFiles(path), (subPath) => 
             {
-                string md5 =  FileUtil.GetFileMD5(subPath);
-                FileInfo subFileInfo = new FileInfo(subPath);
+                var md5 =  FileUtil.GetFileMD5(subPath);
+                var subFileInfo = new FileInfo(subPath);
                 resultFiles.Add(new FileNode() { Id = GetId() , Path = path , Name = subFileInfo.Name , MD5 = md5 });
             });
             Parallel.ForEach(Directory.GetDirectories(path), (subPath) =>
