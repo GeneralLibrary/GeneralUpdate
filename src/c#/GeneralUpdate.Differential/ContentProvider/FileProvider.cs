@@ -12,27 +12,44 @@ namespace GeneralUpdate.Differential.ContentProvider
     {
         private long _fileCount = 0;
 
-        public void Compare(string leftPath, string rightPath)
+        /// <summary>
+        /// Compare two binary trees with different children.
+        /// </summary>
+        /// <param name="leftPath">Left tree folder path.</param>
+        /// <param name="rightPath">Right tree folder path.</param>
+        /// <returns></returns>
+        public async Task<List<FileNode>> Compare(string leftPath, string rightPath)
         {
-            var leftFilenodes = ReadAsync(leftPath);
-            var rightFilenodes = ReadAsync(rightPath);
-            var leftTree = new FileTree(leftFilenodes);
-            var rightTree = new FileTree(rightFilenodes);
+            return await Task.Run(() => 
+            {
+                var leftFilenodes = Read(leftPath);
+                var rightFilenodes = Read(rightPath);
+                var leftTree = new FileTree(leftFilenodes);
+                var rightTree = new FileTree(rightFilenodes);
+                List<FileNode> diffrentTreeNode = new List<FileNode>();
+                leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref diffrentTreeNode);
+                return diffrentTreeNode;
+            });
         }
 
-        private IEnumerable<FileNode> ReadAsync(string path)
+        /// <summary>
+        /// Recursively read all files in the folder path.
+        /// </summary>
+        /// <param name="path">folder path.</param>
+        /// <returns>different childrens.</returns>
+        private IEnumerable<FileNode> Read(string path)
         {
             var resultFiles = new List<FileNode>();
-            Parallel.ForEach(Directory.GetFiles(path), (subPath) => 
+            foreach (var subPath in Directory.GetFiles(path))
             {
-                var md5 =  FileUtil.GetFileMD5(subPath);
+                var md5 = FileUtil.GetFileMD5(subPath);
                 var subFileInfo = new FileInfo(subPath);
-                resultFiles.Add(new FileNode() { Id = GetId() , Path = path , Name = subFileInfo.Name , MD5 = md5 });
-            });
-            Parallel.ForEach(Directory.GetDirectories(path), (subPath) =>
+                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5 });
+            }
+            foreach (var subPath in Directory.GetDirectories(path))
             {
-                resultFiles.AddRange(ReadAsync(subPath));
-            });
+                resultFiles.AddRange(Read(subPath));
+            }
             ResetId();
             return resultFiles;
         }
