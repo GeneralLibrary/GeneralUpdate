@@ -1,10 +1,12 @@
 ﻿using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
+using GeneralUpdate.Differential.ContentProvider;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -79,6 +81,8 @@ namespace GeneralUpdate.Differential
                 if (!Directory.Exists(patchPath)) Directory.CreateDirectory(patchPath);
 
                 //Take the left tree as the center to match the files that are not in the right tree .
+                //FileProvider fileProvider = new FileProvider();
+                //List<FileNode> nodes = await fileProvider.Compare(targetPath, appPath);
                 var tupleResult = FileUtil.Compare(targetPath, appPath);
                 //Binary differencing of like terms .
                 foreach (var file in tupleResult)
