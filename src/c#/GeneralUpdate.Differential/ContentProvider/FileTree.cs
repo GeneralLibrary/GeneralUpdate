@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace GeneralUpdate.Differential.ContentProvider
 {
@@ -35,7 +34,7 @@ namespace GeneralUpdate.Differential.ContentProvider
             }
             else
             {
-                Console.WriteLine("二叉排序树为空，不能遍历！");
+                Debug.WriteLine("The binary sort tree is empty and cannot be traversed！");
             }
         }
 
@@ -43,29 +42,17 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public FileNode SearchParent(long id) => root == null ? null : root.SearchParent(id);
 
-        /// <summary>
-        /// 1.node 传入的节点当作二叉树排序树的根节点
-        /// 2.删除node为根节点的二叉排序树的最小节点
-        /// </summary>
-        /// <param name="node">以node为根节点二叉排序树的最小节点的值</param>
-        /// <returns></returns>
         public long DelRightTreeMin(FileNode node)
         {
             FileNode target = node;
-            //循环的查找左节点，就会找到最小值
             while (target.Left != null)
             {
                 target = target.Left;
             }
-            //这时target指向了最小节点
             DelNode(target.Id);
             return target.Id;
         }
 
-        /// <summary>
-        /// 删除节点
-        /// </summary>
-        /// <param name="id"></param>
         public void DelNode(long id)
         {
             if (root == null)
@@ -143,6 +130,12 @@ namespace GeneralUpdate.Differential.ContentProvider
             }
         }
 
+        /// <summary>
+        /// Starting from the root node, recursively compares two different child nodes of the binary tree and nodes that are not included.
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="node0"></param>
+        /// <param name="nodes"></param>
         public void Compare(FileNode node, FileNode node0, ref List<FileNode> nodes)
         {
             if (node != null && node.Left != null)
