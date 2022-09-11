@@ -5,9 +5,13 @@ namespace GeneralUpdate.Differential.ContentProvider
 {
     public class FileNode
     {
+        #region Public Properties
+
         public long Id { get; set; }
 
         public string Name { get; set; }
+
+        public string FullName { get; set; }
 
         public string Path { get; set; }
 
@@ -21,12 +25,20 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public int RightType { get; set; }
 
+        #endregion
+
+        #region Constructors
+
         public FileNode() { }
 
         public FileNode(int id)
         {
             Id = id;
         }
+
+        #endregion
+
+        #region Public Methods
 
         public void Add(FileNode node)
         {
@@ -110,7 +122,7 @@ namespace GeneralUpdate.Differential.ContentProvider
                 }
                 else
                 {
-                    return null; 
+                    return null;
                 }
             }
         }
@@ -122,8 +134,14 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns></returns>
         public override bool Equals(object obj)
         {
+            if (obj == null) throw new ArgumentNullException(nameof(obj));
             var tempNode = obj as FileNode;
-            return MD5.ToUpper().Equals(tempNode.MD5.ToUpper()) && Name.Equals(tempNode.Name);
+            if (tempNode == null) throw new ArgumentException(nameof(tempNode));
+            return MD5.Equals(tempNode.MD5) && Name.Equals(tempNode.Name);
         }
+
+        public override int GetHashCode()=>base.GetHashCode();
+
+        #endregion
     }
 }

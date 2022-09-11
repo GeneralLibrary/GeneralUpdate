@@ -8,7 +8,13 @@ namespace GeneralUpdate.Differential.ContentProvider
 {
     public class FileProvider
     {
+        #region Private Members
+
         private long _fileCount = 0;
+
+        #endregion
+
+        #region Public Methods
 
         /// <summary>
         /// Compare two binary trees with different children.
@@ -18,8 +24,9 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns></returns>
         public async Task<List<FileNode>> Compare(string leftPath, string rightPath)
         {
-            return await Task.Run(() => 
+            return await Task.Run(() =>
             {
+                ResetId();
                 var leftFilenodes = Read(leftPath);
                 var rightFilenodes = Read(rightPath);
                 var leftTree = new FileTree(leftFilenodes);
@@ -29,6 +36,10 @@ namespace GeneralUpdate.Differential.ContentProvider
                 return diffrentTreeNode;
             });
         }
+
+        #endregion
+
+        #region Private Methods
 
         /// <summary>
         /// Recursively read all files in the folder path.
@@ -42,18 +53,19 @@ namespace GeneralUpdate.Differential.ContentProvider
             {
                 var md5 = FileUtil.GetFileMD5(subPath);
                 var subFileInfo = new FileInfo(subPath);
-                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5 });
+                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5, FullName = subFileInfo.FullName });
             }
             foreach (var subPath in Directory.GetDirectories(path))
             {
                 resultFiles.AddRange(Read(subPath));
             }
-            ResetId();
             return resultFiles;
         }
 
-        private long GetId()=> Interlocked.Increment(ref _fileCount);
+        private long GetId() => Interlocked.Increment(ref _fileCount);
 
-        private void ResetId()=> Interlocked.Exchange(ref _fileCount, 0);
+        private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
+
+        #endregion
     }
 }
