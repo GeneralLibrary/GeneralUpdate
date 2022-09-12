@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="GeneralUpdate.PacketTool.MainPage">
+    <ScrollView>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition ></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition ></RowDefinition>
+                <RowDefinition></RowDefinition>
+            </Grid.RowDefinitions>
+            <StackLayout HorizontalOptions="Center" Orientation="Horizontal">
+                <Image WidthRequest="100" HeightRequest="100"   Source="generalupdate_img.png"></Image>
+            </StackLayout>
+            <StackLayout Grid.Row="1" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center" >
+                <Label VerticalOptions="Center" Text="Source path :"></Label>
+                <Entry WidthRequest="400" HeightRequest="30" Margin="3,0,3,0" Text="{Binding SourcePath}" ></Entry>
+                <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Source" ></Button>
+            </StackLayout>
+            <StackLayout Grid.Row="2" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="Target path :"></Label>
+                <Entry WidthRequest="400" HeightRequest="30" Margin="5,0,3,0" Text="{Binding TargetPath}"  ></Entry>
+                <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Target"></Button>
+            </StackLayout>
+            <StackLayout Grid.Row="3" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="Patch path :"></Label>
+                <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding PatchPath}"></Entry>
+                <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Patch" ></Button>
+            </StackLayout>
+            <StackLayout Margin="0,0,50,0" Grid.Row="4" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="url :"></Label>
+                <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding Url}"></Entry>
+            </StackLayout>
+            <StackLayout Grid.Row="5"  HorizontalOptions="Center" WidthRequest="500" Margin="0,10,0,0">
+                <Entry WidthRequest="400" HeightRequest="130" Text="{Binding InfoMessage}" ></Entry>
+            </StackLayout>
+            <StackLayout HorizontalOptions="Center" Grid.Row="6"  HeightRequest="35" Orientation="Horizontal">
+                <Button HorizontalOptions="Center"  Text="Build" WidthRequest="110" HeightRequest="35" Command="{Binding BuildCommand}" />
+                <CheckBox Margin="10,0,0,0" IsChecked="{Binding IsPublish}" SemanticProperties.Hint="If checked, the generated differential update package will be automatically uploaded to the server." />
+                <Label VerticalOptions="Center"  Text="publish"/>
+            </StackLayout>
+        </Grid>
+    </ScrollView>
+</ContentPage>

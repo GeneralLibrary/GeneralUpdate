@@ -103,6 +103,9 @@
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\IniHandle.cs" Link="Differential\Config\Handles\IniHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\JsonHandle.cs" Link="Differential\Config\Handles\JsonHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\XmlHandle.cs" Link="Differential\Config\Handles\XmlHandle.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
@@ -155,6 +158,7 @@
     <Folder Include="Differential\Common\" />
     <Folder Include="Differential\Config\" />
     <Folder Include="Differential\GStream\" />
+    <Folder Include="Differential\ContentProvider\" />
     <Folder Include="Domain\DTO\Assembler\" />
     <Folder Include="Domain\Entity\Assembler\" />
     <Folder Include="Domain\Enum\" />
