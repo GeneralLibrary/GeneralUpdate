@@ -4,9 +4,16 @@
              x:Class="GeneralUpdate.PacketTool.Views.DifferentPage"
              Title="DifferentPage">
     <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
+        <Grid Grid.Row="2" Grid.Column="3">
+            <ListView WidthRequest="120" HeightRequest="600"></ListView>
+            <ListView Grid.Column="1" WidthRequest="120" HeightRequest="600"></ListView>
+            <ListView Grid.Column="2" WidthRequest="120" HeightRequest="600"></ListView>
+            <StackLayout Grid.Row="1" Grid.Column="2" HeightRequest="40" Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                <Button WidthRequest="110" Text="add"></Button>
+                <Button WidthRequest="110" Text="delete"></Button>
+                <Button WidthRequest="110" Text="revert"></Button>
+                <Button WidthRequest="110" Text="go back" Command="{Binding GoBackCommand}"></Button>
+            </StackLayout>
+        </Grid>
     </VerticalStackLayout>
 </ContentPage>

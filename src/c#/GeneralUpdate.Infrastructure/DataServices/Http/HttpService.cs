@@ -37,7 +37,6 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
 
         public async Task PostFileRequest<T>(string filePath,string apiRoute, Action<T> reponseCallback) where T : class
         {
-            T result = default;
             try
             {
                 using (HttpClient client = new HttpClient())

@@ -19,7 +19,7 @@ namespace GeneralUpdate.PacketTool
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
-            
+            Routing.RegisterRoute("DifferentPage", typeof(DifferentPage));
             return builder.Build();
         }
 

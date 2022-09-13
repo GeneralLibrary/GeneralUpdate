@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.PacketTool.Models
 {
-    internal class MainModel
+    public class MainModel
     {
     }
 }

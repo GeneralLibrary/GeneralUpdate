@@ -11,6 +11,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
 
         private string sourcePath, targetPath, patchPath, infoMessage, url;
         private bool isPublish;
+        private AsyncRelayCommand editCommand;
         private AsyncRelayCommand buildCommand;
         private AsyncRelayCommand<string> selectFolderCommand;
         private readonly IFolderPickerService _folderPickerService;
@@ -46,6 +47,15 @@ namespace GeneralUpdate.PacketTool.ViewModels
         public AsyncRelayCommand BuildCommand
         {
             get => buildCommand ?? (buildCommand = new AsyncRelayCommand(BuildPacketCallback));
+        }
+        public AsyncRelayCommand EditCommand
+        {
+            get => editCommand ?? (editCommand = new AsyncRelayCommand(EditCallback));
+        }
+
+        private async Task EditCallback()
+        {
+            await Shell.Current.GoToAsync("DifferentPage");
         }
 
         #endregion
@@ -96,7 +106,6 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 //});
                 //If upload is checked, the differential package will be uploaded to the file server,
                 //and the file server will insert the information of the update package after receiving it.
-                //TODO: Still need to design.
                 if (IsPublish)
                 {
                     var directoryInfo = new DirectoryInfo(TargetPath);

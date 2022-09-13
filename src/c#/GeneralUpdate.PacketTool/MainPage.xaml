@@ -10,7 +10,6 @@
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
-                <RowDefinition ></RowDefinition>
                 <RowDefinition></RowDefinition>
             </Grid.RowDefinitions>
             <StackLayout HorizontalOptions="Center" Orientation="Horizontal">
@@ -35,10 +34,8 @@
                 <Label VerticalOptions="Center"  Text="url :"></Label>
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding Url}"></Entry>
             </StackLayout>
-            <StackLayout Grid.Row="5"  HorizontalOptions="Center" WidthRequest="500" Margin="0,10,0,0">
-                <Entry WidthRequest="400" HeightRequest="130" Text="{Binding InfoMessage}" ></Entry>
-            </StackLayout>
-            <StackLayout HorizontalOptions="Center" Grid.Row="6"  HeightRequest="35" Orientation="Horizontal">
+            <StackLayout HorizontalOptions="Center" Grid.Row="5"  HeightRequest="35" Orientation="Horizontal">
+                <Button HorizontalOptions="Center"  Text="Edit" WidthRequest="110" HeightRequest="35" Command="{Binding EditCommand}" />
                 <Button HorizontalOptions="Center"  Text="Build" WidthRequest="110" HeightRequest="35" Command="{Binding BuildCommand}" />
                 <CheckBox Margin="10,0,0,0" IsChecked="{Binding IsPublish}" SemanticProperties.Hint="If checked, the generated differential update package will be automatically uploaded to the server." />
                 <Label VerticalOptions="Center"  Text="publish"/>
