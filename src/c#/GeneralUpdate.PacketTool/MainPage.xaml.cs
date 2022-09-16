@@ -1,6 +1,4 @@
-﻿using GeneralUpdate.Infrastructure.DataServices.Pick;
-using GeneralUpdate.Infrastructure.MVVM;
-using GeneralUpdate.PacketTool.ViewModels;
+﻿using GeneralUpdate.PacketTool.ViewModels;
 
 namespace GeneralUpdate.PacketTool
 {

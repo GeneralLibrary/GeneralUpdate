@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="GeneralUpdate.PacketTool.MainPage">
+             x:Class="GeneralUpdate.PacketTool.MainPage" Title="GeneralUpdate.PacketTool">
     <ScrollView>
         <Grid>
             <Grid.RowDefinitions>
@@ -10,6 +10,8 @@
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition></RowDefinition>
                 <RowDefinition></RowDefinition>
             </Grid.RowDefinitions>
             <StackLayout HorizontalOptions="Center" Orientation="Horizontal">
@@ -30,15 +32,18 @@
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding PatchPath}"></Entry>
                 <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Patch" ></Button>
             </StackLayout>
-            <StackLayout Margin="0,0,50,0" Grid.Row="4" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+            <StackLayout Margin="0,0,55,0" Grid.Row="4" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
                 <Label VerticalOptions="Center"  Text="url :"></Label>
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding Url}"></Entry>
             </StackLayout>
-            <StackLayout HorizontalOptions="Center" Grid.Row="5"  HeightRequest="35" Orientation="Horizontal">
-                <!--<Button HorizontalOptions="Center"  Text="Edit" WidthRequest="110" HeightRequest="35" Command="{Binding EditCommand}" />-->
+            <StackLayout Margin="0,0,120,0" Grid.Row="5" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="packet name :"></Label>
+                <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding PacketName}" ></Entry>
+            </StackLayout>
+            <StackLayout HorizontalOptions="Center" Grid.Row="6"  HeightRequest="35" Orientation="Horizontal">
                 <Button HorizontalOptions="Center"  Text="Build" WidthRequest="110" HeightRequest="35" Command="{Binding BuildCommand}" />
-                <CheckBox Margin="10,0,0,0" IsChecked="{Binding IsPublish}" SemanticProperties.Hint="If checked, the generated differential update package will be automatically uploaded to the server." />
-                <Label VerticalOptions="Center"  Text="publish"/>
+                <CheckBox Margin="10,0,0,0" IsChecked="{Binding IsPublish}" />
+                <Label VerticalOptions="Center"  Text="publish" SemanticProperties.Hint="If checked, the generated differential update package will be automatically uploaded to the server." />
             </StackLayout>
         </Grid>
     </ScrollView>

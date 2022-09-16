@@ -1,7 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.Input;
+using GeneralUpdate.Infrastructure.Config;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
 using GeneralUpdate.PacketTool.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace GeneralUpdate.PacketTool.ViewModels
 {
@@ -9,21 +11,23 @@ namespace GeneralUpdate.PacketTool.ViewModels
     {
         #region Private Members
 
-        private string sourcePath, targetPath, patchPath, infoMessage, url;
+        private string sourcePath, targetPath, patchPath, infoMessage, url, packetName;
         private bool isPublish;
         private AsyncRelayCommand editCommand;
         private AsyncRelayCommand buildCommand;
         private AsyncRelayCommand<string> selectFolderCommand;
         private readonly IFolderPickerService _folderPickerService;
         private MainService _mainService;
-        
+        private IConfiguration _configuration;
+
         #endregion
 
         #region Constructors
 
-        public MainViewModel(IFolderPickerService folderPickerService)
+        public MainViewModel(IFolderPickerService folderPickerService, IConfiguration config)
         {
             _folderPickerService = folderPickerService;
+            _configuration = config;
             _mainService = new MainService();
             IsPublish = false;
         }
@@ -38,6 +42,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
         public string InfoMessage { get => infoMessage; set => SetProperty(ref infoMessage, value); }
         public bool IsPublish { get => isPublish; set => SetProperty(ref isPublish, value); }
         public string Url { get => url; set => SetProperty(ref url, value); }
+        public string PacketName { get => url; set => SetProperty(ref packetName, value); }
 
         public AsyncRelayCommand<string> SelectFolderCommand
         {
