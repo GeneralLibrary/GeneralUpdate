@@ -8,11 +8,12 @@ namespace GeneralUpdate.Zip.Factory
         /// <summary>
         /// Configure compression parameters.
         /// </summary>
+        /// <param name="name">packet name.</param>
         /// <param name="sourcePath">path to be packaged.</param>
         /// <param name="destinationPath">unzip path.</param>
         /// <param name="encoding">Compressed Content Coding Format.</param>
         /// <param name="includeBaseDirectory">Whether to include the root directory when packaging.</param>
-        void Configs(string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false);
+        void Configs(string name,string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false);
 
         /// <summary>
         /// Create a compressed package.

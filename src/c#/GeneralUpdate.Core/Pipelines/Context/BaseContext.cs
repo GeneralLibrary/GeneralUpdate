@@ -17,6 +17,8 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         public VersionInfo Version { get; set; }
 
+        public string Name { get; set; }
+
         public string ZipfilePath { get; set; }
 
         public string TargetPath { get; set; }

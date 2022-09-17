@@ -31,7 +31,7 @@ namespace GeneralUpdate.Zip
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public IFactory CreatefOperate(OperationType type, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
+        public IFactory CreatefOperate(OperationType type,string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
                 throw new ArgumentNullException("The path cannot be empty !");
@@ -41,12 +41,12 @@ namespace GeneralUpdate.Zip
                 {
                     case OperationType.GZip:
                         _operation = new GeneralZip();
-                        _operation.Configs(sourcePath, destinationPath, encoding, includeBaseDirectory);
+                        _operation.Configs(name,sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
 
                     case OperationType.G7z:
                         _operation = new General7z();
-                        _operation.Configs(sourcePath, destinationPath, encoding, includeBaseDirectory);
+                        _operation.Configs(name,sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
                 }
                 _operation.CompressProgress += OnCompressProgress;
