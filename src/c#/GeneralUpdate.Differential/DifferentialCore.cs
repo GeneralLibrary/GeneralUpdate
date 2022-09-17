@@ -67,7 +67,7 @@ namespace GeneralUpdate.Differential
         /// <param name="type">7z or zip</param>
         /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
-        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null)
+        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null,string name = null)
         {
             try
             {
@@ -113,7 +113,8 @@ namespace GeneralUpdate.Differential
                 var factory = new GeneralZipFactory();
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
                 //The update package exists in the 'target path' directory.
-                factory.CreatefOperate(type, patchPath, targetPath, true, encoding).CreatZip();
+                name = name ?? DateTime.Now.ToString();
+                factory.CreatefOperate(type, name, patchPath, targetPath, true, encoding).CreatZip();
             }
             catch (Exception ex)
             {
