@@ -71,7 +71,8 @@ namespace GeneralUpdate.ClientCore.Strategys
         {
             try
             {
-                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl)) Process.Start("explorer.exe", Packet.UpdateLogUrl);
+                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl) && GetPlatform() == PlatformType.Windows) 
+                    Process.Start("explorer.exe", Packet.UpdateLogUrl);
                 Process.Start(Path.Combine(Packet.InstallPath, appName), Packet.ProcessBase64);
                 Process.GetCurrentProcess().Kill();
                 return true;

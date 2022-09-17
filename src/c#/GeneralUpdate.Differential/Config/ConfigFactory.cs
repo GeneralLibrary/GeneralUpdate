@@ -50,10 +50,7 @@ namespace GeneralUpdate.Differential.Config
                 {
                     lock (_locker)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new ConfigFactory();
-                        }
+                        if (_instance == null) _instance = new ConfigFactory();
                     }
                 }
                 return _instance;
