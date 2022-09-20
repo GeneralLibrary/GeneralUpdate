@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+  </ItemGroup>
+
 </Project>

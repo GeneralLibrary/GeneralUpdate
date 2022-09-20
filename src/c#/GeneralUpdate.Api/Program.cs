@@ -31,7 +31,7 @@ List<VersionDTO> GerVersions()
 
 string GetLastVersion()
 {
-    return "9.1.3.0";
+    return "9.9.9.9";
 }
 
 string GetAppSecretKey()

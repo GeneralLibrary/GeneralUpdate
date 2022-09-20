@@ -49,7 +49,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(ProgressEventAction, ExceptionEventAction, version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
                                 UseMiddleware<MD5Middleware>().
                                 UseMiddleware<ZipMiddleware>().
-                                UseMiddleware<ConfigMiddleware>().
+                                //UseMiddleware<ConfigMiddleware>().
                                 UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Launch();
                         }
