@@ -54,6 +54,7 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\Format.cs" Link="Domain\Enum\Format.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
@@ -161,7 +162,6 @@
     <Folder Include="Differential\ContentProvider\" />
     <Folder Include="Domain\DTO\Assembler\" />
     <Folder Include="Domain\Entity\Assembler\" />
-    <Folder Include="Domain\Enum\" />
     <Folder Include="Domain\Service\" />
     <Folder Include="Domain\VO\" />
     <Folder Include="Download\" />
