@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace GeneralUpdate.Core.Domain.Enum
+﻿namespace GeneralUpdate.Core.Domain.Enum
 {
     public enum ProgressType
     {
@@ -41,6 +37,9 @@ namespace GeneralUpdate.Core.Domain.Enum
         /// </summary>
         Patch,
 
+        /// <summary>
+        /// MD5 code
+        /// </summary>
         MD5
     }
 }

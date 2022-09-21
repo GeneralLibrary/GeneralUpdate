@@ -1,7 +1,8 @@
 ﻿using GeneralUpdate.ClientCore;
-using GeneralUpdate.ClientCore.Strategys;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 
 namespace GeneralUpdate.Client
@@ -78,10 +79,10 @@ namespace GeneralUpdate.Client
                 generalClientBootstrap.Config(baseUrl,"appsecretkey").
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Encoding, Encoding.Default).
-                Option(UpdateOption.Format, "zip").
+                Option(UpdateOption.Format, Format.ZIP).
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 SetCustomOption(ShowCustomOption).
-                Strategy<ClientStrategy>();
+                Strategy<WindowsStrategy>();
                 await generalClientBootstrap.LaunchTaskAsync();
             });
         }

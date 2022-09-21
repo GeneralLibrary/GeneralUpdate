@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys.PlatformWindows
 {
+    /// <summary>
+    /// Update policy based on the Windows platform.
+    /// </summary>
     public class WindowsStrategy : AbstractStrategy
     {
         #region Private Members
@@ -55,7 +58,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         }
                     }
                     Dirty();
-                    StartApp(Packet.AppName);
+                    StartApp(Packet.AppName, Packet.AppType);
                 });
             }
             catch (Exception ex)
@@ -65,13 +68,23 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             }
         }
 
-        protected override bool StartApp(string appName)
+        protected override bool StartApp(string appName,int appType)
         {
             try
             {
                 if (!string.IsNullOrEmpty(Packet.UpdateLogUrl))
                     Process.Start("explorer.exe", Packet.UpdateLogUrl);
-                Process.Start($"{Packet.InstallPath}\\{appName}.exe");
+
+                switch (appType)
+                {
+                    case AppType.ClientApp:
+                        Process.Start(Path.Combine(Packet.InstallPath, appName), Packet.ProcessBase64);
+                        Process.GetCurrentProcess().Kill();
+                        break;
+                    case AppType.UpdateApp:
+                        Process.Start($"{Packet.InstallPath}\\{appName}.exe");
+                        break;
+                }
                 return true;
             }
             catch (Exception ex)

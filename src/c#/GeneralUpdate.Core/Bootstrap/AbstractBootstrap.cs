@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
@@ -19,7 +20,6 @@ namespace GeneralUpdate.Core.Bootstrap
         private volatile Func<TStrategy> _strategyFactory;
         private Packet _packet;
         private IStrategy _strategy;
-        protected const string DefaultFormat = "zip";
 
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
@@ -73,7 +73,7 @@ namespace GeneralUpdate.Core.Bootstrap
         {
             try
             {
-                Packet.Format = $".{GetOption(UpdateOption.Format) ?? DefaultFormat}";
+                Packet.Format = $".{GetOption(UpdateOption.Format) ?? Format.ZIP}";
                 Packet.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
                 Packet.AppName = Packet.AppName ?? GetOption(UpdateOption.MainApp);

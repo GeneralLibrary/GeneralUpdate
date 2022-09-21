@@ -23,7 +23,7 @@ namespace GeneralUpdate.Upgrad
                 bootStrap.Strategy<WindowsStrategy>().
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.DownloadTimeOut, 60).
-                Option(UpdateOption.Format, "zip").
+                Option(UpdateOption.Format, Format.ZIP).
                 Remote(args[0]);
                 await bootStrap.LaunchTaskAsync();
             });

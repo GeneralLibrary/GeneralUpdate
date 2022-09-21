@@ -16,7 +16,7 @@
             <Label x:Name="MyLabel"
                 FontSize="18"
                 HorizontalOptions="Center" />
-            <ProgressBar x:Name="MyProgressBar"></ProgressBar>
+            <ProgressBar x:Name="MyProgressBar"/>
             <Button
                 x:Name="MyButton"
                 Text="launch"
