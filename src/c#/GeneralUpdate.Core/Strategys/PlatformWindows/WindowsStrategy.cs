@@ -82,7 +82,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         Process.GetCurrentProcess().Kill();
                         break;
                     case AppType.UpdateApp:
-                        Process.Start($"{Packet.InstallPath}\\{appName}.exe");
+                        Process.Start($"{Packet.InstallPath}{ Path.DirectorySeparatorChar }{appName}.exe");
                         break;
                 }
                 return true;

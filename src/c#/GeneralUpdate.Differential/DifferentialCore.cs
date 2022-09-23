@@ -76,10 +76,10 @@ namespace GeneralUpdate.Differential
 
                 //Take the left tree as the center to match the files that are not in the right tree .
                 var fileProvider = new FileProvider();
-                var nodes = await fileProvider.Compare(targetPath, appPath);
+                var nodes = await fileProvider.Compare(appPath, targetPath);
 
                 //Binary differencing of like terms .
-                foreach (var file in nodes)
+                foreach (var file in nodes.Item3)
                 {
                     var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
                     var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
@@ -96,13 +96,13 @@ namespace GeneralUpdate.Differential
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
                         tempPath0 = Path.Combine(tempDir, $"{Path.GetFileNameWithoutExtension(file.Name)}{PATCH_FORMAT}");
                     }
-                    var oldfile = Path.Combine(appPath, file.Name);
+                    var oldfile = nodes.Item1.FirstOrDefault(i=>i.Name.Equals(file.Name)).FullName;
                     var newfile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
                     if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.Diff.Contains(extensionName))
                     {
                         //Generate the difference file to the difference directory .
-                        await new BinaryHandle().Clean(Path.Combine(appPath, file.Name), file.FullName, tempPath0);
+                        await new BinaryHandle().Clean(oldfile, newfile, tempPath0);
                     }
                     else
                     {
@@ -113,7 +113,7 @@ namespace GeneralUpdate.Differential
                 var factory = new GeneralZipFactory();
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
                 //The update package exists in the 'target path' directory.
-                name = name ?? DateTime.Now.ToString();
+                name = name ?? Path.GetRandomFileName();
                 factory.CreatefOperate(type, name, patchPath, targetPath, true, encoding).CreatZip();
             }
             catch (Exception ex)

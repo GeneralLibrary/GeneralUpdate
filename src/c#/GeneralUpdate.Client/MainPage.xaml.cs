@@ -3,6 +3,7 @@ using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
+using GeneralUpdate.Differential;
 using System.Text;
 
 namespace GeneralUpdate.Client
@@ -15,6 +16,16 @@ namespace GeneralUpdate.Client
         {
             InitializeComponent();
             MyButton.Clicked += OnClicked;
+            MyButtonMD5.Clicked += OnMD5Clicked;
+        }
+
+        private async void OnMD5Clicked(object sender, EventArgs e)
+        {
+            var path1 = @"F:\temp\source";
+            var path2 = @"F:\temp\target";
+            var path3 = @"F:\temp\patchs";
+            await DifferentialCore.Instance.Clean(path1, path2, path3);
+            //await DifferentialCore.Instance.Drity(path1, path3);
         }
 
         private void OnClicked(object sender, EventArgs e)

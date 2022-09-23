@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Core.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -22,7 +23,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <param name="leftPath">Left tree folder path.</param>
         /// <param name="rightPath">Right tree folder path.</param>
         /// <returns></returns>
-        public async Task<List<FileNode>> Compare(string leftPath, string rightPath)
+        public async Task<ValueTuple<IEnumerable<FileNode>, IEnumerable<FileNode>, IEnumerable<FileNode>>> Compare(string leftPath, string rightPath)
         {
             return await Task.Run(() =>
             {
@@ -33,7 +34,7 @@ namespace GeneralUpdate.Differential.ContentProvider
                 var rightTree = new FileTree(rightFilenodes);
                 List<FileNode> diffrentTreeNode = new List<FileNode>();
                 leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref diffrentTreeNode);
-                return diffrentTreeNode;
+                return ValueTuple.Create(leftFilenodes,rightFilenodes,diffrentTreeNode);
             });
         }
 
