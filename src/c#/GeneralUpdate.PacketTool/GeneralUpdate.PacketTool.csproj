@@ -67,6 +67,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
 	  <ProjectReference Include="..\GeneralUpdate.Infrastructure\GeneralUpdate.Infrastructure.csproj" />
 	</ItemGroup>
 

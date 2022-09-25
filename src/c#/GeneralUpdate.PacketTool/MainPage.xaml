@@ -11,6 +11,8 @@
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
+                <RowDefinition Height="35"></RowDefinition>
                 <RowDefinition></RowDefinition>
                 <RowDefinition></RowDefinition>
             </Grid.RowDefinitions>
@@ -32,15 +34,23 @@
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding PatchPath}"></Entry>
                 <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Patch" ></Button>
             </StackLayout>
-            <StackLayout Margin="0,0,55,0" Grid.Row="4" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
-                <Label VerticalOptions="Center"  Text="url :"></Label>
+            <StackLayout Margin="0,0,100,0" Grid.Row="4" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="server url :"></Label>
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding Url}"></Entry>
             </StackLayout>
             <StackLayout Margin="0,0,120,0" Grid.Row="5" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
                 <Label VerticalOptions="Center"  Text="packet name :"></Label>
                 <Entry WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" Text="{Binding PacketName}" ></Entry>
             </StackLayout>
-            <StackLayout HorizontalOptions="Center" Grid.Row="6"  HeightRequest="35" Orientation="Horizontal">
+            <StackLayout Margin="0,0,85,0" Grid.Row="6" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="format :"></Label>
+                <Picker WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" ItemsSource="{Binding Formats}" SelectedItem="{Binding CurrentFormat}" />
+            </StackLayout>
+            <StackLayout Margin="0,0,100,0" Grid.Row="7" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
+                <Label VerticalOptions="Center"  Text="encoding :"></Label>
+                <Picker WidthRequest="400" HeightRequest="30" Margin="9,0,3,0" SelectedIndex="0" ItemsSource="{Binding Encodings}" SelectedItem="{Binding CurrentEncoding}" />
+            </StackLayout>
+            <StackLayout HorizontalOptions="Center" Grid.Row="8"  HeightRequest="35" Orientation="Horizontal">
                 <Button HorizontalOptions="Center"  Text="Build" WidthRequest="110" HeightRequest="35" Command="{Binding BuildCommand}" />
                 <CheckBox Margin="10,0,0,0" IsChecked="{Binding IsPublish}" />
                 <Label VerticalOptions="Center"  Text="publish" SemanticProperties.Hint="If checked, the generated differential update package will be automatically uploaded to the server." />
