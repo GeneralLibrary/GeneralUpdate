@@ -21,7 +21,6 @@ namespace GeneralUpdate.Core.Domain.Entity.Assembler
             packet.ClientVersion = info.CurrentVersion;
             packet.LastVersion = info.LastVersion;
             packet.UpdateLogUrl = info.LogUrl;
-            packet.IsUpdate = info.IsUpdate;
             packet.Encoding = ConvertUtil.ToEncoding(info.CompressEncoding);
             packet.Format = info.CompressFormat;
             packet.DownloadTimeOut = info.DownloadTimeOut;

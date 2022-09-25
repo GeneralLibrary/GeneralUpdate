@@ -140,7 +140,7 @@ namespace GeneralUpdate.Differential.ContentProvider
                 if (!node.Equals(node0)) nodes.Add(node0);
                 Compare(node.Left, node0.Left, ref nodes);
             }
-            else if (node0.Left != null)
+            else if (node0 != null && node0.Left != null)
             {
                 nodes.Add(node0);
                 Compare(node.Left, node0.Left, ref nodes);
@@ -151,7 +151,7 @@ namespace GeneralUpdate.Differential.ContentProvider
                 if (!node.Equals(node0)) nodes.Add(node0);
                 Compare(node.Right, node0.Right, ref nodes);
             }
-            else if (node0.Right != null)
+            else if (node0 != null && node0.Right != null)
             {
                 nodes.Add(node0);
                 Compare(node == null ? null : node.Right, node0.Right, ref nodes);

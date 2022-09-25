@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace GeneralUpdate.ClientCore
 {
@@ -35,19 +36,20 @@ namespace GeneralUpdate.ClientCore
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
             var upgradResp = await versionService.ValidationVersion(Packet.UpdateUrl);
+            Packet.IsUpgradeUpdate = upgradResp.Body.IsUpdate;
+            Packet.IsMainUpdate = mainResp.Body.IsUpdate;
             //No need to update, return directly.
-            if ((!mainResp.Body.IsUpdate) && (!upgradResp.Body.IsUpdate)) return this;
+            if ((!Packet.IsMainUpdate) && (!Packet.IsUpgradeUpdate)) return this;
             //If the main program needs to be forced to update, the skip will not take effect.
-            if (IsSkip(mainResp.Body.IsForcibly)) return this;
-            var processInfo = new ProcessInfo(AppType.ClientApp, Packet.MainAppName, Packet.InstallPath,
-                    Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
-                    mainResp.Body.IsUpdate, Packet.Encoding, Packet.Format,
-                    Packet.DownloadTimeOut, Packet.AppSecretKey, mainResp.Body.Versions);
-            Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
-            Packet.LastVersion = Packet.UpdateVersions.Last().Version;
+            var isForcibly = mainResp.Body.IsForcibly || upgradResp.Body.IsForcibly;
+            if (IsSkip(isForcibly)) return this;
             Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Body.Versions);
-            Packet.IsUpdate = true;
-            Packet.IsMainUpdate = true;
+            Packet.LastVersion = Packet.UpdateVersions.Last().Version;
+            var processInfo = new ProcessInfo(Packet.MainAppName, Packet.InstallPath,
+                    Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
+                    Packet.Encoding, Packet.Format,Packet.DownloadTimeOut,
+                    Packet.AppSecretKey, mainResp.Body.Versions);
+            Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
             return base.LaunchAsync();
         }
 
@@ -58,19 +60,19 @@ namespace GeneralUpdate.ClientCore
         /// <param name="appName">The updater name does not need to contain an extension.</param>
         /// <returns></returns>
         /// <exception cref="Exception">Parameter initialization is abnormal.</exception>
-        public GeneralClientBootstrap Config(string url,string appSecretKey, string appName = "AutoUpdate.Core")
+        public GeneralClientBootstrap Config(string url,string appSecretKey, string appName = "GeneralUpdate.Upgrad")
         {
             if (string.IsNullOrEmpty(url)) throw new Exception("Url cannot be empty !");
             try
             {
-                string basePath = Environment.CurrentDirectory;
+                string basePath = System.Threading.Thread.GetDomain().BaseDirectory; //AppDomain.CurrentDomain.BaseDirectory;
                 Packet.InstallPath = basePath;
                 Packet.AppSecretKey = appSecretKey;
                 //update app.
                 Packet.AppName = appName;
-                string clienVersion = GetFileVersion(Path.Combine(basePath, Packet.AppName));
+                string clienVersion = GetFileVersion(Path.Combine(basePath, $"{Packet.AppName}.exe"));
                 Packet.ClientVersion = clienVersion;
-                Packet.AppType = AppType.UpdateApp;
+                Packet.AppType = AppType.ClientApp;
                 Packet.UpdateUrl = $"{url}/versions/{ Packet.AppType }/{ clienVersion }/{ Packet.AppSecretKey }";
                 //main app.
                 string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);

@@ -19,7 +19,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             MainAppName = mainAppName ?? throw new ArgumentNullException(nameof(mainAppName));
             Format = format ?? throw new ArgumentNullException(nameof(format));
-            IsUpdate = isUpdate;
+            IsUpgradeUpdate = isUpdate;
             Encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
@@ -53,10 +53,7 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string Format { get; set; }
 
-        /// <summary>
-        /// Whether to force update.
-        /// </summary>
-        public bool IsUpdate { get; set; }
+        public bool IsUpgradeUpdate { get; set; }
 
         public bool IsMainUpdate { get; set; }
 

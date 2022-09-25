@@ -10,6 +10,6 @@
         /// <summary>
         /// upgrade program.
         /// </summary>
-        public const int UpdateApp = 2;
+        public const int UpgradeApp = 2;
     }
 }

@@ -12,19 +12,18 @@ namespace GeneralUpdate.Core.Domain.Entity
     {
         public ProcessInfo() { }
 
-        public ProcessInfo(int appType, string appName, string installPath, string currentVersion, string lastVersion, string logUrl, bool isUpdate,Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
+        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl,Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
         {
-            AppType = appType;
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if(!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! { installPath }." );
             InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
-            LogUrl = logUrl ?? throw new ArgumentNullException(nameof(logUrl));
-            IsUpdate = isUpdate;
+            LogUrl = logUrl;
+            compressEncoding = compressEncoding ?? Encoding.Default;
             CompressEncoding = ConvertUtil.ToEncodingType(compressEncoding);
-            CompressFormat = compressFormat ?? throw new ArgumentNullException(nameof(compressFormat));
-            if (downloadTimeOut <= 0) throw new ArgumentException("Timeout must be greater than 0 !");
+            CompressFormat = compressFormat;
+            if (downloadTimeOut < 0) throw new ArgumentException("Timeout must be greater than 0 !");
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
@@ -54,11 +53,6 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// Update log web address.
         /// </summary>
         public string LogUrl { get; set; }
-
-        /// <summary>
-        /// Whether to update.
-        /// </summary>
-        public bool IsUpdate { get; set; }
 
         public int CompressEncoding { get; set; }
 

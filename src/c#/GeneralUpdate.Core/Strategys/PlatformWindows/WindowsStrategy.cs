@@ -57,7 +57,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                             await pipelineBuilder.Launch();
                         }
                     }
-                    Dirty();
+                    Clear();
                     StartApp(Packet.AppName, Packet.AppType);
                 });
             }
@@ -68,21 +68,20 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             }
         }
 
-        protected override bool StartApp(string appName,int appType)
+        public override bool StartApp(string appName,int appType)
         {
             try
             {
-                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl))
-                    Process.Start("explorer.exe", Packet.UpdateLogUrl);
-
+                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl)) Process.Start("explorer.exe", Packet.UpdateLogUrl);
+                var path = Path.Combine(Packet.InstallPath, appName);
                 switch (appType)
                 {
                     case AppType.ClientApp:
-                        Process.Start(Path.Combine(Packet.InstallPath, appName), Packet.ProcessBase64);
+                        Process.Start(path, Packet.ProcessBase64);
                         Process.GetCurrentProcess().Kill();
                         break;
-                    case AppType.UpdateApp:
-                        Process.Start($"{Packet.InstallPath}{ Path.DirectorySeparatorChar }{appName}.exe");
+                    case AppType.UpgradeApp:
+                        Process.Start(path);
                         break;
                 }
                 return true;
@@ -109,7 +108,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         /// Remove update redundant files.
         /// </summary>
         /// <returns></returns>
-        private bool Dirty()
+        private bool Clear()
         {
             try
             {

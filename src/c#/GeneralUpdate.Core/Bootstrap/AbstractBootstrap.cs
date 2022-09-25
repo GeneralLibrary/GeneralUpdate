@@ -6,6 +6,7 @@ using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.Contracts;
+using System.IO;
 using System.Text;
 
 namespace GeneralUpdate.Core.Bootstrap
@@ -20,6 +21,8 @@ namespace GeneralUpdate.Core.Bootstrap
         private volatile Func<TStrategy> _strategyFactory;
         private Packet _packet;
         private IStrategy _strategy;
+        private const string EXECUTABLE_FILE = ".exe";
+
 
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
@@ -73,11 +76,14 @@ namespace GeneralUpdate.Core.Bootstrap
         {
             try
             {
+                InitStrategy();
+                //When the upgrade stops and does not need to be updated, the client needs to be updated. Start the upgrade assistant directly.
+                if (!Packet.IsUpgradeUpdate && Packet.IsMainUpdate) _strategy.StartApp(Packet.AppName, Packet.AppType);
                 Packet.Format = $".{GetOption(UpdateOption.Format) ?? Format.ZIP}";
                 Packet.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
-                Packet.AppName = Packet.AppName ?? GetOption(UpdateOption.MainApp);
-                Packet.TempPath = $"{ FileUtil.GetTempDirectory(Packet.LastVersion) }\\";
+                Packet.AppName = $"{Packet.AppName ?? GetOption(UpdateOption.MainApp)}{EXECUTABLE_FILE}";
+                Packet.TempPath = $"{FileUtil.GetTempDirectory(Packet.LastVersion)}{Path.DirectorySeparatorChar}";
                 var manager = new DownloadManager<VersionInfo>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
                 manager.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
                 manager.MutiDownloadCompleted += OnMutiDownloadCompleted;
@@ -111,9 +117,8 @@ namespace GeneralUpdate.Core.Bootstrap
 
         protected IStrategy ExcuteStrategy()
         {
-            var strategy = InitStrategy();
-            strategy.Excute();
-            return strategy;
+            if(_strategy != null)  _strategy.Excute();
+            return _strategy;
         }
 
         public virtual TBootstrap Validate()

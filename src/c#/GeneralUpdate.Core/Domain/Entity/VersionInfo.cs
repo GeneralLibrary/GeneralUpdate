@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             Name = name ?? throw new ArgumentNullException(nameof(name));
             MD5 = mD5 ?? throw new ArgumentNullException(nameof(mD5));
             Version = version ?? throw new ArgumentNullException(nameof(version));
-            if(Url == null) throw new ArgumentNullException(nameof(Url));
+            Url = url ?? throw new ArgumentNullException(nameof(Url));
             if (!IsURL(Url)) throw new Exception($"Illegal url {nameof(Url)}");
         }
 

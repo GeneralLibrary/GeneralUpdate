@@ -96,7 +96,8 @@ namespace GeneralUpdate.Differential
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
                         tempPath0 = Path.Combine(tempDir, $"{Path.GetFileNameWithoutExtension(file.Name)}{PATCH_FORMAT}");
                     }
-                    var oldfile = nodes.Item1.FirstOrDefault(i=>i.Name.Equals(file.Name)).FullName;
+                    var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
+                    var oldfile = finOldFile == null ? "" : finOldFile.FullName;
                     var newfile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
                     if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.Diff.Contains(extensionName))
@@ -109,11 +110,11 @@ namespace GeneralUpdate.Differential
                         File.Copy(newfile, Path.Combine(tempDir, Path.GetFileName(newfile)), true);
                     }
                 }
-                _compressProgressCallback = compressProgressCallback;
                 var factory = new GeneralZipFactory();
+                _compressProgressCallback = compressProgressCallback;
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
                 //The update package exists in the 'target path' directory.
-                name = name ?? Path.GetRandomFileName();
+                name = name ?? new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
                 factory.CreatefOperate(type, name, patchPath, targetPath, true, encoding).CreatZip();
             }
             catch (Exception ex)

@@ -21,6 +21,14 @@ namespace GeneralUpdate.Core.Strategys
         void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
 
         /// <summary>
+        /// After the update is complete.
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <param name="appType"></param>
+        /// <returns></returns>
+        bool StartApp(string appName, int appType);
+
+        /// <summary>
         /// Get the platform for the current strategy.
         /// </summary>
         /// <returns></returns>

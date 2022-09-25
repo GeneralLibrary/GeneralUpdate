@@ -3,6 +3,7 @@ using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential;
 using System.Text;
 
@@ -16,16 +17,16 @@ namespace GeneralUpdate.Client
         {
             InitializeComponent();
             MyButton.Clicked += OnClicked;
-            MyButtonMD5.Clicked += OnMD5Clicked;
+            //MyButtonMD5.Clicked += OnMD5Clicked;
         }
 
-        private async void OnMD5Clicked(object sender, EventArgs e)
+        private void OnMD5Clicked(object sender, EventArgs e)
         {
-            var path1 = @"F:\temp\source";
-            var path2 = @"F:\temp\target";
-            var path3 = @"F:\temp\patchs";
-            await DifferentialCore.Instance.Clean(path1, path2, path3);
-            //await DifferentialCore.Instance.Drity(path1, path3);
+            //var path1 = @"F:\temp\source";
+            //var path2 = @"F:\temp\target";
+            //var path3 = @"F:\temp\patchs";
+            //await DifferentialCore.Instance.Clean(path1, path2, path3);
+            //var m = FileUtil.GetFileMD5(@"F:\temp\1664083126.zip");
         }
 
         private void OnClicked(object sender, EventArgs e)
@@ -92,7 +93,7 @@ namespace GeneralUpdate.Client
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.Format, Format.ZIP).
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                SetCustomOption(ShowCustomOption).
+                //SetCustomOption(ShowCustomOption).
                 Strategy<WindowsStrategy>();
                 await generalClientBootstrap.LaunchTaskAsync();
             });
@@ -102,10 +103,14 @@ namespace GeneralUpdate.Client
         /// 让用户决定是否跳过本次更新
         /// </summary>
         /// <returns></returns>
-        private bool ShowCustomOption()
-        {
-            return Shell.Current.DisplayAlert("Upgrad Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "ok","cancel").Result; 
-        }
+        //private bool ShowCustomOption()
+        //{
+        //    Shell.Current.Dispatcher.Dispatch(() => 
+        //    {
+        //        return Shell.Current.DisplayAlert("Upgrad Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "ok", "cancel").Result;
+        //    });
+        //    return false;
+        //}
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
         {

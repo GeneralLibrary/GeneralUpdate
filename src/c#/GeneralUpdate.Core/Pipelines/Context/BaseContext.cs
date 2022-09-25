@@ -29,6 +29,8 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         public Encoding Encoding { get; set; }
 
+        public BaseContext() { }
+
         public BaseContext(Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
             Action<object, ExceptionEventArgs> exceptionEventAction,
             VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)

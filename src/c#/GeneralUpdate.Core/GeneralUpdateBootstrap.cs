@@ -1,6 +1,7 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
+using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
@@ -24,6 +25,7 @@ namespace GeneralUpdate.Core
             {
                 var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
                 Packet = ProcessAssembler.ToPacket(processInfo);
+                Packet.AppType = AppType.UpgradeApp;
                 Packet.TempPath = $"{FileUtil.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}";
             }
             catch (Exception ex)
