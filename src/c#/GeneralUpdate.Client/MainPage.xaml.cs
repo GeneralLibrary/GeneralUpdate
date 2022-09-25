@@ -93,7 +93,7 @@ namespace GeneralUpdate.Client
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.Format, Format.ZIP).
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                //SetCustomOption(ShowCustomOption).
+                SetCustomOption(ShowCustomOption).
                 Strategy<WindowsStrategy>();
                 await generalClientBootstrap.LaunchTaskAsync();
             });
@@ -103,14 +103,13 @@ namespace GeneralUpdate.Client
         /// 让用户决定是否跳过本次更新
         /// </summary>
         /// <returns></returns>
-        //private bool ShowCustomOption()
-        //{
-        //    Shell.Current.Dispatcher.Dispatch(() => 
-        //    {
-        //        return Shell.Current.DisplayAlert("Upgrad Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "ok", "cancel").Result;
-        //    });
-        //    return false;
-        //}
+        private async Task<bool> ShowCustomOption()
+        {
+            return await Shell.Current.Dispatcher.DispatchAsync(() =>
+            {
+                return Shell.Current.DisplayAlert("Upgrad Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "skip", "update");
+            });
+        }
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
         {

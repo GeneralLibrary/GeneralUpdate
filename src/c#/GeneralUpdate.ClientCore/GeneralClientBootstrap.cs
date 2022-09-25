@@ -18,6 +18,7 @@ namespace GeneralUpdate.ClientCore
     public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
     {
         private Func<bool> _customOption;
+        private Func<Task<bool>> _customTaskOption;
 
         public GeneralClientBootstrap() : base() { }
 
@@ -42,7 +43,7 @@ namespace GeneralUpdate.ClientCore
             if ((!Packet.IsMainUpdate) && (!Packet.IsUpgradeUpdate)) return this;
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = mainResp.Body.IsForcibly || upgradResp.Body.IsForcibly;
-            if (IsSkip(isForcibly)) return this;
+            if (await IsSkip(isForcibly)) return this;
             Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Body.Versions);
             Packet.LastVersion = Packet.UpdateVersions.Last().Version;
             var processInfo = new ProcessInfo(Packet.MainAppName, Packet.InstallPath,
@@ -113,6 +114,13 @@ namespace GeneralUpdate.ClientCore
             return this;
         }
 
+        public GeneralClientBootstrap SetCustomOption(Func<Task<bool>> func)
+        {
+            if (func == null) throw new ArgumentNullException(nameof(func));
+            _customTaskOption = func;
+            return this;
+        }
+
         #endregion
 
         #region Private Methods
@@ -135,11 +143,12 @@ namespace GeneralUpdate.ClientCore
         /// User decides if update is required.
         /// </summary>
         /// <returns>is false to continue execution.</returns>
-        private bool IsSkip(bool isForcibly) 
+        private async Task<bool> IsSkip(bool isForcibly) 
         {
             bool isSkip = false;
             if (isForcibly) return false;
             if (_customOption != null) isSkip = _customOption.Invoke();
+            if(_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
             return isSkip;
         }
 
