@@ -1,9 +1,6 @@
 ﻿using GeneralUpdate.Infrastructure.Config;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.PacketTool.ViewModels;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Reflection;
 
 namespace GeneralUpdate.PacketTool
 {
@@ -29,12 +26,6 @@ namespace GeneralUpdate.PacketTool
         public static MauiAppBuilder RegisterOther(this MauiAppBuilder mauiAppBuilder)
         {
             mauiAppBuilder.Services.AddTransient<App>();
-            //var assembly = Assembly.GetExecutingAssembly();
-            //using var stream = assembly.GetManifestResourceStream("GeneralUpdate.PacketTool.appsettings.json");
-            //var config = new ConfigurationBuilder()
-            //            .AddJsonStream(stream)
-            //            .Build();
-            //mauiAppBuilder.Configuration.AddConfiguration(config);
             return mauiAppBuilder;
         }
 

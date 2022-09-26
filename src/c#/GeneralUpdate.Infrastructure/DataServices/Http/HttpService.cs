@@ -17,7 +17,7 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
 
         private HttpService()
         {
-            _url = "";
+            _url = "http://127.0.0.1:5001";
         }
 
         public static HttpService Instance 
@@ -35,7 +35,7 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
             } 
         }
 
-        public async Task PostFileRequest<T>(string filePath,string apiRoute, Action<T> reponseCallback) where T : class
+        public async Task PostFileRequest<T>(string filePath, int clientType, string version, string clientAppKey,string apiRoute, Action<T> reponseCallback) where T : class
         {
             try
             {

@@ -1,10 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using GeneralUpdate.Differential;
-using GeneralUpdate.Infrastructure.Config;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
 using GeneralUpdate.PacketTool.Services;
-using Microsoft.Extensions.Configuration;
 using System.Text;
 
 namespace GeneralUpdate.PacketTool.ViewModels
@@ -14,28 +12,26 @@ namespace GeneralUpdate.PacketTool.ViewModels
         #region Private Members
 
         private string sourcePath, targetPath, patchPath, infoMessage, url, packetName;
-        private List<string> _formats, _encodings;
-        private string _currentFormat, _currentEncoding;
+        private List<string> _formats, _encodings,_appTypes;
+        private string _currentFormat, _currentEncoding, _currnetAppType, _currentVersion, _currentClientAppKey;
         private bool isPublish;
-        private AsyncRelayCommand editCommand;
         private AsyncRelayCommand buildCommand;
         private AsyncRelayCommand<string> selectFolderCommand;
         private readonly IFolderPickerService _folderPickerService;
         private MainService _mainService;
-        private IConfiguration _configuration;
 
         #endregion
 
         #region Constructors
 
-        public MainViewModel(IFolderPickerService folderPickerService, IConfiguration config)
+        public MainViewModel(IFolderPickerService folderPickerService)
         {
             _folderPickerService = folderPickerService;
-            _configuration = config;
             _mainService = new MainService();
             IsPublish = false;
             CurrentEncoding = Encodings.First();
             CurrentFormat = Formats.First();
+            CurrnetAppType = AppTypes.First();
         }
 
         #endregion
@@ -59,13 +55,24 @@ namespace GeneralUpdate.PacketTool.ViewModels
         {
             get => buildCommand ?? (buildCommand = new AsyncRelayCommand(BuildPacketCallback));
         }
-        public AsyncRelayCommand EditCommand
-        {
-            get => editCommand ?? (editCommand = new AsyncRelayCommand(EditCallback));
-        }
-        public List<string> Formats 
+
+        public List<string> AppTypes
         {
             get 
+            {
+                if (_appTypes == null)
+                {
+                    _appTypes = new List<string>();
+                    _appTypes.Add("Client");
+                    _appTypes.Add("Upgrade");
+                }
+                return _appTypes;
+            }
+        }
+
+        public List<string> Formats
+        {
+            get
             {
                 if (_formats == null)
                 {
@@ -108,10 +115,14 @@ namespace GeneralUpdate.PacketTool.ViewModels
             set => SetProperty(ref _currentEncoding, value);
         }
 
-        private async Task EditCallback()
-        {
-            await Shell.Current.GoToAsync("DifferentPage");
+        public string CurrnetAppType 
+        { 
+            get => _currnetAppType; 
+            set => SetProperty(ref _currnetAppType, value); 
         }
+
+        public string CurrentVersion { get => _currentVersion; set => SetProperty(ref _currentVersion, value); }
+        public string CurrentClientAppKey { get => _currentClientAppKey; set => SetProperty(ref _currentClientAppKey, value); }
 
         #endregion
 
@@ -161,12 +172,10 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 //and the file server will insert the information of the update package after receiving it.
                 if (IsPublish)
                 {
-                    var directoryInfo = new DirectoryInfo(TargetPath);
-                    var fileArray = directoryInfo.GetFiles();
-                    var findPacket = fileArray.FirstOrDefault(f => f.Extension.Equals(".zip"));
-                    if (findPacket == null) return;
+                    var packetPath = Path.Combine(TargetPath,PacketName);
+                    if (!File.Exists(packetPath)) await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
                     //TODO:TEST
-                    await _mainService.PostUpgradPakcet<string>(Path.Combine(TargetPath, PacketName),async (resp) => 
+                    await _mainService.PostUpgradPakcet<string>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey, async (resp) =>
                     {
                         await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");
                     });
@@ -179,7 +188,8 @@ namespace GeneralUpdate.PacketTool.ViewModels
         }
 
         private bool ValidationParameters() => (string.IsNullOrEmpty(SourcePath) || string.IsNullOrEmpty(TargetPath) || string.IsNullOrEmpty(PatchPath) ||
-                !Directory.Exists(SourcePath) || !Directory.Exists(TargetPath) || !Directory.Exists(PatchPath));
+                !Directory.Exists(SourcePath) || !Directory.Exists(TargetPath) || !Directory.Exists(PatchPath) || string.IsNullOrEmpty(CurrentVersion) || string.IsNullOrEmpty(Url)
+            || string.IsNullOrEmpty(CurrentClientAppKey));
 
         private Encoding String2Encoding(string encoding)
         {
@@ -224,6 +234,21 @@ namespace GeneralUpdate.PacketTool.ViewModels
                     break;
                 case "7Z":
                     result = Zip.Factory.OperationType.G7z;
+                    break;
+            }
+            return result;
+        }
+
+        private int String2AppType(string appType)
+        {
+            int result = 0;
+            switch (appType)
+            {
+                case "Client":
+                    result = 1;
+                    break;
+                case "UTF8":
+                    result = 2;
                     break;
             }
             return result;
