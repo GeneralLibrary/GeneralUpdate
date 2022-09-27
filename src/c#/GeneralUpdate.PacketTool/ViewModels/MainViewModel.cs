@@ -3,6 +3,7 @@ using GeneralUpdate.Differential;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
 using GeneralUpdate.PacketTool.Services;
+using GeneralUpdate.Zip.Factory;
 using System.Text;
 
 namespace GeneralUpdate.PacketTool.ViewModels
@@ -44,7 +45,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
         public string InfoMessage { get => infoMessage; set => SetProperty(ref infoMessage, value); }
         public bool IsPublish { get => isPublish; set => SetProperty(ref isPublish, value); }
         public string Url { get => url; set => SetProperty(ref url, value); }
-        public string PacketName { get => url; set => SetProperty(ref packetName, value); }
+        public string PacketName { get => packetName; set => SetProperty(ref packetName, value); }
 
         public AsyncRelayCommand<string> SelectFolderCommand
         {
@@ -159,9 +160,15 @@ namespace GeneralUpdate.PacketTool.ViewModels
         /// </summary>
         private async Task BuildPacketCallback()
         {
+            //var packetPath1 = Path.Combine(TargetPath, PacketName);
+            //await _mainService.PostUpgradPakcet<string>(packetPath1, String2AppType(CurrnetAppType), CurrentVersion, CurrentClientAppKey,"", async (resp) =>
+            //{
+            //    await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");
+            //});
+
             if (ValidationParameters())
             {
-                await Shell.Current.DisplayAlert("Build options", "The path is not set or the folder does not exist !", "ok");
+                await Shell.Current.DisplayAlert("Build options", "Required field not filled !", "ok");
                 return;
             }
             try
@@ -175,7 +182,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
                     var packetPath = Path.Combine(TargetPath,PacketName);
                     if (!File.Exists(packetPath)) await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
                     //TODO:TEST
-                    await _mainService.PostUpgradPakcet<string>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey, async (resp) =>
+                    await _mainService.PostUpgradPakcet<string>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
                     {
                         await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");
                     });
@@ -224,7 +231,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
             return result;
         }
 
-        private Zip.Factory.OperationType String2OperationType(string type)
+        private OperationType String2OperationType(string type)
         {
             var result = Zip.Factory.OperationType.GZip;
             switch (type)
@@ -253,6 +260,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
             }
             return result;
         }
+
         #endregion
     }
 }

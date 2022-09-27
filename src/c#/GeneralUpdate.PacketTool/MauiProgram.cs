@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Infrastructure.Config;
-using GeneralUpdate.Infrastructure.DataServices.Pick;
+﻿using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.PacketTool.ViewModels;
 
 namespace GeneralUpdate.PacketTool

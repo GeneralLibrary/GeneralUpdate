@@ -32,7 +32,7 @@ app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientT
     return updateService.Update(clientType, clientVersion, version, clientAppKey, GetAppSecretKey(), false, versions);
 });
 
-app.MapPost("/upload", async Task<IResult> (int clientType,  string version,  string clientAppKey, HttpRequest request) =>
+app.MapPost("/upload", async Task<IResult> ([FromForm] int clientType, [FromForm] string version, [FromForm] string clientAppKey, [FromForm] string md5, HttpRequest request) =>
 {
     try
     {
