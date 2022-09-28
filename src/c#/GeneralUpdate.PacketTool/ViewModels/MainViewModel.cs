@@ -4,7 +4,6 @@ using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
 using GeneralUpdate.PacketTool.Services;
 using GeneralUpdate.Zip.Factory;
-using Java.Util;
 using System.Text;
 
 namespace GeneralUpdate.PacketTool.ViewModels
@@ -183,7 +182,6 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 {
                     var packetPath = Path.Combine(TargetPath,PacketName);
                     if (!File.Exists(packetPath)) await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
-                    //TODO:TEST
                     await _mainService.PostUpgradPakcet<string>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
                     {
                         await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");

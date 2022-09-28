@@ -1,11 +1,24 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 
 namespace GeneralUpdate.Infrastructure.DataServices.Http
 {
     public class MultipartFormDataContentProvider
     {
+        public static MultipartFormDataContent CreateContent(byte[] bytes, string fileName, IDictionary<string, string> addParams)
+        {
+            var strBoundary = DateTime.Now.Ticks.ToString("x");
+            var resultContent = new MultipartFormDataContent(strBoundary);
+            var fileByteContent = CreateByteArrayContent("file", fileName, "application/x-zip", bytes);
+            resultContent.Add(fileByteContent);
+            var paramsByteContent = CreateParamsByteArrayContent(addParams);
+            paramsByteContent.ForEach(element =>
+            {
+                resultContent.Add(element);
+            });
+            return resultContent;
+        }
+
         private static ByteArrayContent CreateByteArrayContent(string key, string fileName, string fileContent,
     byte[] fileBytes)
         {
@@ -13,8 +26,8 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
             fileByteArrayContent.Headers.ContentType = new MediaTypeHeaderValue(fileContent);
             fileByteArrayContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
             {
-                Name = key, //接口匹配name
-                FileName = fileName //附件文件名
+                Name = key,
+                FileName = fileName
             };
             return fileByteArrayContent;
         }
@@ -33,24 +46,7 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
                 };
                 list.Add(byteArray);
             }
-
             return list;
-        }
-
-        public static MultipartFormDataContent CreateContent(byte[] bytes,string fileName, IDictionary<string, string> addParams)
-        {
-            var strBoundary = DateTime.Now.Ticks.ToString("x"); //分隔符
-            var resultContent = new MultipartFormDataContent(strBoundary);
-            //文件
-            var fileByteContent = CreateByteArrayContent("file", fileName, "application/x-zip", bytes);
-            resultContent.Add(fileByteContent);
-            //其它附加参数
-            var paramsByteContent = CreateParamsByteArrayContent(addParams);
-            paramsByteContent.ForEach(el =>
-            {
-                resultContent.Add(el);
-            });
-            return resultContent;
         }
     }
 }
