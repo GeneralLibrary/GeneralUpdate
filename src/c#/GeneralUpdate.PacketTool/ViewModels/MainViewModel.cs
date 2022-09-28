@@ -4,6 +4,7 @@ using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
 using GeneralUpdate.PacketTool.Services;
 using GeneralUpdate.Zip.Factory;
+using Java.Util;
 using System.Text;
 
 namespace GeneralUpdate.PacketTool.ViewModels
@@ -160,17 +161,18 @@ namespace GeneralUpdate.PacketTool.ViewModels
         /// </summary>
         private async Task BuildPacketCallback()
         {
-            //var packetPath1 = Path.Combine(TargetPath, PacketName);
-            //await _mainService.PostUpgradPakcet<string>(packetPath1, String2AppType(CurrnetAppType), CurrentVersion, CurrentClientAppKey,"", async (resp) =>
-            //{
-            //    await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");
-            //});
-
             if (ValidationParameters())
             {
                 await Shell.Current.DisplayAlert("Build options", "Required field not filled !", "ok");
                 return;
             }
+
+            if (ValidationFolder())
+            {
+                await Shell.Current.DisplayAlert("Build options", "Folder does not exist !", "ok");
+                return;
+            }
+
             try
             {
                 await DifferentialCore.Instance.Clean(SourcePath, TargetPath, PatchPath, (sender, args) =>{},
@@ -194,9 +196,10 @@ namespace GeneralUpdate.PacketTool.ViewModels
             }
         }
 
-        private bool ValidationParameters() => (string.IsNullOrEmpty(SourcePath) || string.IsNullOrEmpty(TargetPath) || string.IsNullOrEmpty(PatchPath) ||
-                !Directory.Exists(SourcePath) || !Directory.Exists(TargetPath) || !Directory.Exists(PatchPath) || string.IsNullOrEmpty(CurrentVersion) || string.IsNullOrEmpty(Url)
-            || string.IsNullOrEmpty(CurrentClientAppKey));
+        private bool ValidationParameters() => (string.IsNullOrEmpty(SourcePath) || string.IsNullOrEmpty(TargetPath) || string.IsNullOrEmpty(PatchPath) || 
+            string.IsNullOrEmpty(PacketName) || string.IsNullOrEmpty(CurrentFormat) || string.IsNullOrEmpty(CurrentEncoding));
+
+        private bool ValidationFolder() => (!Directory.Exists(SourcePath) || !Directory.Exists(TargetPath) || !Directory.Exists(PatchPath));
 
         private Encoding String2Encoding(string encoding)
         {

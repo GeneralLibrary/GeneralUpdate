@@ -28,19 +28,23 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
         {
             try
             {
-                using (HttpClient client = new HttpClient())
+                using (var fileStream = File.Open(filePath, FileMode.Open))
                 {
-                    client.Timeout = new TimeSpan(timeOutInMillisecond);
-                    var content = new MultipartFormDataContent();
-                    content.Add(new MultipartFormDataContentProvider(parameters));
-                    if (File.Exists(filePath))
+                    var bytes = new byte[fileStream.Length];
+                    fileStream.Read(bytes, 0, bytes.Length);
+                    using (var client = new HttpClient())
                     {
-                        var fileName = Path.GetFileName(filePath);
-                        content.Add(new ByteArrayContent(File.ReadAllBytes(filePath)), "file", fileName);
+                        client.Timeout = new TimeSpan(timeOutInMillisecond);
+                        var message = new HttpRequestMessage(HttpMethod.Post, url);
+                        message.Content = MultipartFormDataContentProvider.CreateContent(bytes,Path.GetFileName(filePath), parameters);
+                        var responseMessage = await client.SendAsync(message);
+                        if (responseMessage.IsSuccessStatusCode)
+                        {
+                            var response = await responseMessage.Content.ReadAsStringAsync();
+                            var obj = JsonSerializer.Deserialize<T>(response, _serializerOptions);
+                            reponseCallback(obj);
+                        }
                     }
-                    var response = await client.PostAsync(url, content).Result.Content.ReadAsStringAsync();
-                    var obj = JsonSerializer.Deserialize<T>(response, _serializerOptions);
-                    reponseCallback(obj);
                 }
             }
             catch (Exception ex)

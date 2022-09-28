@@ -58,6 +58,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <MauiAsset Include="appsettings.json" />
 	</ItemGroup>
 
@@ -75,6 +80,10 @@
 	  <None Update="appsettings.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="DTO\" />
 	</ItemGroup>
 
 </Project>

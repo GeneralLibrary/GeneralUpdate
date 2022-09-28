@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="DTO\VersionDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="DTO\VersionRespDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Services\AppType.cs" />
