@@ -12,7 +12,7 @@ namespace GeneralUpdate.PacketTool.Services
             parameters.Add("version", version);
             parameters.Add("clientAppKey", clientAppKey);
             parameters.Add("md5", md5);
-            await HttpService.Instance.PostFileRequest(remoteUrl,parameters, filePath, reponseCallback);
+            await HttpService.Instance.PostFileRequest<T>(remoteUrl,parameters, filePath, reponseCallback);
         }
     }
 }

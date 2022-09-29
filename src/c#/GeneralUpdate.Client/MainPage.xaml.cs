@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.ClientCore;
+using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
@@ -12,12 +13,24 @@ namespace GeneralUpdate.Client
     public partial class MainPage : ContentPage
     {
         private const string baseUrl = @"http://127.0.0.1:5001";
+        private const string hubName = "versionhub";
 
         public MainPage()
         {
             InitializeComponent();
             MyButton.Clicked += OnClicked;
+            Loaded += OnLoaded;
             //MyButtonMD5.Clicked += OnMD5Clicked;
+        }
+
+        private void OnLoaded(object sender, EventArgs e)
+        {
+            VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
+        }
+
+        private void GetMessage(string msg)
+        {
+            Shell.Current.DisplayAlert("New Version", msg, "ok");
         }
 
         private void OnMD5Clicked(object sender, EventArgs e)

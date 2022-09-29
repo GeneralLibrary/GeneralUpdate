@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.Input;
+using GeneralUpdate.AspNetCore.DTO;
+using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Differential;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
@@ -25,7 +27,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
 
         #region Constructors
 
-        public MainViewModel(IFolderPickerService folderPickerService)
+        public MainViewModel(IFolderPickerService folderPickerService) 
         {
             _folderPickerService = folderPickerService;
             _mainService = new MainService();
@@ -176,15 +178,20 @@ namespace GeneralUpdate.PacketTool.ViewModels
             {
                 await DifferentialCore.Instance.Clean(SourcePath, TargetPath, PatchPath, (sender, args) =>{},
                     String2OperationType(CurrentFormat),String2Encoding(CurrentEncoding), PacketName);
-                //If upload is checked, the differential package will be uploaded to the file server,
-                //and the file server will insert the information of the update package after receiving it.
                 if (IsPublish)
                 {
                     var packetPath = Path.Combine(TargetPath,PacketName);
                     if (!File.Exists(packetPath)) await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
-                    await _mainService.PostUpgradPakcet<string>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
+                    await _mainService.PostUpgradPakcet<UploadReapDTO>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
                     {
-                        await Shell.Current.DisplayAlert("Build options", $"Release success!", "ok");
+                        if (resp.Code == HttpStatus.OK)
+                        {
+                            await Shell.Current.DisplayAlert("Build options", resp.Message, "ok");
+                        }
+                        else
+                        {
+                            await Shell.Current.DisplayAlert("Build options", resp.Body, "cancel");
+                        }
                     });
                 }
             }

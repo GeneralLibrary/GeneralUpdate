@@ -17,4 +17,21 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="DTO\VersionDTO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="DTO\VersionRespDTO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Enum\AppType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\Format.cs" Link="Enum\Format.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Enum\HttpStatus.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Enum\PlatformType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Enum\ProgressType.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="DTO\" />
+	  <Folder Include="Enum\" />
+	</ItemGroup>
+
 </Project>

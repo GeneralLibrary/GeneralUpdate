@@ -1,15 +1,39 @@
 using GeneralUpdate.AspNetCore.DTO;
+using GeneralUpdate.AspNetCore.Hubs;
 using GeneralUpdate.AspNetCore.Services;
 using GeneralUpdate.Core.Domain.DTO;
 using GeneralUpdate.Core.Domain.Enum;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 builder.Services.AddSingleton<IUpdateService, GeneralUpdateService>();
+builder.Services.AddSignalR();
 var app = builder.Build();
+
+/**
+ * Push the latest version information in real time.
+ */
+app.MapHub<VersionHub>("/versionhub");
+app.Use(async (context, next) =>
+{
+    var hubContext = context.RequestServices.GetRequiredService<IHubContext<VersionHub>>();
+    while (true)
+    {
+        await CommonHubContextMethod((IHubContext)hubContext);
+        if (next != null) await next.Invoke();
+    }
+
+});
+
+async Task CommonHubContextMethod(IHubContext context)
+{
+    await context.Clients.All.SendAsync("clientMethod", "");
+}
+
+/**
+ * Check if an update is required.
+ */
 app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientType, string clientVersion, string clientAppKey, IUpdateService updateService) =>
 {
     var versions = new List<VersionDTO>();
@@ -34,6 +58,9 @@ app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientT
     return updateService.Update(clientType, clientVersion, version, clientAppKey, GetAppSecretKey(), false, versions);
 });
 
+/**
+ * Upload update package.
+ */
 app.MapPost("/upload", async Task<string> (HttpContext context,HttpRequest request) =>
 {
     var uploadReapDTO = new UploadReapDTO();
@@ -58,8 +85,7 @@ app.MapPost("/upload", async Task<string> (HttpContext context,HttpRequest reque
         await using var fileStream = new FileStream(localPath, FileMode.CreateNew, FileAccess.Write);
         fileStream.Write(buffer, 0, buffer.Length);
 
-        //TODO: data persistence.
-        //To mysql , sqlserver....
+        //TODO: data persistence.To mysql , sqlserver....
 
         uploadReapDTO.Code = HttpStatus.OK;
         uploadReapDTO.Body = "Published successfully.";

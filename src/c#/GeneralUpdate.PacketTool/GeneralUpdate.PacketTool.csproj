@@ -58,11 +58,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
-	  <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <MauiAsset Include="appsettings.json" />
 	</ItemGroup>
 
@@ -73,6 +68,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+	  <ProjectReference Include="..\GeneralUpdate.Domain\GeneralUpdate.Domain.csproj" />
 	  <ProjectReference Include="..\GeneralUpdate.Infrastructure\GeneralUpdate.Infrastructure.csproj" />
 	</ItemGroup>
 
@@ -80,10 +76,6 @@
 	  <None Update="appsettings.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="DTO\" />
 	</ItemGroup>
 
 </Project>
