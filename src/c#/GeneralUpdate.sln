@@ -35,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Api", "Genera
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Client", "GeneralUpdate.Client\GeneralUpdate.Client.csproj", "{EBDB251D-014F-473B-A30B-BBCF50BC23F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Upgrad", "GeneralUpdate.Upgrad\GeneralUpdate.Upgrad.csproj", "{E1F9FF93-CA63-4A9C-82F0-450F09ED81F9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Upgrad", "GeneralUpdate.Upgrad\GeneralUpdate.Upgrad.csproj", "{E1F9FF93-CA63-4A9C-82F0-450F09ED81F9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -30,7 +30,8 @@ namespace GeneralUpdate.Client
 
         private void GetMessage(string msg)
         {
-            Shell.Current.DisplayAlert("New Version", msg, "ok");
+            Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "ok");
+
         }
 
         private void OnMD5Clicked(object sender, EventArgs e)

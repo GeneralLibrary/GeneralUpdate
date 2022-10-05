@@ -9,7 +9,7 @@
     }
   },
   "profiles": {
-    "AutoUpdate.MinimalService": {
+    "GeneralUpdate.Api": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,

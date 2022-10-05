@@ -58,6 +58,8 @@ namespace GeneralUpdate.AspNetCore.Hubs
             }
         }
 
+        
+
         /// <summary>
         /// Kick client connection from group.
         /// </summary>
@@ -81,5 +83,27 @@ namespace GeneralUpdate.AspNetCore.Hubs
         public Task ThrowException()=> throw new HubException("This error will be sent to the client!");
 
         #endregion Public Methods
+    }
+
+    public static class HubProvider
+    {
+        private const string GroupName = "VersionGroup";
+        private const string ReceiveMessageflag = "ReceiveMessage";
+
+        public static async Task SendMessage(this IHubContext<Hub> hub, string user, string message)
+        {
+            if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(message))
+                throw new ArgumentNullException($"'VersionHub' The required parameter send message cannot be null !");
+
+            try
+            {
+                var clientParameter = SerializeUtil.Serialize(message);
+                await hub.Clients.Groups(GroupName).SendAsync(ReceiveMessageflag, user, clientParameter);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"'VersionHub' Send message error :  {ex.Message} .", ex.InnerException);
+            }
+        }
     }
 }

@@ -3,8 +3,10 @@ using GeneralUpdate.AspNetCore.Hubs;
 using GeneralUpdate.AspNetCore.Services;
 using GeneralUpdate.Core.Domain.DTO;
 using GeneralUpdate.Core.Domain.Enum;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
+using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IUpdateService, GeneralUpdateService>();
@@ -15,21 +17,21 @@ var app = builder.Build();
  * Push the latest version information in real time.
  */
 app.MapHub<VersionHub>("/versionhub");
-app.Use(async (context, next) =>
-{
-    var hubContext = context.RequestServices.GetRequiredService<IHubContext<VersionHub>>();
-    while (true)
-    {
-        await CommonHubContextMethod((IHubContext)hubContext);
-        if (next != null) await next.Invoke();
-    }
 
+app.MapPost("/push", async Task<string> (HttpContext context) =>
+{
+    try
+    {
+        var hubContext = context.RequestServices.GetRequiredService<IHubContext<VersionHub>>();
+        await hubContext.SendMessage("TESTNAME", "123");
+    }
+    catch (Exception ex)
+    {
+        return ex.Message;
+    }
+    return "OK";
 });
 
-async Task CommonHubContextMethod(IHubContext context)
-{
-    await context.Clients.All.SendAsync("clientMethod", "");
-}
 
 /**
  * Check if an update is required.
