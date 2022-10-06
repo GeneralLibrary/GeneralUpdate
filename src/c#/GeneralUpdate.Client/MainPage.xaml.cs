@@ -3,6 +3,9 @@ using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Strategys.PlatformAndroid;
+using GeneralUpdate.Core.Strategys.PlatformiOS;
+using GeneralUpdate.Core.Strategys.PlatformMac;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 

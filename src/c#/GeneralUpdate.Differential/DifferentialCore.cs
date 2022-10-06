@@ -88,13 +88,13 @@ namespace GeneralUpdate.Differential
                     if (string.IsNullOrEmpty(tempPath))
                     {
                         tempDir = patchPath;
-                        tempPath0 = Path.Combine(patchPath, $"{Path.GetFileNameWithoutExtension(file.Name)}{PATCH_FORMAT}");
+                        tempPath0 = Path.Combine(patchPath, $"{file.Name}{PATCH_FORMAT}");
                     }
                     else
                     {
                         tempDir = Path.Combine(patchPath, tempPath);
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
-                        tempPath0 = Path.Combine(tempDir, $"{Path.GetFileNameWithoutExtension(file.Name)}{PATCH_FORMAT}");
+                        tempPath0 = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
                     }
                     var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
                     var oldfile = finOldFile == null ? "" : finOldFile.FullName;
@@ -143,7 +143,11 @@ namespace GeneralUpdate.Differential
                 foreach (var oldFile in oldFiles)
                 {
                     //Only the difference file (.patch) can be updated here.
-                    var findFile = patchFiles.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f.Name).Equals(Path.GetFileNameWithoutExtension(oldFile.Name)));
+                    var findFile = patchFiles.FirstOrDefault(f => 
+                    {
+                        var tempName = Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "");
+                        return tempName.Equals(oldFile.Name);
+                    });
                     if (findFile != null)
                     {
                         var extensionName = Path.GetExtension(findFile.FullName);

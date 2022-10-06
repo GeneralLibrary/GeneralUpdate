@@ -24,7 +24,7 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
             } 
         }
 
-        public async Task PostFileRequest<T>(string url, Dictionary<string, string> parameters, string filePath , Action<T> reponseCallback, int timeOutInMillisecond = 1000 * 10) where T : class
+        public async Task PostFileRequest<T>(string url, Dictionary<string, string> parameters, string filePath , Action<T> reponseCallback) where T : class
         {
             try
             {
@@ -34,7 +34,6 @@ namespace GeneralUpdate.Infrastructure.DataServices.Http
                     fileStream.Read(bytes, 0, bytes.Length);
                     using (var client = new HttpClient())
                     {
-                        client.Timeout = new TimeSpan(timeOutInMillisecond);
                         var message = new HttpRequestMessage(HttpMethod.Post, url);
                         message.Content = MultipartFormDataContentProvider.CreateContent(bytes,Path.GetFileName(filePath), parameters);
                         var responseMessage = await client.SendAsync(message);

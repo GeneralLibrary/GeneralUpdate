@@ -80,8 +80,8 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 if (_formats == null)
                 {
                     _formats = new List<string>();
-                    _formats.Add("ZIP");
-                    _formats.Add("7Z");
+                    _formats.Add(".zip");
+                    _formats.Add(".7z");
                 }
                 return _formats;
             }
@@ -178,12 +178,24 @@ namespace GeneralUpdate.PacketTool.ViewModels
             {
                 await DifferentialCore.Instance.Clean(SourcePath, TargetPath, PatchPath, (sender, args) =>{},
                     String2OperationType(CurrentFormat),String2Encoding(CurrentEncoding), PacketName);
+
+                await DifferentialCore.Instance.Drity(SourcePath,PatchPath);
                 if (IsPublish)
                 {
-                    var packetPath = Path.Combine(TargetPath,PacketName);
-                    if (!File.Exists(packetPath)) await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
-                    await _mainService.PostUpgradPakcet<UploadReapDTO>(packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
+                    var packetPath = Path.Combine(TargetPath,$"{PacketName}{CurrentFormat}");
+                    if (!File.Exists(packetPath)) 
                     {
+                        await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
+                        return;
+                    }
+                    await _mainService.PostUpgradPakcet<UploadReapDTO>(Url,packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
+                    {
+                        if (resp == null) 
+                        {
+                            await Shell.Current.DisplayAlert("Build options", "Upload failed !", "cancel");
+                            return;
+                        }
+
                         if (resp.Code == HttpStatus.OK)
                         {
                             await Shell.Current.DisplayAlert("Build options", resp.Message, "ok");
@@ -194,10 +206,14 @@ namespace GeneralUpdate.PacketTool.ViewModels
                         }
                     });
                 }
+                else
+                {
+                    await Shell.Current.DisplayAlert("Build options", "Build complete.", "ok");
+                }
             }
             catch (Exception ex)
             {
-                await Shell.Current.DisplayAlert("Build options", $"Operation failed : {TargetPath} , Error : {ex.Message}  !", "ok");
+                await Shell.Current.DisplayAlert("Build options", $"Operation failed : {TargetPath} , Error : {ex.Message}  !", "cancel");
             }
         }
 

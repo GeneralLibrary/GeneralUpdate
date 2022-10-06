@@ -27,10 +27,17 @@ namespace GeneralUpdate.Zip
         public event CompressProgressEventHandler CompressProgress;
 
         /// <summary>
-        /// Select archive format .
+        /// Configuring Compression.
         /// </summary>
-        /// <param name="type"></param>
+        /// <param name="type">Enumeration selects the compressed package format to operate on.(OperationType.GZip , OperationType.G7z)</param>
+        /// <param name="name">Compressed package Name.</param>
+        /// <param name="sourcePath">Source file path.</param>
+        /// <param name="destinationPath">The target path.</param>
+        /// <param name="includeBaseDirectory">Whether to include the root directory when packing.</param>
+        /// <param name="encoding">Compressed package encoding format.</param>
         /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="Exception"></exception>
         public IFactory CreatefOperate(OperationType type,string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
