@@ -33,6 +33,7 @@
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
+    <Folder Include="CustomAwaiter\" />
   </ItemGroup>
 
   <ItemGroup>

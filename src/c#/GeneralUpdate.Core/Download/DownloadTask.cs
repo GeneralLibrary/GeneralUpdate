@@ -1,5 +1,6 @@
-﻿using GeneralUpdate.Core.CustomAwaiter;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.CustomAwaiter;
+using GeneralUpdate.Core.Domain.Enum;
 using System;
 using System.Globalization;
 using System.Reflection;
@@ -94,16 +95,12 @@ namespace GeneralUpdate.Core.Download
                 try
                 {
                     var interval = DateTime.Now - StartTime;
-
                     var downLoadSpeed = interval.Seconds < 1
                         ? ToUnit(ReceivedBytes - BeforBytes)
                         : ToUnit(ReceivedBytes - BeforBytes / interval.Seconds);
-
                     var size = (TotalBytes - ReceivedBytes) / DEFAULT_DELTA;
                     var remainingTime = new DateTime().AddSeconds(Convert.ToDouble(size));
-
                     _manager.OnMutiDownloadStatistics(this, new MutiDownloadStatisticsEventArgs() { Version = _version, Remaining = remainingTime, Speed = downLoadSpeed });
-
                     StartTime = DateTime.Now;
                     BeforBytes = ReceivedBytes;
                 }

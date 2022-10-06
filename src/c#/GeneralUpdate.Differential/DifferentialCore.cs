@@ -1,6 +1,7 @@
 ﻿using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
+using GeneralUpdate.Differential.ContentProvider;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
@@ -20,7 +21,6 @@ namespace GeneralUpdate.Differential
         /// Differential file format .
         /// </summary>
         private const string PATCH_FORMAT = ".patch";
-
         private const string PATCHS = "patchs";
 
         private static readonly object _lockObj = new object();
@@ -32,8 +32,7 @@ namespace GeneralUpdate.Differential
 
         #region Constructors
 
-        private DifferentialCore()
-        { }
+        private DifferentialCore() { }
 
         #endregion Constructors
 
@@ -47,10 +46,7 @@ namespace GeneralUpdate.Differential
                 {
                     lock (_lockObj)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new DifferentialCore();
-                        }
+                        if (_instance == null) _instance = new DifferentialCore();
                     }
                 }
                 return _instance;
@@ -71,7 +67,7 @@ namespace GeneralUpdate.Differential
         /// <param name="type">7z or zip</param>
         /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
-        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null)
+        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null,string name = null)
         {
             try
             {
@@ -79,9 +75,11 @@ namespace GeneralUpdate.Differential
                 if (!Directory.Exists(patchPath)) Directory.CreateDirectory(patchPath);
 
                 //Take the left tree as the center to match the files that are not in the right tree .
-                var tupleResult = FileUtil.Compare(targetPath, appPath);
+                var fileProvider = new FileProvider();
+                var nodes = await fileProvider.Compare(appPath, targetPath);
+
                 //Binary differencing of like terms .
-                foreach (var file in tupleResult)
+                foreach (var file in nodes.Item3)
                 {
                     var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
                     var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
@@ -98,24 +96,26 @@ namespace GeneralUpdate.Differential
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
                         tempPath0 = Path.Combine(tempDir, $"{Path.GetFileNameWithoutExtension(file.Name)}{PATCH_FORMAT}");
                     }
-                    var oldfile = Path.Combine(appPath, file.Name);
+                    var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
+                    var oldfile = finOldFile == null ? "" : finOldFile.FullName;
                     var newfile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
                     if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.Diff.Contains(extensionName))
                     {
                         //Generate the difference file to the difference directory .
-                        await new BinaryHandle().Clean(Path.Combine(appPath, file.Name), file.FullName, tempPath0);
+                        await new BinaryHandle().Clean(oldfile, newfile, tempPath0);
                     }
                     else
                     {
                         File.Copy(newfile, Path.Combine(tempDir, Path.GetFileName(newfile)), true);
                     }
                 }
-                _compressProgressCallback = compressProgressCallback;
                 var factory = new GeneralZipFactory();
+                _compressProgressCallback = compressProgressCallback;
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
                 //The update package exists in the 'target path' directory.
-                factory.CreatefOperate(type, patchPath, targetPath, true, encoding).CreatZip();
+                name = name ?? new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
+                factory.CreatefOperate(type, name, patchPath, targetPath, true, encoding).CreatZip();
             }
             catch (Exception ex)
             {

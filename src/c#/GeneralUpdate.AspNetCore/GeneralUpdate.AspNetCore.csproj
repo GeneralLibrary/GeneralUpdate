@@ -15,13 +15,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Core\DTOs\BaseRequestDTO.cs" Link="DTOs\BaseRequestDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\BaseResponseDTO.cs" Link="DTOs\BaseResponseDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\IRequest.cs" Link="DTOs\IRequest.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\IResponse.cs" Link="DTOs\IResponse.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\UpdateValidateRespDTO.cs" Link="DTOs\UpdateValidateRespDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\UpdateVersionDTO.cs" Link="DTOs\UpdateVersionDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\DTOs\UpdateVersionsRespDTO.cs" Link="DTOs\UpdateVersionsRespDTO.cs" />
+    <Compile Remove="DTOs\**" />
+    <EmbeddedResource Remove="DTOs\**" />
+    <None Remove="DTOs\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="DTO\VersionDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="DTO\VersionRespDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Services\AppType.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Services\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utils\SerializeUtil.cs" />
   </ItemGroup>
 
@@ -35,11 +40,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\" />
-    <Folder Include="DTOs\" />
     <Folder Include="Utils\" />
     <Folder Include="Utils\" />
-    <Folder Include="DTOs\" />
+    <Folder Include="Utils\" />
     <Folder Include="Utils\" />
   </ItemGroup>
 

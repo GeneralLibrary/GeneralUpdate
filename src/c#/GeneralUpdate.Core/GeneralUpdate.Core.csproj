@@ -29,9 +29,6 @@
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Models\UpdateConfig.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <None Remove="GeneralUpdate.Core.2.0.0.nupkg" />
     <None Remove="GeneralUpdate.Core.3.2.1.nupkg" />
     <None Remove="GeneralUpdate.Core.3.6.9.nupkg" />

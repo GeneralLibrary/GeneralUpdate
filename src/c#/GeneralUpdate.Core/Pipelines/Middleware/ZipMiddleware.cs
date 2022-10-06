@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Pipelines.Context;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Differential.Config;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
@@ -47,7 +47,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 var generalZipfactory = new GeneralZipFactory();
                 generalZipfactory.UnZipProgress += (sender, e) => context.OnProgressEventAction(this, ProgressType.Updatefile, "Updatting file...");
                 generalZipfactory.Completed += (sender, e) => isComplated = true;
-                generalZipfactory.CreatefOperate(MatchType(context.Format), context.ZipfilePath, context.TargetPath, false, context.Encoding).
+                generalZipfactory.CreatefOperate(MatchType(context.Format), context.Name, context.ZipfilePath, context.TargetPath, false, context.Encoding).
                     UnZip();
                 return isComplated;
             }

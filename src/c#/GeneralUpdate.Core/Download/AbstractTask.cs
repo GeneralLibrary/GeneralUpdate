@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;

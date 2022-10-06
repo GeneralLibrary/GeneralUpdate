@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Models;
-using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.Entity;
 using System;
 
 namespace GeneralUpdate.Core.Strategys
@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Strategys
     public interface IStrategy
     {
         /// <summary>
-        /// execution strategy.
+        /// Execution strategy.
         /// </summary>
         void Excute();
 
@@ -18,6 +18,20 @@ namespace GeneralUpdate.Core.Strategys
         /// Create a policy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
-        void Create(string platformType,IFile file, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
+        void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
+
+        /// <summary>
+        /// After the update is complete.
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <param name="appType"></param>
+        /// <returns></returns>
+        bool StartApp(string appName, int appType);
+
+        /// <summary>
+        /// Get the platform for the current strategy.
+        /// </summary>
+        /// <returns></returns>
+        string GetPlatform();
     }
 }

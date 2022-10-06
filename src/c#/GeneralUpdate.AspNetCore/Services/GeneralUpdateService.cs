@@ -1,9 +1,9 @@
-﻿using GeneralUpdate.AspNetCore.Models;
-using GeneralUpdate.Core.DTOs;
+﻿using GeneralUpdate.AspNetCore.DTO;
+using GeneralUpdate.Core.Domain.DTO;
+using GeneralUpdate.Core.Domain.Enum;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.AspNetCore.Services
 {
@@ -18,78 +18,49 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="isForce">Do you need to force an update.</param>
         /// <param name="getUrlsAction">Each version update (Query the latest version information in the database according to the client version number).</param>
         /// <returns></returns>
-        public async Task<string> UpdateValidateTaskAsync(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
-            bool isForce, Func<int, string, Task<List<UpdateVersionDTO>>> getUrlsAction)
+        public string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey,
+            bool isForce, List<VersionDTO> versions)
         {
-            ParameterVerification(clientType, clientVersion, serverLastVersion, clientAppkey, appSecretKey, getUrlsAction);
+            ParameterVerification(clientType, clientVersion, serverLastVersion, clientAppkey, appSecretKey, versions);
             if (!clientAppkey.Equals(appSecretKey)) throw new Exception("App key does not exist or is incorrect !");
             Version clientLastVersion;
-            var respDTO = new UpdateValidateRespDTO();
+            var respDTO = new VersionRespDTO();
             try
             {
                 if (!Version.TryParse(clientVersion, out clientLastVersion))
                 {
                     respDTO.Message = $"{ RespMessage.RequestFailed } Wrong version number.";
-                    respDTO.Code = ResponseStatus.Bad;
+                    respDTO.Code = HttpStatus.BAD_REQUEST;
                     return null;
                 }
                 var lastVersion = new Version(serverLastVersion);
                 if (clientLastVersion < lastVersion)
                 {
-                    respDTO.Body = new UpdateValidateDTO();
-                    var body = respDTO.Body;
-                    body.ClientType = clientType;
-                    body.UpdateVersions = await getUrlsAction(clientType, clientVersion);
-                    body.IsForcibly = isForce;
-                    body.IsUpdate = true;
-                    respDTO.Code = ResponseStatus.Success;
+                    respDTO.Body = new VersionBodyDTO() { ClientType = clientType, Versions = versions, IsUpdate = true, IsForcibly = isForce };
+                    respDTO.Code = HttpStatus.OK;
                     respDTO.Message = RespMessage.RequestSucceeded;
                 }
                 else
                 {
-                    respDTO.Body = new UpdateValidateDTO() { UpdateVersions = new List<UpdateVersionDTO>() , ClientType = clientType };
-                    respDTO.Code = ResponseStatus.Success;
+                    respDTO.Body = new VersionBodyDTO() { ClientType = clientType, Versions = versions, IsUpdate = false, IsForcibly = false };
+                    respDTO.Code = HttpStatus.OK;
                     respDTO.Message = RespMessage.RequestNone;
                 }
             }
             catch
             {
                 respDTO.Message = RespMessage.ServerException;
-                respDTO.Code = ResponseStatus.Internal;
+                respDTO.Code = HttpStatus.SERVICE_UNAVAILABLE;
             }
             return JsonConvert.SerializeObject(respDTO);
         }
 
-        /// <summary>
-        /// Return all updated version information.
-        /// </summary>
-        /// <param name="getUrlsAction">Each version update (Query the latest version information in the database according to the client version number).</param>
-        /// <returns></returns>
-        public async Task<string> UpdateVersionsTaskAsync(int clientType, string clientVersion, string clientAppkey, string appSecretKey, Func<int, string, Task<List<UpdateVersionDTO>>> getUrlsAction)
-        {
-            ParameterVerification(clientType, clientVersion, "skip", clientAppkey, appSecretKey, getUrlsAction);
-            if (!clientAppkey.Equals(appSecretKey)) throw new Exception("App key does not exist or is incorrect !");
-            var respDTO = new UpdateVersionsRespDTO();
-            try
-            {
-                respDTO.Code = ResponseStatus.Success;
-                respDTO.Message = RespMessage.RequestSucceeded;
-                respDTO.Body = new UpdateVersionsDTO { UpdateVersions = await getUrlsAction(clientType, clientVersion) };
-            }
-            catch (Exception)
-            {
-                respDTO.Code = ResponseStatus.Internal;
-                respDTO.Message = RespMessage.ServerException;
-            }
-            return JsonConvert.SerializeObject(respDTO);
-        }
-
-        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, Func<int, string, Task<List<UpdateVersionDTO>>> getUrlsAction)
+        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, List<VersionDTO> versions)
         {
             if (clientType <= 0) throw new Exception(@"'clientType' cannot be less than or equal to 0 !");
             if (string.IsNullOrWhiteSpace(clientVersion)) throw new ArgumentNullException(@"'clientVersion' cannot be null !");
             if (string.IsNullOrWhiteSpace(serverLastVersion)) throw new ArgumentNullException(@"'serverLastVersion' cannot be null !");
-            if (getUrlsAction == null) throw new ArgumentNullException(@"'getUrlsAction' cannot be null!");
+            if (versions == null) throw new ArgumentNullException(@"versions cannot be null !");
             if (string.IsNullOrEmpty(clientAppkey) || string.IsNullOrEmpty(appSecretKey)) throw new NullReferenceException("The APP key does not exist !");
         }
     }

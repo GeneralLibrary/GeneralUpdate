@@ -1,23 +1,9 @@
-﻿using GeneralUpdate.Core.DTOs;
-using GeneralUpdate.Core.Models;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 
 namespace GeneralUpdate.Core.Utils
 {
     public class ConvertUtil
     {
-        public static UpdateVersion ToUpdateVersion(UpdateVersionDTO versionDTO)=> new UpdateVersion(versionDTO.MD5, versionDTO.PubTime, versionDTO.Version, versionDTO.Url, versionDTO.Name);
-
-        public static List<UpdateVersion> ToUpdateVersions(List<UpdateVersionDTO> versionDTOs)
-        {
-            var versions = new List<UpdateVersion>();
-            versionDTOs.ForEach(v => versions.Add(ToUpdateVersion(v)));
-            versions = versions.OrderBy(v => v.PubTime).ToList();
-            return versions;
-        }
-
         public static Encoding ToEncoding(int type)
         {
             Encoding encoding = Encoding.Default;

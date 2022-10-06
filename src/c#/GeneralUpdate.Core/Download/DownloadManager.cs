@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Update;
+﻿using GeneralUpdate.Core.Bootstrap;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -102,7 +102,7 @@ namespace GeneralUpdate.Core.Download
                 Task.WaitAll(downloadTasks.ToArray());
                 MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(true, _failedVersions));
             }
-            catch (ObjectDisposedException ex)
+            catch (ObjectDisposedException ex) 
             {
                 MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
                 throw new ArgumentNullException("Method 'GetMethod' in 'Launch' executes abnormally ! exception is 'ObjectDisposedException'.", ex);
