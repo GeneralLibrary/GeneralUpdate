@@ -1,6 +1,5 @@
 # GeneralUpdate #
 ![](https://img.shields.io/github/license/WELL-E/AutoUpdater?color=blue)
-![](https://img.shields.io/github/stars/WELL-E/AutoUpdater?color=blue)
 
 
 ![](imgs/GeneralUpdate_h.png)
@@ -9,7 +8,7 @@
 
 ### 组件介绍 ###
 
-GeneralUpdate寓意为通用更新力致于成为全平台更新组件，包含常见个人、企业项目所需特性。并提供GeneralUpdate.PacketTool更新包打包工具。
+GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 
 | 功能                           | 是否支持 | 备注                                                         |
 | ------------------------------ | -------- | ------------------------------------------------------------ |

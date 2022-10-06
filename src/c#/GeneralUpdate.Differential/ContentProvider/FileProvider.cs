@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Core.Utils;
+using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -52,6 +53,7 @@ namespace GeneralUpdate.Differential.ContentProvider
             var resultFiles = new List<FileNode>();
             foreach (var subPath in Directory.GetFiles(path))
             {
+                if (subPath.Contains(Filefilter.JSON_DLL)) continue;
                 var md5 = FileUtil.GetFileMD5(subPath);
                 var subFileInfo = new FileInfo(subPath);
                 resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5, FullName = subFileInfo.FullName });

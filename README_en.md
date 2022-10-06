@@ -1,12 +1,12 @@
 # GeneralUpdate #
 ![](https://img.shields.io/github/license/WELL-E/AutoUpdater?color=blue)
-![](https://img.shields.io/github/stars/WELL-E/AutoUpdater?color=blue)
+
 
 ![](imgs/GeneralUpdate_h.png)
 
 ### Component introduction ###
 
-GeneralUpdate means that the general update is committed to becoming a full-platform update component, including features required for common personal and enterprise projects. And provide GeneralUpdate.PacketTool update package packaging tool.
+GeneralUpdate means that the general update is committed to becoming a full-platform update component, including features required for common personal and enterprise projects.
 
 | Function                                          | support              | Remark                                                       |
 | ------------------------------------------------- | -------------------- | ------------------------------------------------------------ |
