@@ -81,7 +81,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 {
                     _formats = new List<string>();
                     _formats.Add(".zip");
-                    _formats.Add(".7z");
+                    //_formats.Add(".7z");
                 }
                 return _formats;
             }
@@ -179,7 +179,7 @@ namespace GeneralUpdate.PacketTool.ViewModels
                 await DifferentialCore.Instance.Clean(SourcePath, TargetPath, PatchPath, (sender, args) =>{},
                     String2OperationType(CurrentFormat),String2Encoding(CurrentEncoding), PacketName);
 
-                await DifferentialCore.Instance.Drity(SourcePath,PatchPath);
+                //await DifferentialCore.Instance.Drity(SourcePath,PatchPath);
                 if (IsPublish)
                 {
                     var packetPath = Path.Combine(TargetPath,$"{PacketName}{CurrentFormat}");
