@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace GeneralUpdate.ClientCore
 {
@@ -66,7 +65,7 @@ namespace GeneralUpdate.ClientCore
             if (string.IsNullOrEmpty(url)) throw new Exception("Url cannot be empty !");
             try
             {
-                string basePath = System.Threading.Thread.GetDomain().BaseDirectory; //AppDomain.CurrentDomain.BaseDirectory;
+                string basePath = System.Threading.Thread.GetDomain().BaseDirectory;
                 Packet.InstallPath = basePath;
                 Packet.AppSecretKey = appSecretKey;
                 //update app.
@@ -147,8 +146,8 @@ namespace GeneralUpdate.ClientCore
         {
             bool isSkip = false;
             if (isForcibly) return false;
+            if (_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
             if (_customOption != null) isSkip = _customOption.Invoke();
-            if(_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
             return isSkip;
         }
 

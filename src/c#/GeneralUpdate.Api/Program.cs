@@ -3,10 +3,8 @@ using GeneralUpdate.AspNetCore.Hubs;
 using GeneralUpdate.AspNetCore.Services;
 using GeneralUpdate.Core.Domain.DTO;
 using GeneralUpdate.Core.Domain.Enum;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
-using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IUpdateService, GeneralUpdateService>();
@@ -31,7 +29,6 @@ app.MapPost("/push", async Task<string> (HttpContext context) =>
     }
     return "OK";
 });
-
 
 /**
  * Check if an update is required.

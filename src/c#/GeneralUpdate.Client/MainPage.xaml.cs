@@ -4,8 +4,6 @@ using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
-using GeneralUpdate.Core.Utils;
-using GeneralUpdate.Differential;
 using System.Text;
 
 namespace GeneralUpdate.Client
@@ -20,7 +18,6 @@ namespace GeneralUpdate.Client
             InitializeComponent();
             MyButton.Clicked += OnClicked;
             Loaded += OnLoaded;
-            //MyButtonMD5.Clicked += OnMD5Clicked;
         }
 
         private void OnLoaded(object sender, EventArgs e)
@@ -28,22 +25,15 @@ namespace GeneralUpdate.Client
             VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
         }
 
-        private void GetMessage(string msg)
+        private async void GetMessage(string msg)
         {
-            Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "ok");
-
+            var isUpdate = await Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "update","cancel");
+            if (isUpdate) Upgrade();
         }
 
-        private void OnMD5Clicked(object sender, EventArgs e)
-        {
-            //var path1 = @"F:\temp\source";
-            //var path2 = @"F:\temp\target";
-            //var path3 = @"F:\temp\patchs";
-            //await DifferentialCore.Instance.Clean(path1, path2, path3);
-            //var m = FileUtil.GetFileMD5(@"F:\temp\1664083126.zip");
-        }
+        private void OnClicked(object sender, EventArgs e)=> Upgrade();
 
-        private void OnClicked(object sender, EventArgs e)
+        private void Upgrade() 
         {
             Task.Run(async () =>
             {

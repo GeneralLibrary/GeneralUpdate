@@ -21,7 +21,6 @@ namespace GeneralUpdate.AspNetCore.Hubs
         private const string GroupName = "VersionGroup";
 
         public delegate void ConnectionStatus(HubStatus hubStatus, string message);
-
         public event ConnectionStatus OnConnectionStatus;
 
         #endregion Private Members
@@ -41,24 +40,6 @@ namespace GeneralUpdate.AspNetCore.Hubs
             await base.OnDisconnectedAsync(exception);
             if (OnConnectionStatus != null) OnConnectionStatus(HubStatus.Disconnected, "The Version hub is disconnected !");
         }
-
-        public async Task SendMessage(string user, string message)
-        {
-            if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(message))
-                throw new ArgumentNullException($"'VersionHub' The required parameter send message cannot be null !");
-
-            try
-            {
-                var clientParameter = SerializeUtil.Serialize(message);
-                await Clients.Groups(GroupName).SendAsync(ReceiveMessageflag, user, clientParameter);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"'VersionHub' Send message error :  { ex.Message } .", ex.InnerException);
-            }
-        }
-
-        
 
         /// <summary>
         /// Kick client connection from group.

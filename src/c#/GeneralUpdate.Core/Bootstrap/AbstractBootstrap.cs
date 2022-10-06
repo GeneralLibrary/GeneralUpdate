@@ -117,7 +117,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         protected IStrategy ExcuteStrategy()
         {
-            if(_strategy != null)  _strategy.Excute();
+            if(_strategy != null) _strategy.Excute();
             return _strategy;
         }
 
