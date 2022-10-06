@@ -21,10 +21,6 @@
                 x:Name="MyButton"
                 Text="launch"
                 HorizontalOptions="Center" />
-            <Button
-                x:Name="MyButtonMD5"
-                Text="MD5"
-                HorizontalOptions="Center" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
