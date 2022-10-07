@@ -23,12 +23,20 @@ namespace GeneralUpdate.ClientCore
 
         #region Public Methods
 
+        /// <summary>
+        /// Start the update.
+        /// </summary>
+        /// <returns></returns>
         public override GeneralClientBootstrap LaunchAsync()
         {
             Task.Run(() => BaseLaunch());
             return this;
         }
 
+        /// <summary>
+        /// Start the update.
+        /// </summary>
+        /// <returns></returns>
         public Task<GeneralClientBootstrap> LaunchTaskAsync() => BaseLaunch();
 
         private async Task<GeneralClientBootstrap> BaseLaunch() 
@@ -87,6 +95,11 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
+        /// <summary>
+        /// Custom Configuration.
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
         public GeneralClientBootstrap Config(Configinfo info)
         {
             Packet.AppType = info.AppType;
@@ -113,6 +126,12 @@ namespace GeneralUpdate.ClientCore
             return this;
         }
 
+        /// <summary>
+        ///  Let the user decide whether to update in the state of non-mandatory update.
+        /// </summary>
+        /// <param name="func">Custom funcion ,Custom actions to let users decide whether to update. true update false do not update .</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public GeneralClientBootstrap SetCustomOption(Func<Task<bool>> func)
         {
             if (func == null) throw new ArgumentNullException(nameof(func));
