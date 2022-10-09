@@ -42,46 +42,32 @@ namespace GeneralUpdate.Client
         {
             Task.Run(async () =>
             {
-                //主程序信息
-                var mainVersion = "1.1.1.1";
-
-                #region update app.
+                #region Config.
 
                 //该对象用于主程序客户端与更新组件进程之间交互用的对象
-                //clientParameter = new ClientParameter();
-
+                var config = new Configinfo();
                 //本机的客户端程序应用地址
-                //clientParameter.InstallPath = @"D:\Updatetest_hub\Run_app";
+                config.InstallPath = @"D:\Updatetest_hub\Run_app";
                 //更新公告网页
-                //clientParameter.UpdateLogUrl = "https://www.baidu.com/";
-
-                //clientParameter.ClientVersion = "9.1.3.0";//"1.1.1.1";
-
-                ////客户端类型：1.主程序客户端 2.更新组件
-                //clientParameter.AppType = (int)AppType.UpdateApp;
-                //clientParameter.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
-                ////更新组件请求验证更新的服务端地址
-                //clientParameter.ValidateUrl = $"{baseUrl}/validate/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
-                ////更新组件更新包下载地址
-                //clientParameter.UpdateUrl = $"{baseUrl}/versions/{ clientParameter.AppType }/{ clientParameter.ClientVersion }/{clientParameter.AppSecretKey}";
-                ////更新程序exe名称
-                //clientParameter.AppName = "AutoUpdate.Core";
+                config.UpdateLogUrl = "https://www.baidu.com/";
+                //客户端当前版本号
+                config.ClientVersion = "1.1.1.1";
+                //客户端类型：1.主程序客户端 2.更新组件
+                config.AppType = AppType.ClientApp;
                 //指定应用密钥，用于区分客户端应用
+                config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
+                //更新组件更新包下载地址
+                config.UpdateUrl = $"{baseUrl}/versions/{config.AppType}/{config.ClientVersion}/{config.AppSecretKey}";
+                //更新程序exe名称
+                config.AppName = "AutoUpdate.Core";
+                //主程序客户端exe名称
+                config.MainAppName = "AutoUpdate.ClientCore";
+                //主程序信息
+                var mainVersion = "1.1.1.1";
+                //主程序客户端更新包下载地址
+                config.MainUpdateUrl = $"{baseUrl}/versions/{AppType.ClientApp}/{mainVersion}/{config.AppSecretKey}";
 
                 #endregion update app.
-
-                #region main app.
-
-                //更新组件的版本号
-                //clientParameter.ClientVersion = "1.1.1";
-                //主程序客户端exe名称
-                //clientParameter.MainAppName = "AutoUpdate.ClientCore";
-                //主程序客户端请求验证更新的服务端地址
-                //clientParameter.MainValidateUrl = $"{baseUrl}/validate/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
-                //主程序客户端更新包下载地址
-                //clientParameter.MainUpdateUrl = $"{baseUrl}/versions/{ (int)AppType.ClientApp }/{ mainVersion }/{clientParameter.AppSecretKey}";
-
-                #endregion main app.
 
                 var generalClientBootstrap = new GeneralClientBootstrap();
                 //单个或多个更新包下载通知事件
