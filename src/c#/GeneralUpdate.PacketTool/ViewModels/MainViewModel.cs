@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using GeneralUpdate.AspNetCore.DTO;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential;
 using GeneralUpdate.Infrastructure.DataServices.Pick;
 using GeneralUpdate.Infrastructure.MVVM;
@@ -178,8 +179,6 @@ namespace GeneralUpdate.PacketTool.ViewModels
             {
                 await DifferentialCore.Instance.Clean(SourcePath, TargetPath, PatchPath, (sender, args) =>{},
                     String2OperationType(CurrentFormat),String2Encoding(CurrentEncoding), PacketName);
-
-                //await DifferentialCore.Instance.Drity(SourcePath,PatchPath);
                 if (IsPublish)
                 {
                     var packetPath = Path.Combine(TargetPath,$"{PacketName}{CurrentFormat}");
@@ -188,7 +187,8 @@ namespace GeneralUpdate.PacketTool.ViewModels
                         await Shell.Current.DisplayAlert("Build options", $"The package was not found in the following path {packetPath} !", "cancel");
                         return;
                     }
-                    await _mainService.PostUpgradPakcet<UploadReapDTO>(Url,packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey,"", async (resp) =>
+                    var md5 = FileUtil.GetFileMD5(packetPath);
+                    await _mainService.PostUpgradPakcet<UploadReapDTO>(Url,packetPath, String2AppType(CurrnetAppType), CurrentVersion,CurrentClientAppKey, md5, async (resp) =>
                     {
                         if (resp == null) 
                         {

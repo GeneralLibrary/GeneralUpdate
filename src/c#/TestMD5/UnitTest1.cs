@@ -9,7 +9,7 @@ namespace TestMD5
         {
             try
             {
-                string path = "";
+                string path = "F:\temp\target\testpacket.zip";
                 var md5 = FileUtil.GetFileMD5(path);
                 if (string.IsNullOrWhiteSpace(md5))
                 {

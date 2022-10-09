@@ -15,7 +15,6 @@ namespace GeneralUpdate.Upgrad
             Thread.Sleep(5000);
             Task.Run(async () =>
             {
-                //var arg = "eyJBcHBUeXBlIjoxLCJBcHBOYW1lIjoiR2VuZXJhbFVwZGF0ZS5DbGllbnQiLCJJbnN0YWxsUGF0aCI6IkY6XFxnaXRfcHJvamVjdFxcR2VuZXJhbFVwZGF0ZVxcc3JjXFxjI1xcR2VuZXJhbFVwZGF0ZS5DbGllbnRcXGJpblxcRGVidWdcXG5ldDYuMC13aW5kb3dzMTAuMC4xOTA0MS4wXFx3aW4xMC14NjRcXEFwcFhcXCIsIkN1cnJlbnRWZXJzaW9uIjoiMS4wLjAuMCIsIkxhc3RWZXJzaW9uIjoiOS45LjkuOSIsIkxvZ1VybCI6bnVsbCwiSXNVcGRhdGUiOmZhbHNlLCJDb21wcmVzc0VuY29kaW5nIjo3LCJDb21wcmVzc0Zvcm1hdCI6bnVsbCwiRG93bmxvYWRUaW1lT3V0IjowLCJBcHBTZWNyZXRLZXkiOiJCOEE3RkFERC0zODZDLTQ2QjAtQjI4My1DOUY5NjM0MjBDN0MiLCJVcGRhdGVWZXJzaW9ucyI6W3siUHViVGltZSI6MTY2NDA5NjUyMCwiTmFtZSI6IjE2NjQwODEzMTUiLCJNRDUiOiJkZDc3NmUzYTRmMjAyOGE1ZjYxMTg3ZTIzMDg5ZGRiZCIsIlZlcnNpb24iOiIwLjAuMC4wIiwiVXJsIjoiaHR0cDovLzEyNy4wLjAuMS8xNjY0MDgzMTI2LnppcCIsIklEIjpudWxsfV0sIklEIjpudWxsfQ==";
                 var bootStrap = new GeneralUpdateBootstrap();
                 bootStrap.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
                 bootStrap.MutiDownloadCompleted += OnMutiDownloadCompleted;

@@ -7,6 +7,7 @@ using GeneralUpdate.Core.Strategys.PlatformAndroid;
 using GeneralUpdate.Core.Strategys.PlatformiOS;
 using GeneralUpdate.Core.Strategys.PlatformMac;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
+using GeneralUpdate.Core.Utils;
 using System.Text;
 
 namespace GeneralUpdate.Client
@@ -25,6 +26,7 @@ namespace GeneralUpdate.Client
 
         private void OnLoaded(object sender, EventArgs e)
         {
+            var md5 = FileUtil.GetFileMD5(@"F:\temp\target\testpacket.zip");
             VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
         }
 
