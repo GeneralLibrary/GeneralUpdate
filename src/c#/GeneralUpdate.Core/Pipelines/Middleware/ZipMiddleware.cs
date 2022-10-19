@@ -20,7 +20,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 bool isUnzip = UnZip(context);
                 if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{ version.Version }  MD5-{ version.MD5 } !");
 
-                await ConfigFactory.Instance.Scan(context.SourcePath, context.TargetPath);
+                //await ConfigFactory.Instance.Scan(context.SourcePath, context.TargetPath);
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);
             }

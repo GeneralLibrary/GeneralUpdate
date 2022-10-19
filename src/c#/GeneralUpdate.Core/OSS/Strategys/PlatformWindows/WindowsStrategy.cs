@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GeneralUpdate.Core.OSS.Strategys.PlatformWindows
 {
-    public class WindowsStrategy : IStrategy
+    public class WindowsStrategy// : IStrategy
     {
         public void Create()
         {
