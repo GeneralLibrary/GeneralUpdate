@@ -3,12 +3,12 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
-    <Version>4.10.13</Version>
+    <Version>4.11.19</Version>
     <Authors>juster.zhu</Authors>
     <Company>juster.zhu</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>Snipaste_128.png</PackageIcon>
+    <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Copyright>Copyright ©  2022</Copyright>
     <Description>This section describes how to upgrade client applications.</Description>
@@ -37,6 +37,12 @@
     <None Remove="GeneralUpdate.ico" />
     <None Remove="nuget.exe" />
     <None Remove="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\imgs\GeneralUpdate128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />

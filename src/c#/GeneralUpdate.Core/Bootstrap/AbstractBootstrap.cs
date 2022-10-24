@@ -52,11 +52,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Constructors
 
-        protected internal AbstractBootstrap() 
-        {
-            this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
-            InitStrategy();
-        }
+        protected internal AbstractBootstrap()=> this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         #endregion Constructors
 
@@ -80,6 +76,7 @@ namespace GeneralUpdate.Core.Bootstrap
         {
             try
             {
+                InitStrategy();
                 //When the upgrade stops and does not need to be updated, the client needs to be updated. Start the upgrade assistant directly.
                 if (!Packet.IsUpgradeUpdate && Packet.IsMainUpdate) _strategy.StartApp(Packet.AppName, Packet.AppType);
                 Packet.Format = $".{GetOption(UpdateOption.Format) ?? Format.ZIP}";
