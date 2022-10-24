@@ -11,7 +11,7 @@
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <SignAssembly>False</SignAssembly>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/WELL-E/AutoUpdater</RepositoryUrl>
+    <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Copyright>Copyright ©  2022</Copyright>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
   </PropertyGroup>

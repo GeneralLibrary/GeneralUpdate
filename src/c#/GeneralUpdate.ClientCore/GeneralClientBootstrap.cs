@@ -62,7 +62,7 @@ namespace GeneralUpdate.ClientCore
         }
 
         /// <summary>
-        /// Configure server address .
+        /// Configure server address (Recommended Windows,Linux,Mac).
         /// </summary>
         /// <param name="url">Remote server address.</param>
         /// <param name="appName">The updater name does not need to contain an extension.</param>
@@ -96,7 +96,7 @@ namespace GeneralUpdate.ClientCore
         }
 
         /// <summary>
-        /// Custom Configuration.
+        /// Custom Configuration (Recommended : All platforms).
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>

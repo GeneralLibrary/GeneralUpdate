@@ -15,6 +15,7 @@ namespace GeneralUpdate.Core.Exceptions
         //internal static void ThrowWrongKeyTypeArgumentException(object key, Type targetType)
         //{
         //    throw new ArgumentException(Environment.GetResourceString("Arg_WrongType", key, targetType), "key");
+
         //}
 
         //internal static void ThrowWrongValueTypeArgumentException(object value, Type targetType)

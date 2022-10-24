@@ -42,32 +42,15 @@ namespace GeneralUpdate.Client
         {
             Task.Run(async () =>
             {
-                #region Config.
+                Configinfo configinfo = null;
 
-                //该对象用于主程序客户端与更新组件进程之间交互用的对象
-                var config = new Configinfo();
-                //本机的客户端程序应用地址
-                config.InstallPath = @"D:\Updatetest_hub\Run_app";
-                //更新公告网页
-                config.UpdateLogUrl = "https://www.baidu.com/";
-                //客户端当前版本号
-                config.ClientVersion = "1.1.1.1";
-                //客户端类型：1.主程序客户端 2.更新组件
-                config.AppType = AppType.ClientApp;
-                //指定应用密钥，用于区分客户端应用
-                config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
-                //更新组件更新包下载地址
-                config.UpdateUrl = $"{baseUrl}/versions/{config.AppType}/{config.ClientVersion}/{config.AppSecretKey}";
-                //更新程序exe名称
-                config.AppName = "AutoUpdate.Core";
-                //主程序客户端exe名称
-                config.MainAppName = "AutoUpdate.ClientCore";
-                //主程序信息
-                var mainVersion = "1.1.1.1";
-                //主程序客户端更新包下载地址
-                config.MainUpdateUrl = $"{baseUrl}/versions/{AppType.ClientApp}/{mainVersion}/{config.AppSecretKey}";
+#if WINDOWS
+                configinfo = GetWindowsConfiginfo();
+#endif
 
-                #endregion update app.
+#if ANDROID
+                configinfo = GetAndroidConfiginfo();
+#endif
 
                 var generalClientBootstrap = new GeneralClientBootstrap();
                 //单个或多个更新包下载通知事件
@@ -83,15 +66,72 @@ namespace GeneralUpdate.Client
                 //整个更新过程出现的任何问题都会通过这个事件通知
                 generalClientBootstrap.Exception += OnException;
                 //ClientStrategy该更新策略将完成1.自动升级组件自更新 2.启动更新组件 3.配置好ClientParameter无需再像之前的版本写args数组进程通讯了。
-                generalClientBootstrap.Config(baseUrl, "B8A7FADD-386C-46B0-B283-C9F963420C7C").
+                //generalClientBootstrap.Config(baseUrl, "B8A7FADD-386C-46B0-B283-C9F963420C7C").
+                generalClientBootstrap.Config(configinfo).
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.Format, Format.ZIP).
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                SetCustomOption(ShowCustomOption).
-                Strategy<WindowsStrategy>();
+                SetCustomOption(ShowCustomOption);
+#if WINDOWS
+                generalClientBootstrap.Strategy<WindowsStrategy>();
+#endif
+#if ANDROID
+                generalClientBootstrap.Strategy<AndroidStrategy>();
+#endif
                 await generalClientBootstrap.LaunchTaskAsync();
             });
+        }
+
+        /// <summary>
+        /// 获取Windows平台所需的配置参数
+        /// </summary>
+        /// <returns></returns>
+        private Configinfo GetWindowsConfiginfo() 
+        {
+            //该对象用于主程序客户端与更新组件进程之间交互用的对象
+            var config = new Configinfo();
+            //本机的客户端程序应用地址
+            config.InstallPath =  //@"D:\Updatetest_hub\Run_app";
+                                  //更新公告网页
+            config.UpdateLogUrl = "https://www.baidu.com/";
+            //客户端当前版本号
+            config.ClientVersion = "1.1.1.1";
+            //客户端类型：1.主程序客户端 2.更新组件
+            config.AppType = AppType.ClientApp;
+            //指定应用密钥，用于区分客户端应用
+            config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
+            //更新组件更新包下载地址
+            config.UpdateUrl = $"{baseUrl}/versions/{config.AppType}/{config.ClientVersion}/{config.AppSecretKey}";
+            //更新程序exe名称
+            config.AppName = "AutoUpdate.Core";
+            //主程序客户端exe名称
+            config.MainAppName = "AutoUpdate.ClientCore";
+            //主程序信息
+            var mainVersion = "1.1.1.1";
+            //主程序客户端更新包下载地址
+            config.MainUpdateUrl = $"{baseUrl}/versions/{AppType.ClientApp}/{mainVersion}/{config.AppSecretKey}";
+            return config;
+        }
+
+        /// <summary>
+        /// 获取Android平台所需要的参数
+        /// </summary>
+        /// <returns></returns>
+        private Configinfo GetAndroidConfiginfo() 
+        {
+            var config = new Configinfo();
+            config.InstallPath = System.Threading.Thread.GetDomain().BaseDirectory;
+            //主程序客户端当前版本号
+            config.ClientVersion = VersionTracking.Default.CurrentVersion.ToString();
+            config.AppType = AppType.ClientApp;
+            config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
+            //主程序客户端exe名称
+            config.MainAppName = "GeneralUpdate.ClientCore";
+            //主程序信息
+            var mainVersion = "1.1.1.1";
+            config.MainUpdateUrl = $"{baseUrl}/versions/{AppType.ClientApp}/{mainVersion}/{config.AppSecretKey}";
+            return config;
         }
 
         /// <summary>
