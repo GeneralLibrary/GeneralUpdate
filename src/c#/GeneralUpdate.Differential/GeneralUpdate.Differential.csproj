@@ -3,11 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>Snipaste_128.png</PackageIcon>
+    <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/WELL-E/AutoUpdater</RepositoryUrl>
+    <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
     <Authors>juster.zhu</Authors>
+    <Version>1.3.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +35,13 @@
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\imgs\GeneralUpdate128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

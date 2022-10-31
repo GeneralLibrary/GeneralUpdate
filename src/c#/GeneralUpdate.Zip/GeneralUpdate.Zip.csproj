@@ -7,9 +7,9 @@
     <Description>Decompress the compressed file with progress notification.</Description>
     <Copyright>Copyright ©  2022</Copyright>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>Snipaste_128.png</PackageIcon>
+    <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Version>2.2.0</Version>
+    <Version>2.3.1</Version>
     <RepositoryUrl>https://github.com/WELL-E/AutoUpdater</RepositoryUrl>
   </PropertyGroup>
 
@@ -24,6 +24,13 @@
     <None Remove="GeneralUpdate.Zip.1.0.0.nupkg" />
     <None Remove="GeneralUpdate.Zip.nuspec" />
     <None Remove="nuget.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\imgs\GeneralUpdate128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
