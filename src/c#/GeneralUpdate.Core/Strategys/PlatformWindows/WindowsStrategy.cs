@@ -45,9 +45,9 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                     var updateVersions = Packet.UpdateVersions.OrderBy(x => x.PubTime).ToList();
                     if (updateVersions != null && updateVersions.Count > 0)
                     {
-                        var patchPath = FileUtil.GetTempDirectory(PATCHS);
                         foreach (var version in updateVersions)
                         {
+                            var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(ProgressEventAction, ExceptionEventAction, version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
                                 UseMiddleware<MD5Middleware>().
