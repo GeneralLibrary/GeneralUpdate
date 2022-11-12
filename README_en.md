@@ -68,3 +68,5 @@ GeneralUpdate means that the general update is committed to becoming a full-plat
 | iOS                   | Not currently supported |
 | Android               | Not currently supported |
 | raspberry pie         | pending verification    |
+| Kylin V10 (FT-S2500)  | yes                     |
+| Kylin V10 (x64)       | yes                     |
