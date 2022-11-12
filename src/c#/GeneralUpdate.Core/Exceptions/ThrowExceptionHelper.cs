@@ -5,38 +5,37 @@ using System.Runtime.Serialization;
 namespace GeneralUpdate.Core.Exceptions
 {
     [Pure]
-    public static class @ThrowHelper
+    public static class ThrowExceptionHelper
     {
-        //internal static void ThrowArgumentOutOfRangeException()
-        //{
-        //    ThrowArgumentOutOfRangeException(ExceptionArgument.index, ExceptionResource.ArgumentOutOfRange_Index);
-        //}
+        internal static void ThrowArgumentOutOfRangeException()
+        {
+            ThrowArgumentOutOfRangeException(ExceptionArgument.index, ExceptionResource.ArgumentOutOfRange_Index);
+        }
 
-        //internal static void ThrowWrongKeyTypeArgumentException(object key, Type targetType)
-        //{
-        //    throw new ArgumentException(Environment.GetResourceString("Arg_WrongType", key, targetType), "key");
+        internal static void ThrowWrongKeyTypeArgumentException(object key, Type targetType)
+        {
+            throw new ArgumentException(GetResourceString("Arg_WrongType", key, targetType), "key");
+        }
 
-        //}
-
-        //internal static void ThrowWrongValueTypeArgumentException(object value, Type targetType)
-        //{
-        //    throw new ArgumentException(Environment.GetResourceString("Arg_WrongType", value, targetType), "value");
-        //}
+        internal static void ThrowWrongValueTypeArgumentException(object value, Type targetType)
+        {
+            throw new ArgumentException(GetResourceString("Arg_WrongType", value, targetType), "value");
+        }
 
         internal static void ThrowKeyNotFoundException()
         {
             throw new System.Collections.Generic.KeyNotFoundException();
         }
 
-        //internal static void ThrowArgumentException(ExceptionResource resource)
-        //{
-        //    throw new ArgumentException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowArgumentException(ExceptionResource resource)
+        {
+            throw new ArgumentException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowArgumentException(ExceptionResource resource, ExceptionArgument argument)
-        //{
-        //    throw new ArgumentException(Environment.GetResourceString(GetResourceName(resource)), GetArgumentName(argument));
-        //}
+        internal static void ThrowArgumentException(ExceptionResource resource, ExceptionArgument argument)
+        {
+            throw new ArgumentException(GetResourceString(GetResourceName(resource)), GetArgumentName(argument));
+        }
 
         internal static void ThrowArgumentNullException(ExceptionArgument argument)
         {
@@ -48,57 +47,48 @@ namespace GeneralUpdate.Core.Exceptions
             throw new ArgumentOutOfRangeException(GetArgumentName(argument));
         }
 
-        //internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument, ExceptionResource resource)
-        //{
+        internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument, ExceptionResource resource)
+        {
+            throw new ArgumentOutOfRangeException(GetArgumentName(argument),
+                                                     GetResourceString(GetResourceName(resource)));
+        }
 
-        //    if (CompatibilitySwitches.IsAppEarlierThanWindowsPhone8)
-        //    {
-        //        // Dev11 474369 quirk: Mango had an empty message string:
-        //        throw new ArgumentOutOfRangeException(GetArgumentName(argument), String.Empty);
-        //    }
-        //    else
-        //    {
-        //        throw new ArgumentOutOfRangeException(GetArgumentName(argument),
-        //                                              Environment.GetResourceString(GetResourceName(resource)));
-        //    }
-        //}
+        internal static void ThrowInvalidOperationException(ExceptionResource resource)
+        {
+            throw new InvalidOperationException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowInvalidOperationException(ExceptionResource resource)
-        //{
-        //    throw new InvalidOperationException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowSerializationException(ExceptionResource resource)
+        {
+            throw new SerializationException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowSerializationException(ExceptionResource resource)
-        //{
-        //    throw new SerializationException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowSecurityException(ExceptionResource resource)
+        {
+            throw new System.Security.SecurityException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowSecurityException(ExceptionResource resource)
-        //{
-        //    throw new System.Security.SecurityException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowNotSupportedException(ExceptionResource resource)
+        {
+            throw new NotSupportedException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowNotSupportedException(ExceptionResource resource)
-        //{
-        //    throw new NotSupportedException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowUnauthorizedAccessException(ExceptionResource resource)
+        {
+            throw new UnauthorizedAccessException(GetResourceString(GetResourceName(resource)));
+        }
 
-        //internal static void ThrowUnauthorizedAccessException(ExceptionResource resource)
-        //{
-        //    throw new UnauthorizedAccessException(Environment.GetResourceString(GetResourceName(resource)));
-        //}
-
-        //internal static void ThrowObjectDisposedException(string objectName, ExceptionResource resource)
-        //{
-        //    throw new ObjectDisposedException(objectName, Environment.GetResourceString(GetResourceName(resource)));
-        //}
+        internal static void ThrowObjectDisposedException(string objectName, ExceptionResource resource)
+        {
+            throw new ObjectDisposedException(objectName, GetResourceString(GetResourceName(resource)));
+        }
 
         // Allow nulls for reference types and Nullable<U>, but not for value types.
         internal static void IfNullAndNullsAreIllegalThenThrow<T>(object value, ExceptionArgument argName)
         {
             // Note that default(T) is not equal to null for value types except when T is Nullable<U>. 
             if (value == null && !(default(T) == null))
-                ThrowHelper.ThrowArgumentNullException(argName);
+                ThrowArgumentNullException(argName);
         }
 
         //
@@ -417,6 +407,17 @@ namespace GeneralUpdate.Core.Exceptions
             return resourceName;
         }
 
+        internal static string GetResourceString(string e) 
+        {
+            //TODO
+            return e;
+        }
+
+        internal static string GetResourceString(string e, object key, Type targetType)
+        {
+            //TODO
+            return e;
+        }
     }
 
     //
