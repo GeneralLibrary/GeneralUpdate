@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GeneralUpdate.Core.Exceptions.CustomArgs;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
@@ -11,7 +12,7 @@ namespace GeneralUpdate.Core.Exceptions.CustomException
     /// </summary>
     [Serializable]
     public sealed class GeneralUpdateException<TExceptionArgs> : Exception, ISerializable
-        where TExceptionArgs : Exception
+        where TExceptionArgs : ExceptionArgs
     {
         private const String c_args = "Args";
         private readonly TExceptionArgs m_args;
