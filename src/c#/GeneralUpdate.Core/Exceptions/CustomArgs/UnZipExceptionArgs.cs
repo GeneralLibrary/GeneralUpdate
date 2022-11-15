@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Exceptions.CustomArgs
         {
             get
             {
-                return (_filePath == null) ? base.Message : $"Patch file path {_filePath}";
+                return (_filePath == null) ? base.Message : $"Unzip file failed : {_filePath} !";
             }
         }
     }

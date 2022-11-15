@@ -15,14 +15,14 @@ namespace GeneralUpdate.Core.OSS.Strategys
         /// Create a policy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
-        void Create();
+        void Create(string filePath, string appName);
 
         /// <summary>
         /// After the update is complete.
         /// </summary>
         /// <param name="appName"></param>
         /// <returns></returns>
-        bool StartApp(string appName);
+        bool StartApp();
 
         /// <summary>
         /// Get the platform for the current strategy.

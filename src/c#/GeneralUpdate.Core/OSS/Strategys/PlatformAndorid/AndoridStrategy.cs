@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace GeneralUpdate.Core.OSS.Strategys.PlatformWindows
+namespace GeneralUpdate.Core.OSS.Strategys.PlatformAndorid
 {
-    public class WindowsStrategy : IStrategy
+    internal class AndoridStrategy : IStrategy
     {
         public void Create(string filePath, string appName)
         {
