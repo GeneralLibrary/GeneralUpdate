@@ -1,9 +1,12 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Exceptions.CustomArgs;
+using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 
 namespace GeneralUpdate.Core.Download
@@ -141,7 +144,7 @@ namespace GeneralUpdate.Core.Download
                 _state.Request.Timeout = _timeOut;
                 _state.Respone = _state.Request.GetResponse();
                 _state.Stream = _state.Respone.GetResponseStream();
-                if (_state.Respone.ContentLength == startPos) 
+                if (_state.Respone.ContentLength == startPos)
                 {
                     _state.Close();
                     File.Move(_state.TempPath, _state.Path);
@@ -170,10 +173,14 @@ namespace GeneralUpdate.Core.Download
                     WriteFile(_state, startPos);
                 }
             }
+            catch (HttpRequestException ex) 
+            {
+                throw new GeneralUpdateException<HttpExceptionArgs>(new HttpExceptionArgs(url, 400, "Download file failed."),ex.Message,ex.InnerException);
+            }
             catch (Exception e)
             {
                 _state.Exception = e;
-                throw new Exception($"'DownloadFileRange' This function has an internal exception : { e.Message } .", e.InnerException);
+                throw new Exception($"'DownloadFileRange' This function has an internal exception : {e.Message} .", e.InnerException);
             }
             finally
             {
