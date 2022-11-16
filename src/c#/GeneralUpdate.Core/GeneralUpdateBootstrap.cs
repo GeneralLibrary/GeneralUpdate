@@ -30,7 +30,7 @@ namespace GeneralUpdate.Core
             }
             catch (Exception ex)
             {
-                throw new Exception($"Client parameter json conversion failed, please check whether the parameter content is legal : { ex.Message },{ ex.StackTrace }.");
+                throw new ArgumentException($"Client parameter json conversion failed, please check whether the parameter content is legal : { ex.Message },{ ex.StackTrace }.");
             }
             return this;
         }

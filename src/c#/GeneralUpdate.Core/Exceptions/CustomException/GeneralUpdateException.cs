@@ -1,9 +1,7 @@
 ﻿using GeneralUpdate.Core.Exceptions.CustomArgs;
 using System;
-using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
 
 namespace GeneralUpdate.Core.Exceptions.CustomException
 {

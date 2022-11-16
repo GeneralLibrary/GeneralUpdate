@@ -1,4 +1,6 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Exceptions.CustomArgs;
+using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
