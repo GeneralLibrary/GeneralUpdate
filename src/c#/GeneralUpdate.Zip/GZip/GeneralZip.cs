@@ -1,5 +1,6 @@
 ﻿using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -219,7 +220,7 @@ namespace GeneralUpdate.Zip.GZip
                 if (!fileInfo.Exists) return false;
                 using (var zipToOpen = new FileStream(zipFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
                 {
-                    using (var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read,false,_encoding))
+                    using (var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read, false, _encoding))
                     {
                         var count = archive.Entries.Count;
                         for (int i = 0; i < count; i++)
@@ -230,11 +231,21 @@ namespace GeneralUpdate.Zip.GZip
                                 var entryFilePath = Regex.Replace(entries.FullName.Replace("/", @"\"), @"^\\*", "");
                                 var filePath = directoryInfo + entryFilePath;
                                 OnUnZipProgressEventHandler(this, new BaseUnZipProgressEventArgs { Size = entries.Length, Count = count, Index = i + 1, Path = entries.FullName, Name = entries.Name });
-                                var content = new byte[entries.Length];
-                                entries.Open().Read(content, 0, content.Length);
-                                var greatFolder = Directory.GetParent(filePath);
-                                if (!greatFolder.Exists) greatFolder.Create();
-                                File.WriteAllBytes(filePath, content);
+                                //如果是.Net6版本以上,直接使用提取方式
+                                if (Environment.Version >= new Version("6.0.0"))
+                                {
+                                    entries.ExtractToFile(filePath);
+                                }
+                                else
+                                {
+                                    var content = new byte[entries.Length];
+                                    entries.Open().Read(content, 0, content.Length);
+                                    var greatFolder = Directory.GetParent(filePath);
+                                    if (!greatFolder.Exists) greatFolder.Create();
+                                    File.WriteAllBytes(filePath, content);
+                                }
+
+
                             }
                         }
                     }
