@@ -231,6 +231,8 @@ namespace GeneralUpdate.Zip.GZip
                                 var entryFilePath = Regex.Replace(entries.FullName.Replace("/", @"\"), @"^\\*", "");
                                 var filePath = directoryInfo + entryFilePath;
                                 OnUnZipProgressEventHandler(this, new BaseUnZipProgressEventArgs { Size = entries.Length, Count = count, Index = i + 1, Path = entries.FullName, Name = entries.Name });
+                                var greatFolder = Directory.GetParent(filePath);
+                                if (!greatFolder.Exists) greatFolder.Create();
                                 //如果是.Net6版本以上,直接使用提取方式
                                 if (Environment.Version >= new Version("6.0.0"))
                                 {
@@ -240,8 +242,6 @@ namespace GeneralUpdate.Zip.GZip
                                 {
                                     var content = new byte[entries.Length];
                                     entries.Open().Read(content, 0, content.Length);
-                                    var greatFolder = Directory.GetParent(filePath);
-                                    if (!greatFolder.Exists) greatFolder.Create();
                                     File.WriteAllBytes(filePath, content);
                                 }
 
