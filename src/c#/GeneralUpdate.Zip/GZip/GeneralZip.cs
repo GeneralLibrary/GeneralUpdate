@@ -233,19 +233,12 @@ namespace GeneralUpdate.Zip.GZip
                                 OnUnZipProgressEventHandler(this, new BaseUnZipProgressEventArgs { Size = entries.Length, Count = count, Index = i + 1, Path = entries.FullName, Name = entries.Name });
                                 var greatFolder = Directory.GetParent(filePath);
                                 if (!greatFolder.Exists) greatFolder.Create();
-                                //如果是.Net6版本以上,直接使用提取方式
-                                if (Environment.Version >= new Version("6.0.0"))
-                                {
-                                    entries.ExtractToFile(filePath);
-                                }
-                                else
-                                {
-                                    var content = new byte[entries.Length];
-                                    entries.Open().Read(content, 0, content.Length);
-                                    File.WriteAllBytes(filePath, content);
-                                }
+                                //ADAPTS to .NET 6 and above decompression updates.
+                                entries.ExtractToFile(filePath);
 
-
+                                //var content = new byte[entries.Length];
+                                //entries.Open().Read(content, 0, content.Length);
+                                //File.WriteAllBytes(filePath, content);
                             }
                         }
                     }
