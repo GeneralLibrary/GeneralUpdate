@@ -96,7 +96,6 @@ namespace GeneralUpdate.Core.Bootstrap
             catch (Exception ex)
             {
                 this.Exception(this, new ExceptionEventArgs(ex));
-                throw new Exception($"Launch error : { ex.Message }.");
             }
             return (TBootstrap)this;
         }
@@ -221,7 +220,7 @@ namespace GeneralUpdate.Core.Bootstrap
             }
             catch (Exception ex)
             {
-                throw new Exception("Failed to execute strategy!", ex);
+                this.Exception(this, new ExceptionEventArgs(ex));
             }
         }
 

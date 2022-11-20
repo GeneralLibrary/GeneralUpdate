@@ -1,8 +1,4 @@
-﻿using GeneralUpdate.Core.CustomAwaiter;
-using GeneralUpdate.Core.Domain.DO;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using GeneralUpdate.Core.Domain.DO;
 
 namespace GeneralUpdate.Core.Download
 {

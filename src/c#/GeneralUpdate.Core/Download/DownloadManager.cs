@@ -1,6 +1,4 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Exceptions.CustomArgs;
-using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -104,25 +102,25 @@ namespace GeneralUpdate.Core.Download
                 Task.WaitAll(downloadTasks.ToArray());
                 MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(true, _failedVersions));
             }
-            catch (ObjectDisposedException ex) 
+            catch (ObjectDisposedException ex)
             {
-                MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
-                throw new ArgumentNullException("Method 'GetMethod' in 'Launch' executes abnormally ! exception is 'ObjectDisposedException'.", ex);
+                throw new ArgumentNullException("Download manager launch abnormally ! exception is 'ObjectDisposedException'.", ex);
             }
             catch (AggregateException ex)
             {
-                MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
-                throw new ArgumentNullException("Method 'GetMethod' in 'Launch' executes abnormally ! exception is 'AggregateException'.", ex);
+                throw new ArgumentNullException("Download manager launch abnormally ! exception is 'AggregateException'.", ex);
             }
             catch (ArgumentNullException ex)
             {
-                MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
-                throw new ArgumentNullException("Method 'GetMethod' in 'Launch' executes abnormally ! exception is 'ArgumentNullException'.", ex);
+                throw new ArgumentNullException("Download manager launch abnormally ! exception is 'ArgumentNullException'.", ex);
             }
             catch (AmbiguousMatchException ex)
             {
-                MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
-                throw new AmbiguousMatchException("Method 'GetMethod' in 'Launch' executes abnormally ! exception is 'AmbiguousMatchException'.", ex);
+                throw new AmbiguousMatchException("Download manager launch abnormally ! exception is 'AmbiguousMatchException'.", ex);
+            }
+            finally 
+            {
+                if(_failedVersions.Count > 0) MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
             }
         }
 

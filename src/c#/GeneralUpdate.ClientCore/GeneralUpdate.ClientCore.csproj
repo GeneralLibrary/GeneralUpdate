@@ -66,6 +66,12 @@
     <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" Link="Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" Link="Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Context\BaseContext.cs" Link="Pipelines\Context\BaseContext.cs" />
@@ -167,6 +173,8 @@
     <Folder Include="Download\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
+    <Folder Include="Exceptions\CustomArgs\" />
+    <Folder Include="Exceptions\CustomException\" />
     <Folder Include="Pipelines\MiddlewareResolver\" />
     <Folder Include="Pipelines\Middleware\" />
     <Folder Include="Pipelines\Context\" />

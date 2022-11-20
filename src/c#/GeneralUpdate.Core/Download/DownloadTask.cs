@@ -65,7 +65,8 @@ namespace GeneralUpdate.Core.Download
             }
             catch (Exception ex)
             {
-                throw _exception = new Exception("'Launch' The method executes abnormally !", ex);
+                _manager.OnMutiDownloadError(this, new MutiDownloadErrorEventArgs(ex, _version));
+                _exception = new GeneralUpdateException<ExceptionArgs>("'download task' The executes abnormally !", ex);
             }
         }
 
