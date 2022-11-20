@@ -20,7 +20,7 @@ using GeneralUpdate.AspNetCore.DTO;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace GPDI.UpdateService.Controllers
+namespace fileserver.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
@@ -43,6 +43,8 @@ namespace GPDI.UpdateService.Controllers
         [HttpGet]
         public string Test()
         {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", $"1.0.0.9.zip");
+            var md5 = FileUtil.GetFileMD5(path);
             return "success";
         }
 
@@ -71,12 +73,17 @@ namespace GPDI.UpdateService.Controllers
             }
 
             var versions = new List<VersionDTO>();
-            //生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
-            //这个md5可以使用单元测试里面的生成md5获取
-            var md5 = "cc9f7189676613b906bd7680ea518f0e";
+           
+          
             var pubTime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
             //这里只会是更新主程序,因为升级程序已经在上面直接返回了
             string version = "1.0.0.9";//这里设置为9是让程序认为需要更新
+
+            //生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
+            //这个md5可以使用单元测试里面的生成md5获取  为了方便测试,直接用升级文件来获取了
+            //var md5 = "cc9f7189676613b906bd7680ea518f0e";
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", $"{version}.zip");
+            var md5 = FileUtil.GetFileMD5(path);
 
             var url = $"http://127.0.0.1:5008/{version}.zip";//更新包的下载地址
             var name = version;
