@@ -156,7 +156,7 @@ namespace GeneralUpdate.Differential
                     }
                 }
                 //Update does not include files or copies configuration files.
-                await DrityUnkonw(appPath, patchPath);
+                await DirtyUnknow(appPath, patchPath);
             }
             catch (Exception ex)
             {
@@ -190,7 +190,7 @@ namespace GeneralUpdate.Differential
         /// </summary>
         /// <param name="appPath">Client application directory .</param>
         /// <param name="patchPath"></param>
-        private Task DrityUnkonw(string appPath, string patchPath)
+        private Task DirtyUnknow(string appPath, string patchPath)
         {
             try
             {
