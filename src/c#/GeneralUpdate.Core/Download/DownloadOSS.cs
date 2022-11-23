@@ -13,7 +13,7 @@ namespace GeneralUpdate.Core.Download
             _targetPath = targetPath;
         }
 
-        public void Dowload()
+        public void Download()
         {
             DownloadFileRange(_name,_url, _targetPath);
         }
