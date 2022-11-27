@@ -1,6 +1,4 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Download;
-using System;
+﻿using GeneralUpdate.Core.Download;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
