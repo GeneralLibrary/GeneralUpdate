@@ -35,6 +35,10 @@ namespace GeneralUpdate.Core
             return this;
         }
 
+        /// <summary>
+        /// Start the update.
+        /// </summary>
+        /// <returns></returns>
         public Task<GeneralUpdateBootstrap> LaunchTaskAsync() => Task.Run(() => base.LaunchAsync());
     }
 }

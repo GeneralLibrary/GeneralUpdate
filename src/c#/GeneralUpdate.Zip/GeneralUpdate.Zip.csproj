@@ -27,6 +27,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\..\imgs\GeneralUpdate128.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
@@ -35,6 +44,11 @@
 
   <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.32.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Exceptions\CustomArgs\" />
+    <Folder Include="Exceptions\CustomException\" />
   </ItemGroup>
 
 </Project>
