@@ -4,6 +4,8 @@ using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Domain.Service;
+using GeneralUpdate.Core.Exceptions.CustomArgs;
+using GeneralUpdate.Core.Exceptions.CustomException;
 using GeneralUpdate.Core.Strategys;
 using System;
 using System.Diagnostics;
@@ -91,7 +93,7 @@ namespace GeneralUpdate.ClientCore
             }
             catch (Exception ex)
             {
-                throw new Exception($"Initial configuration parameters are abnormal . {  ex.Message }", ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>($"Initial configuration parameters are abnormal . {ex.Message}", ex.InnerException);
             }
         }
 
@@ -153,7 +155,7 @@ namespace GeneralUpdate.ClientCore
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to obtain file '{filePath}' version. Procedure. Eorr message : {ex.Message} .", ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>($"Failed to obtain file '{filePath}' version. Procedure. Eorr message : {ex.Message} ", ex.InnerException);
             }
         }
 
@@ -163,11 +165,18 @@ namespace GeneralUpdate.ClientCore
         /// <returns>is false to continue execution.</returns>
         private async Task<bool> IsSkip(bool isForcibly) 
         {
-            bool isSkip = false;
-            if (isForcibly) return false;
-            if (_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
-            if (_customOption != null) isSkip = _customOption.Invoke();
-            return isSkip;
+            try
+            {
+                bool isSkip = false;
+                if (isForcibly) return false;
+                if (_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
+                if (_customOption != null) isSkip = _customOption.Invoke();
+                return isSkip;
+            }
+            catch (Exception ex)
+            {
+                throw new GeneralUpdateException<ExceptionArgs>($"The injected user skips this update with an exception ! { ex.Message }", ex.InnerException);
+            }
         }
 
         #endregion
