@@ -93,7 +93,7 @@ namespace GeneralUpdate.ClientCore
             }
             catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>($"Initial configuration parameters are abnormal . {ex.Message}", ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>(ex.Message, ex.InnerException);
             }
         }
 
@@ -145,18 +145,17 @@ namespace GeneralUpdate.ClientCore
 
         #region Private Methods
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        /// <exception cref="GeneralUpdateException{ExceptionArgs}"></exception>
         private string GetFileVersion(string filePath)
         {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                if (fileInfo != null && fileInfo.Exists) return FileVersionInfo.GetVersionInfo(filePath).FileVersion;
-                throw new Exception($"Failed to obtain file '{filePath}' version. Procedure.");
-            }
-            catch (Exception ex)
-            {
-                throw new GeneralUpdateException<ExceptionArgs>($"Failed to obtain file '{filePath}' version. Procedure. Eorr message : {ex.Message} ", ex.InnerException);
-            }
+            var fileInfo = new FileInfo(filePath);
+            if (fileInfo != null && fileInfo.Exists) return FileVersionInfo.GetVersionInfo(filePath).FileVersion;
+            throw new GeneralUpdateException<ExceptionArgs>($"Failed to obtain file '{filePath}' version. Procedure.");
         }
 
         /// <summary>
