@@ -3,6 +3,7 @@ using GeneralUpdate.Core.CustomAwaiter;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
+using SharpCompress.Common;
 using System;
 using System.Globalization;
 using System.Reflection;
@@ -183,6 +184,10 @@ namespace GeneralUpdate.Core.Download
             catch (AmbiguousMatchException ex)
             {
                 throw _exception = new AmbiguousMatchException("'GetPropertyValue' The method executes abnormally !", ex);
+            }
+            catch (Exception ex) 
+            {
+                throw new GeneralUpdateException<ExceptionArgs>($"Download task GetPropertyValue error : { ex.Message }",ex.InnerException);
             }
             return result;
         }

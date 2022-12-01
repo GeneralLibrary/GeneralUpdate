@@ -104,11 +104,13 @@ namespace GeneralUpdate.Core.Download
             request.AllowWriteStreamBuffering = true;
 
             var cookieContainer = new CookieContainer();
-            var collection = new NameValueCollection();
-            collection.Add("Accept-Language", "zh-cn,zh;q=0.5");
-            collection.Add("Accept-Encoding", "gzip,deflate");
-            collection.Add("Accept-Charset", "GB2312,utf-8;q=0.7,*;q=0.7");
-            collection.Add("Keep-Alive", "115");
+            var collection = new NameValueCollection
+            {
+                { "Accept-Language", "zh-cn,zh;q=0.5" },
+                { "Accept-Encoding", "gzip,deflate" },
+                { "Accept-Charset", "GB2312,utf-8;q=0.7,*;q=0.7" },
+                { "Keep-Alive", "115" }
+            };
             request.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
             request.UserAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.13) Gecko/20101203 Firefox/3.6.13";
             request.Headers.Add(collection);

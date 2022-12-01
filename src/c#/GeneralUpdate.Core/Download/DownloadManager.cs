@@ -1,4 +1,6 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Exceptions.CustomArgs;
+using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -118,9 +120,13 @@ namespace GeneralUpdate.Core.Download
             {
                 throw new AmbiguousMatchException("Download manager launch abnormally ! exception is 'AmbiguousMatchException'.", ex);
             }
-            finally 
+            catch (Exception ex)
             {
-                if(_failedVersions.Count > 0) MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
+                throw new GeneralUpdateException<ExceptionArgs>($"Download manager error : {ex.Message} !",ex.InnerException);
+            }
+            finally
+            {
+                if (_failedVersions.Count > 0) MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
             }
         }
 
