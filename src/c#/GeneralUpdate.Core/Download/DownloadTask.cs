@@ -3,7 +3,6 @@ using GeneralUpdate.Core.CustomAwaiter;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
-using SharpCompress.Common;
 using System;
 using System.Globalization;
 using System.Reflection;
@@ -194,24 +193,25 @@ namespace GeneralUpdate.Core.Download
 
         private string ToUnit(long byteSize)
         {
-            string str;
-            var tempSize = Convert.ToSingle(byteSize);
-            if (tempSize / 1024 > 1)
+            string result;
+            var tempSize = Convert.ToSingle(byteSize) / 1024;
+            if (tempSize > 1)
             {
-                if ((tempSize / 1024) / 1024 > 1)
+                var tempMbyte = tempSize / 1024;
+                if (tempMbyte > 1)
                 {
-                    str = $"{((tempSize / 1024) / 1024).ToString("##0.00", CultureInfo.InvariantCulture)}MB/S";
+                    result = $"{tempMbyte.ToString("##0.00", CultureInfo.InvariantCulture)}MB/S";
                 }
                 else
                 {
-                    str = $"{(tempSize / 1024).ToString("##0.00", CultureInfo.InvariantCulture)}KB/S";
+                    result = $"{tempSize.ToString("##0.00", CultureInfo.InvariantCulture)}KB/S";
                 }
             }
             else
             {
-                str = $"{tempSize.ToString(CultureInfo.InvariantCulture)}B/S";
+                result = $"{byteSize.ToString(CultureInfo.InvariantCulture)}B/S";
             }
-            return str;
+            return result;
         }
 
         #endregion Private Methods
