@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace GeneralUpdate.Differential.ContentProvider
 {
@@ -74,7 +73,6 @@ namespace GeneralUpdate.Differential.ContentProvider
             {
                 Left.InfixOrder();
             }
-            Debug.WriteLine(this);
             if (Right != null)
             {
                 Right.InfixOrder();
