@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Differential.Binary
 {
+    /// <summary>
+    /// File binary differential processing.
+    /// </summary>
     public class BinaryHandle : IBinary
     {
         #region Private Members

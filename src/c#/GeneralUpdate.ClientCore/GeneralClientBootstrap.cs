@@ -16,6 +16,9 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.ClientCore
 {
+    /// <summary>
+    /// This component is used only for client application bootstrapping classes.
+    /// </summary>
     public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
     {
         private Func<bool> _customOption;

@@ -2,6 +2,9 @@
 
 namespace GeneralUpdate.Differential.Common
 {
+    /// <summary>
+    /// Used to filter out non-updatable file formats during the update process.
+    /// </summary>
     public class Filefilter
     {
         public const string JSON_DLL = "Newtonsoft.Json.dll";
