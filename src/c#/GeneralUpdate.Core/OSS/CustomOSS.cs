@@ -20,8 +20,8 @@ namespace GeneralUpdate.Core.OSS
         {
             await Task.Run(() => 
             {
-                var download = new DownloadOSS(_url, _filename, _tempPath);
-                download.Download();
+                //var download = new DownloadOSS(_url, _filename, _tempPath);
+                //download.Download();
             });
             return await Task.FromResult(Path.Combine(_tempPath,_filename));
         }
