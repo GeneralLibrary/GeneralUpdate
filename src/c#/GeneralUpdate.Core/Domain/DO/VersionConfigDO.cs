@@ -1,4 +1,6 @@
-﻿namespace GeneralUpdate.Core.Domain.DO
+﻿using System;
+
+namespace GeneralUpdate.Core.Domain.DO
 {
     public class VersionConfigDO
     {
@@ -31,5 +33,25 @@
         /// The version number that will be updated.
         /// </summary>
         public string Version { get; set; }
+
+        /// <summary>
+        /// Init version config infomation.
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <param name="url"></param>
+        /// <param name="mD5"></param>
+        /// <param name="name"></param>
+        /// <param name="format"></param>
+        /// <param name="version"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public VersionConfigDO(string guid, string url, string mD5, string name, string format, string version)
+        {
+            Guid = guid ?? throw new ArgumentNullException(nameof(guid));
+            Url = url ?? throw new ArgumentNullException(nameof(url));
+            MD5 = mD5 ?? throw new ArgumentNullException(nameof(mD5));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            Format = format ?? throw new ArgumentNullException(nameof(format));
+            Version = version ?? throw new ArgumentNullException(nameof(version));
+        }
     }
 }
