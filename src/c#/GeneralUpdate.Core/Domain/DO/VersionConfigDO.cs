@@ -35,6 +35,11 @@ namespace GeneralUpdate.Core.Domain.DO
         public string Version { get; set; }
 
         /// <summary>
+        /// Update package release time.
+        /// </summary>
+        public long PubTime { get; set; }
+
+        /// <summary>
         /// Init version config infomation.
         /// </summary>
         /// <param name="guid"></param>
@@ -43,8 +48,9 @@ namespace GeneralUpdate.Core.Domain.DO
         /// <param name="name"></param>
         /// <param name="format"></param>
         /// <param name="version"></param>
+        /// <param name="pubTime"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        public VersionConfigDO(string guid, string url, string mD5, string name, string format, string version)
+        public VersionConfigDO(string guid, string url, string mD5, string name, string format, string version, long pubTime)
         {
             Guid = guid ?? throw new ArgumentNullException(nameof(guid));
             Url = url ?? throw new ArgumentNullException(nameof(url));
@@ -52,6 +58,7 @@ namespace GeneralUpdate.Core.Domain.DO
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Format = format ?? throw new ArgumentNullException(nameof(format));
             Version = version ?? throw new ArgumentNullException(nameof(version));
+            PubTime = pubTime;
         }
     }
 }

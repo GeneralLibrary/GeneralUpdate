@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core.OSS.Strategys
         /// Create a policy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
-        void Create(string filePath, string appName);
+        void Create(string appName);
 
         /// <summary>
         /// After the update is complete.

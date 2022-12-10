@@ -27,9 +27,7 @@ namespace GeneralUpdate.Core.OSS
 			try
 			{
                 IStrategy strategy = null;
-                var oss = new T();
-                oss.SetParmeter(url);
-                string versionObjFilePath = await oss.Download();
+                var oss = await new T().Download(url);
                 switch (platform)
                 {
                     case PlatformType.Windows:
@@ -39,7 +37,7 @@ namespace GeneralUpdate.Core.OSS
                         strategy = new AndoridStrategy();
                         break;
                 }
-                strategy.Create(versionObjFilePath, appName);
+                strategy.Create(appName);
                 strategy.Excute();
                 strategy.StartApp();
             }
