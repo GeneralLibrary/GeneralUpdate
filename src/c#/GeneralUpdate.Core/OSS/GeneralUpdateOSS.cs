@@ -5,7 +5,6 @@ using GeneralUpdate.Core.OSS.Strategys;
 using GeneralUpdate.Core.OSS.Strategys.PlatformAndorid;
 using GeneralUpdate.Core.OSS.Strategys.PlatformWindows;
 using System;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.OSS
 {
@@ -21,13 +20,15 @@ namespace GeneralUpdate.Core.OSS
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="GeneralUpdateException{ExceptionArgs}"></exception>
-        public static async Task Start<T>(string url,string appName , string platform = PlatformType.Windows) where T : IOSS, new()
+        public static void Start<T>(string url,string appName ,string fileName = "versions.json" , string format = Format.ZIP, int timeOut = 60, string platform = PlatformType.Windows) where T : IOSS, new()
         {
             if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(appName)) throw new ArgumentNullException("The parameter cannot be empty !");
 			try
 			{
                 IStrategy strategy = null;
-                var oss = await new T().Download(url);
+                var oss = new T();
+                oss.SetParameter(url, fileName, format,timeOut);
+                oss.Update();
                 switch (platform)
                 {
                     case PlatformType.Windows:
