@@ -27,6 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
@@ -47,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Domain\Entity\" />
     <Folder Include="Exceptions\CustomArgs\" />
     <Folder Include="Exceptions\CustomException\" />
   </ItemGroup>
