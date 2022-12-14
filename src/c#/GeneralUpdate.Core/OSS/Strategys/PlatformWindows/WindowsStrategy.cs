@@ -7,11 +7,16 @@ using System.Text;
 
 namespace GeneralUpdate.Core.OSS.Strategys.PlatformWindows
 {
-    public class WindowsStrategy //: IStrategy
+    public class WindowsStrategy : IStrategy
     {
         private string _appPath;
 
         public void Create(string filePath, string appName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Create(string appName)
         {
             throw new NotImplementedException();
         }

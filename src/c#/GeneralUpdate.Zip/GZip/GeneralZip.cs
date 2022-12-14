@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;

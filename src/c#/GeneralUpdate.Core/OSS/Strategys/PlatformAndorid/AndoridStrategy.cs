@@ -2,9 +2,9 @@
 
 namespace GeneralUpdate.Core.OSS.Strategys.PlatformAndorid
 {
-    internal class AndoridStrategy //: IStrategy
+    internal class AndoridStrategy : IStrategy
     {
-        public void Create(string filePath, string appName)
+        public void Create(string appName)
         {
             throw new NotImplementedException();
         }

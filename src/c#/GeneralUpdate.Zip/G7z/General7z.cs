@@ -1,6 +1,4 @@
-﻿using GeneralUpdate.Core.Exceptions.CustomArgs;
-using GeneralUpdate.Core.Exceptions.CustomException;
-using GeneralUpdate.Zip.Events;
+﻿using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
 using SharpCompress.Archives;
 using SharpCompress.Common;
@@ -53,7 +51,7 @@ namespace GeneralUpdate.Zip.G7z
             }
             catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>(ex.Message, ex.InnerException);
+                throw new Exception(ex.Message, ex.InnerException);
             }
         }
 

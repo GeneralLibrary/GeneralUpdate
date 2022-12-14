@@ -61,8 +61,8 @@ namespace GeneralUpdate.Upgrad
 
         private static void OnMutiDownloadCompleted(object sender, GeneralUpdate.Core.Bootstrap.MutiDownloadCompletedEventArgs e)
         {
-            var info = e.Version as VersionInfo;
-            Console.WriteLine($"{info.Name} download completed.");
+            //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
+            //Console.WriteLine($"{info.Name} download completed.");
         }
 
         private static void OnMutiAllDownloadCompleted(object sender, GeneralUpdate.Core.Bootstrap.MutiAllDownloadCompletedEventArgs e)
@@ -72,8 +72,8 @@ namespace GeneralUpdate.Upgrad
 
         private static void OnMutiDownloadError(object sender, GeneralUpdate.Core.Bootstrap.MutiDownloadErrorEventArgs e)
         {
-            var info = e.Version as VersionInfo;
-            Console.WriteLine($"{info.Name},{e.Exception.Message}.");
+            //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
+            //Console.WriteLine($"{info.Name},{e.Exception.Message}.");
         }
 
         private static void OnException(object sender, GeneralUpdate.Core.Bootstrap.ExceptionEventArgs e)
