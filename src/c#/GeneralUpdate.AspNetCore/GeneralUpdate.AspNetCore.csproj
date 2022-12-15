@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="GeneralUpdate.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="DTO\BaseResponseDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\UploadReapDTO.cs" Link="DTO\UploadReapDTO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="DTO\VersionDTO.cs" />
@@ -28,10 +32,6 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Services\AppType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Services\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utils\SerializeUtil.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="GeneralUpdate.ico" />
   </ItemGroup>
 
   <ItemGroup>

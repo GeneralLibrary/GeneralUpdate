@@ -39,12 +39,6 @@
     <None Remove="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\imgs\GeneralUpdate128.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
     <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
   </ItemGroup>
