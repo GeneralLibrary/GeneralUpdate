@@ -11,6 +11,10 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x'    
+        dotnet-version: '7.0.x'
+    - name: Install .NET MAUI
+      run: dotnet workload install maui
+    - name: Restore dependencies
+      run: dotnet restore ./src/c#/GeneralUpdate.sln
     - name: build
-      run: dotnet build ./src/c#/GeneralUpdate.sln
+      run: dotnet build ./src/c#/GeneralUpdate.sln -c Release
