@@ -1,5 +1,7 @@
 # GeneralUpdate #
-![](https://img.shields.io/github/license/WELL-E/AutoUpdater?color=blue)
+![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
+
+![](https://img.shields.io/cirrus/github/JusterZhu/GeneralUpdate/master?color=g&label=build&style=plastic)
 
 
 ![](imgs/GeneralUpdate_h.png)
