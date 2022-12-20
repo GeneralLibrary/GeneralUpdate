@@ -197,9 +197,13 @@ namespace GeneralUpdate.Differential
                 var listExcept = FileUtil.Compare(patchPath, appPath);
                 foreach (var file in listExcept)
                 {
-                    var extensionName = Path.GetExtension(file.FullName);
-                    if (Filefilter.Diff.Contains(extensionName)) continue;
-                    File.Copy(file.FullName, Path.Combine(appPath, file.Name), true);
+                    //var extensionName = Path.GetExtension(file.FullName);
+                    //if (Filefilter.Diff.Contains(extensionName)) continue;
+                    var targetName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
+                    var targetPath = Path.Combine(appPath, targetName);
+                    var greatFolder = Directory.GetParent(targetPath);
+                    if (!greatFolder.Exists) greatFolder.Create();
+                    File.Copy(file.FullName, Path.Combine(appPath, targetPath), true);
                 }
                 if (Directory.Exists(patchPath)) Directory.Delete(patchPath, true);
                 return Task.CompletedTask;
