@@ -18,3 +18,4 @@ jobs:
       run: dotnet restore ./src/c#/GeneralUpdate.sln
     - name: build
       run: dotnet build ./src/c#/GeneralUpdate.sln -c Release
+      run: dotnet build ./src/c#/GeneralUpdate.PacketTool.sln -c Release
