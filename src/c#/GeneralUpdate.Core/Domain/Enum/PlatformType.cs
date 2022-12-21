@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace GeneralUpdate.Core.Domain.Enum
+﻿namespace GeneralUpdate.Core.Domain.Enum
 {
     /// <summary>
     /// Adapt to the update process on different platforms.
