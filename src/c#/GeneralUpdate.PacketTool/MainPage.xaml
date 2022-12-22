@@ -16,7 +16,7 @@
                 <RowDefinition Height="35"/>
                 <RowDefinition Height="35"/>
                 <RowDefinition Height="35"/>
-                <RowDefinition/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition/>
             </Grid.RowDefinitions>
             <StackLayout HorizontalOptions="Center" Orientation="Horizontal">
@@ -25,7 +25,7 @@
             <StackLayout Grid.Row="1" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center" >
                 <Label VerticalOptions="Center" Text="Source path :"/>
                 <Entry WidthRequest="400" HeightRequest="30" Margin="3,0,3,0" Text="{Binding SourcePath}" />
-                <Button WidthRequest="110" HeightRequest="35" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Source" />
+                <Button WidthRequest="110" HeightRequest="25" Text="Pick folder" Command="{Binding SelectFolderCommand}"  CommandParameter="Source" />
                 <Label Text="*" TextColor="Red" VerticalTextAlignment="Center"/>
             </StackLayout>
             <StackLayout Grid.Row="2" Orientation="Horizontal" HeightRequest="35" HorizontalOptions="Center">
