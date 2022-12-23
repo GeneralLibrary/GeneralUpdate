@@ -10,8 +10,6 @@
         /// <param name="appName">main app name</param>
         /// <param name="platform">platform enum</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="GeneralUpdateException{ExceptionArgs}"></exception>
         public static void Start<T>(string url, string appName, string fileName = "versions.json")
         {
             if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(appName)) throw new ArgumentNullException("The parameter cannot be empty !");

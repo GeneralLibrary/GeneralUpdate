@@ -87,8 +87,6 @@
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Pipeline\IPipelineBuilder.cs" Link="Pipelines\Pipeline\IPipelineBuilder.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\AbstractStrategy.cs" Link="Strategys\AbstractStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformAndroid\AndroidStrategy.cs" Link="Strategys\PlatformAndroid\AndroidStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformiOS\iOSStrategy.cs" Link="Strategys\PlatformiOS\iOSStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformMac\MacStrategy.cs" Link="Strategys\PlatformMac\MacStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
@@ -180,13 +178,9 @@
     <Folder Include="Pipelines\Middleware\" />
     <Folder Include="Pipelines\MiddlewareResolver\" />
     <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="Strategys\PlatformAndroid\" />
     <Folder Include="Strategys\PlatformWindows\" />
     <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformLinux\" />
-    <Folder Include="Strategys\PlatformiOS\" />
-    <Folder Include="Strategys\PlatformAndroid\" />
-    <Folder Include="Strategys\PlatformiOS\" />
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformWindows\" />
