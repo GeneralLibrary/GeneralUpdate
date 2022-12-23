@@ -15,6 +15,7 @@
         public static void Start<T>(string url, string appName, string fileName = "versions.json")
         {
             if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(appName)) throw new ArgumentNullException("The parameter cannot be empty !");
+
         }
     }
 }
