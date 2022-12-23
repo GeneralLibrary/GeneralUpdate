@@ -1,5 +1,5 @@
 # GeneralUpdate #
-![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)![](https://img.shields.io/cirrus/github/JusterZhu/GeneralUpdate/master?color=g&label=build&style=plastic)
+![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
 
 
 ![](imgs/GeneralUpdate_h.png)
