@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GeneralUpdate.OSS.Strategys
+﻿namespace GeneralUpdate.OSS.Strategys
 {
     public abstract class AbstractStrategy : IStrategy
     {
@@ -32,7 +26,7 @@ namespace GeneralUpdate.OSS.Strategys
             }
         }
 
-        public abstract void Create();
+        public abstract void Create(params string[] arguments);
 
         public abstract void Excute();
     }

@@ -11,6 +11,6 @@
         /// Create a policy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
-        void Create();
+        void Create(params string[] arguments);
     }
 }

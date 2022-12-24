@@ -1,31 +1,35 @@
 ﻿using Android.Content;
 using Android.OS;
 using GeneralUpdate.OSS.Strategys;
+using Java.Net;
 
 namespace GeneralUpdate.OSS
 {
     // All the code in this file is only included on Android.
-    public class Strategy : IStrategy
+    public class Strategy : AbstractStrategy
     {
-        private readonly string appPath = FileSystem.AppDataDirectory;
-        private string apk = ".apk";
+        private readonly string _appPath = FileSystem.AppDataDirectory;
+        private const string _fromat = ".apk";
+        private string _url,_apk, _authority,_versionFileName;
 
-        public void Create()
+        public override void Create(params string[] arguments)
         {
-            throw new NotImplementedException();
+            _url = arguments[0];
+            _apk = arguments[1];
+            _authority = arguments[2];
+            _versionFileName = arguments[3];
         }
 
-        public void Excute()
+        public override void Excute()
         {
-            var file = $"{appPath}/{apk}";
+            var file = $"{_appPath}/{_apk}{_fromat}";
             var apkFile = new Java.IO.File(file);
             var intent = new Intent(Intent.ActionView);
             //Give temporary read permissions.
             intent.SetFlags(ActivityFlags.GrantReadUriPermission);
-            var uri = FileProvider.GetUriForFile(Android.App.Application.Context, "com.masa.mauidemo.fileprovider", apkFile);
+            var uri = FileProvider.GetUriForFile(Android.App.Application.Context, _authority, apkFile);
             //Sets the explicit MIME data type.
             intent.SetDataAndType(uri, "application/vnd.android.package-archive");
-            //intent.SetDataAndType(Android.Net.Uri.FromFile(new Java.IO.File(file)), "application/vnd.android.package-archive");
             intent.AddFlags(ActivityFlags.NewTask);
             Android.App.Application.Context.StartActivity(intent);
         }
