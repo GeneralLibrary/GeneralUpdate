@@ -2,6 +2,9 @@
 using Android.OS;
 using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.OSS.Strategys;
+using Java.IO;
+using Java.Math;
+using Java.Security;
 using Newtonsoft.Json;
 using System.Text;
 
@@ -42,12 +45,13 @@ namespace GeneralUpdate.OSS
             var currentVersion = new Version(_currentVersion);
             var lastVersion = new Version(versionConfig.Version);
             if (currentVersion.Equals(lastVersion)) return;
-
+            
             //4.Download the apk file.
             var file = $"{_appPath}/{_apk}{_fromat}";
             await DownloadFileAsync(versionConfig.Url, file, null);
             var apkFile = new Java.IO.File(file);
             if(!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
+            if (!versionConfig.MD5.Equals(GetFileMD5(apkFile,64))) throw new Exception("The apk MD5 value does not match !");
 
             //5.Launch the apk to install.
             var intent = new Android.Content.Intent(Android.Content.Intent.ActionView);
@@ -65,26 +69,67 @@ namespace GeneralUpdate.OSS
             Android.App.Application.Context.StartActivity(intent);
         }
 
+        /// <summary>
+        /// Android OS read file byts.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         private byte[] ReadFile(Java.IO.File file) 
         {
-            var buffer = new byte[1024];
             try
             {
-                Java.IO.FileInputStream inputStream = new Java.IO.FileInputStream(file);
+                var fileLength = file.Length();
+                var buffer = new byte[fileLength];
+                var inputStream = new Java.IO.FileInputStream(file);
                 if (file.IsDirectory) return null;
-                if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu) 
-                {
-                    return inputStream.ReadAllBytes();
-                }
-                else
-                {
-                    return null;
-                }
+                inputStream.Read(buffer,0, (int)fileLength);
+                inputStream.Close();
+                return buffer;
             }
-            catch (Exception)
+            catch (FileLoadException ex)
             {
-                return null;
+                throw ex;
             }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message,ex.InnerException);
+            }
+        }
+
+        /// <summary>
+        /// Example Get the md5 value of the file.
+        /// </summary>
+        /// <param name="file">target file.</param>
+        /// <param name="radix">radix 16 32 64</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private string GetFileMD5(Java.IO.File file, int radix)
+        {
+            if (!file.IsFile) return null;
+            MessageDigest digest = null;
+            FileInputStream inputStream = null;
+            byte[] buffer = new byte[1024];
+            int len;
+            try
+            {
+                digest = MessageDigest.GetInstance("MD5");
+                inputStream = new FileInputStream(file);
+                while ((len = inputStream.Read(buffer, 0, 1024)) != -1)
+                {
+                    digest.Update(buffer, 0, len);
+                }
+                inputStream.Close();
+            }
+            catch (DigestException ex) 
+            {
+                throw ex;
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message, e.InnerException);
+            }
+            BigInteger bigInt = new BigInteger(1, digest.Digest());
+            return bigInt.ToString(radix);
         }
     }
 }

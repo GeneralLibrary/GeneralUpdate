@@ -17,4 +17,16 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\VersionConfigDO.cs" Link="Domain\DO\VersionConfigDO.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Domain\DO\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+	</ItemGroup>
+
 </Project>
