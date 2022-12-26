@@ -1,9 +1,16 @@
-﻿namespace GeneralUpdate.OSS.Strategys
+﻿ namespace GeneralUpdate.OSS.Strategys
 {
     public abstract class AbstractStrategy : IStrategy
     {
         private readonly HttpClient _client;
 
+        /// <summary>
+        /// download file.
+        /// </summary>
+        /// <param name="url">remote service address</param>
+        /// <param name="filePath">download file path.</param>
+        /// <param name="action">progress report.</param>
+        /// <returns></returns>
         public async Task DownloadFileAsync(string url,string filePath, Action<long, long> action)
         {
             var request = new HttpRequestMessage(new HttpMethod("GET"), url);
