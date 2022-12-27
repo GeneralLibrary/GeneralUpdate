@@ -1,6 +1,11 @@
 ﻿using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.Core.Pipelines;
+using GeneralUpdate.Core.Pipelines.Context;
+using GeneralUpdate.Core.Pipelines.Middleware;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.OSS.Strategys;
 using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Text;
 
 namespace GeneralUpdate.OSS
@@ -34,6 +39,7 @@ namespace GeneralUpdate.OSS
             if (versions == null) throw new NullReferenceException(nameof(versions));
 
             //3.Compare with the latest version.
+            versions = versions.OrderBy(v=>v.PubTime).ToList();
             var currentVersion = new Version(_currentVersion);
             var lastVersion = new Version(versions[0].Version);
             if (currentVersion.Equals(lastVersion)) return;
@@ -43,7 +49,19 @@ namespace GeneralUpdate.OSS
             {
                 var file = $"{_appPath}/{version.Name}{version.Format}";
                 await DownloadFileAsync(version.Url, file, null);
+                //var patchPath = GeneralUpdate.Core.Utils.FileUtil.GetTempDirectory(PATCHS);
+                //var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
+                //var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(ProgressEventAction, ExceptionEventAction, version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
+                //    UseMiddleware<MD5Middleware>().
+                //    UseMiddleware<ZipMiddleware>().
+                //    UseMiddleware<PatchMiddleware>();
+                //await pipelineBuilder.Launch();
             }
+
+            //5.Launch the main application.
+            string appPath = Path.Combine(_appPath, _app);
+            Process.Start(appPath);
+            Process.GetCurrentProcess().Kill();
         }
     }
 }
