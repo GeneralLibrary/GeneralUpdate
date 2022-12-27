@@ -18,15 +18,50 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateEventArgs.cs" Link="Bootstrap\UpdateEventArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\VersionConfigDO.cs" Link="Domain\DO\VersionConfigDO.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\Format.cs" Link="Domain\Enum\Format.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" Link="Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" Link="Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Context\BaseContext.cs" Link="Pipelines\Context\BaseContext.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" Link="Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\IMiddleware.cs" Link="Pipelines\Middleware\IMiddleware.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MD5Middleware.cs" Link="Pipelines\Middleware\MD5Middleware.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareExtensions.cs" Link="Pipelines\Middleware\MiddlewareExtensions.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareStack.cs" Link="Pipelines\Middleware\MiddlewareStack.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\PatchMiddleware.cs" Link="Pipelines\Middleware\PatchMiddleware.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\ZipMiddleware.cs" Link="Pipelines\Middleware\ZipMiddleware.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\PipelineBuilder.cs" Link="Pipelines\PipelineBuilder.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Pipeline\IPipelineBuilder.cs" Link="Pipelines\Pipeline\IPipelineBuilder.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Domain\DO\" />
+	  <Folder Include="Domain\Enum\" />
+	  <Folder Include="Pipelines\Attributes\" />
+	  <Folder Include="Pipelines\Middleware\" />
+	  <Folder Include="Pipelines\MiddlewareResolver\" />
+	  <Folder Include="Pipelines\Pipeline\" />
+	  <Folder Include="Utils\" />
+	  <Folder Include="Bootstrap\" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+	  <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
 	</ItemGroup>
 
 </Project>
