@@ -1,4 +1,6 @@
-﻿using GeneralUpdate.Core.Domain.DO;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
@@ -15,6 +17,8 @@ namespace GeneralUpdate.OSS
     {
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private string _url, _app, _versionFileName, _currentVersion;
+        private Action<object, MutiDownloadProgressChangedEventArgs> _progressEventAction;
+        private Action<object, ExceptionEventArgs> _exceptionEventAction;
 
         public override void Create(params string[] arguments)
         {
@@ -77,7 +81,8 @@ namespace GeneralUpdate.OSS
 
         private BaseContext InitContext()
         {
-            var context = new BaseContext();
+            VersionInfo version = null;
+            var context = new BaseContext(_progressEventAction,_exceptionEventAction, version,"","","","", Encoding.UTF8);
             return context;
         }
     }
