@@ -286,7 +286,7 @@ namespace GeneralUpdate.Zip.GZip
 
         public override bool UnZip() => UnZip(SOURSE_PATH, _destinationPath);
 
-        public override void Configs(string name,string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false)
+        public override void Configs(string name, string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false)
         {
             _encoding = encoding;
             SOURSE_PATH = sourcePath;

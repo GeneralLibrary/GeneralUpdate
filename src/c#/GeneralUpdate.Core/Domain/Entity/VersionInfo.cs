@@ -4,7 +4,8 @@ namespace GeneralUpdate.Core.Domain.Entity
 {
     public class VersionInfo : Entity
     {
-        public VersionInfo() { }
+        public VersionInfo()
+        { }
 
         public VersionInfo(long pubTime, string name, string mD5, string version, string url)
         {

@@ -9,18 +9,19 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         private FileNode _root;
 
-        #endregion
+        #endregion Private Members
 
         #region Constructors
 
-        public FileTree() { }
+        public FileTree()
+        { }
 
         public FileTree(IEnumerable<FileNode> nodes)
         {
             foreach (var node in nodes) Add(node);
         }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
@@ -164,6 +165,6 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public FileNode GetRoot() => _root;
 
-        #endregion
+        #endregion Public Methods
     }
 }

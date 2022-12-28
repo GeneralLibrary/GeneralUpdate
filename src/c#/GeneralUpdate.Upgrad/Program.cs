@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Core;
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
@@ -9,7 +8,7 @@ namespace GeneralUpdate.Upgrad
 {
     internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Console.WriteLine(args[0]);
             Thread.Sleep(5000);

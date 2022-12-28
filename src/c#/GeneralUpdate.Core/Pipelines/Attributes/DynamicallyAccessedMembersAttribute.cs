@@ -8,7 +8,7 @@ namespace GeneralUpdate.Core.Pipelines.Attributes
         Inherited = false)]
     internal sealed class DynamicallyAccessedMembersAttribute : Attribute
     {
-        public DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes)=> MemberTypes = memberTypes;
+        public DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes) => MemberTypes = memberTypes;
 
         public DynamicallyAccessedMemberTypes MemberTypes { get; }
     }

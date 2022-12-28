@@ -12,7 +12,9 @@ namespace GeneralUpdate.Core
 {
     public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
     {
-        public GeneralUpdateBootstrap() : base(){}
+        public GeneralUpdateBootstrap() : base()
+        {
+        }
 
         /// <summary>
         /// Set parameter.
@@ -30,7 +32,7 @@ namespace GeneralUpdate.Core
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Client parameter json conversion failed, please check whether the parameter content is legal : { ex.Message },{ ex.StackTrace }.");
+                throw new ArgumentException($"Client parameter json conversion failed, please check whether the parameter content is legal : {ex.Message},{ex.StackTrace}.");
             }
             return this;
         }

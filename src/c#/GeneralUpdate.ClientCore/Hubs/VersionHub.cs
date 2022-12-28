@@ -40,7 +40,7 @@ namespace GeneralUpdate.ClientCore.Hubs
                 {
                     lock (_lock)
                     {
-                        if (_instance == null) 
+                        if (_instance == null)
                             _instance = new VersionHub<TParameter>();
                     }
                 }
@@ -86,7 +86,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' Subscribe error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' Subscribe error :  {ex.Message}", ex.InnerException);
             }
         }
 
@@ -105,7 +105,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' Send error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' Send error :  {ex.Message}", ex.InnerException);
             }
         }
 
@@ -123,12 +123,12 @@ namespace GeneralUpdate.ClientCore.Hubs
             try
             {
                 var clientParameter = SerializeUtil.Deserialize<TParameter>(message);
-                if (clientParameter == null) throw new ArgumentNullException($"'VersionHub' Receiving server push version information deserialization failed , receive content :  { message } .");
+                if (clientParameter == null) throw new ArgumentNullException($"'VersionHub' Receiving server push version information deserialization failed , receive content :  {message} .");
                 _receiveMessageCallback.Invoke(clientParameter);
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' Receive message error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' Receive message error :  {ex.Message}", ex.InnerException);
             }
         }
 
@@ -144,7 +144,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' Online message error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' Online message error :  {ex.Message}", ex.InnerException);
             }
         }
 
@@ -161,7 +161,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' On reconnected error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' On reconnected error :  {ex.Message}", ex.InnerException);
             }
             return Task.CompletedTask;
         }
@@ -175,7 +175,7 @@ namespace GeneralUpdate.ClientCore.Hubs
         {
             try
             {
-                if (arg != null) throw new Exception($"'VersionHub' On closed internal exception :  { arg.Message }", arg.InnerException);
+                if (arg != null) throw new Exception($"'VersionHub' On closed internal exception :  {arg.Message}", arg.InnerException);
 
                 if (_connection == null) return;
                 await Task.Delay(new Random().Next(0, 3) * 1000);
@@ -187,7 +187,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' On closed error :  { ex.Message }", ex.InnerException);
+                throw new Exception($"'VersionHub' On closed error :  {ex.Message}", ex.InnerException);
             }
         }
 

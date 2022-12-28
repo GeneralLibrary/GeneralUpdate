@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GeneralUpdate.Core.Exceptions.CustomArgs
 {
@@ -9,13 +7,15 @@ namespace GeneralUpdate.Core.Exceptions.CustomArgs
     {
         private readonly String _patchPath;
 
-        public PatchDirtyExceptionArgs(String patchPath) { _patchPath = patchPath; }
+        public PatchDirtyExceptionArgs(String patchPath)
+        { _patchPath = patchPath; }
 
-        public String PatchPath { get { return _patchPath; } }
+        public String PatchPath
+        { get { return _patchPath; } }
 
-        public override string Message 
+        public override string Message
         {
-            get 
+            get
             {
                 return (_patchPath == null) ? base.Message : $"Patch file path {_patchPath}";
             }

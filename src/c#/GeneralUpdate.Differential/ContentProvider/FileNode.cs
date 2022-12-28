@@ -24,18 +24,19 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public int RightType { get; set; }
 
-        #endregion
+        #endregion Public Properties
 
         #region Constructors
 
-        public FileNode() { }
+        public FileNode()
+        { }
 
         public FileNode(int id)
         {
             Id = id;
         }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
@@ -138,8 +139,8 @@ namespace GeneralUpdate.Differential.ContentProvider
             return MD5.Equals(tempNode.MD5) && Name.Equals(tempNode.Name);
         }
 
-        public override int GetHashCode()=>base.GetHashCode();
+        public override int GetHashCode() => base.GetHashCode();
 
-        #endregion
+        #endregion Public Methods
     }
 }

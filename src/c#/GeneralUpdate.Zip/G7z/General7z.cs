@@ -91,7 +91,7 @@ namespace GeneralUpdate.Zip.G7z
             OnUnZipProgressEventHandler(sender, new BaseUnZipProgressEventArgs() { Size = e.Size, Name = e.Name, Index = _unZipCount, Count = _unzipTotalCount, Path = Path.Combine(_destinationPath, e.Name) });
         }
 
-        public override void Configs(string name,string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false)
+        public override void Configs(string name, string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false)
         {
             SOURSE_PATH = sourcePath;
             COMPRESS_NAME = $"{name}.7z";

@@ -7,11 +7,11 @@ namespace GeneralUpdate.Core.Domain.Entity.Assembler
     {
         public static string ToBase64(ProcessInfo info)
         {
-            if(info == null) throw new ArgumentNullException(nameof(info));
+            if (info == null) throw new ArgumentNullException(nameof(info));
             return SerializeUtil.Serialize(info);
         }
 
-        public static Packet ToPacket(ProcessInfo info) 
+        public static Packet ToPacket(ProcessInfo info)
         {
             var packet = new Packet();
             packet.AppName = info.AppName;

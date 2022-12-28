@@ -40,7 +40,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             }
             catch (Exception ex)
             {
-                throw new Exception($"read config error : { ex.Message } !", ex.InnerException);
+                throw new Exception($"read config error : {ex.Message} !", ex.InnerException);
             }
             finally
             {
@@ -126,7 +126,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             return result;
         }
 
-        public JsonHandle<TContent> GetAwaiter()=>this;
+        public JsonHandle<TContent> GetAwaiter() => this;
 
         public JsonHandle<TContent> GetResult()
         {
@@ -134,6 +134,6 @@ namespace GeneralUpdate.Differential.Config.Handles
             return this;
         }
 
-        public async Task AsTask(JsonHandle<TContent> awaiter)=> await awaiter;
+        public async Task AsTask(JsonHandle<TContent> awaiter) => await awaiter;
     }
 }

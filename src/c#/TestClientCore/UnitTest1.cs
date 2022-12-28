@@ -1,7 +1,3 @@
-using NUnit.Framework.Interfaces;
-using System.Diagnostics;
-using System.Text;
-
 namespace TestClientCore
 {
     public class Tests
@@ -31,7 +27,6 @@ namespace TestClientCore
         //{
         //    Console.WriteLine(1);
         //}
-
 
         //private const string baseUrl = @"http://127.0.0.1:5001", hubName = "versionhub";
         //private const string baseUrl1 = @"http://127.0.0.1:5001";

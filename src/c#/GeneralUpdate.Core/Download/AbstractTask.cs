@@ -175,9 +175,9 @@ namespace GeneralUpdate.Core.Download
                     WriteFile(_state, startPos);
                 }
             }
-            catch (HttpRequestException ex) 
+            catch (HttpRequestException ex)
             {
-                throw new GeneralUpdateException<HttpExceptionArgs>(new HttpExceptionArgs(url, 400, "Download file failed."),ex.Message,ex.InnerException);
+                throw new GeneralUpdateException<HttpExceptionArgs>(new HttpExceptionArgs(url, 400, "Download file failed."), ex.Message, ex.InnerException);
             }
             catch (Exception e)
             {

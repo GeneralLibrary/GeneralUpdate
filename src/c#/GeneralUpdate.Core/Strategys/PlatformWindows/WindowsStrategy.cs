@@ -67,7 +67,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             }
         }
 
-        public override bool StartApp(string appName,int appType)
+        public override bool StartApp(string appName, int appType)
         {
             try
             {
@@ -79,6 +79,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         Process.Start(path, Packet.ProcessBase64);
                         Process.GetCurrentProcess().Kill();
                         break;
+
                     case AppType.UpgradeApp:
                         Process.Start(path);
                         break;
@@ -126,6 +127,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         #endregion Private Methods
 
-        public override string GetPlatform()=> PlatformType.Windows;
+        public override string GetPlatform() => PlatformType.Windows;
     }
 }

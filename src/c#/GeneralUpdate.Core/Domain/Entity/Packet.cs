@@ -6,7 +6,8 @@ namespace GeneralUpdate.Core.Domain.Entity
 {
     public class Packet : Entity
     {
-        public Packet() { }
+        public Packet()
+        { }
 
         public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, Encoding encoding, int downloadTimeOut, string appSecretKey, string tempPath)
         {

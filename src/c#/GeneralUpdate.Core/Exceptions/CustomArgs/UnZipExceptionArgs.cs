@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GeneralUpdate.Core.Exceptions.CustomArgs
 {
@@ -9,9 +7,11 @@ namespace GeneralUpdate.Core.Exceptions.CustomArgs
     {
         private readonly String _filePath;
 
-        public UnZipExceptionArgs(String filePath) { _filePath = filePath; }
+        public UnZipExceptionArgs(String filePath)
+        { _filePath = filePath; }
 
-        public String FilePath { get { return _filePath; } }
+        public String FilePath
+        { get { return _filePath; } }
 
         public override string Message
         {

@@ -3,7 +3,6 @@ using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
 using GeneralUpdate.Core.Utils;
-using GeneralUpdate.OSS.Pipelines.Context;
 using GeneralUpdate.OSS.Strategys;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -50,11 +49,12 @@ namespace GeneralUpdate.OSS
                 //4.Download the packet file.
                 foreach (var version in versions)
                 {
-                    var file = $"{_appPath}/{version.Name}{version.Format}";
-                    await DownloadFileAsync(version.Url, file, null);
-                    var patchPath = FileUtil.GetTempDirectory("");
+                    //var file = Path.Combine(_appPath,$"{version.Name}{version.Format}");
+                    var patchPath = FileUtil.GetTempDirectory(version.Name);
+                    await DownloadFileAsync(version.Url, patchPath, null);
                     var zipFilePath = $"{_app}{version.Name}{version.Format}";
-                    var pipelineBuilder = new PipelineBuilder<OSSContext>(new OSSContext()).
+                    var context = InitContext();
+                    var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
                         UseMiddleware<MD5Middleware>().
                         UseMiddleware<ZipMiddleware>().
                         UseMiddleware<PatchMiddleware>();
@@ -73,6 +73,12 @@ namespace GeneralUpdate.OSS
             {
                 Process.GetCurrentProcess().Kill();
             }
+        }
+
+        private BaseContext InitContext()
+        {
+            var context = new BaseContext();
+            return context;
         }
     }
 }

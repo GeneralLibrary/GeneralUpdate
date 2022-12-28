@@ -9,15 +9,17 @@ namespace GeneralUpdate.Core.Exceptions.CustomArgs
         private readonly VersionInfo _versionInfo;
         private readonly String _excptionMessage;
 
-        public UpdateExceptionArgs(VersionInfo info,String excptionMessage) 
+        public UpdateExceptionArgs(VersionInfo info, String excptionMessage)
         {
             _versionInfo = info;
             _excptionMessage = excptionMessage;
         }
 
-        public VersionInfo VersionInfo { get { return _versionInfo; } }
+        public VersionInfo VersionInfo
+        { get { return _versionInfo; } }
 
-        public String ExcptionMessage { get { return _excptionMessage; } }
+        public String ExcptionMessage
+        { get { return _excptionMessage; } }
 
         public override string Message
         {

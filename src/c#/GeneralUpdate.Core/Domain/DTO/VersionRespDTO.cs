@@ -2,7 +2,8 @@
 
 namespace GeneralUpdate.Core.Domain.DTO
 {
-    public class VersionRespDTO : BaseResponseDTO<VersionBodyDTO> {}
+    public class VersionRespDTO : BaseResponseDTO<VersionBodyDTO>
+    { }
 
     public class VersionBodyDTO
     {

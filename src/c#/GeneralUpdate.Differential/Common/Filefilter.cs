@@ -13,8 +13,8 @@ namespace GeneralUpdate.Differential.Common
 
         /// <summary>
         /// File formats to avoid when doing differential updates.
-        /// ".db", ".xml", ".ini", ".json", ".config" 
+        /// ".db", ".xml", ".ini", ".json", ".config"
         /// </summary>
-        public static readonly List<string> Diff = new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar"};
+        public static readonly List<string> Diff = new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar" };
     }
 }

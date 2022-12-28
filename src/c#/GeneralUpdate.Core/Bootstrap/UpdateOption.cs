@@ -44,10 +44,10 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         public static readonly UpdateOption<bool> UpdateConfig = ValueOf<bool>("UPDATECONFIG");
 
-        #endregion
+        #endregion parameter configuration
 
         internal UpdateOption(int id, string name)
-          : base(id, name) {}
+          : base(id, name) { }
 
         public abstract bool Set(IUpdateConfiguration configuration, object value);
     }

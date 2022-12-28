@@ -1,12 +1,10 @@
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
-using System.Diagnostics;
 
 namespace TestZIP
 {
     public class Tests
     {
-
         [Test]
         public void CreatZip()
         {
@@ -16,15 +14,15 @@ namespace TestZIP
                 string destinationPath = "D:\\Updatetest_hub";
                 string name = "testpacket.zip";
                 var factory = new GeneralZipFactory();
-                factory.CompressProgress += (a,e) => 
+                factory.CompressProgress += (a, e) =>
                 {
                     Console.WriteLine($"fileName:{e.Name},fileSize:{e.Size},fileIndex:{e.Index},filePath:{e.Path},fileCount:{e.Count}");
                 };
-                factory.Completed += (a,e) => 
+                factory.Completed += (a, e) =>
                 {
-                    Console.WriteLine($"IsCompleted:{ e.IsCompleted }");
+                    Console.WriteLine($"IsCompleted:{e.IsCompleted}");
                 };
-                factory.CreatefOperate(OperationType.GZip, name, sourcePath, destinationPath,false,System.Text.Encoding.Default).
+                factory.CreatefOperate(OperationType.GZip, name, sourcePath, destinationPath, false, System.Text.Encoding.Default).
                     CreatZip();
             }
             catch
@@ -35,7 +33,7 @@ namespace TestZIP
         }
 
         [Test]
-        public void UnZip() 
+        public void UnZip()
         {
             try
             {
@@ -43,7 +41,7 @@ namespace TestZIP
                 string destinationPath = "D:\\Updatetest_hub";
                 string name = "testpacket.zip";
                 var factory = new GeneralZipFactory();
-                factory.UnZipProgress += (a,e) => 
+                factory.UnZipProgress += (a, e) =>
                 {
                     Console.WriteLine($"fileName:{e.Name},fileSize:{e.Size},fileIndex:{e.Index},filePath:{e.Path},fileCount:{e.Count}");
                 };

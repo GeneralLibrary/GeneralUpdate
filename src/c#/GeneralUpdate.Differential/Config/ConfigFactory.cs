@@ -83,7 +83,7 @@ namespace GeneralUpdate.Differential.Config
             }
             catch (Exception ex)
             {
-                throw new Exception($"Deploy config error : { ex.Message } .", ex.InnerException);
+                throw new Exception($"Deploy config error : {ex.Message} .", ex.InnerException);
             }
         }
 
@@ -109,7 +109,7 @@ namespace GeneralUpdate.Differential.Config
             }
             catch (Exception ex)
             {
-                throw new Exception($"Scan config files error : { ex.Message } .", ex.InnerException);
+                throw new Exception($"Scan config files error : {ex.Message} .", ex.InnerException);
             }
         }
 
@@ -138,7 +138,7 @@ namespace GeneralUpdate.Differential.Config
             catch (Exception ex)
             {
                 _disposed = false;
-                throw new Exception($"'Dispose' error :{ ex.Message } .", ex.InnerException);
+                throw new Exception($"'Dispose' error :{ex.Message} .", ex.InnerException);
             }
         }
 
@@ -187,7 +187,7 @@ namespace GeneralUpdate.Differential.Config
             }
             catch (Exception ex)
             {
-                throw new Exception($"'Cache' error :{ ex.Message } .", ex.InnerException);
+                throw new Exception($"'Cache' error :{ex.Message} .", ex.InnerException);
             }
         }
 

@@ -1,5 +1,4 @@
-﻿
-namespace GeneralUpdate.Core.Domain.DTO
+﻿namespace GeneralUpdate.Core.Domain.DTO
 {
     public class BaseResponseDTO<TBody>
     {

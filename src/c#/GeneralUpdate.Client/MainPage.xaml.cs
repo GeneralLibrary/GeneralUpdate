@@ -29,13 +29,13 @@ namespace GeneralUpdate.Client
 
         private async void GetMessage(string msg)
         {
-            var isUpdate = await Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "update","cancel");
+            var isUpdate = await Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "update", "cancel");
             if (isUpdate) Upgrade();
         }
 
-        private void OnClicked(object sender, EventArgs e)=> Upgrade();
+        private void OnClicked(object sender, EventArgs e) => Upgrade();
 
-        private void Upgrade() 
+        private void Upgrade()
         {
             Task.Run(async () =>
             {
@@ -81,7 +81,7 @@ namespace GeneralUpdate.Client
         /// 获取Windows平台所需的配置参数
         /// </summary>
         /// <returns></returns>
-        private Configinfo GetWindowsConfiginfo() 
+        private Configinfo GetWindowsConfiginfo()
         {
             //该对象用于主程序客户端与更新组件进程之间交互用的对象
             var config = new Configinfo();
@@ -112,7 +112,7 @@ namespace GeneralUpdate.Client
         /// 获取Android平台所需要的参数
         /// </summary>
         /// <returns></returns>
-        private Configinfo GetAndroidConfiginfo() 
+        private Configinfo GetAndroidConfiginfo()
         {
             var config = new Configinfo();
             config.InstallPath = System.Threading.Thread.GetDomain().BaseDirectory;
@@ -156,7 +156,7 @@ namespace GeneralUpdate.Client
             //e.Type 当前正在执行的操作  1.ProgressType.Check 检查版本信息中 2.ProgressType.Donwload 正在下载当前版本 3. ProgressType.Updatefile 更新当前版本 4. ProgressType.Done更新完成 5.ProgressType.Fail 更新失败
             //e.BytesReceived 已下载大小
             DispatchMessage($"{e.ProgressPercentage}%");
-            MyProgressBar.ProgressTo(e.ProgressValue,100,Easing.Default);
+            MyProgressBar.ProgressTo(e.ProgressValue, 100, Easing.Default);
         }
 
         private void OnException(object sender, ExceptionEventArgs e)
@@ -182,7 +182,7 @@ namespace GeneralUpdate.Client
             DispatchMessage($"{info.Name} error!");
         }
 
-        private void DispatchMessage(string message) 
+        private void DispatchMessage(string message)
         {
             Shell.Current.Dispatcher.DispatchAsync(() =>
             {

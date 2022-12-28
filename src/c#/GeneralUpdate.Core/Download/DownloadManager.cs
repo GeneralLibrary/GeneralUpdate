@@ -122,7 +122,7 @@ namespace GeneralUpdate.Core.Download
             }
             catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>($"Download manager error : {ex.Message} !",ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>($"Download manager error : {ex.Message} !", ex.InnerException);
             }
             finally
             {

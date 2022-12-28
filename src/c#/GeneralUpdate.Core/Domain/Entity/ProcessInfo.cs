@@ -10,12 +10,13 @@ namespace GeneralUpdate.Core.Domain.Entity
 {
     public class ProcessInfo : Entity
     {
-        public ProcessInfo() { }
+        public ProcessInfo()
+        { }
 
-        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl,Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
+        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
-            if(!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! { installPath }." );
+            if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
             InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));

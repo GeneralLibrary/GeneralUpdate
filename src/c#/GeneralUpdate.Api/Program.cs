@@ -60,7 +60,7 @@ app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientT
 /**
  * Upload update package.
  */
-app.MapPost("/upload", async Task<string> (HttpContext context,HttpRequest request) =>
+app.MapPost("/upload", async Task<string> (HttpContext context, HttpRequest request) =>
 {
     var uploadReapDTO = new UploadReapDTO();
     try
@@ -73,7 +73,7 @@ app.MapPost("/upload", async Task<string> (HttpContext context,HttpRequest reque
 
         if (!request.HasFormContentType) throw new Exception("ContentType was not included in the request !");
         var form = await request.ReadFormAsync();
-        
+
         var formFile = form.Files["file"];
         if (formFile is null || formFile.Length == 0) throw new ArgumentNullException("Uploaded update package file not found !");
         await using var stream = formFile.OpenReadStream();
@@ -94,7 +94,7 @@ app.MapPost("/upload", async Task<string> (HttpContext context,HttpRequest reque
     catch (Exception ex)
     {
         uploadReapDTO.Code = HttpStatus.BAD_REQUEST;
-        uploadReapDTO.Body = $"Failed to publish ! Because : { ex.Message }";
+        uploadReapDTO.Body = $"Failed to publish ! Because : {ex.Message}";
         uploadReapDTO.Message = RespMessage.RequestFailed;
         return JsonConvert.SerializeObject(uploadReapDTO);
     }

@@ -5,7 +5,6 @@ namespace GeneralUpdate.AspNetCore.Services
 {
     public interface IUpdateService
     {
-
         /// <summary>
         /// Verify whether the current version of the client needs to be updated.
         /// </summary>
@@ -17,6 +16,6 @@ namespace GeneralUpdate.AspNetCore.Services
         /// <param name="isForce">Whether to force all versions to be updated.</param>
         /// <param name="versions"></param>
         /// <returns>Json object.</returns>
-        string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, bool isForce, List<VersionDTO> versions);
+        string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey, bool isForce, List<VersionDTO> versions);
     }
 }

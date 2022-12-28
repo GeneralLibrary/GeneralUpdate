@@ -1,4 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace GeneralUpdate.Core.Utils
@@ -55,7 +59,7 @@ namespace GeneralUpdate.Core.Utils
 
         public static string GetTempDirectory(string name)
         {
-            var path2 = $"generalupdate_{ DateTime.Now.ToString("yyyy-MM-dd") }_{name}";
+            var path2 = $"generalupdate_{DateTime.Now.ToString("yyyy-MM-dd")}_{name}";
             var tempDir = Path.Combine(Path.GetTempPath(), path2);
             if (!Directory.Exists(tempDir))
             {
@@ -121,7 +125,6 @@ namespace GeneralUpdate.Core.Utils
                 return null;
             }
         }
-
     }
 
     /// <summary>
@@ -131,7 +134,8 @@ namespace GeneralUpdate.Core.Utils
     /// </summary>
     public class FileCompare : IEqualityComparer<FileInfo>
     {
-        public FileCompare(){ }
+        public FileCompare()
+        { }
 
         public bool Equals(FileInfo f1, FileInfo f2)
         {

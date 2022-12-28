@@ -40,11 +40,11 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 throw new InvalidOperationException("No suitable method matched .");
 
             if (!typeof(Task).IsAssignableFrom(invokeMethod.ReturnType))
-                throw new InvalidOperationException($"The method is not an awaitable method { nameof(Task) } !");
+                throw new InvalidOperationException($"The method is not an awaitable method {nameof(Task)} !");
 
             var parameters = invokeMethod.GetParameters();
             if (parameters.Length == 0 || parameters[0].ParameterType != typeof(BaseContext))
-                throw new InvalidOperationException($" The method parameter does not contain an { nameof(BaseContext) } type parameter !");
+                throw new InvalidOperationException($" The method parameter does not contain an {nameof(BaseContext)} type parameter !");
 
             return pipeline.Use(((IMiddleware)ActivatorMiddlewareResolver.Resolve(middleware)));
         }

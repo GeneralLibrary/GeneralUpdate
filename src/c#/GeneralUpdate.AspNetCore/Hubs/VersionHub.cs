@@ -21,6 +21,7 @@ namespace GeneralUpdate.AspNetCore.Hubs
         private const string GroupName = "VersionGroup";
 
         public delegate void ConnectionStatus(HubStatus hubStatus, string message);
+
         public event ConnectionStatus OnConnectionStatus;
 
         #endregion Private Members
@@ -57,11 +58,11 @@ namespace GeneralUpdate.AspNetCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception($"'VersionHub' Remove error :  { ex.Message } .", ex.InnerException);
+                throw new Exception($"'VersionHub' Remove error :  {ex.Message} .", ex.InnerException);
             }
         }
 
-        public Task ThrowException()=> throw new HubException("This error will be sent to the client!");
+        public Task ThrowException() => throw new HubException("This error will be sent to the client!");
 
         #endregion Public Methods
     }

@@ -29,7 +29,7 @@ namespace GeneralUpdate.AspNetCore.Services
             {
                 if (!Version.TryParse(clientVersion, out clientLastVersion))
                 {
-                    respDTO.Message = $"{ RespMessage.RequestFailed } Wrong version number.";
+                    respDTO.Message = $"{RespMessage.RequestFailed} Wrong version number.";
                     respDTO.Code = HttpStatus.BAD_REQUEST;
                     return null;
                 }
@@ -55,7 +55,7 @@ namespace GeneralUpdate.AspNetCore.Services
             return JsonConvert.SerializeObject(respDTO);
         }
 
-        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey,string appSecretKey, List<VersionDTO> versions)
+        private void ParameterVerification(int clientType, string clientVersion, string serverLastVersion, string clientAppkey, string appSecretKey, List<VersionDTO> versions)
         {
             if (clientType <= 0) throw new Exception(@"'clientType' cannot be less than or equal to 0 !");
             if (string.IsNullOrWhiteSpace(clientVersion)) throw new ArgumentNullException(@"'clientVersion' cannot be null !");

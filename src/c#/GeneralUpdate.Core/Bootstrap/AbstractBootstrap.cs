@@ -23,7 +23,6 @@ namespace GeneralUpdate.Core.Bootstrap
         private IStrategy _strategy;
         private const string EXECUTABLE_FILE = ".exe";
 
-
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
         public event MutiAllDownloadCompletedEventHandler MutiAllDownloadCompleted;
@@ -52,7 +51,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Constructors
 
-        protected internal AbstractBootstrap()=> this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
+        protected internal AbstractBootstrap() => this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         #endregion Constructors
 
@@ -114,14 +113,14 @@ namespace GeneralUpdate.Core.Bootstrap
             return _strategy;
         }
 
-        protected string GetPlatform() 
+        protected string GetPlatform()
         {
             return _strategy.GetPlatform();
         }
 
         protected IStrategy ExcuteStrategy()
         {
-            if(_strategy != null) _strategy.Excute();
+            if (_strategy != null) _strategy.Excute();
             return _strategy;
         }
 
@@ -190,7 +189,7 @@ namespace GeneralUpdate.Core.Bootstrap
 
         protected void ExceptionAction(object sender, ExceptionEventArgs e)
         {
-            if (Exception != null)  Exception.Invoke(this, e);
+            if (Exception != null) Exception.Invoke(this, e);
         }
 
         private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)

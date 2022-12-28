@@ -1,4 +1,4 @@
-﻿ namespace GeneralUpdate.OSS.Strategys
+﻿namespace GeneralUpdate.OSS.Strategys
 {
     public abstract class AbstractStrategy : IStrategy
     {
@@ -11,7 +11,7 @@
         /// <param name="filePath">download file path.</param>
         /// <param name="action">progress report.</param>
         /// <returns></returns>
-        public async Task DownloadFileAsync(string url,string filePath, Action<long, long> action)
+        public async Task DownloadFileAsync(string url, string filePath, Action<long, long> action)
         {
             var request = new HttpRequestMessage(new HttpMethod("GET"), url);
             var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -26,7 +26,7 @@
                 while ((length = await stream.ReadAsync(buffer, 0, buffer.Length)) != 0)
                 {
                     readLength += length;
-                    if(action != null) action(readLength, totalLength!.Value);
+                    if (action != null) action(readLength, totalLength!.Value);
                     fileStream.Write(buffer, 0, length);
                 }
             }

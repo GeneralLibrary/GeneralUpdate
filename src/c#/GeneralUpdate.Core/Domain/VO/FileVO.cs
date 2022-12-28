@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace GeneralUpdate.Core.Domain.VO
+﻿namespace GeneralUpdate.Core.Domain.VO
 {
     /// <summary>
     /// file object value.

@@ -62,7 +62,7 @@ namespace GeneralUpdate.Zip.Factory
             Directory.Delete(SOURSE_PATH, true);
         }
 
-        public abstract void Configs(string name ,string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false);
+        public abstract void Configs(string name, string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false);
 
         public abstract bool CreatZip();
 

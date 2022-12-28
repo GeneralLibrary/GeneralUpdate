@@ -7,14 +7,14 @@ namespace GeneralUpdate.Core.Events
     /// <summary>
     /// Manage all events in the component.
     /// </summary>
-    public class EventManager : IEventManager , IDisposable
+    public class EventManager : IEventManager, IDisposable
     {
         //TODO:https://gitee.com/Juster-zhu/GeneralUpdate/commit/59f8a4ba072c73d924a6bce744629d40934ac44d
 
         // Use interop to call the method necessary
         // to clean up the unmanaged resource.
         [System.Runtime.InteropServices.DllImport("Kernel32")]
-        private extern static Boolean CloseHandle(IntPtr handle);
+        private static extern Boolean CloseHandle(IntPtr handle);
 
         private static readonly object _lockObj = new object();
         private static EventManager _instance;
@@ -36,7 +36,7 @@ namespace GeneralUpdate.Core.Events
         // does not get called.
         // It gives your base class the opportunity to finalize.
         // Do not provide finalizer in types derived from this class.
-        ~EventManager() 
+        ~EventManager()
         {
             // Do not re-create Dispose clean-up code here.
             // Calling Dispose(disposing: false) is optimal in terms of

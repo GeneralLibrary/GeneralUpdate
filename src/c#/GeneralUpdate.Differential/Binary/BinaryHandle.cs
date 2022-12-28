@@ -212,7 +212,7 @@ namespace GeneralUpdate.Differential.Binary
             }
             catch (Exception ex)
             {
-                throw new Exception($"Clean error : { ex.Message } !", ex.InnerException);
+                throw new Exception($"Clean error : {ex.Message} !", ex.InnerException);
             }
         }
 

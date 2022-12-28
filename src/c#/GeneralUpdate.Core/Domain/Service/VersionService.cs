@@ -8,11 +8,11 @@ namespace GeneralUpdate.Core.Domain.Service
 {
     public class VersionService
     {
-        public async Task<VersionRespDTO> ValidationVersion(string url,Action<object, ProgressType, string> statusCallback) 
+        public async Task<VersionRespDTO> ValidationVersion(string url, Action<object, ProgressType, string> statusCallback)
         {
             statusCallback(this, ProgressType.Check, "Update checking...");
             VersionRespDTO resp = await ValidationVersion(url);
-            if(resp == null) statusCallback(this, ProgressType.Check, $"Request failed , Code :{resp.Code}, Message:{resp.Message} !");
+            if (resp == null) statusCallback(this, ProgressType.Check, $"Request failed , Code :{resp.Code}, Message:{resp.Message} !");
             return await ValidationVersion(url);
         }
 

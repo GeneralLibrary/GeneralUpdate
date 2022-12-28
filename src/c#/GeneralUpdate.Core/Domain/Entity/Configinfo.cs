@@ -4,7 +4,8 @@ namespace GeneralUpdate.Core.Domain.Entity
 {
     public class Configinfo : Entity
     {
-        public Configinfo() { }
+        public Configinfo()
+        { }
 
         public Configinfo(int appType, string appName, string appSecretKey, string clientVersion, string updateUrl, string updateLogUrl, string installPath, string mainUpdateUrl, string mainAppName)
         {

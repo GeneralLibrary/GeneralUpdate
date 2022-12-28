@@ -13,7 +13,7 @@ namespace GeneralUpdate.Core.Pipelines
         private MiddlewareStack _components;
         private readonly TContext _context;
 
-        public PipelineBuilder(TContext context) 
+        public PipelineBuilder(TContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
             _context = context;

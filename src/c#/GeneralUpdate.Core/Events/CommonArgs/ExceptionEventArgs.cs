@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace GeneralUpdate.Core.Events.CommonArgs
+﻿namespace GeneralUpdate.Core.Events.CommonArgs
 {
     public class ExceptionEventArgs : BaseEventArgs
     {

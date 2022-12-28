@@ -59,7 +59,7 @@ namespace GeneralUpdate.Core.Download
                 InitStatisticsEvent();
                 InitProgressEvent();
                 InitCompletedEvent();
-                var installPath = $"{ _manager.Path }{ name }{_manager.Format}";
+                var installPath = $"{_manager.Path}{name}{_manager.Format}";
                 DownloadFileRange(url, installPath, null);
                 await this;
             }
@@ -81,7 +81,7 @@ namespace GeneralUpdate.Core.Download
             if (IsCompleted) continuation?.Invoke();
         }
 
-        public DownloadTask<TVersion> GetAwaiter()=> this;
+        public DownloadTask<TVersion> GetAwaiter() => this;
 
         public async Task AsTask(DownloadTask<TVersion> awaiter) => await awaiter;
 
@@ -184,9 +184,9 @@ namespace GeneralUpdate.Core.Download
             {
                 throw _exception = new AmbiguousMatchException("'GetPropertyValue' The method executes abnormally !", ex);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>($"Download task GetPropertyValue error : { ex.Message }",ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>($"Download task GetPropertyValue error : {ex.Message}", ex.InnerException);
             }
             return result;
         }

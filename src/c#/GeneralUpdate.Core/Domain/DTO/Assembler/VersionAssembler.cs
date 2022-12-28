@@ -1,7 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace GeneralUpdate.Core.Domain.DTO.Assembler
 {
@@ -10,7 +8,7 @@ namespace GeneralUpdate.Core.Domain.DTO.Assembler
         public static List<VersionInfo> ToEntitys(List<VersionDTO> versionDTO)
         {
             List<VersionInfo> entitys = new List<VersionInfo>();
-            versionDTO.ForEach((v) => 
+            versionDTO.ForEach((v) =>
             {
                 entitys.Add(ToEntity(v));
             });

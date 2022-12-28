@@ -20,7 +20,7 @@
             this.value = value;
         }
 
-        public override object GetValue()=> this.value;
+        public override object GetValue() => this.value;
 
         public override bool Set(IUpdateConfiguration config) => config.SetOption(this.Option, this.value);
 

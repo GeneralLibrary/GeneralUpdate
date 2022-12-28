@@ -1,5 +1,4 @@
 using GeneralUpdate.Differential;
-using GeneralUpdate.Differential.Config;
 
 namespace TestDifferential
 {

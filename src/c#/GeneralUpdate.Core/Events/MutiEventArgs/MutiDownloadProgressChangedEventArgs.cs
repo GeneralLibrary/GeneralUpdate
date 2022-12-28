@@ -1,8 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GeneralUpdate.Core.Events.MutiEventArgs
 {

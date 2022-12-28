@@ -38,7 +38,7 @@ namespace GeneralUpdate.Zip
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
-        public IFactory CreatefOperate(OperationType type,string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
+        public IFactory CreatefOperate(OperationType type, string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
                 throw new ArgumentNullException("The path cannot be empty !");
@@ -48,12 +48,12 @@ namespace GeneralUpdate.Zip
                 {
                     case OperationType.GZip:
                         _operation = new GeneralZip();
-                        _operation.Configs(name,sourcePath, destinationPath, encoding, includeBaseDirectory);
+                        _operation.Configs(name, sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
 
                     case OperationType.G7z:
                         _operation = new General7z();
-                        _operation.Configs(name,sourcePath, destinationPath, encoding, includeBaseDirectory);
+                        _operation.Configs(name, sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
                 }
                 _operation.CompressProgress += OnCompressProgress;
@@ -62,7 +62,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatefOperate' Initialization exception : { ex.Message } .", ex.InnerException);
+                throw new Exception($"'CreatefOperate' Initialization exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }
@@ -90,7 +90,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatZip' exception : { ex.Message } .", ex.InnerException);
+                throw new Exception($"'CreatZip' exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }
@@ -103,7 +103,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatefOperate' exception : { ex.Message } .", ex.InnerException);
+                throw new Exception($"'CreatefOperate' exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }

@@ -24,7 +24,9 @@ namespace GeneralUpdate.ClientCore
         private Func<bool> _customOption;
         private Func<Task<bool>> _customTaskOption;
 
-        public GeneralClientBootstrap() : base() { }
+        public GeneralClientBootstrap() : base()
+        {
+        }
 
         #region Public Methods
 
@@ -44,7 +46,7 @@ namespace GeneralUpdate.ClientCore
         /// <returns></returns>
         public Task<GeneralClientBootstrap> LaunchTaskAsync() => BaseLaunch();
 
-        private async Task<GeneralClientBootstrap> BaseLaunch() 
+        private async Task<GeneralClientBootstrap> BaseLaunch()
         {
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
@@ -60,7 +62,7 @@ namespace GeneralUpdate.ClientCore
             Packet.LastVersion = Packet.UpdateVersions.Last().Version;
             var processInfo = new ProcessInfo(Packet.MainAppName, Packet.InstallPath,
                     Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
-                    Packet.Encoding, Packet.Format,Packet.DownloadTimeOut,
+                    Packet.Encoding, Packet.Format, Packet.DownloadTimeOut,
                     Packet.AppSecretKey, mainResp.Body.Versions);
             Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
             return base.LaunchAsync();
@@ -73,7 +75,7 @@ namespace GeneralUpdate.ClientCore
         /// <param name="appName">The updater name does not need to contain an extension.</param>
         /// <returns></returns>
         /// <exception cref="Exception">Parameter initialization is abnormal.</exception>
-        public GeneralClientBootstrap Config(string url,string appSecretKey, string appName = "GeneralUpdate.Upgrad")
+        public GeneralClientBootstrap Config(string url, string appSecretKey, string appName = "GeneralUpdate.Upgrad")
         {
             if (string.IsNullOrEmpty(url)) throw new Exception("Url cannot be empty !");
             try
@@ -86,11 +88,11 @@ namespace GeneralUpdate.ClientCore
                 string clienVersion = GetFileVersion(Path.Combine(basePath, $"{Packet.AppName}.exe"));
                 Packet.ClientVersion = clienVersion;
                 Packet.AppType = AppType.UpgradeApp;
-                Packet.UpdateUrl = $"{url}/versions/{AppType.UpgradeApp}/{ clienVersion }/{ Packet.AppSecretKey }";
+                Packet.UpdateUrl = $"{url}/versions/{AppType.UpgradeApp}/{clienVersion}/{Packet.AppSecretKey}";
                 //main app.
                 string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
                 string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                Packet.MainUpdateUrl = $"{url}/versions/{ AppType.ClientApp }/{ mainVersion }/{Packet.AppSecretKey}";
+                Packet.MainUpdateUrl = $"{url}/versions/{AppType.ClientApp}/{mainVersion}/{Packet.AppSecretKey}";
                 Packet.MainAppName = mainAppName;
                 return this;
             }
@@ -144,12 +146,12 @@ namespace GeneralUpdate.ClientCore
             return this;
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
@@ -165,7 +167,7 @@ namespace GeneralUpdate.ClientCore
         /// User decides if update is required.
         /// </summary>
         /// <returns>is false to continue execution.</returns>
-        private async Task<bool> IsSkip(bool isForcibly) 
+        private async Task<bool> IsSkip(bool isForcibly)
         {
             try
             {
@@ -177,10 +179,10 @@ namespace GeneralUpdate.ClientCore
             }
             catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>($"The injected user skips this update with an exception ! { ex.Message }", ex.InnerException);
+                throw new GeneralUpdateException<ExceptionArgs>($"The injected user skips this update with an exception ! {ex.Message}", ex.InnerException);
             }
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

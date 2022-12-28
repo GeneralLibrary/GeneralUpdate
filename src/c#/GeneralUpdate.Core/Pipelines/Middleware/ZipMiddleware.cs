@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Pipelines.Context;
-using GeneralUpdate.Differential.Config;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
 using System;
@@ -18,7 +17,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 context.OnProgressEventAction(this, ProgressType.Updatefile, "In the unzipped file ...");
                 var version = context.Version;
                 bool isUnzip = UnZip(context);
-                if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{ version.Version }  MD5-{ version.MD5 } !");
+                if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{version.Version}  MD5-{version.MD5} !");
 
                 //await ConfigFactory.Instance.Scan(context.SourcePath, context.TargetPath);
                 var node = stack.Pop();

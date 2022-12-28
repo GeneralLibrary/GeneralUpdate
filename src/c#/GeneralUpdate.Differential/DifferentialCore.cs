@@ -21,6 +21,7 @@ namespace GeneralUpdate.Differential
         /// Differential file format .
         /// </summary>
         private const string PATCH_FORMAT = ".patch";
+
         private const string PATCHS = "patchs";
 
         private static readonly object _lockObj = new object();
@@ -32,7 +33,8 @@ namespace GeneralUpdate.Differential
 
         #region Constructors
 
-        private DifferentialCore() { }
+        private DifferentialCore()
+        { }
 
         #endregion Constructors
 
@@ -67,7 +69,7 @@ namespace GeneralUpdate.Differential
         /// <param name="type">7z or zip</param>
         /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
-        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null,string name = null)
+        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null, string name = null)
         {
             try
             {
@@ -143,7 +145,7 @@ namespace GeneralUpdate.Differential
                 foreach (var oldFile in oldFiles)
                 {
                     //Only the difference file (.patch) can be updated here.
-                    var findFile = patchFiles.FirstOrDefault(f => 
+                    var findFile = patchFiles.FirstOrDefault(f =>
                     {
                         var tempName = Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "");
                         return tempName.Equals(oldFile.Name);

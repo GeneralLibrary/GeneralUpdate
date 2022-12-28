@@ -16,7 +16,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 context.OnProgressEventAction(this, ProgressType.MD5, "Verify file MD5 code ...");
                 var version = context.Version;
                 bool isVerify = VerifyFileMd5(context.ZipfilePath, version.MD5);
-                if (!isVerify) throw exception = new Exception($"The update package MD5 code is inconsistent ! version-{ version.Version }  MD5-{ version.MD5 } .");
+                if (!isVerify) throw exception = new Exception($"The update package MD5 code is inconsistent ! version-{version.Version}  MD5-{version.MD5} .");
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);
             }

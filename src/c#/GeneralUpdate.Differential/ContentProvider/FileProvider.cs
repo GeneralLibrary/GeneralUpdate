@@ -14,7 +14,7 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         private long _fileCount = 0;
 
-        #endregion
+        #endregion Private Members
 
         #region Public Methods
 
@@ -35,11 +35,11 @@ namespace GeneralUpdate.Differential.ContentProvider
                 var rightTree = new FileTree(rightFilenodes);
                 List<FileNode> diffrentTreeNode = new List<FileNode>();
                 leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref diffrentTreeNode);
-                return ValueTuple.Create(leftFilenodes,rightFilenodes,diffrentTreeNode);
+                return ValueTuple.Create(leftFilenodes, rightFilenodes, diffrentTreeNode);
             });
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -69,6 +69,6 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
 
-        #endregion
+        #endregion Private Methods
     }
 }

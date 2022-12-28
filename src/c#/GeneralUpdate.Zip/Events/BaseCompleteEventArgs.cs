@@ -4,6 +4,6 @@
     {
         public bool IsCompleted { get; set; }
 
-        public BaseCompleteEventArgs(bool isCompleted)=> IsCompleted = isCompleted;
+        public BaseCompleteEventArgs(bool isCompleted) => IsCompleted = isCompleted;
     }
 }

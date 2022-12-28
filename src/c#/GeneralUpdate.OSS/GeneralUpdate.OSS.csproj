@@ -18,6 +18,18 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Bootstrap\.gitkeep" />
+	  <None Remove="Domain\DO\.gitkeep" />
+	  <None Remove="Domain\Enum\.gitkeep" />
+	  <None Remove="Pipelines\Attributes\.gitkeep" />
+	  <None Remove="Pipelines\Context\.gitkeep" />
+	  <None Remove="Pipelines\MiddlewareResolver\.gitkeep" />
+	  <None Remove="Pipelines\Middleware\.gitkeep" />
+	  <None Remove="Pipelines\Pipeline\.gitkeep" />
+	  <None Remove="Utils\.gitkeep" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateEventArgs.cs" Link="Bootstrap\UpdateEventArgs.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
