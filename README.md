@@ -6,12 +6,6 @@
 
 [English introduction](https://github.com/WELL-E/AutoUpdater/blob/master/README_en.md)
 
-### 调查问卷
-
-收集问题和建议，微信扫一扫下方二维码即可。
-
-<img src="imgs\qrcode.png" alt="qrcode" style="zoom:33%;" />
-
 ### 组件介绍 ###
 
 GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
