@@ -82,6 +82,7 @@ namespace GeneralUpdate.OSS
         private BaseContext InitContext()
         {
             VersionInfo version = null;
+            //TODO: Design update notification event
             var context = new BaseContext(_progressEventAction,_exceptionEventAction, version,"","","","", Encoding.UTF8);
             return context;
         }
