@@ -1,5 +1,5 @@
 ﻿using GeneralUpdate.OSS.Domain.Entity;
-using GeneralUpdate.OSS.Strategys;
+using GeneralUpdate.OSS.OSSStrategys;
 
 namespace GeneralUpdate.Core.OSS
 {

@@ -1,7 +1,7 @@
 ﻿using Android.Content;
 using Android.OS;
 using GeneralUpdate.Core.Domain.DO;
-using GeneralUpdate.OSS.Strategys;
+using GeneralUpdate.OSS.OSSStrategys;
 using Java.IO;
 using Java.Math;
 using Java.Security;

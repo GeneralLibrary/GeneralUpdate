@@ -21,6 +21,9 @@
 	  <None Remove="Bootstrap\.gitkeep" />
 	  <None Remove="Domain\DO\.gitkeep" />
 	  <None Remove="Domain\Enum\.gitkeep" />
+	  <None Remove="Download\.gitkeep" />
+	  <None Remove="Exceptions\CustomArgs\.gitkeep" />
+	  <None Remove="Exceptions\CustomException\.gitkeep" />
 	  <None Remove="Pipelines\Attributes\.gitkeep" />
 	  <None Remove="Pipelines\Context\.gitkeep" />
 	  <None Remove="Pipelines\MiddlewareResolver\.gitkeep" />
@@ -30,17 +33,32 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\AbstractBootstrap.cs" Link="Bootstrap\AbstractBootstrap.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateEventArgs.cs" Link="Bootstrap\UpdateEventArgs.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\Assembler\VersionAssembler.cs" Link="Domain\DO\Assembler\VersionAssembler.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\VersionConfigDO.cs" Link="Domain\DO\VersionConfigDO.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\Format.cs" Link="Domain\Enum\Format.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\AbstractTask.cs" Link="Download\AbstractTask.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\AbstractTaskManager.cs" Link="Download\AbstractTaskManager.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\DownloadManager.cs" Link="Download\DownloadManager.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" Link="Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" Link="Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Context\BaseContext.cs" Link="Pipelines\Context\BaseContext.cs" />
@@ -53,18 +71,24 @@
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\ZipMiddleware.cs" Link="Pipelines\Middleware\ZipMiddleware.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\PipelineBuilder.cs" Link="Pipelines\PipelineBuilder.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Pipelines\Pipeline\IPipelineBuilder.cs" Link="Pipelines\Pipeline\IPipelineBuilder.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Strategys\AbstractStrategy.cs" Link="Strategys\AbstractStrategy.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Domain\DO\" />
+	  <Folder Include="Domain\DO\Assembler\" />
 	  <Folder Include="Domain\Enum\" />
+	  <Folder Include="Exceptions\CustomArgs\" />
+	  <Folder Include="Exceptions\CustomException\" />
 	  <Folder Include="Pipelines\Attributes\" />
 	  <Folder Include="Pipelines\Middleware\" />
 	  <Folder Include="Pipelines\MiddlewareResolver\" />
 	  <Folder Include="Pipelines\Pipeline\" />
 	  <Folder Include="Utils\" />
 	  <Folder Include="Bootstrap\" />
+	  <Folder Include="Download\" />
+	  <Folder Include="Strategys\" />
 	</ItemGroup>
 
 	<ItemGroup>

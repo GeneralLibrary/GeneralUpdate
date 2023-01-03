@@ -1,6 +1,4 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Exceptions.CustomArgs;
-using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -122,7 +120,7 @@ namespace GeneralUpdate.Core.Download
             }
             catch (Exception ex)
             {
-                throw new GeneralUpdateException<ExceptionArgs>($"Download manager error : {ex.Message} !", ex.InnerException);
+                throw new Exception($"Download manager error : {ex.Message} !", ex.InnerException);
             }
             finally
             {

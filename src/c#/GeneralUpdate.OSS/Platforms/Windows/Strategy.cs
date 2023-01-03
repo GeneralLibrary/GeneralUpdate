@@ -1,11 +1,9 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.Core.Domain.DO.Assembler;
 using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Pipelines;
-using GeneralUpdate.Core.Pipelines.Context;
-using GeneralUpdate.Core.Pipelines.Middleware;
-using GeneralUpdate.Core.Utils;
-using GeneralUpdate.OSS.Strategys;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.OSS.OSSStrategys;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
@@ -51,19 +49,14 @@ namespace GeneralUpdate.OSS
                 if (currentVersion.Equals(lastVersion)) return;
 
                 //4.Download the packet file.
-                foreach (var version in versions)
-                {
-                    //var file = Path.Combine(_appPath,$"{version.Name}{version.Format}");
-                    var patchPath = FileUtil.GetTempDirectory(version.Name);
-                    await DownloadFileAsync(version.Url, patchPath, null);
-                    var zipFilePath = $"{_app}{version.Name}{version.Format}";
-                    var context = InitContext();
-                    var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
-                        UseMiddleware<MD5Middleware>().
-                        UseMiddleware<ZipMiddleware>().
-                        UseMiddleware<PatchMiddleware>();
-                    await pipelineBuilder.Launch();
-                }
+                var manager = new DownloadManager<VersionInfo>(_appPath, ".zip", 60);
+                manager.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
+                manager.MutiDownloadCompleted += OnMutiDownloadCompleted;
+                manager.MutiDownloadError += OnMutiDownloadError;
+                manager.MutiDownloadProgressChanged += OnMutiDownloadProgressChanged;
+                manager.MutiDownloadStatistics += OnMutiDownloadStatistics;
+                versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, VersionAssembler.ToDataObject(v))));
+                manager.LaunchTaskAsync();
 
                 //5.Launch the main application.
                 string appPath = Path.Combine(_appPath, _app);
@@ -79,12 +72,24 @@ namespace GeneralUpdate.OSS
             }
         }
 
-        private BaseContext InitContext()
+        private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
         {
-            VersionInfo version = null;
-            //TODO: Design update notification event
-            var context = new BaseContext(_progressEventAction,_exceptionEventAction, version,"","","","", Encoding.UTF8);
-            return context;
+        }
+
+        private void OnMutiDownloadProgressChanged(object csender, MutiDownloadProgressChangedEventArgs e)
+        {
+        }
+
+        private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
+        {
+        }
+
+        private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
+        {
+        }
+
+        private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
+        {
         }
     }
 }
