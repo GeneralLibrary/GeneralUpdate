@@ -4,7 +4,7 @@
 
 ![](imgs/GeneralUpdate_h.png)
 
-[English introduction](https://github.com/WELL-E/AutoUpdater/blob/master/README_en.md)
+[English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
 ### 组件介绍 ###
 
