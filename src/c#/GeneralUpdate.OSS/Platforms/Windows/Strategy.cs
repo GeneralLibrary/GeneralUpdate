@@ -3,6 +3,9 @@ using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Domain.DO.Assembler;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Pipelines;
+using GeneralUpdate.Core.Pipelines.Context;
+using GeneralUpdate.Core.Pipelines.Middleware;
 using GeneralUpdate.OSS.OSSStrategys;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -57,6 +60,12 @@ namespace GeneralUpdate.OSS
                 manager.MutiDownloadStatistics += OnMutiDownloadStatistics;
                 versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, VersionAssembler.ToDataObject(v))));
                 manager.LaunchTaskAsync();
+
+    //            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(ProgressEventAction, ExceptionEventAction, version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
+    //UseMiddleware<MD5Middleware>().
+    //UseMiddleware<ZipMiddleware>().
+    //UseMiddleware<PatchMiddleware>();
+    //            await pipelineBuilder.Launch();
 
                 //5.Launch the main application.
                 string appPath = Path.Combine(_appPath, _app);
