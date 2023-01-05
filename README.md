@@ -6,6 +6,12 @@
 
 [English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
+### 调查问卷
+
+收集开源社区开发者的使用反馈以及新功能的建议。
+
+https://wj.qq.com/s2/11454913/ddf6/
+
 ### 组件介绍 ###
 
 GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
