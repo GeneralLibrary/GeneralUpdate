@@ -35,6 +35,7 @@ namespace GeneralUpdate.Core.OSS
         /// <exception cref="ArgumentNullException"></exception>
         public static async Task Start<T>(ParamsWindows @params) where T : AbstractStrategy, new()
         {
+            //,@params.MutiDownloadStatisticsAction, @params.MutiDownloadProgressChangedAction, @params.MutiDownloadCompletedAction, @params.MutiAllDownloadCompletedAction,@params.MutiDownloadErrorAction
             await BaseStart<T>(@params.Url, @params.AppName, @params.CurrentVersion, @params.VersionFileName);
         }
 
