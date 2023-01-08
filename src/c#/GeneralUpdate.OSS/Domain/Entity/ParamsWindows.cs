@@ -22,12 +22,15 @@ namespace GeneralUpdate.OSS.Domain.Entity
 
         public Action<object, MutiDownloadErrorEventArgs> MutiDownloadErrorAction { get; set; }
 
+        public Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
+
         public ParamsWindows(string url, string appName, string currentVersion, string versionFileName, 
             Action<object, MutiDownloadStatisticsEventArgs> mutiDownloadStatistics= null, 
             Action<object, MutiDownloadProgressChangedEventArgs> mutiDownloadProgressChanged = null,
             Action<object, MutiDownloadCompletedEventArgs> mutiDownloadCompleted = null,
             Action<object, MutiAllDownloadCompletedEventArgs> mutiAllDownloadCompletedAction = null,
-            Action<object, MutiDownloadErrorEventArgs> mutiDownloadErrorAction=null)
+            Action<object, MutiDownloadErrorEventArgs> mutiDownloadErrorAction=null,
+            Action<object, ExceptionEventArgs> exceptionEventAction = null)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
@@ -38,6 +41,7 @@ namespace GeneralUpdate.OSS.Domain.Entity
             MutiDownloadCompletedAction= mutiDownloadCompleted;
             MutiAllDownloadCompletedAction = mutiAllDownloadCompletedAction;
             MutiDownloadErrorAction = mutiDownloadErrorAction;
+            ExceptionEventAction = exceptionEventAction;
         }
     }
 }

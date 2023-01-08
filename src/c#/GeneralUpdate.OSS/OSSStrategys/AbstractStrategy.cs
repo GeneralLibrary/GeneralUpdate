@@ -32,7 +32,7 @@
             }
         }
 
-        public abstract void Create(params string[] arguments);
+        public abstract void Create<T>(T parameter) where T : class;
 
         public abstract Task Excute();
     }

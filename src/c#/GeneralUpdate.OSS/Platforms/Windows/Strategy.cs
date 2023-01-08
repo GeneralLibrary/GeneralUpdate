@@ -6,6 +6,7 @@ using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
+using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -18,15 +19,11 @@ namespace GeneralUpdate.OSS
     {
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private string _url, _app, _versionFileName, _currentVersion;
-        private Action<object, MutiDownloadProgressChangedEventArgs> _progressEventAction;
-        private Action<object, ExceptionEventArgs> _exceptionEventAction;
+        private ParamsWindows _parameter;
 
-        public override void Create(params string[] arguments)
+        public override void Create<T>(T parameter)
         {
-            _url = arguments[0];
-            _app = arguments[1];
-            _versionFileName = arguments[2];
-            _currentVersion = arguments[3];
+            _parameter = parameter as ParamsWindows;
         }
 
         public override async Task Excute()
@@ -61,11 +58,11 @@ namespace GeneralUpdate.OSS
                 versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, VersionAssembler.ToDataObject(v))));
                 manager.LaunchTaskAsync();
 
-    //            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(ProgressEventAction, ExceptionEventAction, version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
-    //UseMiddleware<MD5Middleware>().
-    //UseMiddleware<ZipMiddleware>().
-    //UseMiddleware<PatchMiddleware>();
-    //            await pipelineBuilder.Launch();
+                var pipelineBuilder = new PipelineBuilder<BaseContext>(InitContext()).
+    UseMiddleware<MD5Middleware>().
+    UseMiddleware<ZipMiddleware>().
+    UseMiddleware<PatchMiddleware>();
+                await pipelineBuilder.Launch();
 
                 //5.Launch the main application.
                 string appPath = Path.Combine(_appPath, _app);
@@ -83,22 +80,30 @@ namespace GeneralUpdate.OSS
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
         {
+            _parameter?.MutiDownloadStatisticsAction(sender, e);
         }
 
-        private void OnMutiDownloadProgressChanged(object csender, MutiDownloadProgressChangedEventArgs e)
+        private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
         {
-        }
-
-        private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
-        {
+            _parameter?.MutiDownloadProgressChangedAction(sender, e);
         }
 
         private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
         {
+            _parameter?.MutiDownloadCompletedAction(sender, e);
         }
 
         private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
         {
+            _parameter?.MutiAllDownloadCompletedAction(sender, e);
         }
+
+        private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
+        {
+            _parameter?.MutiDownloadErrorAction(sender, e);
+        }
+
+        private BaseContext InitContext() 
+            => new BaseContext(_parameter.MutiDownloadProgressChangedAction, _parameter.ExceptionEventAction, null, _appPath, _appPath, _appPath, ".zip", Encoding.Default);
     }
 }

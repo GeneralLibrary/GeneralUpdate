@@ -18,9 +18,9 @@ namespace GeneralUpdate.Core.OSS
         /// <param name="authority">Application authority.</param>
         /// <param name="versionFileName">Updated version configuration file name.</param>
         /// <exception cref="ArgumentNullException">Method entry parameter is null exception.</exception>
-        public static async Task Start<T>(ParamsAndroid @params) where T : AbstractStrategy, new()
+        public static async Task Start<T>(ParamsAndroid parameter) where T : AbstractStrategy, new()
         {
-            await BaseStart<T>(@params.Url, @params.Apk, @params.CurrentVersion, @params.Authority, @params.VersionFileName);
+            await BaseStart<T, ParamsAndroid>(parameter);
         }
 
         /// <summary>
@@ -33,23 +33,22 @@ namespace GeneralUpdate.Core.OSS
         /// <param name="versionFileName">Updated version configuration file name.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static async Task Start<T>(ParamsWindows @params) where T : AbstractStrategy, new()
+        public static async Task Start<T>(ParamsWindows parameter) where T : AbstractStrategy, new()
         {
-            //,@params.MutiDownloadStatisticsAction, @params.MutiDownloadProgressChangedAction, @params.MutiDownloadCompletedAction, @params.MutiAllDownloadCompletedAction,@params.MutiDownloadErrorAction
-            await BaseStart<T>(@params.Url, @params.AppName, @params.CurrentVersion, @params.VersionFileName);
+            await BaseStart<T, ParamsWindows>(parameter);
         }
 
         /// <summary>
         /// The underlying update method.
         /// </summary>
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
-        /// <param name="args">List of parameters.</param>
+        /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<T>(params string[] args) where T : AbstractStrategy, new()
+        private static async Task BaseStart<T,P>(P parameter) where T : AbstractStrategy , new() where P : class
         {
             //Initializes and executes the policy.
             var oss = new T();
-            oss.Create(args);
+            oss.Create(parameter);
             await oss.Excute();
         }
     }

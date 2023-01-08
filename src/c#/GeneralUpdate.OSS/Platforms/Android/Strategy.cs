@@ -1,6 +1,7 @@
 ﻿using Android.Content;
 using Android.OS;
 using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
 using Java.IO;
 using Java.Math;
@@ -16,14 +17,11 @@ namespace GeneralUpdate.OSS
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private const string _fromat = ".apk";
         private string _url, _apk, _authority, _versionFileName, _currentVersion;
+        private ParamsAndroid _parameter;
 
-        public override void Create(params string[] arguments)
+        public override void Create<T>(T parameter)
         {
-            _url = arguments[0];
-            _apk = arguments[1];
-            _currentVersion = arguments[2];
-            _authority = arguments[3];
-            _versionFileName = arguments[4];
+            _parameter = parameter as ParamsAndroid;
         }
 
         public override async Task Excute()
