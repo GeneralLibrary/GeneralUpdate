@@ -58,11 +58,14 @@ namespace GeneralUpdate.OSS
                 versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, VersionAssembler.ToDataObject(v))));
                 manager.LaunchTaskAsync();
 
-                var pipelineBuilder = new PipelineBuilder<BaseContext>(InitContext()).
-    UseMiddleware<MD5Middleware>().
-    UseMiddleware<ZipMiddleware>().
-    UseMiddleware<PatchMiddleware>();
-                await pipelineBuilder.Launch();
+                foreach (var version in versions) 
+                {
+                    var pipelineBuilder = new PipelineBuilder<BaseContext>(InitContext()).
+UseMiddleware<MD5Middleware>().
+UseMiddleware<ZipMiddleware>().
+UseMiddleware<PatchMiddleware>();
+                    await pipelineBuilder.Launch();
+                }
 
                 //5.Launch the main application.
                 string appPath = Path.Combine(_appPath, _app);
@@ -104,6 +107,6 @@ namespace GeneralUpdate.OSS
         }
 
         private BaseContext InitContext() 
-            => new BaseContext(_parameter.MutiDownloadProgressChangedAction, _parameter.ExceptionEventAction, null, _appPath, _appPath, _appPath, ".zip", Encoding.Default);
+            => new BaseContext( null, _appPath, _appPath, _appPath, ".zip", Encoding.Default, _parameter.MutiDownloadProgressChangedAction, _parameter.ExceptionEventAction);
     }
 }

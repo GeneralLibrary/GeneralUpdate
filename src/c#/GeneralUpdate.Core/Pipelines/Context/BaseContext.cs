@@ -32,9 +32,9 @@ namespace GeneralUpdate.Core.Pipelines.Context
         public BaseContext()
         { }
 
-        public BaseContext(Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
-            Action<object, ExceptionEventArgs> exceptionEventAction,
-            VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
+        public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding,
+            Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction = null,
+            Action<object, ExceptionEventArgs> exceptionEventAction = null)
         {
             ProgressEventAction = progressEventAction;
             ExceptionEventAction = exceptionEventAction;
