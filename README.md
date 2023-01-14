@@ -6,13 +6,13 @@
 
 [English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
-### 调查问卷
+## 调查问卷
 
 收集开源社区开发者的使用反馈以及新功能的建议。
 
 https://wj.qq.com/s2/11454913/ddf6/
 
-### 组件介绍 ###
+## 1.组件介绍 ##
 
 GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 
@@ -34,19 +34,34 @@ GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 
 
 
-### 帮助文档 ###
+## 2.帮助文档 ##
 
 - 讲解视频： https://www.bilibili.com/video/BV1aX4y137dd
 - 官方网站： http://justerzhu.cn/
 - 快速启动： https://mp.weixin.qq.com/s/pRKPFe3eC0NSqv9ixXEiTg
 - 使用教程视频：https://www.bilibili.com/video/BV1FT4y1Y7hV
 
-### 开源地址 ###
+## 3.开源地址 ##
+
+### 3.1当前项目GeneralUpdate
 
 - https://github.com/JusterZhu/GeneralUpdate
 - https://gitee.com/Juster-zhu/GeneralUpdate
 
-### 支持框架
+### 3.2打包工具项目地址GeneralUpdate.Tools
+
+- https://github.com/GeneralLibrary/GeneralUpdate.Tools
+- https://gitee.com/GeneralTeam/GeneralUpdate.Tools
+
+### 3.3示例项目地址GeneralUpdate-Samples
+
+- https://github.com/GeneralLibrary/GeneralUpdate-Samples
+
+- https://gitee.com/GeneralTeam/GeneralUpdate-Samples
+
+
+
+## 4.支持框架
 
 | 框架名称                   | 是否支持 |
 | -------------------------- | -------- |
@@ -74,7 +89,7 @@ GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 
 
 
-### 操作系统
+## 5.操作系统
 
 | 操作系统名称 | 是否支持 |
 | ------------ | -------- |
