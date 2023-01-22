@@ -5,7 +5,7 @@
     <AssemblyVersion>2.4.7.0</AssemblyVersion>
     <FileVersion>2.4.7.0</FileVersion>
     <Version>2.8.10</Version>
-    <Authors>juster.chu</Authors>
+    <Authors>juster.zhu</Authors>
     <Description>Provides functions related to upgrade and update programs.</Description>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
