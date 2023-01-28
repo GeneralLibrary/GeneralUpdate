@@ -86,7 +86,7 @@ namespace GeneralUpdate.OSS
             }
             catch (FileLoadException ex)
             {
-                throw ex;
+                throw new FileLoadException(ex.Message, ex.InnerException);
             }
             catch (Exception ex)
             {
@@ -120,13 +120,13 @@ namespace GeneralUpdate.OSS
             }
             catch (DigestException ex)
             {
-                throw ex;
+                throw new DigestException(ex.Message,ex.Cause);
             }
             catch (Exception e)
             {
                 throw new Exception(e.Message, e.InnerException);
             }
-            BigInteger bigInt = new BigInteger(1, digest.Digest());
+            var bigInt = new BigInteger(1, digest.Digest());
             return bigInt.ToString(radix);
         }
     }
