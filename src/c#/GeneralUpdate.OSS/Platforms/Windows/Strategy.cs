@@ -21,6 +21,18 @@ namespace GeneralUpdate.OSS
         private string _url, _app, _versionFileName, _currentVersion;
         private ParamsWindows _parameter;
 
+        Action<object, MutiDownloadStatisticsEventArgs> MutiDownloadStatisticsAction { get; set; }
+
+        Action<object, MutiDownloadProgressChangedEventArgs> MutiDownloadProgressChangedAction { get; set; }
+
+        Action<object, MutiDownloadCompletedEventArgs> MutiDownloadCompletedAction { get; set; }
+
+        Action<object, MutiAllDownloadCompletedEventArgs> MutiAllDownloadCompletedAction { get; set; }
+
+        Action<object, MutiDownloadErrorEventArgs> MutiDownloadErrorAction { get; set; }
+
+        Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
+
         public override void Create<T>(T parameter)
         {
             _parameter = parameter as ParamsWindows;
@@ -61,9 +73,8 @@ namespace GeneralUpdate.OSS
                 foreach (var version in versions) 
                 {
                     var pipelineBuilder = new PipelineBuilder<BaseContext>(InitContext()).
-UseMiddleware<MD5Middleware>().
-UseMiddleware<ZipMiddleware>().
-UseMiddleware<PatchMiddleware>();
+                        UseMiddleware<MD5Middleware>().
+                        UseMiddleware<ZipMiddleware>();
                     await pipelineBuilder.Launch();
                 }
 

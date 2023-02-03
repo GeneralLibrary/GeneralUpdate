@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.OSS.Domain.Entity;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
 
 namespace GeneralUpdate.Core.OSS
@@ -8,6 +9,18 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
+        public static Action<object, MutiDownloadStatisticsEventArgs> MutiDownloadStatisticsAction { get; set; }
+
+        public static Action<object, MutiDownloadProgressChangedEventArgs> MutiDownloadProgressChangedAction { get; set; }
+
+        public static Action<object, MutiDownloadCompletedEventArgs> MutiDownloadCompletedAction { get; set; }
+
+        public static Action<object, MutiAllDownloadCompletedEventArgs> MutiAllDownloadCompletedAction { get; set; }
+
+        public static Action<object, MutiDownloadErrorEventArgs> MutiDownloadErrorAction { get; set; }
+
+        public static Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
+
         /// <summary>
         /// Starting an OSS update for android platform.
         /// </summary>
