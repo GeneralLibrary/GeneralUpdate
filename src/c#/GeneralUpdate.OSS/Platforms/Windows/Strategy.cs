@@ -1,6 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
+using GeneralUpdate.Zip;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
@@ -43,7 +44,10 @@ namespace GeneralUpdate.OSS
 
                 foreach (var version in versions)
                 {
-                    //await DownloadFileAsync(version.Url, _appPath, );
+                    await DownloadFileAsync(version.Url, _appPath, (e,s) => { });
+                    var factory = new GeneralZipFactory();
+                    factory.CreatefOperate(Zip.Factory.OperationType.GZip,"","","",true,Encoding.UTF8);
+                    factory.UnZip();
                 }
 
                 //5.Launch the main application.
