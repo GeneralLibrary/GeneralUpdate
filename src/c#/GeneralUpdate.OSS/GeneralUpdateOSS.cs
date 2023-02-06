@@ -9,17 +9,29 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        public static Action<object, MutiDownloadStatisticsEventArgs> MutiDownloadStatisticsAction { get; set; }
+        public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
-        public static Action<object, MutiDownloadProgressChangedEventArgs> MutiDownloadProgressChangedAction { get; set; }
+        public event MutiAllDownloadCompletedEventHandler MutiAllDownloadCompleted;
 
-        public static Action<object, MutiDownloadCompletedEventArgs> MutiDownloadCompletedAction { get; set; }
+        public delegate void MutiDownloadProgressChangedEventHandler(object sender, MutiDownloadProgressChangedEventArgs e);
 
-        public static Action<object, MutiAllDownloadCompletedEventArgs> MutiAllDownloadCompletedAction { get; set; }
+        public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
 
-        public static Action<object, MutiDownloadErrorEventArgs> MutiDownloadErrorAction { get; set; }
+        public delegate void MutiAsyncCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
 
-        public static Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
+        public event MutiAsyncCompletedEventHandler MutiDownloadCompleted;
+
+        public delegate void MutiDownloadErrorEventHandler(object sender, MutiDownloadErrorEventArgs e);
+
+        public event MutiDownloadErrorEventHandler MutiDownloadError;
+
+        public delegate void MutiDownloadStatisticsEventHandler(object sender, MutiDownloadStatisticsEventArgs e);
+
+        public event MutiDownloadStatisticsEventHandler MutiDownloadStatistics;
+
+        public delegate void ExceptionEventHandler(object sender, ExceptionEventArgs e);
+
+        public event ExceptionEventHandler Exception;
 
         /// <summary>
         /// Starting an OSS update for android platform.

@@ -14,6 +14,9 @@ namespace GeneralUpdate.OSS
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private string _url, _app, _versionFileName, _currentVersion;
         private ParamsWindows _parameter;
+        private Action<long, long> _downloadAction;
+        private Action<object, Zip.Events.BaseCompleteEventArgs> _unZipComplete;
+        private Action<object, Zip.Events.BaseUnZipProgressEventArgs> _unZipProgress;
 
         public override void Create<T>(T parameter)
         {
@@ -44,9 +47,12 @@ namespace GeneralUpdate.OSS
 
                 foreach (var version in versions)
                 {
-                    await DownloadFileAsync(version.Url, _appPath, (e,s) => { });
+                    string filePath = _appPath;
+                    await DownloadFileAsync(version.Url, _appPath, _downloadAction);
                     var factory = new GeneralZipFactory();
-                    factory.CreatefOperate(Zip.Factory.OperationType.GZip,"","","",true,Encoding.UTF8);
+                    factory.CreatefOperate(Zip.Factory.OperationType.GZip, version.Name, _appPath, _appPath, true,Encoding.UTF8);
+                    factory.Completed += OnCompleted;
+                    factory.UnZipProgress += OnUnZipProgress;
                     factory.UnZip();
                 }
 
@@ -63,5 +69,9 @@ namespace GeneralUpdate.OSS
                 Process.GetCurrentProcess().Kill();
             }
         }
+
+        private void OnUnZipProgress(object sender, Zip.Events.BaseUnZipProgressEventArgs e)=> _unZipProgress?.Invoke(sender, e);
+
+        private void OnCompleted(object sender, Zip.Events.BaseCompleteEventArgs e)=> _unZipComplete?.Invoke(sender, e);
     }
 }
