@@ -9,6 +9,10 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
+        private Action<long, long> _downloadAction;
+        private Action<object, Zip.Events.BaseCompleteEventArgs> _unZipComplete;
+        private Action<object, Zip.Events.BaseUnZipProgressEventArgs> _unZipProgress;
+
         public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
 
         public event MutiAllDownloadCompletedEventHandler MutiAllDownloadCompleted;

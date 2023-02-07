@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.Core.Domain.DO;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
 using GeneralUpdate.Zip;
@@ -17,6 +18,18 @@ namespace GeneralUpdate.OSS
         private Action<long, long> _downloadAction;
         private Action<object, Zip.Events.BaseCompleteEventArgs> _unZipComplete;
         private Action<object, Zip.Events.BaseUnZipProgressEventArgs> _unZipProgress;
+
+        public Action<object, MutiAllDownloadCompletedEventArgs> MutiAllDownloadCompleted;
+
+        public Action<object, MutiDownloadProgressChangedEventArgs> MutiDownloadProgressChanged;
+
+        public Action<object, MutiDownloadCompletedEventArgs> MutiDownloadCompleted;
+
+        public Action<object, MutiDownloadErrorEventArgs> MutiDownloadError;
+
+        public Action<object, MutiDownloadStatisticsEventArgs> MutiDownloadStatistics;
+
+        public Action<object, ExceptionEventArgs> Exception;
 
         public override void Create<T>(T parameter)
         {
