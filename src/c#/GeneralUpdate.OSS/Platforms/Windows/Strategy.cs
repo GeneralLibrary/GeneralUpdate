@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.DO;
+﻿using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.Events;

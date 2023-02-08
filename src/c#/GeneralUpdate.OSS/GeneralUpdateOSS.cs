@@ -1,5 +1,6 @@
 ﻿using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
+using GeneralUpdate.OSS.Events;
 using GeneralUpdate.OSS.OSSStrategys;
 using static GeneralUpdate.OSS.Events.OSSEvents;
 
@@ -10,9 +11,17 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        public static Action<long, long> DownloadAction { get; set; }
-        public static Action<object, Zip.Events.BaseCompleteEventArgs> UnZipComplete { get; set; }
-        public static Action<object, Zip.Events.BaseUnZipProgressEventArgs> UnZipProgress { get; set; }
+        public  delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
+
+        public static event DownloadEventHandler Download;
+
+        public delegate void UnZipCompletedEventHandler(object sender, Zip.Events.BaseCompleteEventArgs e);
+
+        public static event UnZipCompletedEventHandler UnZipCompleted;
+
+        public delegate void UnZipProgressEventHandler(object sender, Zip.Events.BaseUnZipProgressEventArgs e);
+
+        public static event UnZipProgressEventHandler UnZipProgress;
 
         private GeneralUpdateOSS(){  }
 
@@ -64,9 +73,18 @@ namespace GeneralUpdate.Core.OSS
 
         private static void InitEventManage() 
         {
-            EventManager.Instance.AddListener<DownloadEventHandler>((s,e) => { DownloadAction?.Invoke(e.CurrentByte,e.TotalByte); });
-            EventManager.Instance.AddListener<UnZipCompletedEventHandler>((s, e) => { UnZipComplete?.Invoke(s,e); });
-            EventManager.Instance.AddListener<UnZipProgressEventHandler>((s, e) => { UnZipProgress?.Invoke(s,e); });
+            EventManager.Instance.AddListener<DownloadEventHandler>((s,e) => 
+            {
+                if(Download != null) Download(s,e); 
+            });
+            EventManager.Instance.AddListener<UnZipCompletedEventHandler>((s, e) => 
+            {
+                if(UnZipCompleted != null) UnZipCompleted(s, e);
+            });
+            EventManager.Instance.AddListener<UnZipProgressEventHandler>((s, e) =>
+            {
+                if(UnZipProgress != null) UnZipProgress(s, e);
+            });
         }
     }
 }
