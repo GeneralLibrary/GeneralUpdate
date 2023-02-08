@@ -2,7 +2,6 @@
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.Events;
 using GeneralUpdate.OSS.OSSStrategys;
-using static GeneralUpdate.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.Core.OSS
 {
