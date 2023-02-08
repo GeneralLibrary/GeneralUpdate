@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Events;
+﻿using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
 using static GeneralUpdate.OSS.Events.OSSEvents;
@@ -55,6 +54,7 @@ namespace GeneralUpdate.Core.OSS
         /// <returns></returns>
         private static async Task BaseStart<T,P>(P parameter) where T : AbstractStrategy , new() where P : class
         {
+            //Initialize events that may be used by each platform.
             InitEventManage();
             //Initializes and executes the policy.
             var oss = new T();

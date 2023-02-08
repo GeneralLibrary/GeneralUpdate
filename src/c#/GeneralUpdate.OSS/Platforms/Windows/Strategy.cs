@@ -12,7 +12,9 @@ using static GeneralUpdate.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.OSS
 {
-    // All the code in this file is only included on Windows.
+    /// <summary>
+    /// All the code in this file is only included on Windows.
+    /// </summary>
     public class Strategy : AbstractStrategy
     {
         private readonly string _appPath = FileSystem.AppDataDirectory;

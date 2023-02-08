@@ -1,17 +1,22 @@
 ﻿using Android.Content;
 using Android.OS;
 using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
+using GeneralUpdate.OSS.Events;
 using GeneralUpdate.OSS.OSSStrategys;
 using Java.IO;
 using Java.Math;
 using Java.Security;
 using Newtonsoft.Json;
 using System.Text;
+using static GeneralUpdate.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.OSS
 {
-    // All the code in this file is only included on Android.
+    /// <summary>
+    /// All the code in this file is only included on Android.
+    /// </summary>
     public class Strategy : AbstractStrategy
     {
         private readonly string _appPath = FileSystem.AppDataDirectory;
@@ -29,7 +34,7 @@ namespace GeneralUpdate.OSS
             //1.Download the JSON version configuration file.
             var jsonUrl = $"{_url}/{_versionFileName}";
             var jsonPath = Path.Combine(_appPath, _versionFileName);
-            await DownloadFileAsync(jsonUrl, jsonPath, null);
+            await DownloadFileAsync(jsonUrl, jsonPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
             var jsonFile = new Java.IO.File(jsonPath);
             if (!jsonFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
 
@@ -46,7 +51,7 @@ namespace GeneralUpdate.OSS
 
             //4.Download the apk file.
             var file = $"{_appPath}/{_apk}{_fromat}";
-            await DownloadFileAsync(versionConfig.Url, file, null);
+            await DownloadFileAsync(versionConfig.Url, file, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
             var apkFile = new Java.IO.File(file);
             if (!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
             if (!versionConfig.MD5.Equals(GetFileMD5(apkFile, 64))) throw new Exception("The apk MD5 value does not match !");
