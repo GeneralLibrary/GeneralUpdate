@@ -29,6 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Bootstrap\.gitkeep" />
+    <None Remove="CustomAwaiter\.gitkeep" />
+    <None Remove="Differential\.gitkeep" />
+    <None Remove="Domain\.gitkeep" />
+    <None Remove="Download\.gitkeep" />
+    <None Remove="Exceptions\.gitkeep" />
     <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
     <None Remove="GeneralUpdate.ClientCore.nuspec" />
     <None Remove="GeneralUpdate.ico" />

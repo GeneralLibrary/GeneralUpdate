@@ -1,6 +1,8 @@
-﻿namespace GeneralUpdate.Zip.Events
+﻿using System;
+
+namespace GeneralUpdate.Zip.Events
 {
-    public class BaseCompleteEventArgs
+    public class BaseCompleteEventArgs : EventArgs
     {
         public bool IsCompleted { get; set; }
 

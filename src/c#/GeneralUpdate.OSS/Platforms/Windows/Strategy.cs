@@ -1,11 +1,14 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.DO;
+using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
+using GeneralUpdate.OSS.Events;
 using GeneralUpdate.OSS.OSSStrategys;
 using GeneralUpdate.Zip;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
+using static GeneralUpdate.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.OSS
 {
@@ -15,21 +18,6 @@ namespace GeneralUpdate.OSS
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private string _url, _app, _versionFileName, _currentVersion;
         private ParamsWindows _parameter;
-        private Action<long, long> _downloadAction;
-        private Action<object, Zip.Events.BaseCompleteEventArgs> _unZipComplete;
-        private Action<object, Zip.Events.BaseUnZipProgressEventArgs> _unZipProgress;
-
-        public Action<object, MutiAllDownloadCompletedEventArgs> MutiAllDownloadCompleted;
-
-        public Action<object, MutiDownloadProgressChangedEventArgs> MutiDownloadProgressChanged;
-
-        public Action<object, MutiDownloadCompletedEventArgs> MutiDownloadCompleted;
-
-        public Action<object, MutiDownloadErrorEventArgs> MutiDownloadError;
-
-        public Action<object, MutiDownloadStatisticsEventArgs> MutiDownloadStatistics;
-
-        public Action<object, ExceptionEventArgs> Exception;
 
         public override void Create<T>(T parameter)
         {
@@ -61,11 +49,11 @@ namespace GeneralUpdate.OSS
                 foreach (var version in versions)
                 {
                     string filePath = _appPath;
-                    await DownloadFileAsync(version.Url, _appPath, _downloadAction);
+                    await DownloadFileAsync(version.Url, _appPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e,s)));
                     var factory = new GeneralZipFactory();
                     factory.CreatefOperate(Zip.Factory.OperationType.GZip, version.Name, _appPath, _appPath, true,Encoding.UTF8);
-                    factory.Completed += OnCompleted;
-                    factory.UnZipProgress += OnUnZipProgress;
+                    factory.Completed += (s,e)=> EventManager.Instance.Dispatch<UnZipCompletedEventHandler>(this, e);
+                    factory.UnZipProgress += (s,e)=> EventManager.Instance.Dispatch<UnZipProgressEventHandler>(this, e);
                     factory.UnZip();
                 }
 
@@ -82,9 +70,5 @@ namespace GeneralUpdate.OSS
                 Process.GetCurrentProcess().Kill();
             }
         }
-
-        private void OnUnZipProgress(object sender, Zip.Events.BaseUnZipProgressEventArgs e)=> _unZipProgress?.Invoke(sender, e);
-
-        private void OnCompleted(object sender, Zip.Events.BaseCompleteEventArgs e)=> _unZipComplete?.Invoke(sender, e);
     }
 }

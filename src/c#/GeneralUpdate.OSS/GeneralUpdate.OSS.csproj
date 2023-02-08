@@ -53,6 +53,8 @@
 	  <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />

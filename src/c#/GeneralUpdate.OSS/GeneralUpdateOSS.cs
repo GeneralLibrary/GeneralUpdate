@@ -1,6 +1,8 @@
 ﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Events;
 using GeneralUpdate.OSS.Domain.Entity;
 using GeneralUpdate.OSS.OSSStrategys;
+using static GeneralUpdate.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.Core.OSS
 {
@@ -9,33 +11,11 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        private Action<long, long> _downloadAction;
-        private Action<object, Zip.Events.BaseCompleteEventArgs> _unZipComplete;
-        private Action<object, Zip.Events.BaseUnZipProgressEventArgs> _unZipProgress;
+        public static Action<long, long> DownloadAction { get; set; }
+        public static Action<object, Zip.Events.BaseCompleteEventArgs> UnZipComplete { get; set; }
+        public static Action<object, Zip.Events.BaseUnZipProgressEventArgs> UnZipProgress { get; set; }
 
-        public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
-
-        public event MutiAllDownloadCompletedEventHandler MutiAllDownloadCompleted;
-
-        public delegate void MutiDownloadProgressChangedEventHandler(object sender, MutiDownloadProgressChangedEventArgs e);
-
-        public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
-
-        public delegate void MutiAsyncCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
-
-        public event MutiAsyncCompletedEventHandler MutiDownloadCompleted;
-
-        public delegate void MutiDownloadErrorEventHandler(object sender, MutiDownloadErrorEventArgs e);
-
-        public event MutiDownloadErrorEventHandler MutiDownloadError;
-
-        public delegate void MutiDownloadStatisticsEventHandler(object sender, MutiDownloadStatisticsEventArgs e);
-
-        public event MutiDownloadStatisticsEventHandler MutiDownloadStatistics;
-
-        public delegate void ExceptionEventHandler(object sender, ExceptionEventArgs e);
-
-        public event ExceptionEventHandler Exception;
+        private GeneralUpdateOSS(){  }
 
         /// <summary>
         /// Starting an OSS update for android platform.
@@ -75,10 +55,18 @@ namespace GeneralUpdate.Core.OSS
         /// <returns></returns>
         private static async Task BaseStart<T,P>(P parameter) where T : AbstractStrategy , new() where P : class
         {
+            InitEventManage();
             //Initializes and executes the policy.
             var oss = new T();
             oss.Create(parameter);
             await oss.Excute();
+        }
+
+        private static void InitEventManage() 
+        {
+            EventManager.Instance.AddListener<DownloadEventHandler>((s,e) => { DownloadAction?.Invoke(e.CurrentByte,e.TotalByte); });
+            EventManager.Instance.AddListener<UnZipCompletedEventHandler>((s, e) => { UnZipComplete?.Invoke(s,e); });
+            EventManager.Instance.AddListener<UnZipProgressEventHandler>((s, e) => { UnZipProgress?.Invoke(s,e); });
         }
     }
 }

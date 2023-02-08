@@ -1,6 +1,8 @@
-﻿namespace GeneralUpdate.Zip.Events
+﻿using System;
+
+namespace GeneralUpdate.Zip.Events
 {
-    public class BaseUnZipProgressEventArgs
+    public class BaseUnZipProgressEventArgs : EventArgs
     {
         public long Size { get; set; }
 
