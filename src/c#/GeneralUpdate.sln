@@ -37,7 +37,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Client", "Gen
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Upgrad", "GeneralUpdate.Upgrad\GeneralUpdate.Upgrad.csproj", "{E1F9FF93-CA63-4A9C-82F0-450F09ED81F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.OSS", "GeneralUpdate.OSS\GeneralUpdate.OSS.csproj", "{39738964-2F22-4AA9-9C04-B772FC7D025A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.OSS", "GeneralUpdate.OSS\GeneralUpdate.OSS.csproj", "{39738964-2F22-4AA9-9C04-B772FC7D025A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestOSS", "TestOSS\TestOSS.csproj", "{28FA8795-F840-4F9B-875B-0F265EBD29B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -107,6 +109,10 @@ Global
 		{39738964-2F22-4AA9-9C04-B772FC7D025A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39738964-2F22-4AA9-9C04-B772FC7D025A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39738964-2F22-4AA9-9C04-B772FC7D025A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28FA8795-F840-4F9B-875B-0F265EBD29B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28FA8795-F840-4F9B-875B-0F265EBD29B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28FA8795-F840-4F9B-875B-0F265EBD29B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28FA8795-F840-4F9B-875B-0F265EBD29B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -127,6 +133,7 @@ Global
 		{EBDB251D-014F-473B-A30B-BBCF50BC23F8} = {74BE0282-A10D-4A81-A0F0-FAA79A6152B7}
 		{E1F9FF93-CA63-4A9C-82F0-450F09ED81F9} = {74BE0282-A10D-4A81-A0F0-FAA79A6152B7}
 		{39738964-2F22-4AA9-9C04-B772FC7D025A} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
+		{28FA8795-F840-4F9B-875B-0F265EBD29B3} = {50B6BB53-63A9-414B-9BB0-79A69EEF6785}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A7B2D0AD-E000-4749-BAC0-FF21B9872805}
