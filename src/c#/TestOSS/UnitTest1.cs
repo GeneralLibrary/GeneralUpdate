@@ -1,6 +1,7 @@
 using GeneralUpdate.Core.OSS;
 using GeneralUpdate.OSS;
 using GeneralUpdate.OSS.Domain.Entity;
+using GeneralUpdate.OSS.OSSStrategys;
 
 namespace TestOSS
 {
@@ -12,9 +13,7 @@ namespace TestOSS
             GeneralUpdateOSS.Download += OnOSSDownload;
             GeneralUpdateOSS.UnZipCompleted += OnOSSUnZipCompleted;
             GeneralUpdateOSS.UnZipProgress += OnOSSUnZipProgress;
-#if Windows
-            await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid("","","","",""));
-#endif
+            await GeneralUpdateOSS.Start<OSSStrategy>(new ParamsOSS("", "", "", ""));
         }
 
         private void OnOSSUnZipProgress(object sender, GeneralUpdate.Zip.Events.BaseUnZipProgressEventArgs e)

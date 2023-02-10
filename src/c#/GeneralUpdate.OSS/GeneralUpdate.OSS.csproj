@@ -21,23 +21,18 @@
 	  <Compile Remove="Bootstrap\**" />
 	  <Compile Remove="Download\**" />
 	  <Compile Remove="Pipelines\**" />
-	  <Compile Remove="Strategys\**" />
 	  <EmbeddedResource Remove="Bootstrap\**" />
 	  <EmbeddedResource Remove="Download\**" />
 	  <EmbeddedResource Remove="Pipelines\**" />
-	  <EmbeddedResource Remove="Strategys\**" />
 	  <MauiCss Remove="Bootstrap\**" />
 	  <MauiCss Remove="Download\**" />
 	  <MauiCss Remove="Pipelines\**" />
-	  <MauiCss Remove="Strategys\**" />
 	  <MauiXaml Remove="Bootstrap\**" />
 	  <MauiXaml Remove="Download\**" />
 	  <MauiXaml Remove="Pipelines\**" />
-	  <MauiXaml Remove="Strategys\**" />
 	  <None Remove="Bootstrap\**" />
 	  <None Remove="Download\**" />
 	  <None Remove="Pipelines\**" />
-	  <None Remove="Strategys\**" />
 	</ItemGroup>
 
 	<ItemGroup>
