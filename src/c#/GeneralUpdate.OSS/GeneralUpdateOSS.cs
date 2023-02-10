@@ -67,6 +67,7 @@ namespace GeneralUpdate.Core.OSS
             //Initializes and executes the policy.
             var oss = new T();
             oss.Create(parameter);
+            //Implement different update strategies depending on the platform.
             await oss.Excute();
         }
 
