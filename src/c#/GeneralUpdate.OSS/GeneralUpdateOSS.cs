@@ -10,8 +10,6 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        private volatile Func<TStrategy> _strategyFactory;
-
         public  delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
 
         public static event DownloadEventHandler Download;
@@ -83,11 +81,6 @@ namespace GeneralUpdate.Core.OSS
             strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
             await strategy.Excute();
-        }
-
-        private static void InitStrategy<TStrategy>(Func<TStrategy> strategy) 
-        {
-
         }
 
         private static void InitEventManage() 
