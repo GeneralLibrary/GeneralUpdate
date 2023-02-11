@@ -5,6 +5,7 @@ using GeneralUpdate.OSS.Events;
 using GeneralUpdate.Zip;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text;
 using static GeneralUpdate.Core.OSS.GeneralUpdateOSS;
 
@@ -21,6 +22,7 @@ namespace GeneralUpdate.OSS.OSSStrategys
             _parameter = parameter as ParamsOSS;
         }
 
+        [SupportedOSPlatform("ios14.0")]
         public override async Task Excute()
         {
             try

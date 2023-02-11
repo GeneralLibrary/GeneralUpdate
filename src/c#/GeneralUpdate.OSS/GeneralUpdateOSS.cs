@@ -10,6 +10,8 @@ namespace GeneralUpdate.Core.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
+        private volatile Func<TStrategy> _strategyFactory;
+
         public  delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
 
         public static event DownloadEventHandler Download;
@@ -34,9 +36,9 @@ namespace GeneralUpdate.Core.OSS
         /// <param name="authority">Application authority.</param>
         /// <param name="versionFileName">Updated version configuration file name.</param>
         /// <exception cref="ArgumentNullException">Method entry parameter is null exception.</exception>
-        public static async Task Start<T>(ParamsAndroid parameter) where T : AbstractStrategy, new()
+        public static async Task Start<TStrategy>(ParamsAndroid parameter) where TStrategy : AbstractStrategy, new()
         {
-            await BaseStart<T, ParamsAndroid>(parameter);
+            await BaseStart<TStrategy, ParamsAndroid>(parameter);
         }
 
         /// <summary>
@@ -49,9 +51,20 @@ namespace GeneralUpdate.Core.OSS
         /// <param name="versionFileName">Updated version configuration file name.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static async Task Start<T>(ParamsWindows parameter) where T : AbstractStrategy, new()
+        public static async Task Start<TStrategy>(ParamsWindows parameter) where TStrategy : AbstractStrategy, new()
         {
-            await BaseStart<T, ParamsWindows>(parameter);
+            await BaseStart<TStrategy, ParamsWindows>(parameter);
+        }
+
+        /// <summary>
+        /// Starting an OSS update for windows,linux,mac platform.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parameter"></param>
+        /// <returns></returns>
+        public static async Task Start<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
+        {
+            await BaseStart<TStrategy, ParamsOSS>(parameter);
         }
 
         /// <summary>
@@ -60,15 +73,21 @@ namespace GeneralUpdate.Core.OSS
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<T,P>(P parameter) where T : AbstractStrategy , new() where P : class
+        private static async Task BaseStart<TStrategy, TParams>(TParams parameter) where TStrategy : AbstractStrategy , new() where TParams : class
         {
             //Initialize events that may be used by each platform.
             InitEventManage();
             //Initializes and executes the policy.
-            var oss = new T();
-            oss.Create(parameter);
+            var strategyFunc = new Func<TStrategy>(()=>new TStrategy());
+            IStrategy strategy = strategyFunc();
+            strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
-            await oss.Excute();
+            await strategy.Excute();
+        }
+
+        private static void InitStrategy<TStrategy>(Func<TStrategy> strategy) 
+        {
+
         }
 
         private static void InitEventManage() 
