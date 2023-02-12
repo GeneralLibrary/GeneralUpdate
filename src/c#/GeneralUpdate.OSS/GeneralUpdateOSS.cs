@@ -77,7 +77,7 @@ namespace GeneralUpdate.Core.OSS
             InitEventManage();
             //Initializes and executes the policy.
             var strategyFunc = new Func<TStrategy>(()=>new TStrategy());
-            IStrategy strategy = strategyFunc();
+            var strategy = strategyFunc();
             strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
             await strategy.Excute();
