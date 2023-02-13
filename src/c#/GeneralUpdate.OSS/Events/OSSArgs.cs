@@ -8,8 +8,14 @@
             TotalByte = totalByte;
         }
 
+        /// <summary>
+        /// Size of the file that has been downloaded.
+        /// </summary>
         public long CurrentByte { get; set; }
 
+        /// <summary>
+        /// Total file size.
+        /// </summary>
         public long TotalByte { get; set; }
     }
 }

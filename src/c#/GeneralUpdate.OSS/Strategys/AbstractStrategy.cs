@@ -1,5 +1,8 @@
 ﻿namespace GeneralUpdate.OSS.OSSStrategys
 {
+    /// <summary>
+    /// OSS updates abstract Strategy.
+    /// </summary>
     public abstract class AbstractStrategy : IStrategy
     {
         private readonly HttpClient _client;
@@ -32,8 +35,17 @@
             }
         }
 
+        /// <summary>
+        /// Example Initialize the creation strategy.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parameter"></param>
         public abstract void Create<T>(T parameter) where T : class;
 
+        /// <summary>
+        /// Execute the injected strategy.
+        /// </summary>
+        /// <returns></returns>
         public abstract Task Excute();
     }
 }

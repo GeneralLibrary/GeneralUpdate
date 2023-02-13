@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace GeneralUpdate.OSS.Domain.Entity
+﻿namespace GeneralUpdate.OSS.Domain.Entity
 {
     public class ParamsOSS : ParamsWindows
     {
