@@ -22,7 +22,6 @@ namespace GeneralUpdate.OSS.OSSStrategys
             _parameter = parameter as ParamsOSS;
         }
 
-        [SupportedOSPlatform("ios14.0")]
         public override async Task Excute()
         {
             try

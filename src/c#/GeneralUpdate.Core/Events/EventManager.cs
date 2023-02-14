@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace GeneralUpdate.Core.Events
 {
@@ -7,8 +9,6 @@ namespace GeneralUpdate.Core.Events
     /// </summary>
     public class EventManager : IEventManager, IDisposable
     {
-        //TODO:https://gitee.com/Juster-zhu/GeneralUpdate/commit/59f8a4ba072c73d924a6bce744629d40934ac44d
-
         // Use interop to call the method necessary
         // to clean up the unmanaged resource.
         [System.Runtime.InteropServices.DllImport("Kernel32")]
