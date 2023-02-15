@@ -53,7 +53,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\GeneralUpdate.OSS\GeneralUpdate.OSS.csproj" />
+	  <ProjectReference Include="..\GeneralUpdate.Maui.OSS\GeneralUpdate.Maui.OSS.csproj" />
 	</ItemGroup>
 
 </Project>

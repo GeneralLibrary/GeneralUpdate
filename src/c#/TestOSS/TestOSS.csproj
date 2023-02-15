@@ -21,8 +21,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.OSS\GeneralUpdate.OSS.csproj" />
-  </ItemGroup>
-
 </Project>

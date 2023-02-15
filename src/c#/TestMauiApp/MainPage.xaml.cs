@@ -1,13 +1,11 @@
-﻿using GeneralUpdate.Core.OSS;
-using GeneralUpdate.OSS.Domain.Entity;
-using GeneralUpdate.OSS.OSSStrategys;
+﻿using GeneralUpdate.Maui.OSS;
+using GeneralUpdate.Maui.OSS.Domain.Entity;
+using GeneralUpdate.Maui.OSS.Events;
 
 namespace TestMauiApp
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
-
         public MainPage()
         {
             InitializeComponent();
@@ -22,7 +20,7 @@ namespace TestMauiApp
             GeneralUpdateOSS.Download += OnOSSDownload;
             GeneralUpdateOSS.UnZipCompleted += OnOSSUnZipCompleted;
             GeneralUpdateOSS.UnZipProgress += OnOSSUnZipProgress;
-            await GeneralUpdateOSS.Start<OSSStrategy>(new ParamsOSS(url, appName, currentVersion, versionFileName));
+            await GeneralUpdateOSS.Start<Strategy>(new ParamsWindows(url, appName, currentVersion, versionFileName));
         }
 
         private void OnOSSUnZipProgress(object sender, GeneralUpdate.Zip.Events.BaseUnZipProgressEventArgs e)
@@ -35,7 +33,7 @@ namespace TestMauiApp
 
         }
 
-        private void OnOSSDownload(object sender, GeneralUpdate.OSS.Events.OSSDownloadArgs e)
+        private void OnOSSDownload(object sender, OSSDownloadArgs e)
         {
             Console.WriteLine($"{e.CurrentByte},{e.TotalByte}");
         }
