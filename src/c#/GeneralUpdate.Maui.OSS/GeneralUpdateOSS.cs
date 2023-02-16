@@ -2,6 +2,7 @@
 using GeneralUpdate.Maui.OSS.Domain.Entity;
 using GeneralUpdate.Maui.OSS.Events;
 using GeneralUpdate.Maui.OSS.Strategys;
+using System.Threading.Tasks;
 
 namespace GeneralUpdate.Maui.OSS
 {

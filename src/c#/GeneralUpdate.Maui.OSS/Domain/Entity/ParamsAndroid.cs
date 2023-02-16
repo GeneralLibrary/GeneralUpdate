@@ -1,4 +1,6 @@
-﻿namespace GeneralUpdate.Maui.OSS.Domain.Entity
+﻿using System;
+
+namespace GeneralUpdate.Maui.OSS.Domain.Entity
 {
     public class ParamsAndroid : GeneralUpdate.Core.Domain.Entity.Entity
     {

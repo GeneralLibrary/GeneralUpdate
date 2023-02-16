@@ -1,4 +1,6 @@
-﻿namespace GeneralUpdate.Maui.OSS.Domain.Entity
+﻿using System;
+
+namespace GeneralUpdate.Maui.OSS.Domain.Entity
 {
     public class ParamsWindows : GeneralUpdate.Core.Domain.Entity.Entity
     {

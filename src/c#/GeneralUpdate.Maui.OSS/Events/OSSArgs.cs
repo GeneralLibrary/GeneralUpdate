@@ -1,4 +1,6 @@
-﻿namespace GeneralUpdate.Maui.OSS.Events
+﻿using System;
+
+namespace GeneralUpdate.Maui.OSS.Events
 {
     public class OSSDownloadArgs : EventArgs
     {
