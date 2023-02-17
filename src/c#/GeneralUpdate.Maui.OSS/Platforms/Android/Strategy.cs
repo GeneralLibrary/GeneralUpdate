@@ -49,7 +49,7 @@ namespace GeneralUpdate.Maui.OSS
             if (currentVersion.Equals(lastVersion)) return;
 
             //4.Download the apk file.
-            var file = $"{_appPath}/{_parameter.Apk}{_fromat}";
+            var file = Path.Combine(_appPath,$"{_parameter.Apk}{_fromat}");
             await DownloadFileAsync(versionConfig.Url, file, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
             var apkFile = new Java.IO.File(file);
             if (!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);

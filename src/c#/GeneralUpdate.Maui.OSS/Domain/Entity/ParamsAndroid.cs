@@ -16,9 +16,9 @@ namespace GeneralUpdate.Maui.OSS.Domain.Entity
 
         public ParamsAndroid(string url, string apk, string currentVersion, string authority, string versionFileName)
         {
-            Url = url ?? throw new ArgumentNullException(nameof(url));
+            Url = IsURL(url) ? url : throw new ArgumentNullException(nameof(url));
             Apk = apk ?? throw new ArgumentNullException(nameof(apk));
-            CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
+            CurrentVersion = IsVersion(currentVersion) ? currentVersion :  throw new ArgumentNullException(nameof(currentVersion));
             Authority = authority ?? throw new ArgumentNullException(nameof(authority));
             VersionFileName = versionFileName ?? "versions.json";
         }
