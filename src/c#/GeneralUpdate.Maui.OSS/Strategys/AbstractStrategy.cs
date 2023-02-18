@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-namespace GeneralUpdate.Maui.OSS.Strategys
+﻿namespace GeneralUpdate.Maui.OSS.Strategys
 {
     /// <summary>
     /// OSS updates abstract Strategy.

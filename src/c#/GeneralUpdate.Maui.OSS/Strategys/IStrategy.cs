@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace GeneralUpdate.Maui.OSS.Strategys
+﻿namespace GeneralUpdate.Maui.OSS.Strategys
 {
     public interface IStrategy
     {

@@ -2,7 +2,6 @@
 using GeneralUpdate.Maui.OSS.Domain.Entity;
 using GeneralUpdate.Maui.OSS.Events;
 using GeneralUpdate.Maui.OSS.Strategys;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.Maui.OSS
 {
@@ -11,7 +10,7 @@ namespace GeneralUpdate.Maui.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        public  delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
+        public delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
 
         public static event DownloadEventHandler Download;
 
@@ -23,7 +22,8 @@ namespace GeneralUpdate.Maui.OSS
 
         public static event UnZipProgressEventHandler UnZipProgress;
 
-        private GeneralUpdateOSS(){  }
+        private GeneralUpdateOSS()
+        { }
 
         /// <summary>
         /// Starting an OSS update for android platform.
@@ -72,31 +72,31 @@ namespace GeneralUpdate.Maui.OSS
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<TStrategy, TParams>(TParams parameter) where TStrategy : AbstractStrategy , new() where TParams : class
+        private static async Task BaseStart<TStrategy, TParams>(TParams parameter) where TStrategy : AbstractStrategy, new() where TParams : class
         {
             //Initialize events that may be used by each platform.
             InitEventManage();
             //Initializes and executes the policy.
-            var strategyFunc = new Func<TStrategy>(()=>new TStrategy());
+            var strategyFunc = new Func<TStrategy>(() => new TStrategy());
             var strategy = strategyFunc();
             strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
             await strategy.Excute();
         }
 
-        private static void InitEventManage() 
+        private static void InitEventManage()
         {
-            EventManager.Instance.AddListener<DownloadEventHandler>((s,e) => 
+            EventManager.Instance.AddListener<DownloadEventHandler>((s, e) =>
             {
-                if(Download != null) Download(s,e); 
+                if (Download != null) Download(s, e);
             });
-            EventManager.Instance.AddListener<UnZipCompletedEventHandler>((s, e) => 
+            EventManager.Instance.AddListener<UnZipCompletedEventHandler>((s, e) =>
             {
-                if(UnZipCompleted != null) UnZipCompleted(s, e);
+                if (UnZipCompleted != null) UnZipCompleted(s, e);
             });
             EventManager.Instance.AddListener<UnZipProgressEventHandler>((s, e) =>
             {
-                if(UnZipProgress != null) UnZipProgress(s, e);
+                if (UnZipProgress != null) UnZipProgress(s, e);
             });
         }
     }

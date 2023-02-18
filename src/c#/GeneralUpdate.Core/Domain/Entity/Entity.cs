@@ -23,7 +23,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             return regex.IsMatch(url);
         }
 
-        protected bool IsVersion(string version) 
+        protected bool IsVersion(string version)
         {
             return Version.TryParse(version, out var ver);
         }

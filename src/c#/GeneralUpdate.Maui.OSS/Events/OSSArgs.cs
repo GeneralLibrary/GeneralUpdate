@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace GeneralUpdate.Maui.OSS.Events
+﻿namespace GeneralUpdate.Maui.OSS.Events
 {
     public class OSSDownloadArgs : EventArgs
     {
-        public OSSDownloadArgs(long currentByte,long totalByte) 
+        public OSSDownloadArgs(long currentByte, long totalByte)
         {
             CurrentByte = currentByte;
             TotalByte = totalByte;

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace GeneralUpdate.Maui.OSS.Domain.Entity
+﻿namespace GeneralUpdate.Maui.OSS.Domain.Entity
 {
     public class ParamsAndroid : GeneralUpdate.Core.Domain.Entity.Entity
     {
@@ -18,7 +16,7 @@ namespace GeneralUpdate.Maui.OSS.Domain.Entity
         {
             Url = IsURL(url) ? url : throw new ArgumentNullException(nameof(url));
             Apk = apk ?? throw new ArgumentNullException(nameof(apk));
-            CurrentVersion = IsVersion(currentVersion) ? currentVersion :  throw new ArgumentNullException(nameof(currentVersion));
+            CurrentVersion = IsVersion(currentVersion) ? currentVersion : throw new ArgumentNullException(nameof(currentVersion));
             Authority = authority ?? throw new ArgumentNullException(nameof(authority));
             VersionFileName = versionFileName ?? "versions.json";
         }
