@@ -16,7 +16,7 @@ namespace TestMauiApp
             string url = "http://192.168.50.203/";
             string appName = "MainApplication.exe";
             string currentVersion = "1.1.1.1";
-            string versionFileName = "version_config.json";
+            string versionFileName = "versions.json";
             GeneralUpdateOSS.Download += OnOSSDownload;
             GeneralUpdateOSS.UnZipCompleted += OnOSSUnZipCompleted;
             GeneralUpdateOSS.UnZipProgress += OnOSSUnZipProgress;
