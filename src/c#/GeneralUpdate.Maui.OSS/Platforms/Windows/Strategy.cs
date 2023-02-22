@@ -16,7 +16,7 @@ namespace GeneralUpdate.Maui.OSS
     /// </summary>
     public class Strategy : AbstractStrategy
     {
-        private readonly string _appPath = FileSystem.AppDataDirectory;
+        private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
         private ParamsWindows _parameter;
 
         public override void Create<T>(T parameter)
@@ -29,7 +29,7 @@ namespace GeneralUpdate.Maui.OSS
             try
             {
                 //1.Download the JSON version configuration file.
-                var jsonUrl = $"{_parameter.Url} / {_parameter.VersionFileName}";
+                var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
                 await DownloadFileAsync(jsonUrl, jsonPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
                 if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
@@ -61,9 +61,9 @@ namespace GeneralUpdate.Maui.OSS
                 string appPath = Path.Combine(_appPath, _parameter.AppName);
                 Process.Start(appPath);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception(ex.StackTrace);
             }
             finally
             {

@@ -5,7 +5,7 @@
     /// </summary>
     public abstract class AbstractStrategy : IStrategy
     {
-        private readonly HttpClient _client;
+        private readonly HttpClient _client = new HttpClient();
 
         /// <summary>
         /// download file.
