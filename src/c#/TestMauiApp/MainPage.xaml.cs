@@ -14,7 +14,7 @@ namespace TestMauiApp
         private async void OnCounterClicked(object sender, EventArgs e)
         {
             //http://192.168.50.203/version.json
-            string url = "http://192.168.50.203:80";
+            string url = "http://192.168.50.203";
             string appName = "MainApplication.exe";
             string currentVersion = "1.1.1.1";
             string versionFileName = "versions.json";

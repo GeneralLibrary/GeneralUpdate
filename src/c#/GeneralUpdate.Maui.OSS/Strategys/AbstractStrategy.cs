@@ -1,12 +1,12 @@
-﻿namespace GeneralUpdate.Maui.OSS.Strategys
+﻿using System.Net;
+
+namespace GeneralUpdate.Maui.OSS.Strategys
 {
     /// <summary>
     /// OSS updates abstract Strategy.
     /// </summary>
     public abstract class AbstractStrategy : IStrategy
     {
-        private readonly HttpClient _client = new HttpClient();
-
         /// <summary>
         /// download file.
         /// </summary>
@@ -17,7 +17,8 @@
         public async Task DownloadFileAsync(string url, string filePath, Action<long, long> action)
         {
             var request = new HttpRequestMessage(new HttpMethod("GET"), url);
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            var client = new HttpClient();
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             var totalLength = response.Content.Headers.ContentLength;
             var stream = await response.Content.ReadAsStreamAsync();
             await using var fileStream = new FileStream(filePath, FileMode.Create);
