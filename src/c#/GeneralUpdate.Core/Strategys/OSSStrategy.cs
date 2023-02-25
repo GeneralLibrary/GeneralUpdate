@@ -1,5 +1,8 @@
-﻿using GeneralUpdate.Core.Domain.DO;
+﻿using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Events;
 using GeneralUpdate.Zip;
 using Newtonsoft.Json;
 using System;
@@ -12,9 +15,10 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys
 {
-    internal class OSSStrategy : AbstractStrategy
+    public sealed class OSSStrategy : AbstractStrategy
     {
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
+        private const string _format = ".zip";
         private ParamsOSS _parameter;
 
         public override void Create<T>(T parameter)
@@ -68,5 +72,17 @@ namespace GeneralUpdate.Core.Strategys
                 Process.GetCurrentProcess().Kill();
             }
         }
+
+        //private void Download(List<VersionInfo> versions) 
+        //{
+        //    var manager = new DownloadManager<VersionInfo>(_appPath, _format, 60);
+        //    manager.MutiAllDownloadCompleted += (s,e)=> EventManager.Instance.Dispatch<MutiAllDownloadCompletedEventHandler>(s, new MutiAllDownloadCompletedEventArgs(e.IsAllDownloadCompleted,e.FailedVersions));
+        //    manager.MutiDownloadCompleted += (s,e) => EventManager.Instance.Dispatch<MutiAsyncCompletedEventHandler>(s, new MutiDownloadCompletedEventArgs(e.Version,e.Error,e.Cancelled,e.UserState));
+        //    manager.MutiDownloadError += (s,e) => EventManager.Instance.Dispatch<MutiDownloadErrorEventHandler>(s, new MutiDownloadErrorEventArgs(e.Exception,e.Version));
+        //    manager.MutiDownloadProgressChanged += (s,e) => EventManager.Instance.Dispatch<MutiDownloadProgressChangedEventHandler>(s, new MutiDownloadProgressChangedEventArgs(s,e.Type,e.Message,e.BytesReceived,e.TotalBytesToReceive,e.ProgressPercentage,e.UserState));
+        //    manager.MutiDownloadStatistics += (s,e)=> EventManager.Instance.Dispatch<MutiDownloadStatisticsEventHandler>(s,new MutiDownloadStatisticsEventArgs(e.Version,e.Remaining,e.Speed));
+        //    versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, v)));
+        //    manager.LaunchTaskAsync();
+        //}
     }
 }

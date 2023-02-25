@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core
 {
-    public class GeneralUpdateOSS
+    public sealed class GeneralUpdateOSS
     {
         //public delegate void DownloadEventHandler(object sender, OSSDownloadArgs e);
 

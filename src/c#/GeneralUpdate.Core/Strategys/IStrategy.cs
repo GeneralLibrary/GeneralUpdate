@@ -22,17 +22,6 @@ namespace GeneralUpdate.Core.Strategys
         void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction);
 
         /// <summary>
-        /// Execution strategy.
-        /// </summary>
-        Task ExcuteTaskAsync();
-
-        /// <summary>
-        /// Create a policy.
-        /// </summary>
-        /// <param name="file">Abstraction for updating package information.</param>
-        void Create<T>(T parameter) where T : class;
-
-        /// <summary>
         /// After the update is complete.
         /// </summary>
         /// <param name="appName"></param>
@@ -45,5 +34,16 @@ namespace GeneralUpdate.Core.Strategys
         /// </summary>
         /// <returns></returns>
         string GetPlatform();
+
+        /// <summary>
+        /// Execution strategy.
+        /// </summary>
+        Task ExcuteTaskAsync();
+
+        /// <summary>
+        /// Create a policy.
+        /// </summary>
+        /// <param name="file">Abstraction for updating package information.</param>
+        void Create<T>(T parameter) where T : class;
     }
 }

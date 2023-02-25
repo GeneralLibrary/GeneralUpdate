@@ -38,6 +38,13 @@ namespace GeneralUpdate.Core.Bootstrap
 
     public class MutiDownloadStatisticsEventArgs : EventArgs
     {
+        public MutiDownloadStatisticsEventArgs(object version,DateTime remaining,string speed) 
+        {
+            Version = version;
+            Remaining = remaining;
+            Speed = speed;
+        }
+
         public object Version { get; set; }
 
         public DateTime Remaining { get; set; }

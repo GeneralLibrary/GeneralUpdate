@@ -103,7 +103,7 @@ namespace GeneralUpdate.Core.Download
                         : ToUnit(ReceivedBytes - BeforBytes / interval.Seconds);
                     var size = (TotalBytes - ReceivedBytes) / DEFAULT_DELTA;
                     var remainingTime = new DateTime().AddSeconds(Convert.ToDouble(size));
-                    _manager.OnMutiDownloadStatistics(this, new MutiDownloadStatisticsEventArgs() { Version = _version, Remaining = remainingTime, Speed = downLoadSpeed });
+                    _manager.OnMutiDownloadStatistics(this, new MutiDownloadStatisticsEventArgs(_version,remainingTime,downLoadSpeed));
                     StartTime = DateTime.Now;
                     BeforBytes = ReceivedBytes;
                 }
