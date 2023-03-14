@@ -14,7 +14,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | Update version-by-version                         | yes              | If the current version of the client differs from the server by more than one version, it is updated one by one according to the release date of the multiple versions. (Reference components take effect by default) |
 | Binary differential update                        | yes              | Compare the old and new versions to generate patch files by differential algorithms. (Reference components take effect by default) |
 | Incremental update functionality                  | yes              | Only the currently modified files are updated compared to the previous version. (Reference components take effect by default) |
-| ~~配置文件保留更新~~                              | no               | ~~暂时下线该功能~~                                           |
+| ~~The configuration file remains updated~~        | no               | ~~This feature is temporarily offline~~                      |
 | Force an update                                   | yes              | Force an update directly after opening the client.           |
 | Multi-branch updates                              | yes              | When a product has multiple branches, you need to update the corresponding content according to different branches. |
 | The latest version push                           | yes              | Based on the SignalR implementation, push the latest version. |
