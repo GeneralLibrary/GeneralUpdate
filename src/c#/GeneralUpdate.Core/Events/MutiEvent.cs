@@ -1,5 +1,7 @@
 ﻿using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MutiEventArgs;
+using System;
+using System.ComponentModel;
 
 namespace GeneralUpdate.Core.Events
 {
@@ -13,9 +15,9 @@ namespace GeneralUpdate.Core.Events
 
         public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
 
-        public delegate void MutiCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
+        public delegate void MutiDownloadCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
 
-        public event MutiCompletedEventHandler MutiDownloadCompleted;
+        public event MutiDownloadCompletedEventHandler MutiDownloadCompleted;
 
         public delegate void MutiDownloadErrorEventHandler(object sender, MutiDownloadErrorEventArgs e);
 
@@ -28,5 +30,16 @@ namespace GeneralUpdate.Core.Events
         public delegate void ExceptionEventHandler(object sender, ExceptionEventArgs e);
 
         public event ExceptionEventHandler Exception;
+
+        public delegate void MutiAsyncCompletedEventHandler(object sender, AsyncCompletedEventArgs e);
+
+        public event MutiAsyncCompletedEventHandler DownloadFileCompleted;
+    }
+
+    public class CommonEvent
+    {
+        public delegate void GeneralExceptionEventHandler(object sender, Exception e);
+
+        public event GeneralExceptionEventHandler GeneralException;
     }
 }

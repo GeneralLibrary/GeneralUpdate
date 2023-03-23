@@ -10,7 +10,7 @@
         /// <summary>
         /// Download the update package
         /// </summary>
-        Donwload,
+        Download,
 
         /// <summary>
         /// 更新文件
