@@ -1,10 +1,12 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
@@ -174,6 +176,48 @@ namespace GeneralUpdate.Core.Bootstrap
         #endregion Config option.
 
         #region Callback event.
+
+        public TBootstrap AddListenerMutiAllDownload<MutiAllDownloadCompletedEventArgs>(Action<object, MutiAllDownloadCompletedEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerMutiDownloadProgress<MutiDownloadProgressChangedEventArgs>(Action<object, MutiDownloadProgressChangedEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerMutiDownloadCompleted<MutiDownloadCompletedEventArgs>(Action<object, MutiDownloadCompletedEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerMutiDownloadError<MutiDownloadErrorEventArgs>(Action<object, MutiDownloadErrorEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerMutiDownloadStatistics<MutiDownloadStatisticsEventArgs>(Action<object, MutiDownloadStatisticsEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerDownloadFileCompleted<AsyncCompletedEventArgs>(Action<object, AsyncCompletedEventArgs> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        public TBootstrap AddListenerException<Exception>(Action<object, Exception> callbackAction)
+        {
+            return AddListener(callbackAction);
+        }
+
+        private protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction)
+        {
+            //TODO：To be designed ，event...
+            if(callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+            return (TBootstrap)this;
+        }
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
         {

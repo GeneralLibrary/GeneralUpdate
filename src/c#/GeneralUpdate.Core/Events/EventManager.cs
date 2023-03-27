@@ -98,6 +98,21 @@ namespace GeneralUpdate.Core.Events
         }
 
         /// <summary>
+        /// Gets the listening delegate type to delegate app delivery.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public Delegate GetListenerReference<TDelegate>(TDelegate targetDelegate) 
+        {
+            //TODO:To be designed
+            Delegate tempDelegate = null;
+            var delegateType = targetDelegate.GetType();
+            if (!delegateType.IsInstanceOfType(typeof(TDelegate))) return null;
+            _dicDelegates.TryGetValue(delegateType, out tempDelegate);
+            return tempDelegate;
+        }
+
+        /// <summary>
         /// Triggers a delegate of the same type.
         /// </summary>
         /// <typeparam name="TDelegate"></typeparam>
