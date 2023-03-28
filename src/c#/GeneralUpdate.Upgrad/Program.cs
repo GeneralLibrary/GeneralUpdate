@@ -43,7 +43,7 @@ namespace GeneralUpdate.Upgrad
                 case ProgressType.Check:
                     break;
 
-                case ProgressType.Donwload:
+                case ProgressType.Download:
                     Console.WriteLine($" {Math.Round(e.ProgressValue * 100, 2)}% ， Receivedbyte：{e.BytesReceived}M ，Totalbyte：{e.TotalBytesToReceive}M");
                     break;
 

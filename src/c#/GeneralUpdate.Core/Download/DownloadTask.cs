@@ -124,7 +124,7 @@ namespace GeneralUpdate.Core.Download
                     TotalBytes = e.TotalBytesToReceive;
 
                     var eventArgs = new MutiDownloadProgressChangedEventArgs(_version,
-                        ProgressType.Donwload,
+                        ProgressType.Download,
                         string.Empty,
                         e.BytesReceived / DEFAULT_DELTA,
                         e.TotalBytesToReceive / DEFAULT_DELTA,

@@ -72,6 +72,16 @@
     <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\CommonArgs\BaseEventArgs.cs" Link="Events\CommonArgs\BaseEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\CommonArgs\ExceptionEventArgs.cs" Link="Events\CommonArgs\ExceptionEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEvent.cs" Link="Events\MutiEvent.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiAllDownloadCompletedEventArgs.cs" Link="Events\MutiEventArgs\MutiAllDownloadCompletedEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadCompletedEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadCompletedEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadErrorEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadErrorEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadProgressChangedEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadProgressChangedEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadStatisticsEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadStatisticsEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
@@ -172,6 +182,8 @@
     <Folder Include="Download\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
+    <Folder Include="Events\MutiEventArgs\" />
+    <Folder Include="Events\CommonArgs\" />
     <Folder Include="Exceptions\CustomArgs\" />
     <Folder Include="Exceptions\CustomException\" />
     <Folder Include="Pipelines\MiddlewareResolver\" />
