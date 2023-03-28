@@ -5,6 +5,7 @@ using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics.Contracts;
@@ -143,6 +144,17 @@ namespace GeneralUpdate.Core.Bootstrap
         #endregion Strategy
 
         #region Config option.
+
+        /// <summary>
+        /// Files in the blacklist will skip the update.
+        /// </summary>
+        /// <param name="files">blacklist file name</param>
+        /// <returns></returns>
+        public virtual TBootstrap SetBlacklist(string[] blacklist) 
+        {
+            Packet.Blacklist = blacklist;
+            return (TBootstrap)this;
+        }
 
         /// <summary>
         /// Setting update configuration.

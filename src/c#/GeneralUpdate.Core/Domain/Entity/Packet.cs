@@ -100,5 +100,10 @@ namespace GeneralUpdate.Core.Domain.Entity
         public string ProcessBase64 { get; set; }
 
         public string Platform { get; set; }
+
+        /// <summary>
+        /// Files in the blacklist will skip the update.
+        /// </summary>
+        public string[] Blacklist { get; set; }
     }
 }

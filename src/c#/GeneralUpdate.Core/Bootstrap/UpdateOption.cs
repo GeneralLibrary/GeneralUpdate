@@ -44,6 +44,11 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         public static readonly UpdateOption<bool> UpdateConfig = ValueOf<bool>("UPDATECONFIG");
 
+        /// <summary>
+        /// Whether to let the application gain administrator privileges.
+        /// </summary>
+        public static readonly UpdateOption<bool> UseAdmin = ValueOf<bool>("USEADMIN");
+
         #endregion parameter configuration
 
         internal UpdateOption(int id, string name)
@@ -86,19 +91,19 @@ namespace GeneralUpdate.Core.Bootstrap
         /// <param name="name">the name of the <see cref="IConstant" /></param>
         public IConstant ValueOf<T>(string name)
         {
-            IConstant c;
+            IConstant constant;
             lock (this.constants)
             {
-                if (this.constants.TryGetValue(name, out c))
+                if (this.constants.TryGetValue(name, out constant))
                 {
-                    return c;
+                    return constant;
                 }
                 else
                 {
-                    c = this.NewInstance0<T>(name);
+                    constant = this.NewInstance0<T>(name);
                 }
             }
-            return c;
+            return constant;
         }
 
         /// <summary>Returns <c>true</c> if a <see cref="AttributeKey{T}" /> exists for the given <c>name</c>.</summary>
@@ -116,8 +121,8 @@ namespace GeneralUpdate.Core.Bootstrap
         public IConstant NewInstance<T>(string name)
         {
             if (this.Exists(name)) throw new ArgumentException($"'{name}' is already in use");
-            IConstant c = this.NewInstance0<T>(name);
-            return c;
+            IConstant constant = this.NewInstance0<T>(name);
+            return constant;
         }
 
         // Be careful that this dose not check whether the argument is null or empty.
@@ -125,10 +130,10 @@ namespace GeneralUpdate.Core.Bootstrap
         {
             lock (this.constants)
             {
-                IConstant c = this.NewConstant<T>(this.nextId, name);
-                this.constants[name] = c;
+                IConstant constant = this.NewConstant<T>(this.nextId, name);
+                this.constants[name] = constant;
                 this.nextId++;
-                return c;
+                return constant;
             }
         }
 
