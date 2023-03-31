@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Bootstrap;
+﻿using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core.Download
     {
         #region Private Members
 
-        private DownloadFileRangeState _state;
+        private DownloadFileRangeState _fileRange;
         private long _beforBytes;
         private long _receivedBytes;
         private long _totalBytes;
@@ -25,13 +25,13 @@ namespace GeneralUpdate.Core.Download
 
         #region Public Properties
 
-        public delegate void DownloadProgressChangedEventHandlerEx(object sender, DownloadProgressChangedEventArgsEx e);
+        public delegate void MutiDownloadProgressChangedEventHandler(object sender, MutiDownloadProgressChangedEventArgs e);
 
-        public event DownloadProgressChangedEventHandlerEx DownloadProgressChangedEx;
+        public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
 
-        public delegate void AsyncCompletedEventHandlerEx(object sender, AsyncCompletedEventArgs e);
+        public delegate void MutiAsyncCompletedEventHandler(object sender, AsyncCompletedEventArgs e);
 
-        public event AsyncCompletedEventHandlerEx DownloadFileCompletedEx;
+        public event MutiAsyncCompletedEventHandler MutiDownloadFileCompleted;
 
         protected Timer SpeedTimer { get; set; }
         protected DateTime StartTime { get; set; }
@@ -128,51 +128,51 @@ namespace GeneralUpdate.Core.Download
         public new void CancelAsync()
         {
             base.CancelAsync();
-            if (_state != null && _state.IsRangeDownload) _state.IsRangeDownload = false;
+            if (_fileRange != null && _fileRange.IsRangeDownload) _fileRange.IsRangeDownload = false;
         }
 
         public void DownloadFileRange(string url, string path, object userState)
         {
-            if (_state != null && _state.IsRangeDownload) return;
-            _state = new DownloadFileRangeState(path, userState, this);
-            _state.OnCompleted = () => DownloadFileCompletedEx;
-            _state.IsRangeDownload = true;
-            long startPos = CheckFile(_state);
+            if (_fileRange != null && _fileRange.IsRangeDownload) return;
+            _fileRange = new DownloadFileRangeState(path, userState, this);
+            _fileRange.OnCompleted = () => MutiDownloadFileCompleted;
+            _fileRange.IsRangeDownload = true;
+            long startPos = CheckFile(_fileRange);
             if (startPos == -1) return;
             try
             {
-                _state.Request = (HttpWebRequest)GetWebRequest(new Uri(url));
-                _state.Request.ReadWriteTimeout = _timeOut;
-                _state.Request.Timeout = _timeOut;
-                _state.Respone = _state.Request.GetResponse();
-                _state.Stream = _state.Respone.GetResponseStream();
-                if (_state.Respone.ContentLength == startPos)
+                _fileRange.Request = (HttpWebRequest)GetWebRequest(new Uri(url));
+                _fileRange.Request.ReadWriteTimeout = _timeOut;
+                _fileRange.Request.Timeout = _timeOut;
+                _fileRange.Respone = _fileRange.Request.GetResponse();
+                _fileRange.Stream = _fileRange.Respone.GetResponseStream();
+                if (_fileRange.Respone.ContentLength == startPos)
                 {
-                    _state.Close();
-                    File.Move(_state.TempPath, _state.Path);
-                    _state.Done(true);
+                    _fileRange.Close();
+                    File.Move(_fileRange.TempPath, _fileRange.Path);
+                    _fileRange.Done(true);
                     return;
                 }
-                if (startPos > 0) _state.Request.AddRange((int)startPos);
-                long totalBytesReceived = _state.Respone.ContentLength + startPos;
+                if (startPos > 0) _fileRange.Request.AddRange((int)startPos);
+                long totalBytesReceived = _fileRange.Respone.ContentLength + startPos;
                 long bytesReceived = startPos;
                 if (totalBytesReceived != 0 && bytesReceived >= totalBytesReceived)
                 {
-                    _state.Close();
+                    _fileRange.Close();
                     try
                     {
-                        if (File.Exists(_state.Path)) File.Delete(_state.Path);
-                        File.Move(_state.TempPath, _state.Path);
+                        if (File.Exists(_fileRange.Path)) File.Delete(_fileRange.Path);
+                        File.Move(_fileRange.TempPath, _fileRange.Path);
                     }
                     catch (Exception e)
                     {
-                        _state.Exception = e;
-                        _state.Close();
+                        _fileRange.Exception = e;
+                        _fileRange.Close();
                     }
                 }
                 else
                 {
-                    WriteFile(_state, startPos);
+                    WriteFile(_fileRange, startPos);
                 }
             }
             catch (HttpRequestException ex)
@@ -181,12 +181,12 @@ namespace GeneralUpdate.Core.Download
             }
             catch (Exception e)
             {
-                _state.Exception = e;
+                _fileRange.Exception = e;
                 throw new Exception($"'DownloadFileRange' This function has an internal exception : {e.Message} .", e.InnerException);
             }
             finally
             {
-                if (_state != null) _state.Close();
+                if (_fileRange != null) _fileRange.Close();
             }
         }
 
@@ -233,8 +233,8 @@ namespace GeneralUpdate.Core.Download
                 if (state == null || state.FileStream == null) break;
                 lock (state.FileStream)
                 {
-                    if (DownloadProgressChangedEx != null)
-                        DownloadProgressChangedEx(this, new DownloadProgressChangedEventArgsEx(bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
+                    if (MutiDownloadProgressChanged != null)
+                        MutiDownloadProgressChanged(this, new MutiDownloadProgressChangedEventArgs (bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
                     state.FileStream.Write(bytes, 0, readSize);
                     bytesReceived += readSize;
                     if (totalBytesReceived != 0 && bytesReceived >= totalBytesReceived)
@@ -269,7 +269,7 @@ namespace GeneralUpdate.Core.Download
             #region Private Members
 
             private const string tmpSuffix = ".temp";
-            private Func<AsyncCompletedEventHandlerEx> _onCompleted = null;
+            private Func<MutiAsyncCompletedEventHandler> _onDownloadCompleted = null;
             private HttpWebRequest _request = null;
             private WebResponse _respone = null;
             private Stream _stream = null;
@@ -297,7 +297,7 @@ namespace GeneralUpdate.Core.Download
 
             #region Public Properties
 
-            public Func<AsyncCompletedEventHandlerEx> OnCompleted { get => _onCompleted; set => _onCompleted = value; }
+            public Func<MutiAsyncCompletedEventHandler> OnCompleted { get => _onDownloadCompleted; set => _onDownloadCompleted = value; }
             public HttpWebRequest Request { get => _request; set => _request = value; }
             public WebResponse Respone { get => _respone; set => _respone = value; }
             public Stream Stream { get => _stream; set => _stream = value; }
@@ -330,8 +330,7 @@ namespace GeneralUpdate.Core.Download
             public void Done(bool isCompleted)
             {
                 if (_exception != null) throw new Exception(_exception.Message);
-                if (_onCompleted() != null)
-                    _onCompleted()(Sender, new AsyncCompletedEventArgs(_exception, isCompleted, _userState));
+                _onDownloadCompleted()(Sender, new AsyncCompletedEventArgs(_exception, isCompleted, _userState));
             }
 
             #endregion Public Methods

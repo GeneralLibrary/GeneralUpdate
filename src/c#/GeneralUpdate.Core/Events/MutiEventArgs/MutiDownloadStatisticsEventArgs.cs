@@ -1,9 +1,8 @@
-﻿using GeneralUpdate.Core.Events.CommonArgs;
-using System;
+﻿using System;
 
 namespace GeneralUpdate.Core.Events.MutiEventArgs
 {
-    public class MutiDownloadStatisticsEventArgs : BaseEventArgs
+    public class MutiDownloadStatisticsEventArgs : EventArgs
     {
         public object Version { get; set; }
 

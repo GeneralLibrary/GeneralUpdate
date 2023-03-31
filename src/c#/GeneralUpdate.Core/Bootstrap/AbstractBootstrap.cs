@@ -2,12 +2,12 @@
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
@@ -25,30 +25,6 @@ namespace GeneralUpdate.Core.Bootstrap
         private Packet _packet;
         private IStrategy _strategy;
         private const string EXECUTABLE_FILE = ".exe";
-
-        public delegate void MutiAllDownloadCompletedEventHandler(object sender, MutiAllDownloadCompletedEventArgs e);
-
-        public event MutiAllDownloadCompletedEventHandler MutiAllDownloadCompleted;
-
-        public delegate void MutiDownloadProgressChangedEventHandler(object sender, MutiDownloadProgressChangedEventArgs e);
-
-        public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
-
-        public delegate void MutiAsyncCompletedEventHandler(object sender, MutiDownloadCompletedEventArgs e);
-
-        public event MutiAsyncCompletedEventHandler MutiDownloadCompleted;
-
-        public delegate void MutiDownloadErrorEventHandler(object sender, MutiDownloadErrorEventArgs e);
-
-        public event MutiDownloadErrorEventHandler MutiDownloadError;
-
-        public delegate void MutiDownloadStatisticsEventHandler(object sender, MutiDownloadStatisticsEventArgs e);
-
-        public event MutiDownloadStatisticsEventHandler MutiDownloadStatistics;
-
-        public delegate void ExceptionEventHandler(object sender, ExceptionEventArgs e);
-
-        public event ExceptionEventHandler Exception;
 
         #endregion Private Members
 
@@ -97,7 +73,7 @@ namespace GeneralUpdate.Core.Bootstrap
             }
             catch (Exception ex)
             {
-                this.Exception(this, new ExceptionEventArgs(ex));
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(ex));
             }
             return (TBootstrap)this;
         }
@@ -111,7 +87,7 @@ namespace GeneralUpdate.Core.Bootstrap
                 Validate();
                 _strategy = _strategyFactory();
                 Packet.Platform = _strategy.GetPlatform();
-                _strategy.Create(Packet, MutiDownloadProgressAction, ExceptionAction);
+                _strategy.Create(Packet);
             }
             return _strategy;
         }
@@ -189,93 +165,64 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Callback event.
 
-        public TBootstrap AddListenerMutiAllDownload<MutiAllDownloadCompletedEventArgs>(Action<object, MutiAllDownloadCompletedEventArgs> callbackAction)
+        public TBootstrap AddListenerMutiAllDownloadCompleted(Action<object, MutiAllDownloadCompletedEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerMutiDownloadProgress<MutiDownloadProgressChangedEventArgs>(Action<object, MutiDownloadProgressChangedEventArgs> callbackAction)
+        public TBootstrap AddListenerMutiDownloadProgress(Action<object, MutiDownloadProgressChangedEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerMutiDownloadCompleted<MutiDownloadCompletedEventArgs>(Action<object, MutiDownloadCompletedEventArgs> callbackAction)
+        public TBootstrap AddListenerMutiDownloadCompleted(Action<object, MutiDownloadCompletedEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerMutiDownloadError<MutiDownloadErrorEventArgs>(Action<object, MutiDownloadErrorEventArgs> callbackAction)
+        public TBootstrap AddListenerMutiDownloadError(Action<object, MutiDownloadErrorEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerMutiDownloadStatistics<MutiDownloadStatisticsEventArgs>(Action<object, MutiDownloadStatisticsEventArgs> callbackAction)
+        public TBootstrap AddListenerMutiDownloadStatistics(Action<object, MutiDownloadStatisticsEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerDownloadFileCompleted<AsyncCompletedEventArgs>(Action<object, AsyncCompletedEventArgs> callbackAction)
+        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         {
             return AddListener(callbackAction);
         }
 
-        public TBootstrap AddListenerException<Exception>(Action<object, Exception> callbackAction)
+        private protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            return AddListener(callbackAction);
-        }
-
-        private protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction)
-        {
-            //TODO：To be designed ，event...
             if(callbackAction != null) EventManager.Instance.AddListener(callbackAction);
             return (TBootstrap)this;
         }
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
-        {
-            if (MutiDownloadStatistics != null)
-                MutiDownloadStatistics.Invoke(this, e);
-        }
-
-        protected void MutiDownloadProgressAction(object sender, MutiDownloadProgressChangedEventArgs e)
-        {
-            if (MutiDownloadProgressChanged != null)
-                MutiDownloadProgressChanged.Invoke(sender, e);
-        }
-
-        protected void ExceptionAction(object sender, ExceptionEventArgs e)
-        {
-            if (Exception != null) Exception.Invoke(this, e);
-        }
+        =>EventManager.Instance.Dispatch<Action<object, MutiDownloadStatisticsEventArgs>>(sender, e);
 
         private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
-        {
-            if (MutiDownloadProgressChanged != null)
-                MutiDownloadProgressChanged.Invoke(this, e);
-        }
+        =>EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(sender, e);
 
         private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
-        {
-            if (MutiDownloadCompleted != null)
-                MutiDownloadCompleted.Invoke(sender, e);
-        }
+        => EventManager.Instance.Dispatch<Action<object, MutiDownloadCompletedEventArgs>>(sender, e);
 
         private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
-        {
-            if (MutiDownloadError != null) MutiDownloadError.Invoke(this, e);
-        }
+        => EventManager.Instance.Dispatch<Action<object, MutiDownloadErrorEventArgs>>(sender, e);
 
         private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
         {
             try
             {
-                if (MutiAllDownloadCompleted != null)
-                    MutiAllDownloadCompleted.Invoke(this, e);
+                EventManager.Instance.Dispatch<Action<object, MutiAllDownloadCompletedEventArgs>>(sender, e);
                 ExcuteStrategy();
             }
             catch (Exception ex)
             {
-                this.Exception(this, new ExceptionEventArgs(ex));
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(ex));
             }
         }
 

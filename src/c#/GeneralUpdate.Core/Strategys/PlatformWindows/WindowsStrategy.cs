@@ -1,6 +1,7 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
@@ -21,19 +22,14 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         #region Private Members
 
         protected Packet Packet { get; set; }
-        protected Action<object, MutiDownloadProgressChangedEventArgs> ProgressEventAction { get; set; }
-        protected Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
 
         #endregion Private Members
 
         #region Public Methods
 
-        public override void Create(Entity packet, Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction,
-    Action<object, ExceptionEventArgs> exceptionEventAction)
+        public override void Create<T>(T parameter)
         {
-            Packet = (Packet)packet;
-            ProgressEventAction = progressEventAction;
-            ExceptionEventAction = exceptionEventAction;
+            Packet = parameter as Packet;
         }
 
         public override void Excute()
@@ -49,7 +45,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
-                            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding, ProgressEventAction, ExceptionEventAction)).
+                            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
                                 UseMiddleware<MD5Middleware>().
                                 UseMiddleware<ZipMiddleware>().
                                 UseMiddleware<PatchMiddleware>();
@@ -60,9 +56,9 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                     StartApp(Packet.AppName, Packet.AppType);
                 });
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Error(ex);
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 return;
             }
         }
@@ -86,9 +82,9 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Error(ex);
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 return false;
             }
             finally
@@ -100,9 +96,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         #endregion Public Methods
 
         #region Private Methods
-
-        private void Error(Exception ex)
-        { if (ExceptionEventAction != null) ExceptionEventAction(this, new ExceptionEventArgs(ex)); }
 
         /// <summary>
         /// Remove update redundant files.
@@ -117,10 +110,9 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 if (Directory.Exists(dirPath)) Directory.Delete(dirPath, true);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                if (ExceptionEventAction != null)
-                    ExceptionEventAction(this, new ExceptionEventArgs(ex));
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 return false;
             }
         }

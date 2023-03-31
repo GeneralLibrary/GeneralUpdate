@@ -3,6 +3,8 @@ using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using GeneralUpdate.Core.Utils;
 using System.Text;
@@ -23,8 +25,8 @@ namespace GeneralUpdate.Client
 
         private void OnLoaded(object sender, EventArgs e)
         {
-            var md5 = FileUtil.GetFileMD5(@"F:\temp\target\testpacket.zip");
-            VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
+            //var md5 = FileUtil.GetFileMD5(@"F:\test\update.zip");
+            //VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
         }
 
         private async void GetMessage(string msg)
@@ -39,41 +41,30 @@ namespace GeneralUpdate.Client
         {
             Task.Run(async () =>
             {
-                Configinfo configinfo = null;
-
-#if WINDOWS
-                configinfo = GetWindowsConfiginfo();
-#endif
-
-#if ANDROID
-                configinfo = GetAndroidConfiginfo();
-#endif
-
-                var generalClientBootstrap = new GeneralClientBootstrap();
-                //单个或多个更新包下载通知事件
-                generalClientBootstrap.MutiDownloadProgressChanged += OnMutiDownloadProgressChanged;
-                //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-                generalClientBootstrap.MutiDownloadStatistics += OnMutiDownloadStatistics;
-                //单个或多个更新包下载完成
-                generalClientBootstrap.MutiDownloadCompleted += OnMutiDownloadCompleted;
-                //完成所有的下载任务通知
-                generalClientBootstrap.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
-                //下载过程出现的异常通知
-                generalClientBootstrap.MutiDownloadError += OnMutiDownloadError;
-                //整个更新过程出现的任何问题都会通过这个事件通知
-                generalClientBootstrap.Exception += OnException;
                 //ClientStrategy该更新策略将完成1.自动升级组件自更新 2.启动更新组件 3.配置好ClientParameter无需再像之前的版本写args数组进程通讯了。
                 //generalClientBootstrap.Config(baseUrl, "B8A7FADD-386C-46B0-B283-C9F963420C7C").
-                generalClientBootstrap.Config(configinfo).
-                Option(UpdateOption.DownloadTimeOut, 60).
-                Option(UpdateOption.Encoding, Encoding.Default).
-                Option(UpdateOption.Format, Format.ZIP).
+                var configinfo = GetWindowsConfiginfo();
+                var generalClientBootstrap = await new GeneralClientBootstrap()
+                //单个或多个更新包下载通知事件
+                .AddListenerMutiDownloadProgress(OnMutiDownloadProgressChanged)
+                //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                .AddListenerMutiDownloadStatistics(OnMutiDownloadStatistics)
+                //单个或多个更新包下载完成
+                .AddListenerMutiDownloadCompleted(OnMutiDownloadCompleted)
+                //完成所有的下载任务通知
+                .AddListenerMutiAllDownloadCompleted(OnMutiAllDownloadCompleted)
+                //下载过程出现的异常通知
+                .AddListenerMutiDownloadError(OnMutiDownloadError)
+                //整个更新过程出现的任何问题都会通过这个事件通知
+                .AddListenerException(OnException)
+                .Config(configinfo)
+                .Option(UpdateOption.DownloadTimeOut, 60)
+                .Option(UpdateOption.Encoding, Encoding.Default)
+                .Option(UpdateOption.Format, Format.ZIP)
+                .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                SetCustomOption(ShowCustomOption);
-#if WINDOWS
-                generalClientBootstrap.Strategy<WindowsStrategy>();
-#endif
-                await generalClientBootstrap.LaunchTaskAsync();
+                .SetCustomOption(ShowCustomOption)
+                .LaunchTaskAsync();
             });
         }
 
@@ -86,15 +77,15 @@ namespace GeneralUpdate.Client
             //该对象用于主程序客户端与更新组件进程之间交互用的对象
             var config = new Configinfo();
             //本机的客户端程序应用地址
-            config.InstallPath =  //@"D:\Updatetest_hub\Run_app";
-                                  //更新公告网页
+            config.InstallPath = @"F:\test\Run";
+            //更新公告网页
             config.UpdateLogUrl = "https://www.baidu.com/";
             //客户端当前版本号
             config.ClientVersion = "1.1.1.1";
             //客户端类型：1.主程序客户端 2.更新组件
             config.AppType = AppType.ClientApp;
             //指定应用密钥，用于区分客户端应用
-            config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
+            config.AppSecretKey = "B8A7FADD-386C-46B0-B283-C9F963420C7C";
             //更新组件更新包下载地址
             config.UpdateUrl = $"{baseUrl}/versions/{config.AppType}/{config.ClientVersion}/{config.AppSecretKey}";
             //更新程序exe名称
@@ -161,7 +152,7 @@ namespace GeneralUpdate.Client
 
         private void OnException(object sender, ExceptionEventArgs e)
         {
-            DispatchMessage(e.Exception.Message);
+            //DispatchMessage(e.Exception.Message);
         }
 
         private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)

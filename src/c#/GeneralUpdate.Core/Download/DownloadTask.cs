@@ -1,6 +1,5 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.CustomAwaiter;
-using GeneralUpdate.Core.Domain.Enum;
+﻿using GeneralUpdate.Core.CustomAwaiter;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
@@ -116,7 +115,7 @@ namespace GeneralUpdate.Core.Download
 
         private void InitProgressEvent()
         {
-            DownloadProgressChangedEx += new DownloadProgressChangedEventHandlerEx((sender, e) =>
+            MutiDownloadProgressChanged += ((sender, e) =>
             {
                 try
                 {
@@ -124,8 +123,6 @@ namespace GeneralUpdate.Core.Download
                     TotalBytes = e.TotalBytesToReceive;
 
                     var eventArgs = new MutiDownloadProgressChangedEventArgs(_version,
-                        ProgressType.Download,
-                        string.Empty,
                         e.BytesReceived / DEFAULT_DELTA,
                         e.TotalBytesToReceive / DEFAULT_DELTA,
                         e.ProgressPercentage,
@@ -140,9 +137,10 @@ namespace GeneralUpdate.Core.Download
             });
         }
 
+
         private void InitCompletedEvent()
         {
-            DownloadFileCompletedEx += new AsyncCompletedEventHandlerEx((sender, e) =>
+            MutiDownloadFileCompleted += ((sender, e) =>
             {
                 try
                 {

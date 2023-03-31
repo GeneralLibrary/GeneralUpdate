@@ -1,9 +1,8 @@
-﻿using GeneralUpdate.Core.Events.CommonArgs;
-using System;
+﻿using System;
 
 namespace GeneralUpdate.Core.Events.MutiEventArgs
 {
-    public class MutiDownloadErrorEventArgs : BaseEventArgs
+    public class MutiDownloadErrorEventArgs : EventArgs
     {
         public MutiDownloadErrorEventArgs(Exception exception, object version)
         {

@@ -33,17 +33,25 @@
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Differential\.gitkeep" />
     <None Remove="Domain\.gitkeep" />
+    <None Remove="Domain\Service\.gitkeep" />
     <None Remove="Download\.gitkeep" />
     <None Remove="Exceptions\.gitkeep" />
     <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
     <None Remove="GeneralUpdate.ClientCore.nuspec" />
     <None Remove="GeneralUpdate.ico" />
     <None Remove="nuget.exe" />
+    <None Remove="Pipelines\Attributes\.gitkeep" />
+    <None Remove="Pipelines\Context\.gitkeep" />
+    <None Remove="Pipelines\MiddlewareResolver\.gitkeep" />
+    <None Remove="Pipelines\Middleware\.gitkeep" />
+    <None Remove="Pipelines\Pipeline\.gitkeep" />
+    <None Remove="Strategys\PlatformLinux\.gitkeep" />
+    <None Remove="Strategys\PlatformMac\.gitkeep" />
+    <None Remove="Strategys\PlatformWindows\.gitkeep" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\AbstractBootstrap.cs" Link="Bootstrap\AbstractBootstrap.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateEventArgs.cs" Link="Bootstrap\UpdateEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
@@ -57,6 +65,7 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Configinfo.cs" Link="Domain\Entity\Configinfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ParamsOSS.cs" Link="Domain\Entity\ParamsOSS.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
@@ -72,11 +81,9 @@
     <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\CommonArgs\BaseEventArgs.cs" Link="Events\CommonArgs\BaseEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\CommonArgs\ExceptionEventArgs.cs" Link="Events\CommonArgs\ExceptionEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MutiEvent.cs" Link="Events\MutiEvent.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiAllDownloadCompletedEventArgs.cs" Link="Events\MutiEventArgs\MutiAllDownloadCompletedEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadCompletedEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadCompletedEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Events\MutiEventArgs\MutiDownloadErrorEventArgs.cs" Link="Events\MutiEventArgs\MutiDownloadErrorEventArgs.cs" />

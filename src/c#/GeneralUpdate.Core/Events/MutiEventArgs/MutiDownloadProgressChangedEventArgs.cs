@@ -1,9 +1,9 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events.CommonArgs;
+using System;
 
 namespace GeneralUpdate.Core.Events.MutiEventArgs
 {
-    public class MutiDownloadProgressChangedEventArgs : BaseEventArgs
+    public class MutiDownloadProgressChangedEventArgs : EventArgs
     {
         public MutiDownloadProgressChangedEventArgs(long bytesReceived, long totalBytesToReceive, float progressPercentage, object userState)
         {
@@ -19,6 +19,12 @@ namespace GeneralUpdate.Core.Events.MutiEventArgs
             TotalBytesToReceive = totalBytesToReceive;
             ProgressPercentage = progressPercentage;
             UserState = userState;
+            Version = version;
+            Message = message;
+        }
+        
+        public MutiDownloadProgressChangedEventArgs(object version,string message) 
+        {
             Version = version;
             Message = message;
         }

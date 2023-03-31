@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using System;
 using System.Threading.Tasks;
 
@@ -9,8 +8,7 @@ namespace GeneralUpdate.Core.Strategys
     {
         protected const string PATCHS = "patchs";
 
-        public virtual void Create(Entity entity, Action<object, MutiDownloadProgressChangedEventArgs> eventAction, Action<object, ExceptionEventArgs> errorEventAction) =>
-            throw new NotImplementedException();
+        //public virtual void Create(Entity entity) => throw new NotImplementedException();
 
         public virtual void Excute() => throw new NotImplementedException();
 

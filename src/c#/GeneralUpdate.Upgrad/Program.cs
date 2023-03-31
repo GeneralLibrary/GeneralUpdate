@@ -1,6 +1,8 @@
 ﻿using GeneralUpdate.Core;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 
@@ -14,14 +16,20 @@ namespace GeneralUpdate.Upgrad
             Thread.Sleep(5000);
             Task.Run(async () =>
             {
-                var bootStrap = new GeneralUpdateBootstrap();
-                bootStrap.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
-                bootStrap.MutiDownloadCompleted += OnMutiDownloadCompleted;
-                bootStrap.MutiDownloadError += OnMutiDownloadError;
-                bootStrap.MutiDownloadProgressChanged += OnMutiDownloadProgressChanged;
-                bootStrap.MutiDownloadStatistics += OnMutiDownloadStatistics;
-                bootStrap.Exception += OnException;
-                bootStrap.Strategy<WindowsStrategy>().
+                var bootStrap = new GeneralUpdateBootstrap()
+                //单个或多个更新包下载通知事件
+                .AddListenerMutiDownloadProgress(OnMutiDownloadProgressChanged)
+                //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                .AddListenerMutiDownloadStatistics(OnMutiDownloadStatistics)
+                //单个或多个更新包下载完成
+                .AddListenerMutiDownloadCompleted(OnMutiDownloadCompleted)
+                //完成所有的下载任务通知
+                .AddListenerMutiAllDownloadCompleted(OnMutiAllDownloadCompleted)
+                //下载过程出现的异常通知
+                .AddListenerMutiDownloadError(OnMutiDownloadError)
+                //整个更新过程出现的任何问题都会通过这个事件通知
+                .AddListenerException(OnException)
+                .Strategy<WindowsStrategy>().
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Format, Format.ZIP).
@@ -36,7 +44,7 @@ namespace GeneralUpdate.Upgrad
             Console.WriteLine($" {e.Speed} , {e.Remaining.ToShortTimeString()}");
         }
 
-        private static void OnMutiDownloadProgressChanged(object sender, GeneralUpdate.Core.Bootstrap.MutiDownloadProgressChangedEventArgs e)
+        private static void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
         {
             switch (e.Type)
             {
@@ -58,24 +66,24 @@ namespace GeneralUpdate.Upgrad
             }
         }
 
-        private static void OnMutiDownloadCompleted(object sender, GeneralUpdate.Core.Bootstrap.MutiDownloadCompletedEventArgs e)
+        private static void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
         {
             //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
             //Console.WriteLine($"{info.Name} download completed.");
         }
 
-        private static void OnMutiAllDownloadCompleted(object sender, GeneralUpdate.Core.Bootstrap.MutiAllDownloadCompletedEventArgs e)
+        private static void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
         {
             Console.WriteLine($"AllDownloadCompleted {e.IsAllDownloadCompleted}");
         }
 
-        private static void OnMutiDownloadError(object sender, GeneralUpdate.Core.Bootstrap.MutiDownloadErrorEventArgs e)
+        private static void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
         {
             //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
             //Console.WriteLine($"{info.Name},{e.Exception.Message}.");
         }
 
-        private static void OnException(object sender, GeneralUpdate.Core.Bootstrap.ExceptionEventArgs e)
+        private static void OnException(object sender, ExceptionEventArgs e)
         {
             Console.WriteLine($"{e.Exception.Message}");
         }

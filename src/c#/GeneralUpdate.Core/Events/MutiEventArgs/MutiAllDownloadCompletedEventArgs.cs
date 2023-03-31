@@ -1,10 +1,9 @@
-﻿using GeneralUpdate.Core.Events.CommonArgs;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Events.MutiEventArgs
 {
-    public class MutiAllDownloadCompletedEventArgs : BaseEventArgs
+    public class MutiAllDownloadCompletedEventArgs : EventArgs
     {
         public MutiAllDownloadCompletedEventArgs() { }
 

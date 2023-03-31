@@ -1,6 +1,8 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using System;
 using System.Text;
 
@@ -11,10 +13,6 @@ namespace GeneralUpdate.Core.Pipelines.Context
     /// </summary>
     public class BaseContext
     {
-        private Action<object, MutiDownloadProgressChangedEventArgs> ProgressEventAction { get; set; }
-
-        private Action<object, ExceptionEventArgs> ExceptionEventAction { get; set; }
-
         public VersionInfo Version { get; set; }
 
         public string Name { get; set; }
@@ -32,12 +30,8 @@ namespace GeneralUpdate.Core.Pipelines.Context
         public BaseContext()
         { }
 
-        public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding,
-            Action<object, MutiDownloadProgressChangedEventArgs> progressEventAction = null,
-            Action<object, ExceptionEventArgs> exceptionEventAction = null)
+        public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
         {
-            ProgressEventAction = progressEventAction;
-            ExceptionEventAction = exceptionEventAction;
             Version = version;
             ZipfilePath = zipfilePath;
             TargetPath = targetPath;
@@ -47,16 +41,9 @@ namespace GeneralUpdate.Core.Pipelines.Context
         }
 
         public void OnProgressEventAction(object handle, ProgressType type, string message)
-        {
-            if (ProgressEventAction == null) return;
-            var eventArgs =
-                new MutiDownloadProgressChangedEventArgs(Version, type, message);
-            ProgressEventAction(handle, eventArgs);
-        }
+        => EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(handle, new MutiDownloadProgressChangedEventArgs(Version, message));
 
         public void OnExceptionEventAction(object handle, Exception exception)
-        {
-            if (ExceptionEventAction != null) ExceptionEventAction(handle, new ExceptionEventArgs(exception));
-        }
+        => EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(handle, new ExceptionEventArgs(exception));
     }
 }

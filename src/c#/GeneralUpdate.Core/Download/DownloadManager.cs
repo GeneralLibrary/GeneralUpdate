@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.Core.Bootstrap;
+﻿using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -124,7 +125,7 @@ namespace GeneralUpdate.Core.Download
             }
             finally
             {
-                if (_failedVersions.Count > 0) MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(false, _failedVersions));
+                if (_failedVersions.Count > 0) MutiAllDownloadCompleted(this, new MutiAllDownloadCompletedEventArgs(true, _failedVersions));
             }
         }
 
@@ -160,5 +161,6 @@ namespace GeneralUpdate.Core.Download
         }
 
         #endregion Public Methods
+
     }
 }

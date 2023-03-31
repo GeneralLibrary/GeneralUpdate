@@ -23,6 +23,9 @@
     <None Remove="Config\**" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Bootstrap\UpdateEventArgs.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />

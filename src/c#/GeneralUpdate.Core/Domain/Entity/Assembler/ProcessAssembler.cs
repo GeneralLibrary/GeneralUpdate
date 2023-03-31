@@ -11,6 +11,12 @@ namespace GeneralUpdate.Core.Domain.Entity.Assembler
             return SerializeUtil.Serialize(info);
         }
 
+        public static string ToBase64(ParamsOSS info)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            return SerializeUtil.Serialize(info);
+        }
+
         public static Packet ToPacket(ProcessInfo info)
         {
             var packet = new Packet();

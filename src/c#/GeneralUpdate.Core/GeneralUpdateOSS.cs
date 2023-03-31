@@ -1,5 +1,4 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Strategys;
 using System;
 using System.Threading.Tasks;
@@ -8,7 +7,7 @@ namespace GeneralUpdate.Core
 {
     public sealed class GeneralUpdateOSS
     {
-        private GeneralUpdateOSS() { }
+        private  GeneralUpdateOSS() { }
 
         /// <summary>
         /// Starting an OSS update for windows,linux,mac platform.
