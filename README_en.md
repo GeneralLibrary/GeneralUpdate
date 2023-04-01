@@ -23,6 +23,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | Multilingual                                      | To be verified   | You can also write this component as a console program as an update "script". Update applications in other languages. |
 | Skip updates                                      | yes              | Support injection pop-up window allows users to decide whether to update this release, and the update will not take effect when the server decides to force it. |
 | Upgrade each other                                | yes              | The main program updates the upgrade program, and the upgrade program updates the main program. |
+| Black list                                        | yes              | Files and file extensions from the blacklist are skipped during the update process. |
 
 ### 2.Help documentation ###
 
