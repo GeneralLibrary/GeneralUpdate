@@ -2,15 +2,14 @@
 using Android.OS;
 using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Maui.OSS.Domain.Entity;
-using GeneralUpdate.Maui.OSS.Events;
 using GeneralUpdate.Maui.OSS.Strategys;
 using Java.IO;
 using Java.Math;
 using Java.Security;
 using Newtonsoft.Json;
 using System.Text;
-using static GeneralUpdate.Maui.OSS.Events.OSSEvents;
 
 namespace GeneralUpdate.Maui.OSS
 {
@@ -19,9 +18,15 @@ namespace GeneralUpdate.Maui.OSS
     /// </summary>
     public class Strategy : AbstractStrategy
     {
+        #region Private Members
+
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private const string _fromat = ".apk";
         private ParamsAndroid _parameter;
+
+        #endregion
+
+        #region Public Methods
 
         public override void Create<T>(T parameter)
         {
@@ -33,7 +38,8 @@ namespace GeneralUpdate.Maui.OSS
             //1.Download the JSON version configuration file.
             var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
             var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
-            await DownloadFileAsync(jsonUrl, jsonPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
+            await DownloadFileAsync(jsonUrl, jsonPath, (readLength, totalLength)
+                => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
             var jsonFile = new Java.IO.File(jsonPath);
             if (!jsonFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
 
@@ -50,7 +56,8 @@ namespace GeneralUpdate.Maui.OSS
 
             //4.Download the apk file.
             var file = Path.Combine(_appPath, $"{_parameter.Apk}{_fromat}");
-            await DownloadFileAsync(versionConfig.Url, file, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
+            await DownloadFileAsync(versionConfig.Url, file, (readLength, totalLength)
+                => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
             var apkFile = new Java.IO.File(file);
             if (!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
             if (!versionConfig.MD5.Equals(GetFileMD5(apkFile, 64))) throw new Exception("The apk MD5 value does not match !");
@@ -70,6 +77,10 @@ namespace GeneralUpdate.Maui.OSS
             intent.AddFlags(ActivityFlags.NewTask);
             Android.App.Application.Context.StartActivity(intent);
         }
+
+        #endregion
+
+        #region Private Methods
 
         /// <summary>
         /// Android OS read file byts.
@@ -133,5 +144,7 @@ namespace GeneralUpdate.Maui.OSS
             var bigInt = new BigInteger(1, digest.Digest());
             return bigInt.ToString(radix);
         }
+
+        #endregion
     }
 }

@@ -19,9 +19,15 @@ namespace GeneralUpdate.Core.Strategys
 {
     public sealed class OSSStrategy : AbstractStrategy
     {
+        #region Private Members
+
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
         private const string _format = ".zip";
         private ParamsOSS _parameter;
+
+        #endregion
+
+        #region Public Methods
 
         public override void Create<T>(T parameter)
         {
@@ -35,8 +41,8 @@ namespace GeneralUpdate.Core.Strategys
                 //1.Download the JSON version configuration file.
                 var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
-                var isHasNewVersion = await DownloadFileAsync(jsonUrl, jsonPath, (readLength, totalLength) 
-                    => EventManager.Instance.Dispatch<Action<object,OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength,totalLength)));
+                var isHasNewVersion = await DownloadFileAsync(jsonUrl, jsonPath, (readLength, totalLength)
+                    => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
                 if (!isHasNewVersion) return;
                 if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
@@ -68,6 +74,10 @@ namespace GeneralUpdate.Core.Strategys
             }
         }
 
+        #endregion
+
+        #region Private Methods
+
         /// <summary>
         /// Download all updated versions version by version.
         /// </summary>
@@ -97,7 +107,7 @@ namespace GeneralUpdate.Core.Strategys
             var client = new HttpClient();
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             var totalLength = response.Content.Headers.ContentLength;
-            if(totalLength == 0)return false;
+            if (totalLength == 0) return false;
             var stream = await response.Content.ReadAsStreamAsync();
             using (var fileStream = new FileStream(filePath, FileMode.Create))
             {
@@ -121,11 +131,13 @@ namespace GeneralUpdate.Core.Strategys
         /// Start the main application when the update is complete.
         /// </summary>
         /// <exception cref="FileNotFoundException"></exception>
-        private void LaunchApp() 
+        private void LaunchApp()
         {
             string appPath = Path.Combine(_appPath, _parameter.AppName);
             if (!File.Exists(appPath)) throw new FileNotFoundException($"{nameof(appPath)} , The application is not accessible !");
             Process.Start(appPath);
         }
+
+        #endregion
     }
 }

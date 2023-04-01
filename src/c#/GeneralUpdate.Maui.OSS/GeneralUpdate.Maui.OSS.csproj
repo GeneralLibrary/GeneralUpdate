@@ -54,13 +54,13 @@
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\Events\OSSArgs\OSSDownloadArgs.cs" Link="Events\OSSDownloadArgs.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Domain\DO\Assembler\" />
 	  <Folder Include="Domain\Enum\" />
-	  <Folder Include="Platforms\Windows\" />
 	  <Folder Include="Utils\" />
 	</ItemGroup>
 
