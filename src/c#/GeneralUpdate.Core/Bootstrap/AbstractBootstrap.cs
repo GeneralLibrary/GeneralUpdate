@@ -8,6 +8,7 @@ using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
@@ -126,9 +127,10 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         /// <param name="files">blacklist file name</param>
         /// <returns></returns>
-        public virtual TBootstrap SetBlacklist(string[] blacklist) 
+        public virtual TBootstrap SetBlacklist(List<string> files = null,List<string> fileFormats = null) 
         {
-            Packet.Blacklist = blacklist;
+            Packet.BlackFiles = files ?? new List<string>() { "Newtonsoft.Json.dll" };
+            Packet.BlackFormats = fileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" };
             return (TBootstrap)this;
         }
 

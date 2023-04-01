@@ -151,7 +151,7 @@ namespace GeneralUpdate.ClientCore
         #region Private Methods
 
         /// <summary>
-        ///
+        ///Gets the application version number
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>

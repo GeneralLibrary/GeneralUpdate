@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys
@@ -7,8 +6,6 @@ namespace GeneralUpdate.Core.Strategys
     public abstract class AbstractStrategy : IStrategy
     {
         protected const string PATCHS = "patchs";
-
-        //public virtual void Create(Entity entity) => throw new NotImplementedException();
 
         public virtual void Excute() => throw new NotImplementedException();
 

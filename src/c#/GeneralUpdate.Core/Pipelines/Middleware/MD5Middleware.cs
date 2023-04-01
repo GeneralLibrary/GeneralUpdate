@@ -1,4 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Utils;
 using System;
@@ -13,16 +16,17 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             Exception exception = null;
             try
             {
-                context.OnProgressEventAction(this, ProgressType.MD5, "Verify file MD5 code ...");
+                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.MD5, "Verify file MD5 code ..."));
                 var version = context.Version;
                 bool isVerify = VerifyFileMd5(context.ZipfilePath, version.MD5);
-                if (!isVerify) throw exception = new Exception($"The update package MD5 code is inconsistent ! version-{version.Version}  MD5-{version.MD5} .");
+                if (!isVerify) exception = new Exception($"The update package MD5 code is inconsistent ! version-{version.Version}  MD5-{version.MD5} .");
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);
             }
             catch (Exception ex)
             {
-                context.OnExceptionEventAction(this, exception ?? ex);
+                exception = exception ?? ex;
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 throw exception;
             }
         }

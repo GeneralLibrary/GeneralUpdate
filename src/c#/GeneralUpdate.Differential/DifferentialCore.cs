@@ -6,6 +6,7 @@ using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,15 +18,20 @@ namespace GeneralUpdate.Differential
     {
         #region Private Members
 
+        private static readonly object _lockObj = new object();
+        private static DifferentialCore _instance;
+
         /// <summary>
         /// Differential file format .
         /// </summary>
         private const string PATCH_FORMAT = ".patch";
 
+        /// <summary>
+        /// Patch catalog.
+        /// </summary>
         private const string PATCHS = "patchs";
 
-        private static readonly object _lockObj = new object();
-        private static DifferentialCore _instance;
+        private List<string> _blackFiles, _blackFileFormats;
 
         private Action<object, BaseCompressProgressEventArgs> _compressProgressCallback;
 
@@ -102,7 +108,7 @@ namespace GeneralUpdate.Differential
                     var oldfile = finOldFile == null ? "" : finOldFile.FullName;
                     var newfile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.Diff.Contains(extensionName))
+                    if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.GetBlackFileFormats().Contains(extensionName))
                     {
                         //Generate the difference file to the difference directory .
                         await new BinaryHandle().Clean(oldfile, newfile, tempPath0);
@@ -167,6 +173,17 @@ namespace GeneralUpdate.Differential
         }
 
         /// <summary>
+        /// Set a blacklist.
+        /// </summary>
+        /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
+        /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
+        public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
+
+        #endregion Public Methods
+
+        #region Private Methods
+
+        /// <summary>
         /// Apply patch file .
         /// </summary>
         /// <param name="appPath">Client application directory .</param>
@@ -200,7 +217,7 @@ namespace GeneralUpdate.Differential
                 foreach (var file in listExcept)
                 {
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (Filefilter.Diff.Contains(extensionName)) continue;
+                    if (Filefilter.GetBlackFileFormats().Contains(extensionName)) continue;
                     var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
                     var targetPath = Path.Combine(appPath, targetFileName);
                     var parentFolder = Directory.GetParent(targetPath);
@@ -215,10 +232,6 @@ namespace GeneralUpdate.Differential
                 throw new Exception($" DrityNew error : {ex.Message} !", ex.InnerException);
             }
         }
-
-        #endregion Public Methods
-
-        #region Private Methods
 
         private void OnCompressProgress(object sender, BaseCompressProgressEventArgs e) => _compressProgressCallback(sender, e);
 

@@ -1,9 +1,6 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace GeneralUpdate.Core.Pipelines.Context
@@ -27,23 +24,20 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         public Encoding Encoding { get; set; }
 
-        public BaseContext()
-        { }
+        public List<string> BlackFiles { get; set; }
 
-        public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding)
+        public List<string> BlackFileFormats { get; set; }
+
+        public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding, List<string> files, List<string> fileFormats)
         {
-            Version = version;
-            ZipfilePath = zipfilePath;
-            TargetPath = targetPath;
-            SourcePath = sourcePath;
-            Format = format;
+            Version = version ?? throw new ArgumentNullException($"{nameof(VersionInfo)} Cannot be empty");
+            ZipfilePath = string.IsNullOrWhiteSpace(zipfilePath) ? throw new ArgumentNullException($"{ nameof(zipfilePath) } Cannot be empty") : zipfilePath ;
+            TargetPath = string.IsNullOrWhiteSpace(targetPath) ? throw new ArgumentNullException($"{nameof(targetPath)} Cannot be empty") : targetPath; ;
+            SourcePath = string.IsNullOrWhiteSpace(sourcePath) ? throw new ArgumentNullException($"{nameof(sourcePath)} Cannot be empty") : sourcePath; ;
+            Format = string.IsNullOrWhiteSpace(format) ? throw new ArgumentNullException($"{nameof(format)} Cannot be empty") : format; 
             Encoding = encoding;
+            BlackFiles = files;
+            BlackFileFormats = fileFormats;
         }
-
-        public void OnProgressEventAction(object handle, ProgressType type, string message)
-        => EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(handle, new MutiDownloadProgressChangedEventArgs(Version, message));
-
-        public void OnExceptionEventAction(object handle, Exception exception)
-        => EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(handle, new ExceptionEventArgs(exception));
     }
 }

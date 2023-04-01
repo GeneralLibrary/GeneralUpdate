@@ -53,7 +53,7 @@ namespace GeneralUpdate.Differential.ContentProvider
             var resultFiles = new List<FileNode>();
             foreach (var subPath in Directory.GetFiles(path))
             {
-                if (subPath.Contains(Filefilter.JSON_DLL)) continue;
+                if (IsMatchBlacklist(subPath)) continue;
                 var md5 = FileUtil.GetFileMD5(subPath);
                 var subFileInfo = new FileInfo(subPath);
                 resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5, FullName = subFileInfo.FullName });
@@ -65,9 +65,27 @@ namespace GeneralUpdate.Differential.ContentProvider
             return resultFiles;
         }
 
+        /// <summary>
+        /// Self-growing file tree node ID.
+        /// </summary>
+        /// <returns></returns>
         private long GetId() => Interlocked.Increment(ref _fileCount);
 
         private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
+
+        /// <summary>
+        /// Whether the file name in the file path can match the blacklisted file.
+        /// </summary>
+        /// <param name="subPath"></param>
+        /// <returns></returns>
+        private bool IsMatchBlacklist(string subPath)
+        {
+            foreach (var file in Filefilter.GetBlackFiles())
+            {
+                if (subPath.Contains(file)) return true;
+            }
+            return false;
+        }
 
         #endregion Private Methods
     }

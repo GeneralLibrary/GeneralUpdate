@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys
 {
@@ -12,12 +11,6 @@ namespace GeneralUpdate.Core.Strategys
         /// Execution strategy.
         /// </summary>
         void Excute();
-
-        /// <summary>
-        /// Create a policy.
-        /// </summary>
-        /// <param name="file">Abstraction for updating package information.</param>
-        //void Create(Entity packet);
 
         /// <summary>
         /// After the update is complete.
@@ -39,7 +32,7 @@ namespace GeneralUpdate.Core.Strategys
         Task ExcuteTaskAsync();
 
         /// <summary>
-        /// Create a policy.
+        /// Create a strategy.
         /// </summary>
         /// <param name="file">Abstraction for updating package information.</param>
         void Create<T>(T parameter) where T : class;

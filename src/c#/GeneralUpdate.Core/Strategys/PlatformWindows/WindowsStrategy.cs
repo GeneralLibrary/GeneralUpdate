@@ -45,7 +45,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
-                            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding)).
+                            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding,Packet.BlackFiles,Packet.BlackFormats)).
                                 UseMiddleware<MD5Middleware>().
                                 UseMiddleware<ZipMiddleware>().
                                 UseMiddleware<PatchMiddleware>();
@@ -93,6 +93,8 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             }
         }
 
+        public override string GetPlatform() => PlatformType.Windows;
+
         #endregion Public Methods
 
         #region Private Methods
@@ -118,7 +120,5 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         }
 
         #endregion Private Methods
-
-        public override string GetPlatform() => PlatformType.Windows;
     }
 }

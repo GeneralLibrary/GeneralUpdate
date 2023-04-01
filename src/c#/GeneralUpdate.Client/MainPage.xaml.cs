@@ -64,8 +64,25 @@ namespace GeneralUpdate.Client
                 .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 .SetCustomOption(ShowCustomOption)
+                //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
+                //如果不需要扩展，需要重新传入黑名单集合来覆盖。
+                .SetBlacklist(GetBlackFiles(), GetBlackFormats())
                 .LaunchTaskAsync();
             });
+        }
+
+        private List<string> GetBlackFiles() 
+        {
+            var blackFiles = new List<string>();
+            blackFiles.Add("MainApp");
+            return blackFiles;
+        }
+
+        private List<string> GetBlackFormats() 
+        {
+            var blackFormats = new List<string>();
+            blackFormats.Add(".zip");
+            return blackFormats;
         }
 
         /// <summary>

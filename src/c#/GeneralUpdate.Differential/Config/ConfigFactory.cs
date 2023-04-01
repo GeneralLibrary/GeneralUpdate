@@ -103,7 +103,7 @@ namespace GeneralUpdate.Differential.Config
                 _scanPath = scanPath ?? Environment.CurrentDirectory;
                 if (!Directory.Exists(_appPath) || !Directory.Exists(_scanPath)) return;
                 List<string> files = new List<string>();
-                Find(_scanPath, ref files, Filefilter.Temp);
+                Find(_scanPath, ref files);
                 if (files.Count == 0) return;
                 await Cache(_files = files);
             }
@@ -151,19 +151,19 @@ namespace GeneralUpdate.Differential.Config
         /// </summary>
         /// <param name="directory">root directory</param>
         /// <param name="files">result file list</param>
-        private void Find(string rootDirectory, ref List<string> files, IEnumerable<string> filter)
+        private void Find(string rootDirectory, ref List<string> files)
         {
             var rootDirectoryInfo = new DirectoryInfo(rootDirectory);
             foreach (var file in rootDirectoryInfo.GetFiles())
             {
                 var extensionName = Path.GetExtension(file.Name);
-                if (!Filefilter.Temp.Contains(extensionName)) continue;
+                if (!Filefilter.GetBlackFileFormats().Contains(extensionName)) continue;
                 var fullName = file.FullName;
                 files.Add(fullName);
             }
             foreach (var dir in rootDirectoryInfo.GetDirectories())
             {
-                Find(dir.FullName, ref files, filter);
+                Find(dir.FullName, ref files);
             }
         }
 

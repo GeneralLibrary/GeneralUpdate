@@ -29,10 +29,14 @@ namespace GeneralUpdate.Core.Events.MutiEventArgs
             Message = message;
         }
 
-        public ProgressType Type
+        public MutiDownloadProgressChangedEventArgs(object version, ProgressType type, string message)
         {
-            get { return ProgressType.Download; }
+            Version = version;
+            Type = type;
+            Message = message;
         }
+
+        public ProgressType Type { get; set; }
 
         public long BytesReceived { get; private set; }
 

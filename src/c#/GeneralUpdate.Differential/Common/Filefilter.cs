@@ -7,14 +7,21 @@ namespace GeneralUpdate.Differential.Common
     /// </summary>
     public class Filefilter
     {
-        public const string JSON_DLL = "Newtonsoft.Json.dll";
-
-        public static readonly List<string> Temp = new List<string>() { ".json" };
+        private static List<string> _blackFiles, _blackFileFormats;
 
         /// <summary>
-        /// File formats to avoid when doing differential updates.
-        /// ".db", ".xml", ".ini", ".json", ".config"
+        /// Set a blacklist.
         /// </summary>
-        public static readonly List<string> Diff = new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar" };
+        /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
+        /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
+        public static void SetBlacklist(List<string> blackFiles, List<string> blackFileFormats) 
+        {
+            _blackFiles = blackFiles;
+            _blackFileFormats = blackFileFormats;
+        }
+
+        public static List<string> GetBlackFiles() => _blackFiles;
+
+        public static List<string> GetBlackFileFormats() => _blackFileFormats;
     }
 }

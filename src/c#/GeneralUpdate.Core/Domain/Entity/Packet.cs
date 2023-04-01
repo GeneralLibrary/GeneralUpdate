@@ -47,6 +47,9 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string AppName { get; set; }
 
+        /// <summary>
+        /// The name of the main application, without .exe.
+        /// </summary>
         public string MainAppName { get; set; }
 
         /// <summary>
@@ -54,8 +57,14 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string Format { get; set; }
 
+        /// <summary>
+        /// Whether an update is required to upgrade the application.
+        /// </summary>
         public bool IsUpgradeUpdate { get; set; }
 
+        /// <summary>
+        /// Whether the main application needs to be updated.
+        /// </summary>
         public bool IsMainUpdate { get; set; }
 
         /// <summary>
@@ -68,8 +77,14 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public List<VersionInfo> UpdateVersions { get; set; }
 
+        /// <summary>
+        /// The encoding format for file operations.
+        /// </summary>
         public Encoding Encoding { get; set; }
 
+        /// <summary>
+        /// Time-out event for file download.
+        /// </summary>
         public int DownloadTimeOut { get; set; }
 
         /// <summary>
@@ -97,13 +112,24 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// </summary>
         public string TempPath { get; set; }
 
+        /// <summary>
+        /// Configuration parameters for upgrading the terminal program.
+        /// </summary>
         public string ProcessBase64 { get; set; }
 
+        /// <summary>
+        /// The platform to which the current strategy belongs.
+        /// </summary>
         public string Platform { get; set; }
 
         /// <summary>
         /// Files in the blacklist will skip the update.
         /// </summary>
-        public string[] Blacklist { get; set; }
+        public List<string> BlackFiles { get; set; }
+
+        /// <summary>
+        /// File formats in the blacklist will skip the update.
+        /// </summary>
+        public List<string> BlackFormats { get; set; }
     }
 }

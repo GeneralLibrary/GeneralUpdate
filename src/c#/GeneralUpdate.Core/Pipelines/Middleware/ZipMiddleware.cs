@@ -1,4 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
@@ -14,11 +17,10 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             Exception exception = null;
             try
             {
-                context.OnProgressEventAction(this, ProgressType.Updatefile, "In the unzipped file ...");
+                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "In the unzipped file ..."));
                 var version = context.Version;
                 bool isUnzip = UnZip(context);
                 if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{version.Version}  MD5-{version.MD5} !");
-
                 //await ConfigFactory.Instance.Scan(context.SourcePath, context.TargetPath);
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);
@@ -26,7 +28,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             catch (Exception ex)
             {
                 exception = exception ?? ex;
-                context.OnExceptionEventAction(this, exception);
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 throw exception;
             }
         }
@@ -44,15 +46,16 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             {
                 bool isComplated = false;
                 var generalZipfactory = new GeneralZipFactory();
-                generalZipfactory.UnZipProgress += (sender, e) => context.OnProgressEventAction(this, ProgressType.Updatefile, "Updatting file...");
+                generalZipfactory.UnZipProgress += (sender, e) => 
+                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "Updatting file..."));
                 generalZipfactory.Completed += (sender, e) => isComplated = true;
                 generalZipfactory.CreatefOperate(MatchType(context.Format), context.Name, context.ZipfilePath, context.TargetPath, false, context.Encoding).
                     UnZip();
                 return isComplated;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                context.OnExceptionEventAction(this, ex);
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 return false;
             }
         }
