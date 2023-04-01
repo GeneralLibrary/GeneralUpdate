@@ -14,7 +14,7 @@ namespace GeneralUpdate.Differential.Common
         /// </summary>
         /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
-        public static void SetBlacklist(List<string> blackFiles, List<string> blackFileFormats) 
+        public static void SetBlacklist(List<string> blackFiles, List<string> blackFileFormats)
         {
             _blackFiles = blackFiles;
             _blackFileFormats = blackFileFormats;

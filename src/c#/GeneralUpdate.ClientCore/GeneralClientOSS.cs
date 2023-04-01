@@ -1,11 +1,8 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
-using GeneralUpdate.Core.Domain.Service;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.ClientCore
@@ -15,13 +12,14 @@ namespace GeneralUpdate.ClientCore
         private static Func<bool> _customOption;
         private static Func<Task<bool>> _customTaskOption;
 
-        private GeneralClientOSS() { }
+        private GeneralClientOSS()
+        { }
 
         /// <summary>
         /// Starting an OSS update for windows,linux,mac platform.
         /// </summary>
         /// <param name="configInfo"></param>
-        public static async Task Start(ParamsOSS configParams,string upgradeAppName = "GeneralUpdate.Upgrad")
+        public static async Task Start(ParamsOSS configParams, string upgradeAppName = "GeneralUpdate.Upgrad")
         {
             try
             {

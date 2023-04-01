@@ -127,10 +127,10 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         /// <param name="files">blacklist file name</param>
         /// <returns></returns>
-        public virtual TBootstrap SetBlacklist(List<string> files = null,List<string> fileFormats = null) 
+        public virtual TBootstrap SetBlacklist(List<string> files = null, List<string> fileFormats = null)
         {
             Packet.BlackFiles = files ?? new List<string>() { "Newtonsoft.Json.dll" };
-            Packet.BlackFormats = fileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" };
+            Packet.BlackFormats = fileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar", ".json" };
             return (TBootstrap)this;
         }
 
@@ -197,17 +197,17 @@ namespace GeneralUpdate.Core.Bootstrap
             return AddListener(callbackAction);
         }
 
-        private protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            if(callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+            if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
             return (TBootstrap)this;
         }
 
         private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
-        =>EventManager.Instance.Dispatch<Action<object, MutiDownloadStatisticsEventArgs>>(sender, e);
+        => EventManager.Instance.Dispatch<Action<object, MutiDownloadStatisticsEventArgs>>(sender, e);
 
         private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
-        =>EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(sender, e);
+        => EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(sender, e);
 
         private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
         => EventManager.Instance.Dispatch<Action<object, MutiDownloadCompletedEventArgs>>(sender, e);

@@ -1,12 +1,10 @@
 ﻿using GeneralUpdate.ClientCore;
-using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MutiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
-using GeneralUpdate.Core.Utils;
 using System.Text;
 
 namespace GeneralUpdate.Client
@@ -71,14 +69,14 @@ namespace GeneralUpdate.Client
             });
         }
 
-        private List<string> GetBlackFiles() 
+        private List<string> GetBlackFiles()
         {
             var blackFiles = new List<string>();
             blackFiles.Add("MainApp");
             return blackFiles;
         }
 
-        private List<string> GetBlackFormats() 
+        private List<string> GetBlackFormats()
         {
             var blackFormats = new List<string>();
             blackFormats.Add(".zip");

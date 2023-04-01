@@ -234,7 +234,7 @@ namespace GeneralUpdate.Core.Download
                 lock (state.FileStream)
                 {
                     if (MutiDownloadProgressChanged != null)
-                        MutiDownloadProgressChanged(this, new MutiDownloadProgressChangedEventArgs (bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
+                        MutiDownloadProgressChanged(this, new MutiDownloadProgressChangedEventArgs(bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
                     state.FileStream.Write(bytes, 0, readSize);
                     bytesReceived += readSize;
                     if (totalBytesReceived != 0 && bytesReceived >= totalBytesReceived)

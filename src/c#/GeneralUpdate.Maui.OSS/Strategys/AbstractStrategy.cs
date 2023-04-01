@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace GeneralUpdate.Maui.OSS.Strategys
+﻿namespace GeneralUpdate.Maui.OSS.Strategys
 {
     /// <summary>
     /// OSS updates abstract Strategy.

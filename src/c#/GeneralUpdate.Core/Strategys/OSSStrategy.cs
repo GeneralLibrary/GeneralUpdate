@@ -1,8 +1,5 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.DO;
+﻿using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.Events;
 using GeneralUpdate.Zip;
 using Newtonsoft.Json;
 using System;
@@ -73,7 +70,7 @@ namespace GeneralUpdate.Core.Strategys
             }
         }
 
-        //private void Download(List<VersionInfo> versions) 
+        //private void Download(List<VersionInfo> versions)
         //{
         //    var manager = new DownloadManager<VersionInfo>(_appPath, _format, 60);
         //    manager.MutiAllDownloadCompleted += (s,e)=> EventManager.Instance.Dispatch<MutiAllDownloadCompletedEventHandler>(s, new MutiAllDownloadCompletedEventArgs(e.IsAllDownloadCompleted,e.FailedVersions));

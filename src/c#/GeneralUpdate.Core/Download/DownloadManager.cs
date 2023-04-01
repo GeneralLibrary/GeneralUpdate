@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+﻿using GeneralUpdate.Core.Events.MutiEventArgs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -161,6 +160,5 @@ namespace GeneralUpdate.Core.Download
         }
 
         #endregion Public Methods
-
     }
 }

@@ -46,7 +46,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             {
                 bool isComplated = false;
                 var generalZipfactory = new GeneralZipFactory();
-                generalZipfactory.UnZipProgress += (sender, e) => 
+                generalZipfactory.UnZipProgress += (sender, e) =>
                 EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "Updatting file..."));
                 generalZipfactory.Completed += (sender, e) => isComplated = true;
                 generalZipfactory.CreatefOperate(MatchType(context.Format), context.Name, context.ZipfilePath, context.TargetPath, false, context.Encoding).

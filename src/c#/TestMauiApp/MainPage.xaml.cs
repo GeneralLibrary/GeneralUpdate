@@ -26,12 +26,10 @@ namespace TestMauiApp
 
         private void OnOSSUnZipProgress(object sender, GeneralUpdate.Zip.Events.BaseUnZipProgressEventArgs e)
         {
-
         }
 
         private void OnOSSUnZipCompleted(object sender, GeneralUpdate.Zip.Events.BaseCompleteEventArgs e)
         {
-
         }
 
         private void OnOSSDownload(object sender, OSSDownloadArgs e)

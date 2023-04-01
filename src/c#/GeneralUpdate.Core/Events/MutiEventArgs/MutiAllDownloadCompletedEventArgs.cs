@@ -5,7 +5,8 @@ namespace GeneralUpdate.Core.Events.MutiEventArgs
 {
     public class MutiAllDownloadCompletedEventArgs : EventArgs
     {
-        public MutiAllDownloadCompletedEventArgs() { }
+        public MutiAllDownloadCompletedEventArgs()
+        { }
 
         public MutiAllDownloadCompletedEventArgs(bool isAllDownloadCompleted, IList<(object, string)> failedVersions)
         {

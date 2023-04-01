@@ -7,7 +7,8 @@ namespace GeneralUpdate.Core
 {
     public sealed class GeneralUpdateOSS
     {
-        private  GeneralUpdateOSS() { }
+        private GeneralUpdateOSS()
+        { }
 
         /// <summary>
         /// Starting an OSS update for windows,linux,mac platform.

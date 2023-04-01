@@ -22,8 +22,8 @@ namespace GeneralUpdate.Core.Events.MutiEventArgs
             Version = version;
             Message = message;
         }
-        
-        public MutiDownloadProgressChangedEventArgs(object version,string message) 
+
+        public MutiDownloadProgressChangedEventArgs(object version, string message)
         {
             Version = version;
             Message = message;
