@@ -1,6 +1,6 @@
-﻿using GeneralUpdate.Maui.OSS;
+﻿using GeneralUpdate.Core.Events.OSSArgs;
+using GeneralUpdate.Maui.OSS;
 using GeneralUpdate.Maui.OSS.Domain.Entity;
-using GeneralUpdate.Maui.OSS.Events;
 
 namespace TestMauiApp
 {
@@ -18,23 +18,13 @@ namespace TestMauiApp
             string appName = "MainApplication.exe";
             string currentVersion = "1.1.1.1";
             string versionFileName = "versions.json";
-            GeneralUpdateOSS.Download += OnOSSDownload;
-            GeneralUpdateOSS.UnZipCompleted += OnOSSUnZipCompleted;
-            GeneralUpdateOSS.UnZipProgress += OnOSSUnZipProgress;
-            await GeneralUpdateOSS.Start<Strategy>(new ParamsWindows(url, appName, currentVersion, versionFileName));
-        }
-
-        private void OnOSSUnZipProgress(object sender, GeneralUpdate.Zip.Events.BaseUnZipProgressEventArgs e)
-        {
-        }
-
-        private void OnOSSUnZipCompleted(object sender, GeneralUpdate.Zip.Events.BaseCompleteEventArgs e)
-        {
+            GeneralUpdateOSS.AddListenerDownloadProcess(OnOSSDownload);
+            await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, appName,"", currentVersion, versionFileName));
         }
 
         private void OnOSSDownload(object sender, OSSDownloadArgs e)
         {
-            Console.WriteLine($"{e.CurrentByte},{e.TotalByte}");
+            Console.WriteLine($"{e.ReadLength},{e.TotalLength}");
         }
     }
 }

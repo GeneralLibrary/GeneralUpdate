@@ -34,18 +34,7 @@ namespace GeneralUpdate.Maui.OSS
             await BaseStart<TStrategy, ParamsAndroid>(parameter);
         }
 
-        /// <summary>
-        /// Starting an OSS update for windows,linux,mac platform.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="parameter"></param>
-        /// <returns></returns>
-        public static async Task Start<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
-        {
-            await BaseStart<TStrategy, ParamsOSS>(parameter);
-        }
-
-        public void AddListenerDownloadProcess(Action<object, OSSDownloadArgs> callbackAction)
+        public static void AddListenerDownloadProcess(Action<object, OSSDownloadArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
@@ -70,7 +59,7 @@ namespace GeneralUpdate.Maui.OSS
             await strategy.Excute();
         }
 
-        private void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
             if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
         }

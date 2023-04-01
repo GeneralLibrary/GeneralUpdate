@@ -12,7 +12,7 @@
 
         public string VersionFileName { get; set; }
 
-        public ParamsAndroid(string url, string apk, string currentVersion, string authority, string versionFileName)
+        public ParamsAndroid(string url, string apk, string authority, string currentVersion, string versionFileName)
         {
             Url = IsURL(url) ? url : throw new ArgumentNullException(nameof(url));
             Apk = apk ?? throw new ArgumentNullException(nameof(apk));
