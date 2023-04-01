@@ -60,6 +60,7 @@
 	<ItemGroup>
 	  <Folder Include="Domain\DO\Assembler\" />
 	  <Folder Include="Domain\Enum\" />
+	  <Folder Include="Platforms\Windows\" />
 	  <Folder Include="Utils\" />
 	</ItemGroup>
 
