@@ -18,8 +18,8 @@ namespace TestMauiApp
             string appName = "MainApplication.exe";
             string currentVersion = "1.1.1.1";
             string versionFileName = "versions.json";
-            //GeneralUpdateOSS.AddListenerDownloadProcess(OnOSSDownload);
-            //await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, appName,"", currentVersion, versionFileName));
+            GeneralUpdateOSS.AddListenerDownloadProcess(OnOSSDownload);
+            await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, appName, "", currentVersion, versionFileName));
         }
 
         private void OnOSSDownload(object sender, OSSDownloadArgs e)
