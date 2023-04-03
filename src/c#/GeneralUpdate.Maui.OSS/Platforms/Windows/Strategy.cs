@@ -1,5 +1,6 @@
 ﻿using GeneralUpdate.Core.Domain.DO;
 using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Maui.OSS.Domain.Entity;
 using GeneralUpdate.Maui.OSS.Strategys;
 using GeneralUpdate.Zip;
@@ -29,7 +30,7 @@ namespace GeneralUpdate.Maui.OSS
                 //1.Download the JSON version configuration file.
                 var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
-                //await DownloadFileAsync(jsonUrl, jsonPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
+                await DownloadFileAsync(jsonUrl, jsonPath, (e, s) => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(e, s)));
                 if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
                 //2.Parse the JSON version configuration file content.
