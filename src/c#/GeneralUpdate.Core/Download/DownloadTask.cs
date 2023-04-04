@@ -1,5 +1,5 @@
 ﻿using GeneralUpdate.Core.CustomAwaiter;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
@@ -64,7 +64,7 @@ namespace GeneralUpdate.Core.Download
             }
             catch (Exception ex)
             {
-                _manager.OnMutiDownloadError(this, new MutiDownloadErrorEventArgs(ex, _version));
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(ex, _version));
                 _exception = new GeneralUpdateException<ExceptionArgs>("'download task' The executes abnormally !", ex);
             }
         }
@@ -102,44 +102,44 @@ namespace GeneralUpdate.Core.Download
                         : ToUnit(ReceivedBytes - BeforBytes / interval.Seconds);
                     var size = (TotalBytes - ReceivedBytes) / DEFAULT_DELTA;
                     var remainingTime = new DateTime().AddSeconds(Convert.ToDouble(size));
-                    _manager.OnMutiDownloadStatistics(this, new MutiDownloadStatisticsEventArgs(_version, remainingTime, downLoadSpeed));
+                    _manager.OnMultiDownloadStatistics(this, new MultiDownloadStatisticsEventArgs(_version, remainingTime, downLoadSpeed));
                     StartTime = DateTime.Now;
                     BeforBytes = ReceivedBytes;
                 }
                 catch (Exception exception)
                 {
-                    _manager.OnMutiDownloadError(this, new MutiDownloadErrorEventArgs(exception, _version));
+                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
                 }
             }, null, 0, 1000);
         }
 
         private void InitProgressEvent()
         {
-            MutiDownloadProgressChanged += ((sender, e) =>
+            MultiDownloadProgressChanged += ((sender, e) =>
             {
                 try
                 {
                     ReceivedBytes = e.BytesReceived;
                     TotalBytes = e.TotalBytesToReceive;
 
-                    var eventArgs = new MutiDownloadProgressChangedEventArgs(_version,
+                    var eventArgs = new MultiDownloadProgressChangedEventArgs(_version,
                         e.BytesReceived / DEFAULT_DELTA,
                         e.TotalBytesToReceive / DEFAULT_DELTA,
                         e.ProgressPercentage,
                         e.UserState);
 
-                    _manager.OnMutiDownloadProgressChanged(this, eventArgs);
+                    _manager.OnMultiDownloadProgressChanged(this, eventArgs);
                 }
                 catch (Exception exception)
                 {
-                    _manager.OnMutiDownloadError(this, new MutiDownloadErrorEventArgs(exception, _version));
+                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
                 }
             });
         }
 
         private void InitCompletedEvent()
         {
-            MutiDownloadFileCompleted += ((sender, e) =>
+            MultiDownloadFileCompleted += ((sender, e) =>
             {
                 try
                 {
@@ -148,14 +148,14 @@ namespace GeneralUpdate.Core.Download
                         SpeedTimer.Dispose();
                         SpeedTimer = null;
                     }
-                    var eventArgs = new MutiDownloadCompletedEventArgs(_version, e.Error, e.Cancelled, e.UserState);
-                    _manager.OnMutiAsyncCompleted(this, eventArgs);
+                    var eventArgs = new MultiDownloadCompletedEventArgs(_version, e.Error, e.Cancelled, e.UserState);
+                    _manager.OnMultiAsyncCompleted(this, eventArgs);
                     Dispose();
                 }
                 catch (Exception exception)
                 {
                     _manager.FailedVersions.Add(new ValueTuple<object, string> { });
-                    _manager.OnMutiDownloadError(this, new MutiDownloadErrorEventArgs(exception, _version));
+                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
                 }
                 finally
                 {

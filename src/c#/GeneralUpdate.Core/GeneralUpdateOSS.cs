@@ -1,7 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Core.Strategys;
 using System;
@@ -31,27 +31,27 @@ namespace GeneralUpdate.Core
             await BaseStart<TStrategy, ParamsOSS>(parameter);
         }
 
-        public void AddListenerMutiAllDownloadCompleted(Action<object, MutiAllDownloadCompletedEventArgs> callbackAction)
+        public void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMutiDownloadProgress(Action<object, MutiDownloadProgressChangedEventArgs> callbackAction)
+        public void AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMutiDownloadCompleted(Action<object, MutiDownloadCompletedEventArgs> callbackAction)
+        public void AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMutiDownloadError(Action<object, MutiDownloadErrorEventArgs> callbackAction)
+        public void AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMutiDownloadStatistics(Action<object, MutiDownloadStatisticsEventArgs> callbackAction)
+        public void AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }

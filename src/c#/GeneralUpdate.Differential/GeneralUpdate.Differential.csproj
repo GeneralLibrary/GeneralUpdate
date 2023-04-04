@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="GeneralUpdate.ico" />
   </ItemGroup>
 

@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace GeneralUpdate.Differential.ContentProvider
 {
+    /// <summary>
+    /// Simple file binary tree.
+    /// </summary>
     public class FileTree
     {
         #region Private Members

@@ -100,15 +100,15 @@ namespace TestClientCore
 
         //        var generalClientBootstrap = new GeneralClientBootstrap();
         //        //单个或多个更新包下载通知事件
-        //        generalClientBootstrap.MutiDownloadProgressChanged += OnMutiDownloadProgressChanged;
+        //        generalClientBootstrap.MultiDownloadProgressChanged += OnMultiDownloadProgressChanged;
         //        //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-        //        generalClientBootstrap.MutiDownloadStatistics += OnMutiDownloadStatistics;
+        //        generalClientBootstrap.MultiDownloadStatistics += OnMultiDownloadStatistics;
         //        //单个或多个更新包下载完成
-        //        generalClientBootstrap.MutiDownloadCompleted += OnMutiDownloadCompleted;
+        //        generalClientBootstrap.MultiDownloadCompleted += OnMultiDownloadCompleted;
         //        //完成所有的下载任务通知
-        //        generalClientBootstrap.MutiAllDownloadCompleted += OnMutiAllDownloadCompleted;
+        //        generalClientBootstrap.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
         //        //下载过程出现的异常通知
-        //        generalClientBootstrap.MutiDownloadError += OnMutiDownloadError;
+        //        generalClientBootstrap.MultiDownloadError += OnMultiDownloadError;
         //        //整个更新过程出现的任何问题都会通过这个事件通知
         //        generalClientBootstrap.Exception += OnException;
         //        //ClientStrategy该更新策略将完成1.自动升级组件自更新 2.启动更新组件 3.配置好ClientParameter无需再像之前的版本写args数组进程通讯了。
@@ -134,14 +134,14 @@ namespace TestClientCore
         //    return messageBoxResult == MessageBoxResult.Yes;
         //}
 
-        //private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
+        //private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         //{
         //    //e.Remaining 剩余下载时间
         //    //e.Speed 下载速度
         //    //e.Version 当前下载的版本信息
         //}
 
-        //private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
+        //private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
         //{
         //    //e.TotalBytesToReceive 当前更新包需要下载的总大小
         //    //e.ProgressValue 当前进度值
@@ -156,18 +156,18 @@ namespace TestClientCore
         //    Debug.WriteLine(e.Exception.Message);
         //}
 
-        //private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
+        //private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         //{
         //    //e.FailedVersions; 如果出现下载失败则会把下载错误的版本、错误原因统计到该集合当中。
         //    Debug.WriteLine($"Is all download completed {e.IsAllDownloadCompleted}.");
         //}
 
-        //private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
+        //private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
         //{
         //    //Debug.WriteLine($"{ e.Version.Name } download completed.");
         //}
 
-        //private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
+        //private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         //{
         //    //Debug.WriteLine($"{ e.Version.Name } error!");
         //}

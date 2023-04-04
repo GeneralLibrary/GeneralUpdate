@@ -31,8 +31,6 @@ namespace GeneralUpdate.Differential
         /// </summary>
         private const string PATCHS = "patchs";
 
-        private List<string> _blackFiles, _blackFileFormats;
-
         private Action<object, BaseCompressProgressEventArgs> _compressProgressCallback;
 
         #endregion Private Members
@@ -138,7 +136,7 @@ namespace GeneralUpdate.Differential
         /// <param name="patchPath"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public async Task Drity(string appPath, string patchPath)
+        public async Task Dirty(string appPath, string patchPath)
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
             try
@@ -160,7 +158,7 @@ namespace GeneralUpdate.Differential
                     {
                         var extensionName = Path.GetExtension(findFile.FullName);
                         if (!extensionName.Equals(PATCH_FORMAT)) continue;
-                        await DrityPatch(oldFile.FullName, findFile.FullName);
+                        await DirtyPatch(oldFile.FullName, findFile.FullName);
                     }
                 }
                 //Update does not include files or copies configuration files.
@@ -190,7 +188,7 @@ namespace GeneralUpdate.Differential
         /// <param name="patchPath"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        private async Task DrityPatch(string appPath, string patchPath)
+        private async Task DirtyPatch(string appPath, string patchPath)
         {
             try
             {
@@ -229,7 +227,7 @@ namespace GeneralUpdate.Differential
             }
             catch (Exception ex)
             {
-                throw new Exception($" DrityNew error : {ex.Message} !", ex.InnerException);
+                throw new Exception($" DirtyNew error : {ex.Message} !", ex.InnerException);
             }
         }
 

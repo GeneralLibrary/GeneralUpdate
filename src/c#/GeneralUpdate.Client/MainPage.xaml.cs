@@ -3,7 +3,7 @@ using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 
@@ -44,15 +44,15 @@ namespace GeneralUpdate.Client
                 var configinfo = GetWindowsConfiginfo();
                 var generalClientBootstrap = await new GeneralClientBootstrap()
                 //单个或多个更新包下载通知事件
-                .AddListenerMutiDownloadProgress(OnMutiDownloadProgressChanged)
+                .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
                 //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-                .AddListenerMutiDownloadStatistics(OnMutiDownloadStatistics)
+                .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
                 //单个或多个更新包下载完成
-                .AddListenerMutiDownloadCompleted(OnMutiDownloadCompleted)
+                .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
                 //完成所有的下载任务通知
-                .AddListenerMutiAllDownloadCompleted(OnMutiAllDownloadCompleted)
+                .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
                 //下载过程出现的异常通知
-                .AddListenerMutiDownloadError(OnMutiDownloadError)
+                .AddListenerMultiDownloadError(OnMultiDownloadError)
                 //整个更新过程出现的任何问题都会通过这个事件通知
                 .AddListenerException(OnException)
                 .Config(configinfo)
@@ -146,14 +146,14 @@ namespace GeneralUpdate.Client
             });
         }
 
-        private void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
+        private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         {
             //e.Remaining 剩余下载时间
             //e.Speed 下载速度
             //e.Version 当前下载的版本信息
         }
 
-        private void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
+        private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
         {
             //e.TotalBytesToReceive 当前更新包需要下载的总大小
             //e.ProgressValue 当前进度值
@@ -170,19 +170,19 @@ namespace GeneralUpdate.Client
             //DispatchMessage(e.Exception.Message);
         }
 
-        private void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
+        private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         {
             //e.FailedVersions; 如果出现下载失败则会把下载错误的版本、错误原因统计到该集合当中。
             DispatchMessage($"Is all download completed {e.IsAllDownloadCompleted}.");
         }
 
-        private void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
+        private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
         {
             var info = e.Version as VersionInfo;
             DispatchMessage($"{info.Name} download completed.");
         }
 
-        private void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
+        private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
             var info = e.Version as VersionInfo;
             DispatchMessage($"{info.Name} error!");

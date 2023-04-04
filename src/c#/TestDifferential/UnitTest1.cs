@@ -18,7 +18,7 @@ namespace TestDifferential
                 {
                     var path1 = @"F:\temp\source";
                     var path3 = @"F:\temp\patchs";
-                    await DifferentialCore.Instance.Drity(path1, path3);
+                    await DifferentialCore.Instance.Dirty(path1, path3);
                 }
                 catch (Exception)
                 {

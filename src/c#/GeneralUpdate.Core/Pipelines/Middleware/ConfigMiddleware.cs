@@ -1,7 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Differential.Config;
 using System;
@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         {
             try
             {
-                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.MD5, "Update configuration file ..."));
+                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.MD5, "Update configuration file ..."));
                 await ConfigFactory.Instance.Deploy();
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);

@@ -5,7 +5,8 @@
             android:authorities="com.generalupdate.oss.fileprovider"
 			android:name="androidx.core.content.FileProvider"
 			android:exported="false"
-			android:grantUriPermissions="true">
+			android:grantUriPermissions="true"
+			android:usesCleartextTraffic="true">
 			<meta-data
 				android:name="android.support.FILE_PROVIDER_PATHS"
 				android:resource="@xml/provider_paths" />

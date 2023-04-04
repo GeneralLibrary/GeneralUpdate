@@ -29,13 +29,13 @@ namespace GeneralUpdate.Differential.ContentProvider
             return await Task.Run(() =>
             {
                 ResetId();
-                var leftFilenodes = Read(leftPath);
-                var rightFilenodes = Read(rightPath);
-                var leftTree = new FileTree(leftFilenodes);
-                var rightTree = new FileTree(rightFilenodes);
-                List<FileNode> diffrentTreeNode = new List<FileNode>();
-                leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref diffrentTreeNode);
-                return ValueTuple.Create(leftFilenodes, rightFilenodes, diffrentTreeNode);
+                var leftFileNodes = Read(leftPath);
+                var rightFileNodes = Read(rightPath);
+                var leftTree = new FileTree(leftFileNodes);
+                var rightTree = new FileTree(rightFileNodes);
+                var differentTreeNode = new List<FileNode>();
+                leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref differentTreeNode);
+                return ValueTuple.Create(leftFileNodes, rightFileNodes, differentTreeNode);
             });
         }
 
@@ -47,7 +47,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// Recursively read all files in the folder path.
         /// </summary>
         /// <param name="path">folder path.</param>
-        /// <returns>different childrens.</returns>
+        /// <returns>different chalders.</returns>
         private IEnumerable<FileNode> Read(string path)
         {
             var resultFiles = new List<FileNode>();

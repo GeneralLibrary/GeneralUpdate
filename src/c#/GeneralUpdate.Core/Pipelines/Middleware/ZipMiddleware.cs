@@ -1,7 +1,7 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             Exception exception = null;
             try
             {
-                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "In the unzipped file ..."));
+                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "In the unzipped file ..."));
                 var version = context.Version;
                 bool isUnzip = UnZip(context);
                 if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{version.Version}  MD5-{version.MD5} !");
@@ -47,7 +47,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 bool isComplated = false;
                 var generalZipfactory = new GeneralZipFactory();
                 generalZipfactory.UnZipProgress += (sender, e) =>
-                EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, new MutiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "Updatting file..."));
+                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "Updatting file..."));
                 generalZipfactory.Completed += (sender, e) => isComplated = true;
                 generalZipfactory.CreatefOperate(MatchType(context.Format), context.Name, context.ZipfilePath, context.TargetPath, false, context.Encoding).
                     UnZip();

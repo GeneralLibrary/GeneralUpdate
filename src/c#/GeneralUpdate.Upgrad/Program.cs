@@ -2,7 +2,7 @@
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 
@@ -18,15 +18,15 @@ namespace GeneralUpdate.Upgrad
             {
                 var bootStrap = new GeneralUpdateBootstrap()
                 //单个或多个更新包下载通知事件
-                .AddListenerMutiDownloadProgress(OnMutiDownloadProgressChanged)
+                .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
                 //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-                .AddListenerMutiDownloadStatistics(OnMutiDownloadStatistics)
+                .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
                 //单个或多个更新包下载完成
-                .AddListenerMutiDownloadCompleted(OnMutiDownloadCompleted)
+                .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
                 //完成所有的下载任务通知
-                .AddListenerMutiAllDownloadCompleted(OnMutiAllDownloadCompleted)
+                .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
                 //下载过程出现的异常通知
-                .AddListenerMutiDownloadError(OnMutiDownloadError)
+                .AddListenerMultiDownloadError(OnMultiDownloadError)
                 //整个更新过程出现的任何问题都会通过这个事件通知
                 .AddListenerException(OnException)
                 .Strategy<WindowsStrategy>().
@@ -39,12 +39,12 @@ namespace GeneralUpdate.Upgrad
             Console.Read();
         }
 
-        private static void OnMutiDownloadStatistics(object sender, MutiDownloadStatisticsEventArgs e)
+        private static void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         {
             Console.WriteLine($" {e.Speed} , {e.Remaining.ToShortTimeString()}");
         }
 
-        private static void OnMutiDownloadProgressChanged(object sender, MutiDownloadProgressChangedEventArgs e)
+        private static void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
         {
             switch (e.Type)
             {
@@ -66,18 +66,18 @@ namespace GeneralUpdate.Upgrad
             }
         }
 
-        private static void OnMutiDownloadCompleted(object sender, MutiDownloadCompletedEventArgs e)
+        private static void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
         {
             //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
             //Console.WriteLine($"{info.Name} download completed.");
         }
 
-        private static void OnMutiAllDownloadCompleted(object sender, MutiAllDownloadCompletedEventArgs e)
+        private static void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         {
             Console.WriteLine($"AllDownloadCompleted {e.IsAllDownloadCompleted}");
         }
 
-        private static void OnMutiDownloadError(object sender, MutiDownloadErrorEventArgs e)
+        private static void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
             //var info = e.Version as GeneralUpdate.Core.Domain.Entity.VersionInfo;
             //Console.WriteLine($"{info.Name},{e.Exception.Message}.");

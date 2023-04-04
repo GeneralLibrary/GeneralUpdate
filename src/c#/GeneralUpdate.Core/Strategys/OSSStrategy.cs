@@ -3,7 +3,7 @@ using GeneralUpdate.Core.Domain.DO.Assembler;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.MutiEventArgs;
+using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Events.OSSArgs;
 using Newtonsoft.Json;
 using System;
@@ -85,11 +85,11 @@ namespace GeneralUpdate.Core.Strategys
         private void DownloadVersions(List<VersionInfo> versions)
         {
             var manager = new DownloadManager<VersionInfo>(_appPath, _format, 60);
-            manager.MutiAllDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MutiAllDownloadCompletedEventArgs>>(this, e);
-            manager.MutiDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MutiDownloadCompletedEventArgs>>(this, e);
-            manager.MutiDownloadError += (s, e) => EventManager.Instance.Dispatch<Action<object, MutiDownloadErrorEventArgs>>(this, e);
-            manager.MutiDownloadProgressChanged += (s, e) => EventManager.Instance.Dispatch<Action<object, MutiDownloadProgressChangedEventArgs>>(this, e);
-            manager.MutiDownloadStatistics += (s, e) => EventManager.Instance.Dispatch<Action<object, MutiDownloadStatisticsEventArgs>>(this, e);
+            manager.MultiAllDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiAllDownloadCompletedEventArgs>>(this, e);
+            manager.MultiDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadCompletedEventArgs>>(this, e);
+            manager.MultiDownloadError += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadErrorEventArgs>>(this, e);
+            manager.MultiDownloadProgressChanged += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, e);
+            manager.MultiDownloadStatistics += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadStatisticsEventArgs>>(this, e);
             versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, v)));
             manager.LaunchTaskAsync();
         }

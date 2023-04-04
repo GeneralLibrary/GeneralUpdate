@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Events.MutiEventArgs;
+﻿using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using System;
@@ -25,13 +25,13 @@ namespace GeneralUpdate.Core.Download
 
         #region Public Properties
 
-        public delegate void MutiDownloadProgressChangedEventHandler(object sender, MutiDownloadProgressChangedEventArgs e);
+        public delegate void MultiDownloadProgressChangedEventHandler(object sender, MultiDownloadProgressChangedEventArgs e);
 
-        public event MutiDownloadProgressChangedEventHandler MutiDownloadProgressChanged;
+        public event MultiDownloadProgressChangedEventHandler MultiDownloadProgressChanged;
 
-        public delegate void MutiAsyncCompletedEventHandler(object sender, AsyncCompletedEventArgs e);
+        public delegate void MultiAsyncCompletedEventHandler(object sender, AsyncCompletedEventArgs e);
 
-        public event MutiAsyncCompletedEventHandler MutiDownloadFileCompleted;
+        public event MultiAsyncCompletedEventHandler MultiDownloadFileCompleted;
 
         protected Timer SpeedTimer { get; set; }
         protected DateTime StartTime { get; set; }
@@ -135,7 +135,7 @@ namespace GeneralUpdate.Core.Download
         {
             if (_fileRange != null && _fileRange.IsRangeDownload) return;
             _fileRange = new DownloadFileRangeState(path, userState, this);
-            _fileRange.OnCompleted = () => MutiDownloadFileCompleted;
+            _fileRange.OnCompleted = () => MultiDownloadFileCompleted;
             _fileRange.IsRangeDownload = true;
             long startPos = CheckFile(_fileRange);
             if (startPos == -1) return;
@@ -233,8 +233,8 @@ namespace GeneralUpdate.Core.Download
                 if (state == null || state.FileStream == null) break;
                 lock (state.FileStream)
                 {
-                    if (MutiDownloadProgressChanged != null)
-                        MutiDownloadProgressChanged(this, new MutiDownloadProgressChangedEventArgs(bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
+                    if (MultiDownloadProgressChanged != null)
+                        MultiDownloadProgressChanged(this, new MultiDownloadProgressChangedEventArgs(bytesReceived, totalBytesReceived, ((float)bytesReceived / totalBytesReceived), state.UserState));
                     state.FileStream.Write(bytes, 0, readSize);
                     bytesReceived += readSize;
                     if (totalBytesReceived != 0 && bytesReceived >= totalBytesReceived)
@@ -269,7 +269,7 @@ namespace GeneralUpdate.Core.Download
             #region Private Members
 
             private const string tmpSuffix = ".temp";
-            private Func<MutiAsyncCompletedEventHandler> _onDownloadCompleted = null;
+            private Func<MultiAsyncCompletedEventHandler> _onDownloadCompleted = null;
             private HttpWebRequest _request = null;
             private WebResponse _respone = null;
             private Stream _stream = null;
@@ -297,7 +297,7 @@ namespace GeneralUpdate.Core.Download
 
             #region Public Properties
 
-            public Func<MutiAsyncCompletedEventHandler> OnCompleted { get => _onDownloadCompleted; set => _onDownloadCompleted = value; }
+            public Func<MultiAsyncCompletedEventHandler> OnCompleted { get => _onDownloadCompleted; set => _onDownloadCompleted = value; }
             public HttpWebRequest Request { get => _request; set => _request = value; }
             public WebResponse Respone { get => _respone; set => _respone = value; }
             public Stream Stream { get => _stream; set => _stream = value; }
