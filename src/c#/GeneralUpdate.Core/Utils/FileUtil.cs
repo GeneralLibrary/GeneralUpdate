@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -124,6 +125,27 @@ namespace GeneralUpdate.Core.Utils
             {
                 return null;
             }
+        }
+
+        public static void CreateJsonFile<T>(string targetPath,string fileName,T obj) 
+        {
+            var fileFullPath = Path.Combine(targetPath,fileName);
+            if (File.Exists(fileFullPath)) File.Delete(fileFullPath);
+            var jsonString = JsonConvert.SerializeObject(obj);
+            File.WriteAllText(fileFullPath, jsonString);
+        }
+
+        public static T ReadJsonFile<T>(string path)
+        {
+            if (File.Exists(path)) 
+            {
+               var json = File.ReadAllText(path);
+                if (json != null) 
+                {
+                   return  JsonConvert.DeserializeObject<T>(json);
+                }
+            }
+            return default(T);
         }
     }
 

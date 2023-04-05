@@ -225,7 +225,7 @@ namespace GeneralUpdate.Differential.Binary
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task Drity(string oldfilePath, string newfilePath, string patchPath)
+        public async Task Dirty(string oldfilePath, string newfilePath, string patchPath)
         {
             _oldfilePath = oldfilePath;
             _newfilePath = newfilePath;

@@ -31,6 +31,11 @@ namespace GeneralUpdate.Differential
         /// </summary>
         private const string PATCHS = "patchs";
 
+        /// <summary>
+        /// List of files that need to be deleted.
+        /// </summary>
+        private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
+
         private Action<object, BaseCompressProgressEventArgs> _compressProgressCallback;
 
         #endregion Private Members
@@ -83,7 +88,7 @@ namespace GeneralUpdate.Differential
                 //Take the left tree as the center to match the files that are not in the right tree .
                 var fileProvider = new FileProvider();
                 var nodes = await fileProvider.Compare(appPath, targetPath);
-
+                
                 //Binary differencing of like terms .
                 foreach (var file in nodes.Item3)
                 {
@@ -116,6 +121,12 @@ namespace GeneralUpdate.Differential
                         File.Copy(newfile, Path.Combine(tempDir, Path.GetFileName(newfile)), true);
                     }
                 }
+
+                //If a file is found that needs to be deleted, a list of files is written to the update package.
+                var exceptFiles = await fileProvider.Except(appPath, targetPath);
+                if(exceptFiles != null && exceptFiles.Count() > 0) 
+                    FileUtil.CreateJsonFile(patchPath, DELETE_FILES_NAME, exceptFiles);
+
                 var factory = new GeneralZipFactory();
                 _compressProgressCallback = compressProgressCallback;
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
@@ -141,11 +152,22 @@ namespace GeneralUpdate.Differential
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
             try
             {
-                if (string.IsNullOrWhiteSpace(patchPath) || string.IsNullOrWhiteSpace(appPath))
-                    throw new ArgumentNullException(nameof(appPath));
-
                 var patchFiles = FileUtil.GetAllFiles(patchPath);
                 var oldFiles = FileUtil.GetAllFiles(appPath);
+
+                //If a JSON file for the deletion list is found in the update package, it will be deleted based on its contents.
+                var deleteListJson =  patchFiles.FirstOrDefault(i=>i.Name.Equals(DELETE_FILES_NAME));
+                if (deleteListJson != null) 
+                {
+                    var deleteFiles = FileUtil.ReadJsonFile<IEnumerable<FileNode>>(deleteListJson.FullName);
+                    foreach (var file in deleteFiles)
+                    {
+                        var resultFile = oldFiles.FirstOrDefault(i => FileUtil.GetFileMD5(i.FullName).ToUpper().Equals(file.MD5.ToUpper()));
+                        if (resultFile == null) continue;
+                        if (File.Exists(resultFile.FullName)) File.Delete(resultFile.FullName);
+                    }
+                }
+
                 foreach (var oldFile in oldFiles)
                 {
                     //Only the difference file (.patch) can be updated here.
@@ -166,7 +188,7 @@ namespace GeneralUpdate.Differential
             }
             catch (Exception ex)
             {
-                throw new Exception($"Drity error : {ex.Message} !", ex.InnerException);
+                throw new Exception($"Dirty error : {ex.Message} !", ex.InnerException);
             }
         }
 
@@ -194,7 +216,7 @@ namespace GeneralUpdate.Differential
             {
                 if (!File.Exists(appPath) || !File.Exists(patchPath)) return;
                 var newPath = Path.Combine(Path.GetDirectoryName(appPath), $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
-                await new BinaryHandle().Drity(appPath, newPath, patchPath);
+                await new BinaryHandle().Dirty(appPath, newPath, patchPath);
             }
             catch (Exception ex)
             {

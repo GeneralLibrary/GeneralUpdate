@@ -20,8 +20,8 @@ namespace GeneralUpdate.Differential.Common
             _blackFileFormats = blackFileFormats;
         }
 
-        public static List<string> GetBlackFiles() => _blackFiles;
+        public static List<string> GetBlackFiles() => _blackFiles ?? new List<string>() { "Newtonsoft.Json.dll" };
 
-        public static List<string> GetBlackFileFormats() => _blackFileFormats;
+        public static List<string> GetBlackFileFormats() => _blackFileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar", ".json" };
     }
 }

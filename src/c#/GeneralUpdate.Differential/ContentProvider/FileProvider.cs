@@ -3,6 +3,7 @@ using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,7 +24,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// </summary>
         /// <param name="leftPath">Left tree folder path.</param>
         /// <param name="rightPath">Right tree folder path.</param>
-        /// <returns></returns>
+        /// <returns>ValueTuple(leftFileNodes,rightFileNodes, differentTreeNode)</returns>
         public async Task<ValueTuple<IEnumerable<FileNode>, IEnumerable<FileNode>, IEnumerable<FileNode>>> Compare(string leftPath, string rightPath)
         {
             return await Task.Run(() =>
@@ -36,6 +37,28 @@ namespace GeneralUpdate.Differential.ContentProvider
                 var differentTreeNode = new List<FileNode>();
                 leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref differentTreeNode);
                 return ValueTuple.Create(leftFileNodes, rightFileNodes, differentTreeNode);
+            });
+        }
+
+        /// <summary>
+        /// Using the list on the left as a baseline, find the set of differences between the two file lists.
+        /// </summary>
+        /// <param name="leftPath">Previous version file list path</param>
+        /// <param name="rightPath">The current version file list path</param>
+        /// <returns>Except collection</returns>
+        public async Task<IEnumerable<FileNode>> Except(string leftPath, string rightPath)
+        {
+            return await Task.Run(() => 
+            {
+                var leftFileNodes = Read(leftPath);
+                var rightFileNodes = Read(rightPath);
+                var resultNodes = new List<FileNode>();
+                foreach (var leftNode in leftFileNodes)
+                {
+                    var findObj = rightFileNodes.FirstOrDefault(i => i.Equals(leftNode));
+                    if (findObj == null) resultNodes.Add(leftNode);
+                }
+                return resultNodes;
             });
         }
 
@@ -80,7 +103,9 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns></returns>
         private bool IsMatchBlacklist(string subPath)
         {
-            foreach (var file in Filefilter.GetBlackFiles())
+            var blackList = Filefilter.GetBlackFiles();
+            if (blackList == null) return false;
+            foreach (var file in blackList)
             {
                 if (subPath.Contains(file)) return true;
             }

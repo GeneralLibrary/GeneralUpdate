@@ -32,6 +32,13 @@
     <None Remove="Bootstrap\.gitkeep" />
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Differential\.gitkeep" />
+    <None Remove="Differential\Binary\.gitkeep" />
+    <None Remove="Differential\Common\.gitkeep" />
+    <None Remove="Differential\Config\.gitkeep" />
+    <None Remove="Differential\Config\Cache\.gitkeep" />
+    <None Remove="Differential\Config\Handles\.gitkeep" />
+    <None Remove="Differential\ContentProvider\.gitkeep" />
+    <None Remove="Differential\GStream\.gitkeep" />
     <None Remove="Domain\.gitkeep" />
     <None Remove="Domain\Service\.gitkeep" />
     <None Remove="Download\.gitkeep" />
@@ -163,10 +170,6 @@
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Differential\Binary\" />
     <Folder Include="Differential\Common\" />
-    <Folder Include="Differential\Config\Cache\" />
-    <Folder Include="Differential\Config\Handles\" />
-    <Folder Include="Differential\Config\Cache\" />
-    <Folder Include="Differential\Config\Handles\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
     <Folder Include="Differential\Common\" />
@@ -179,7 +182,6 @@
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
     <Folder Include="Differential\Common\" />
-    <Folder Include="Differential\Config\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\ContentProvider\" />
     <Folder Include="Domain\DTO\Assembler\" />

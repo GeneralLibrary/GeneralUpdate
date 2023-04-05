@@ -129,8 +129,8 @@ namespace GeneralUpdate.Core.Bootstrap
         /// <returns></returns>
         public virtual TBootstrap SetBlacklist(List<string> files = null, List<string> fileFormats = null)
         {
-            Packet.BlackFiles = files ?? new List<string>() { "Newtonsoft.Json.dll" };
-            Packet.BlackFormats = fileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar", ".json" };
+            Packet.BlackFiles = files;
+            Packet.BlackFormats = fileFormats;
             return (TBootstrap)this;
         }
 

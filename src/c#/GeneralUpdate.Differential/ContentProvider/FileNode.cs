@@ -133,7 +133,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            if (obj == null) throw new ArgumentNullException(nameof(obj));
+            if (obj == null) return false; //throw new ArgumentNullException(nameof(obj));
             var tempNode = obj as FileNode;
             if (tempNode == null) throw new ArgumentException(nameof(tempNode));
             return MD5.Equals(tempNode.MD5) && Name.Equals(tempNode.Name);
