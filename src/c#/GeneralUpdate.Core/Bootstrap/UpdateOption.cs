@@ -39,16 +39,6 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
 
-        /// <summary>
-        /// Whether to enable configuration file update.
-        /// </summary>
-        public static readonly UpdateOption<bool> UpdateConfig = ValueOf<bool>("UPDATECONFIG");
-
-        /// <summary>
-        /// Whether to let the application gain administrator privileges.
-        /// </summary>
-        public static readonly UpdateOption<bool> UseAdmin = ValueOf<bool>("USEADMIN");
-
         #endregion parameter configuration
 
         internal UpdateOption(int id, string name)
