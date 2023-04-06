@@ -40,7 +40,11 @@
     <None Remove="Differential\ContentProvider\.gitkeep" />
     <None Remove="Differential\GStream\.gitkeep" />
     <None Remove="Domain\.gitkeep" />
+    <None Remove="Domain\DTO\Assembler\.gitkeep" />
+    <None Remove="Domain\Entity\Assembler\.gitkeep" />
+    <None Remove="Domain\Enum\.gitkeep" />
     <None Remove="Domain\Service\.gitkeep" />
+    <None Remove="Domain\VO\.gitkeep" />
     <None Remove="Download\.gitkeep" />
     <None Remove="Exceptions\.gitkeep" />
     <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
@@ -55,6 +59,7 @@
     <None Remove="Strategys\PlatformLinux\.gitkeep" />
     <None Remove="Strategys\PlatformMac\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
+    <None Remove="Utils\.gitkeep" />
   </ItemGroup>
 
   <ItemGroup>
@@ -80,6 +85,7 @@
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\PO\VersionPO.cs" Link="Domain\PO\VersionPO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\Service\VersionService.cs" Link="Domain\Service\VersionService.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\VO\FileVO.cs" Link="Domain\VO\FileVO.cs" />
     <Compile Include="..\GeneralUpdate.Core\Download\AbstractTask.cs" Link="Download\AbstractTask.cs" />
@@ -184,6 +190,7 @@
     <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\ContentProvider\" />
+    <Folder Include="Domain\PO\Assembler\" />
     <Folder Include="Domain\DTO\Assembler\" />
     <Folder Include="Domain\Entity\Assembler\" />
     <Folder Include="Domain\Service\" />

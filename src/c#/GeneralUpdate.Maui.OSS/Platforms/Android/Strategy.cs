@@ -33,7 +33,7 @@ namespace GeneralUpdate.Maui.OSS
             _parameter = parameter as ParamsAndroid;
         }
 
-        public override async Task Excute()
+        public override async Task Execute()
         {
             //1.Download the JSON version configuration file.
             var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";

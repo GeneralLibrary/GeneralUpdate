@@ -23,7 +23,7 @@ namespace GeneralUpdate.Maui.OSS
             _parameter = parameter as ParamsAndroid;
         }
 
-        public override async Task Excute()
+        public override async Task Execute()
         {
             try
             {

@@ -10,7 +10,7 @@ namespace GeneralUpdate.Maui.OSS
             throw new NotImplementedException();
         }
 
-        public override Task Excute()
+        public override Task Execute()
         {
             throw new NotImplementedException();
         }

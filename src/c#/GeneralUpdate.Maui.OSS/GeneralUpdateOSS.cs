@@ -56,7 +56,7 @@ namespace GeneralUpdate.Maui.OSS
             var strategy = strategyFunc();
             strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
-            await strategy.Excute();
+            await strategy.Execute();
         }
 
         private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs

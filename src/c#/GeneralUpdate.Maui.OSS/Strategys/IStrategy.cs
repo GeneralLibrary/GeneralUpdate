@@ -5,7 +5,7 @@
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        Task Excute();
+        Task Execute();
 
         /// <summary>
         /// Create a policy.

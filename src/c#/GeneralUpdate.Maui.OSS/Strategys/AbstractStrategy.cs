@@ -45,6 +45,6 @@
         /// Execute the injected strategy.
         /// </summary>
         /// <returns></returns>
-        public abstract Task Excute();
+        public abstract Task Execute();
     }
 }

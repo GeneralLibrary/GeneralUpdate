@@ -2,7 +2,7 @@
 
 namespace GeneralUpdate.Core.Domain.Entity
 {
-    public class ParamsOSS : GeneralUpdate.Core.Domain.Entity.Entity
+    public class ParamsOSS : Entity
     {
         public string Url { get; set; }
 
