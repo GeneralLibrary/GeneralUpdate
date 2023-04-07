@@ -88,7 +88,7 @@ namespace GeneralUpdate.Core
             var strategy = strategyFunc();
             strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
-            await strategy.ExcuteTaskAsync();
+            await strategy.ExecuteTaskAsync();
         }
 
         #endregion

@@ -1,16 +1,14 @@
-﻿using GeneralUpdate.Core.Domain.DO;
-using GeneralUpdate.Core.Domain.DO.Assembler;
-using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.PO;
+using GeneralUpdate.Core.Domain.PO.Assembler;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Core.Events.OSSArgs;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,34 +32,24 @@ namespace GeneralUpdate.Core.Strategys
             _parameter = parameter as ParamsOSS;
         }
 
-        public override async Task ExcuteTaskAsync()
+        public override async Task ExecuteTaskAsync()
         {
             try
             {
                 //1.Download the JSON version configuration file.
-                var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
-                var isHasNewVersion = await DownloadFileAsync(jsonUrl, jsonPath, (readLength, totalLength)
-                    => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
-                if (!isHasNewVersion) return;
                 if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
                 //2.Parse the JSON version configuration file content.
                 byte[] jsonBytes = File.ReadAllBytes(jsonPath);
                 string json = Encoding.Default.GetString(jsonBytes);
-                var versions = JsonConvert.DeserializeObject<List<VersionConfigDO>>(json);
+                var versions = JsonConvert.DeserializeObject<List<VersionPO>>(json);
                 if (versions == null) throw new NullReferenceException(nameof(versions));
 
-                //3.Compare with the latest version.
-                versions = versions.OrderBy(v => v.PubTime).ToList();
-                var currentVersion = new Version(_parameter.CurrentVersion);
-                var lastVersion = new Version(versions[0].Version);
-                if (currentVersion.Equals(lastVersion)) return;
-
-                //4.Download version by version according to the version of the configuration file.
+                //3.Download version by version according to the version of the configuration file.
                 DownloadVersions(VersionAssembler.ToDataObjects(versions));
 
-                //5.Launch the main application.
+                //4.Launch the main application.
                 LaunchApp();
             }
             catch (Exception ex)

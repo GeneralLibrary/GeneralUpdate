@@ -29,7 +29,7 @@ namespace GeneralUpdate.Core.Strategys
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        Task ExcuteTaskAsync();
+        Task ExecuteTaskAsync();
 
         /// <summary>
         /// Create a strategy.
