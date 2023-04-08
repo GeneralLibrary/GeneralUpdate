@@ -5,6 +5,7 @@ using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Core.Strategys;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core
@@ -26,9 +27,9 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public static async Task Start<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
+        public static async Task Start<TStrategy>(ParamsOSS parameter,Encoding encoding) where TStrategy : AbstractStrategy, new()
         {
-            await BaseStart<TStrategy, ParamsOSS>(parameter);
+            await BaseStart<TStrategy, ParamsOSS>(parameter, encoding);
         }
 
         public void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
@@ -81,12 +82,12 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<TStrategy, TParams>(TParams parameter) where TStrategy : AbstractStrategy, new() where TParams : class
+        private static async Task BaseStart<TStrategy, TParams>(TParams parameter,Encoding encoding) where TStrategy : AbstractStrategy, new() where TParams : class
         {
             //Initializes and executes the policy.
             var strategyFunc = new Func<TStrategy>(() => new TStrategy());
             var strategy = strategyFunc();
-            strategy.Create(parameter);
+            strategy.Create(parameter, encoding);
             //Implement different update strategies depending on the platform.
             await strategy.ExecuteTaskAsync();
         }

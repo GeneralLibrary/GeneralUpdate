@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Strategys
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        void Excute();
+        void Execute();
 
         /// <summary>
         /// After the update is complete.

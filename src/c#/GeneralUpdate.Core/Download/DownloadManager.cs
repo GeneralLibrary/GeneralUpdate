@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Download
     /// <summary>
     /// download task manager.
     /// </summary>
-    /// <typeparam name="T">update version infomation.</typeparam>
+    /// <typeparam name="T">update version information.</typeparam>
     public sealed class DownloadManager<TVersion> : AbstractTaskManager<TVersion>
     {
         #region Private Members
@@ -47,7 +47,7 @@ namespace GeneralUpdate.Core.Download
 
         /// <summary>
         /// Record download exception information for all versions.
-        /// object: is 'UpdateVersion' , string: is error infomation.
+        /// object: is 'UpdateVersion' , string: is error information.
         /// </summary>
         public IList<(object, string)> FailedVersions { get => _failedVersions; }
 
@@ -63,7 +63,7 @@ namespace GeneralUpdate.Core.Download
 
         public event MultiAllDownloadCompletedEventHandler MultiAllDownloadCompleted;
 
-        public delegate void MultiDownloadProgressChangedEventHandler(object csender, MultiDownloadProgressChangedEventArgs e);
+        public delegate void MultiDownloadProgressChangedEventHandler(object sender, MultiDownloadProgressChangedEventArgs e);
 
         public event MultiDownloadProgressChangedEventHandler MultiDownloadProgressChanged;
 

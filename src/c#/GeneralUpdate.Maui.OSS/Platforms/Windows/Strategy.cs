@@ -50,7 +50,7 @@ namespace GeneralUpdate.Maui.OSS
                     string filePath = _appPath;
                     //await DownloadFileAsync(version.Url, _appPath, (e, s) => EventManager.Instance.Dispatch<DownloadEventHandler>(this, new OSSDownloadArgs(e, s)));
                     var factory = new GeneralZipFactory();
-                    factory.CreatefOperate(Zip.Factory.OperationType.GZip, version.Name, _appPath, _appPath, true, Encoding.UTF8);
+                    factory.CreateOperate(Zip.Factory.OperationType.GZip, version.Name, _appPath, _appPath, true, Encoding.UTF8);
                     //factory.Completed += (s, e) => EventManager.Instance.Dispatch<UnZipCompletedEventHandler>(this, e);
                     //factory.UnZipProgress += (s, e) => EventManager.Instance.Dispatch<UnZipProgressEventHandler>(this, e);
                     factory.UnZip();

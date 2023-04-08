@@ -4,13 +4,13 @@ namespace GeneralUpdate.Zip.Factory
 {
     public interface IFactory
     {
-        IFactory CreatefOperate(OperationType type, string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null);
+        IFactory CreateOperate(OperationType type, string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null);
 
         /// <summary>
         /// Create a compressed package.
         /// </summary>
         /// <returns></returns>
-        IFactory CreatZip();
+        IFactory CreateZip();
 
         /// <summary>
         /// unzip

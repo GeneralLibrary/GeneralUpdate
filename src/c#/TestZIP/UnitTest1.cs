@@ -22,8 +22,8 @@ namespace TestZIP
                 {
                     Console.WriteLine($"IsCompleted:{e.IsCompleted}");
                 };
-                factory.CreatefOperate(OperationType.GZip, name, sourcePath, destinationPath, false, System.Text.Encoding.Default).
-                    CreatZip();
+                factory.CreateOperate(OperationType.GZip, name, sourcePath, destinationPath, false, System.Text.Encoding.Default).
+                    CreateZip();
             }
             catch
             {
@@ -49,7 +49,7 @@ namespace TestZIP
                 {
                     Console.WriteLine($"IsCompleted:{e.IsCompleted}");
                 };
-                factory.CreatefOperate(OperationType.GZip, name, sourcePath, destinationPath, false, System.Text.Encoding.Default).
+                factory.CreateOperate(OperationType.GZip, name, sourcePath, destinationPath, false, System.Text.Encoding.Default).
                     UnZip();
             }
             catch (Exception ex)

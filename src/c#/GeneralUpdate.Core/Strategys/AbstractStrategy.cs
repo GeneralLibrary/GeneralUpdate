@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys
@@ -7,7 +8,7 @@ namespace GeneralUpdate.Core.Strategys
     {
         protected const string PATCHS = "patchs";
 
-        public virtual void Excute() => throw new NotImplementedException();
+        public virtual void Execute() => throw new NotImplementedException();
 
         public virtual bool StartApp(string appName, int appType) => throw new NotImplementedException();
 
@@ -16,5 +17,7 @@ namespace GeneralUpdate.Core.Strategys
         public virtual Task ExecuteTaskAsync() => throw new NotImplementedException();
 
         public virtual void Create<T>(T parameter) where T : class => throw new NotImplementedException();
+
+        public virtual void Create<T>(T parameter,Encoding encoding) where T : class => throw new NotImplementedException();
     }
 }

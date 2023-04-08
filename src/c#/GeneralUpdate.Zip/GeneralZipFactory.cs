@@ -38,7 +38,7 @@ namespace GeneralUpdate.Zip
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
-        public IFactory CreatefOperate(OperationType type, string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
+        public IFactory CreateOperate(OperationType type, string name, string sourcePath, string destinationPath, bool includeBaseDirectory = false, Encoding encoding = null)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
                 throw new ArgumentNullException("The path cannot be empty !");
@@ -62,7 +62,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatefOperate' Initialization exception : {ex.Message} .", ex.InnerException);
+                throw new Exception($"'CreateOperate' Initialization exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }
@@ -82,7 +82,7 @@ namespace GeneralUpdate.Zip
             if (CompressProgress != null) CompressProgress(sender, e);
         }
 
-        public IFactory CreatZip()
+        public IFactory CreateZip()
         {
             try
             {
@@ -90,7 +90,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatZip' exception : {ex.Message} .", ex.InnerException);
+                throw new Exception($"'CreateZip' exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }
@@ -103,7 +103,7 @@ namespace GeneralUpdate.Zip
             }
             catch (Exception ex)
             {
-                throw new Exception($"'CreatefOperate' exception : {ex.Message} .", ex.InnerException);
+                throw new Exception($"'CreateOperate' exception : {ex.Message} .", ex.InnerException);
             }
             return this;
         }

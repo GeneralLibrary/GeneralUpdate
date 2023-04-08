@@ -132,7 +132,7 @@ namespace GeneralUpdate.Differential
                 if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
                 //The update package exists in the 'target path' directory.
                 name = name ?? new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
-                factory.CreatefOperate(type, name, patchPath, targetPath, true, encoding).CreatZip();
+                factory.CreateOperate(type, name, patchPath, targetPath, true, encoding).CreateZip();
             }
             catch (Exception ex)
             {

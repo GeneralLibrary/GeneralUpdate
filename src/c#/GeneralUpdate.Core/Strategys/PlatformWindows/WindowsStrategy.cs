@@ -32,7 +32,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             Packet = parameter as Packet;
         }
 
-        public override void Excute()
+        public override void Execute()
         {
             try
             {
