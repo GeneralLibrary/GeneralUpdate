@@ -8,6 +8,7 @@ using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Zip;
+using GeneralUpdate.Zip.Factory;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -52,9 +53,9 @@ namespace GeneralUpdate.Core.Strategys
                     if (versions == null) throw new NullReferenceException(nameof(versions));
 
                     //3.Download version by version according to the version of the configuration file.
-                    var versions1 = VersionAssembler.ToDataObjects(versions);
-                    DownloadVersions(versions1);
-                    UnZip(versions1);
+                    var versionInfo = VersionAssembler.ToDataObjects(versions);
+                    DownloadVersions(versionInfo);
+                    UnZip(versionInfo);
                     //4.Launch the main application.
                     LaunchApp();
                 }
@@ -100,26 +101,6 @@ namespace GeneralUpdate.Core.Strategys
             Process.Start(appPath);
         }
 
-        /// <summary>
-        /// Remove update redundant files.
-        /// </summary>
-        /// <returns></returns>
-        private bool Clear()
-        {
-            try
-            {
-                //if (System.IO.File.Exists(Packet.TempPath)) System.IO.File.Delete(Packet.TempPath);
-                //var dirPath = Path.GetDirectoryName(Packet.TempPath);
-                //if (Directory.Exists(dirPath)) Directory.Delete(dirPath, true);
-                return true;
-            }
-            catch (Exception exception)
-            {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
-                return false;
-            }
-        }
-
         private bool UnZip(List<VersionInfo> versions)
         {
             try
@@ -127,14 +108,17 @@ namespace GeneralUpdate.Core.Strategys
                 bool isCompleted = true;
                 foreach (VersionInfo version in versions) 
                 {
-                    var zipFilePath = Path.Combine(_appPath,version.Name);
-
-                    //var zipFactory = new GeneralZipFactory();
-                    //zipFactory.UnZipProgress += (sender, e) =>
-                    //EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
-                    //zipFactory.Completed += (sender, e) => isCompleted = e.IsCompleted;
-                    //zipFactory.CreateOperate(_format, version.Name, zipFilePath, _appPath, false, _encoding)
-                    //    .UnZip();
+                    var zipFilePath = Path.Combine(_appPath,$"{version.Name}.zip");
+                    var zipFactory = new GeneralZipFactory();
+                    zipFactory.UnZipProgress += (sender, e) =>
+                    EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
+                    zipFactory.Completed += (sender, e) => 
+                    {
+                        isCompleted = e.IsCompleted;
+                        if(File.Exists(zipFilePath))  File.Delete(zipFilePath);
+                    };
+                    zipFactory.CreateOperate(OperationType.GZip, version.Name, zipFilePath, _appPath, false, _encoding)
+                        .UnZip();
                 }
                 return isCompleted;
             }
