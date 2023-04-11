@@ -41,7 +41,7 @@ namespace GeneralUpdate.Client
             {
                 var url = "http://192.168.50.203";
                 var appName = "GeneralUpdate.Client";
-                var version = "1.0.0";
+                var version = "1.0.0.0";
                 var versionFileName = "version.json";
                 ParamsOSS @params = new ParamsOSS(url, appName, version, versionFileName);
                 await GeneralClientOSS.Start(@params);
