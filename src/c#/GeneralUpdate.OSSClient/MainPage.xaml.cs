@@ -5,8 +5,6 @@ namespace GeneralUpdate.OSSClient
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
-
         public MainPage()
         {
             InitializeComponent();
@@ -19,8 +17,8 @@ namespace GeneralUpdate.OSSClient
                 var url = "http://192.168.50.203";
                 var apk = "GeneralUpdate.Client.apk";
                 var authority = "B8A7FADD-386C-46B0-B283-C9F963420C7C";
-                var currentVersion = "v1.0.0.0";
-                var versionFileName = "GeneralUpdate.Client.apk";
+                var currentVersion = "1.0.0.0";
+                var versionFileName = "version.json";
                 await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, apk, authority, currentVersion, versionFileName));
             });
         }

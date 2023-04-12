@@ -31,7 +31,7 @@ namespace GeneralUpdate.AspNetCore.Services
                 {
                     respDTO.Message = $"{RespMessage.RequestFailed} Wrong version number.";
                     respDTO.Code = HttpStatus.BAD_REQUEST;
-                    return null;
+                    return JsonConvert.SerializeObject(respDTO);
                 }
                 var lastVersion = new Version(serverLastVersion);
                 if (clientLastVersion < lastVersion)
