@@ -83,7 +83,7 @@ namespace GeneralUpdate.Maui.OSS
         #region Private Methods
 
         /// <summary>
-        /// Android OS read file byts.
+        /// Android OS read file bytes.
         /// </summary>
         /// <param name="file"></param>
         /// <returns></returns>
