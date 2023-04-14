@@ -24,6 +24,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | Skip updates                                      | yes              | Support injection pop-up window allows users to decide whether to update this release, and the update will not take effect when the server decides to force it. |
 | Upgrade each other                                | yes              | The main program updates the upgrade program, and the upgrade program updates the main program. |
 | Black list                                        | yes              | Files and file extensions from the blacklist are skipped during the update process. |
+| OSS                                               | yes              | Minimal updates require only the version configuration file of version.json to be placed on the file server. Components are updated and downloaded based on the version information in the configuration file. |
 
 ### 2.Help documentation ###
 
