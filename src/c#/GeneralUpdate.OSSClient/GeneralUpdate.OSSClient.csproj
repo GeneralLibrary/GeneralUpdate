@@ -56,4 +56,10 @@
 	  <ProjectReference Include="..\GeneralUpdate.Maui.OSS\GeneralUpdate.Maui.OSS.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="Platforms\Android\XML\provider_paths.xml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>
