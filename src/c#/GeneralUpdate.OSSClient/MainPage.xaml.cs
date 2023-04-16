@@ -16,7 +16,7 @@ namespace GeneralUpdate.OSSClient
             {
                 var url = "http://192.168.50.203";
                 var apk = "GeneralUpdate.Client.apk";
-                var authority = "com.generalupdate.oss.fileprovider";
+                var authority = "com.generalupdate.oss";
                 var currentVersion = "1.0.0.0";
                 var versionFileName = "version.json";
                 await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, apk, authority, currentVersion, versionFileName));

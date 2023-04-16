@@ -9,7 +9,7 @@
 			android:usesCleartextTraffic="true">
 			<meta-data
 				android:name="android.support.FILE_PROVIDER_PATHS"
-				android:resource="@XML/provider_paths" />
+				android:resource="@resources/xml/provider_paths.xml" />
 		</provider>
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
