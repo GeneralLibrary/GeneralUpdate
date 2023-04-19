@@ -6,10 +6,11 @@
 			android:name="androidx.core.content.FileProvider"
 			android:exported="false"
 			android:grantUriPermissions="true"
-			android:usesCleartextTraffic="true">
+			android:usesCleartextTraffic="true"
+			>
 			<meta-data
 				android:name="android.support.FILE_PROVIDER_PATHS"
-				android:resource="@resources/xml/provider_paths.xml" />
+				android:resource="@xml/provider_paths" />
 		</provider>
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
