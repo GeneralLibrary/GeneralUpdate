@@ -75,7 +75,7 @@ namespace GeneralUpdate.ClientCore
         /// <param name="appName">The updater name does not need to contain an extension.</param>
         /// <returns></returns>
         /// <exception cref="Exception">Parameter initialization is abnormal.</exception>
-        public GeneralClientBootstrap Config(string url, string appSecretKey, string appName = "GeneralUpdate.Upgrad")
+        public GeneralClientBootstrap Config(string url, string appSecretKey, string appName = "GeneralUpdate.Upgrade")
         {
             if (string.IsNullOrEmpty(url)) throw new Exception("Url cannot be empty !");
             try

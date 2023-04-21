@@ -98,7 +98,7 @@ namespace GeneralUpdate.Core.Bootstrap
             return _strategy.GetPlatform();
         }
 
-        protected IStrategy ExcuteStrategy()
+        protected IStrategy ExecuteStrategy()
         {
             if (_strategy != null) _strategy.Execute();
             return _strategy;
@@ -220,7 +220,7 @@ namespace GeneralUpdate.Core.Bootstrap
             try
             {
                 EventManager.Instance.Dispatch<Action<object, MultiAllDownloadCompletedEventArgs>>(sender, e);
-                ExcuteStrategy();
+                ExecuteStrategy();
             }
             catch (Exception ex)
             {
