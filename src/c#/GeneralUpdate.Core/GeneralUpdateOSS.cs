@@ -32,37 +32,37 @@ namespace GeneralUpdate.Core
             await BaseStart<TStrategy, ParamsOSS>(parameter, encoding);
         }
 
-        public void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
+        public static void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
+        public static void AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)
+        public static void AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)
+        public static void AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
+        public static void AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
+        public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
-        public void AddListenerDownloadConfigProcess(Action<object, OSSDownloadArgs> callbackAction)
+        public static void AddListenerDownloadConfigProcess(Action<object, OSSDownloadArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
@@ -71,7 +71,7 @@ namespace GeneralUpdate.Core
 
         #region Private Methods
 
-        private void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
             if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
         }
