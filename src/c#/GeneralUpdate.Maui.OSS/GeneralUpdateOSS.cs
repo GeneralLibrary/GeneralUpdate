@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Maui.OSS.Domain.Entity;
 using GeneralUpdate.Maui.OSS.Strategys;
@@ -35,6 +36,11 @@ namespace GeneralUpdate.Maui.OSS
         }
 
         public static void AddListenerDownloadProcess(Action<object, OSSDownloadArgs> callbackAction)
+        {
+            AddListener(callbackAction);
+        }
+
+        public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }

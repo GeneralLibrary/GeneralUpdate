@@ -1,6 +1,8 @@
-﻿using GeneralUpdate.Core.Events.OSSArgs;
+﻿using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.Events.OSSArgs;
 using GeneralUpdate.Maui.OSS;
 using GeneralUpdate.Maui.OSS.Domain.Entity;
+using System;
 
 namespace TestMauiApp
 {
@@ -19,12 +21,18 @@ namespace TestMauiApp
             string currentVersion = "1.1.1.1";
             string versionFileName = "versions.json";
             GeneralUpdateOSS.AddListenerDownloadProcess(OnOSSDownload);
+            GeneralUpdateOSS.AddListenerException(OnException);
             await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, appName, "123456789", currentVersion, versionFileName));
         }
 
         private void OnOSSDownload(object sender, OSSDownloadArgs e)
         {
             Console.WriteLine($"{e.ReadLength},{e.TotalLength}");
+        }
+
+        private void OnException(object sender, ExceptionEventArgs exception) 
+        {
+            Console.WriteLine(exception.Exception.Message);
         }
     }
 }
