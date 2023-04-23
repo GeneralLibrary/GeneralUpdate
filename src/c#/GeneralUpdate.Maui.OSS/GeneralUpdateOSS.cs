@@ -35,11 +35,19 @@ namespace GeneralUpdate.Maui.OSS
             await BaseStart<TStrategy, ParamsAndroid>(parameter);
         }
 
+        /// <summary>
+        /// Monitor download progress.
+        /// </summary>
+        /// <param name="callbackAction"></param>
         public static void AddListenerDownloadProcess(Action<object, OSSDownloadArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
+        /// <summary>
+        /// Listen for internal exception information.
+        /// </summary>
+        /// <param name="callbackAction"></param>
         public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         {
             AddListener(callbackAction);

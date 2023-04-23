@@ -1,11 +1,9 @@
 ﻿using GeneralUpdate.Core;
-using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 
 namespace GeneralUpdate.Upgrad
@@ -14,8 +12,6 @@ namespace GeneralUpdate.Upgrad
     {
         private static void Main(string[] args)
         {
-            //Console.WriteLine(args[0]);
-            //Thread.Sleep(5000);
             Task.Run(async () =>
             {
                 var url = "http://192.168.50.203";
