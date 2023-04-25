@@ -64,7 +64,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | ------------- | ---------------------------------- |
 | WPF           | yes                                |
 | UWP           | Not updatable in store mode        |
-| MAUI          | Compatible (windows)               |
+| MAUI          | Compatible (windows，Android)      |
 | Avalonia      | yes                                |
 | WinUI         | Not verified, waiting for feedback |
 | Console       | yes                                |
