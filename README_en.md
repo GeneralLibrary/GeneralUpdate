@@ -19,7 +19,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | Multi-branch updates                              | yes              | When a product has multiple branches, you need to update the corresponding content according to different branches. |
 | The latest version push                           | yes              | Based on the SignalR implementation, push the latest version. |
 | Client programs and server programs apply updates | yes              | Both C/S and B/S programs are available.                     |
-| Multi-platform, operating system                  | Partial support  | Linux、Mac、Windows                                          |
+| Multi-platform, operating system                  | Partial support  | Windows、Android                                             |
 | Multilingual                                      | To be verified   | You can also write this component as a console program as an update "script". Update applications in other languages. |
 | Skip updates                                      | yes              | Support injection pop-up window allows users to decide whether to update this release, and the update will not take effect when the server decides to force it. |
 | Upgrade each other                                | yes              | The main program updates the upgrade program, and the upgrade program updates the main program. |
@@ -64,7 +64,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | ------------- | ---------------------------------- |
 | WPF           | yes                                |
 | UWP           | Not updatable in store mode        |
-| MAUI          | Compatible (windows，Android)      |
+| MAUI          | Compatible (Android)               |
 | Avalonia      | yes                                |
 | WinUI         | Not verified, waiting for feedback |
 | Console       | yes                                |
@@ -79,10 +79,10 @@ GeneralUpdate means that universal updates become a full-platform update compone
 | operating system name | support                 |
 | --------------------- | ----------------------- |
 | Windows               | yes                     |
-| Linux                 | yes                     |
-| Mac                   | yes                     |
+| Linux                 | pending verification    |
+| Mac                   | pending verification    |
 | iOS                   | Not currently supported |
-| Android               | Not currently supported |
-| raspberry pie         | pending verification    |
+| Android               | yes                     |
+| raspberry pie         | Not currently supported |
 | Kylin V10 (FT-S2500)  | yes                     |
 | Kylin V10 (x64)       | yes                     |
