@@ -50,15 +50,15 @@ namespace GeneralUpdate.ClientCore
         {
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
-            var upgradResp = await versionService.ValidationVersion(Packet.UpdateUrl);
-            Packet.IsUpgradeUpdate = upgradResp.Body.IsUpdate;
+            var upgradeResp = await versionService.ValidationVersion(Packet.UpdateUrl);
+            Packet.IsUpgradeUpdate = upgradeResp.Body.IsUpdate;
             Packet.IsMainUpdate = mainResp.Body.IsUpdate;
             //No need to update, return directly.
             if ((!Packet.IsMainUpdate) && (!Packet.IsUpgradeUpdate)) return this;
             //If the main program needs to be forced to update, the skip will not take effect.
-            var isForcibly = mainResp.Body.IsForcibly || upgradResp.Body.IsForcibly;
+            var isForcibly = mainResp.Body.IsForcibly || upgradeResp.Body.IsForcibly;
             if (await IsSkip(isForcibly)) return this;
-            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradResp.Body.Versions);
+            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradeResp.Body.Versions);
             Packet.LastVersion = Packet.UpdateVersions.Last().Version;
             var processInfo = new ProcessInfo(Packet.MainAppName, Packet.InstallPath,
                     Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
@@ -124,7 +124,7 @@ namespace GeneralUpdate.ClientCore
         /// <summary>
         /// Let the user decide whether to update in the state of non-mandatory update.
         /// </summary>
-        /// <param name="func">Custom funcion ,Custom actions to let users decide whether to update. true update false do not update .</param>
+        /// <param name="func">Custom function ,Custom actions to let users decide whether to update. true update false do not update .</param>
         /// <returns></returns>
         public GeneralClientBootstrap SetCustomOption(Func<bool> func)
         {
@@ -136,7 +136,7 @@ namespace GeneralUpdate.ClientCore
         /// <summary>
         ///  Let the user decide whether to update in the state of non-mandatory update.
         /// </summary>
-        /// <param name="func">Custom funcion ,Custom actions to let users decide whether to update. true update false do not update .</param>
+        /// <param name="func">Custom function ,Custom actions to let users decide whether to update. true update false do not update .</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         public GeneralClientBootstrap SetCustomOption(Func<Task<bool>> func)

@@ -60,6 +60,10 @@
     <None Remove="Strategys\PlatformMac\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
     <None Remove="Utils\.gitkeep" />
+    <None Remove="ZipFactory\Events\.gitkeep" />
+    <None Remove="ZipFactory\Factory\.gitkeep" />
+    <None Remove="ZipFactory\G7z\.gitkeep" />
+    <None Remove="ZipFactory\GZip\.gitkeep" />
   </ItemGroup>
 
   <ItemGroup>
