@@ -89,7 +89,6 @@ GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 | Windows      | 支持     |
 | Linux        | 待验证 |
 | Mac          | 待验证 |
-| iOS          | 暂不支持 |
 | Android      | 支持 |
 | 树莓派(IoT)  | 暂不支持 |
 | 麒麟V10(飞腾S2500)  | 支持   |
