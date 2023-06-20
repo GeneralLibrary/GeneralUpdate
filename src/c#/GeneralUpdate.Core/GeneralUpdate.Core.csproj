@@ -3,19 +3,20 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
-    <Version>4.11.20</Version>
+    <Version>4.14.20</Version>
     <Authors>juster.zhu</Authors>
     <Company>juster.zhu</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Copyright>Copyright ©  2022</Copyright>
+    <Copyright>Copyright ©  2023</Copyright>
     <Description>This section describes how to upgrade client applications.</Description>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <AssemblyName>GeneralUpdate.Core</AssemblyName>
     <RootNamespace>GeneralUpdate.Core</RootNamespace>
+    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Config\**" />
@@ -40,6 +41,12 @@
     <None Remove="GeneralUpdate.ico" />
     <None Remove="nuget.exe" />
     <None Remove="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\imgs\GeneralUpdate128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />

@@ -15,6 +15,14 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+		<Authors>juster.zhu</Authors>
+		<Description>Based on. Automatic updates for NET MAUI multiplatform.</Description>
+		<Copyright>Copyright ©  2023</Copyright>
+		<PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
+		<PackageIcon>GeneralUpdate128.png</PackageIcon>
+		<PackageReadmeFile></PackageReadmeFile>
+		<RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -66,6 +74,13 @@
 	  <Folder Include="Domain\Enum\" />
 	  <Folder Include="Domain\PO\Assembler\" />
 	  <Folder Include="Utils\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\..\..\imgs\GeneralUpdate128.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
 	</ItemGroup>
 
 	<ItemGroup>
