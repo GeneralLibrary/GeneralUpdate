@@ -2,9 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>2.4.7.0</AssemblyVersion>
-    <FileVersion>2.4.7.0</FileVersion>
-    <Version>2.8.10</Version>
+    <Version>2.12.9</Version>
     <Authors>juster.zhu</Authors>
     <Description>Provides functions related to upgrade and update programs.</Description>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
@@ -12,8 +10,9 @@
     <SignAssembly>False</SignAssembly>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
-    <Copyright>Copyright ©  2022</Copyright>
+    <Copyright>Copyright ©  2023</Copyright>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
