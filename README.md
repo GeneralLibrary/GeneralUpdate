@@ -37,6 +37,7 @@ GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 - 快速启动： https://mp.weixin.qq.com/s/pRKPFe3eC0NSqv9ixXEiTg
 - 使用教程视频：https://www.bilibili.com/video/BV1FT4y1Y7hV
 - 文档：https://gitee.com/GeneralLibrary/GeneralUpdate/tree/master/doc
+- Tag ： https://github.com/GeneralLibrary/GeneralUpdate/tree/master/tag
 
 ## 3.开源地址 ##
 
