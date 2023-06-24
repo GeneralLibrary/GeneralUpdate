@@ -33,6 +33,7 @@ GeneralUpdate means that universal updates become a full-platform update compone
 - Quick Start： https://mp.weixin.qq.com/s/pRKPFe3eC0NSqv9ixXEiTg
 - Use the tutorial video：https://www.bilibili.com/video/BV1FT4y1Y7hV
 - Doc : https://gitee.com/GeneralLibrary/GeneralUpdate/tree/master/doc
+- Tag ： https://github.com/GeneralLibrary/GeneralUpdate/tree/master/tag
 
 ### 3.Open source address ###
 
