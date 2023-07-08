@@ -55,11 +55,11 @@ GeneralUpdate means that universal updates become a full-platform update compone
 
 ### 4.Support frame
 
-| frame name           | support |
-| -------------------- | ------- |
-| .NET Core 2.0        | yes     |
-| .NET 5 6 7           | yes     |
-| .NET Framework 4.6.1 | yes     |
+| frame name                 | support |
+| -------------------------- | ------- |
+| .NET Core 2.0              | yes     |
+| .NET 5 ... to last version | yes     |
+| .NET Framework 4.6.1       | yes     |
 
 | UI frame name | support                            |
 | ------------- | ---------------------------------- |

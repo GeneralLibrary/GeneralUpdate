@@ -64,7 +64,7 @@ GeneralUpdate寓意为通用更新力致于成为全平台更新组件。
 | 框架名称                   | 是否支持 |
 | -------------------------- | -------- |
 | .NET Core 2.0              | 支持     |
-| .NET 5 6 7 to last version | 支持     |
+| .NET 5 ... to last version | 支持     |
 | .NET Framework 4.6.1       | 支持     |
 
 | UI框架名称        | 是否支持           |
