@@ -3,14 +3,15 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>GeneralUpdate.Zip</RootNamespace>
-    <Authors>juster.chu</Authors>
+    <Authors>juster.zhu</Authors>
     <Description>Decompress the compressed file with progress notification.</Description>
-    <Copyright>Copyright ©  2022</Copyright>
+    <Copyright>Copyright ©  2023</Copyright>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Version>2.3.1</Version>
+    <Version>2.3.2</Version>
     <RepositoryUrl>https://github.com/WELL-E/AutoUpdater</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,13 @@
     <None Remove="GeneralUpdate.Zip.1.0.0.nupkg" />
     <None Remove="GeneralUpdate.Zip.nuspec" />
     <None Remove="nuget.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\imgs\GeneralUpdate128.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
