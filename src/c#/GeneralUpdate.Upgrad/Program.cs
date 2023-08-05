@@ -17,9 +17,24 @@ namespace GeneralUpdate.Upgrad
                 var url = "http://192.168.50.203";
                 var appName = "GeneralUpdate.Client";
                 var version = "1.0.0";
+
+                //Part1
                 var versionFileName = "version.json";
                 ParamsOSS @params = new ParamsOSS(url, appName, version, versionFileName);
+                GeneralUpdateOSS.AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged);
+                //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                GeneralUpdateOSS.AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics);
+                //单个或多个更新包下载完成
+                GeneralUpdateOSS.AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted);
+                //完成所有的下载任务通知
+                GeneralUpdateOSS.AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted);
+                //下载过程出现的异常通知
+                GeneralUpdateOSS.AddListenerMultiDownloadError(OnMultiDownloadError);
+                //整个更新过程出现的任何问题都会通过这个事件通知
+                GeneralUpdateOSS.AddListenerException(OnException);
                 await GeneralUpdateOSS.Start<OSSStrategy>(@params,Encoding.Default);
+
+                //Part 2
                 //var bootStrap = new GeneralUpdateBootstrap()
                 ////单个或多个更新包下载通知事件
                 //.AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
