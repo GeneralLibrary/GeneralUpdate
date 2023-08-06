@@ -80,5 +80,16 @@ namespace GeneralUpdate.ClientCore
                 webClient.DownloadFile(new Uri(url), path);
             }
         }
+
+        //todo: add
+        //public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
+        //{
+        //    AddListener(callbackAction);
+        //}
+
+        //private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        //{
+        //    if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+        //}
     }
 }
