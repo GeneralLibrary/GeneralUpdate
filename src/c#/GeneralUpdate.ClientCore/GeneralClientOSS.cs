@@ -81,15 +81,14 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
-        //todo: add
-        //public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-        //{
-        //    AddListener(callbackAction);
-        //}
+        public static void AddListenerException(Action<object, GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs> callbackAction)
+        {
+            AddListener(callbackAction);
+        }
 
-        //private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
-        //{
-        //    if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
-        //}
+        private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        {
+            if (callbackAction != null) GeneralUpdate.Core.Events.EventManager.Instance.AddListener(callbackAction);
+        }
     }
 }
