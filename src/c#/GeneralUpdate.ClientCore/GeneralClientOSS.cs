@@ -46,6 +46,7 @@ namespace GeneralUpdate.ClientCore
                 }
                 catch (Exception ex)
                 {
+                    GeneralUpdate.Core.Events.EventManager.Instance.Dispatch<Action<object, GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs>>(typeof(GeneralClientOSS), new GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs(ex));
                     throw new Exception($"GeneralClientOSS update exception ! {ex.Message}", ex.InnerException);
                 }
                 finally 
