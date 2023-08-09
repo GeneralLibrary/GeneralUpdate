@@ -16,7 +16,7 @@ namespace GeneralUpdate.Upgrad
             {
                 var url = "http://192.168.50.203";
                 var appName = "GeneralUpdate.Client";
-                var version = "1.0.0";
+                var version = "1.0.0.0";
 
                 //Part1
                 var versionFileName = "version.json";
