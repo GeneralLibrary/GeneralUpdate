@@ -6,7 +6,8 @@
 
 ### 1.Component introduction ###
 
-GeneralUpdate means that universal updates become a full-platform update component.
+- GeneralUpdate is an open source automatic upgrade component based on .NET Standard 2.0
+- Operating environment：.NET7、.NET MAUI、Visual studio 2022(Preview)
 
 | function                                          | Supported or not | note                                                         |
 | ------------------------------------------------- | ---------------- | ------------------------------------------------------------ |
