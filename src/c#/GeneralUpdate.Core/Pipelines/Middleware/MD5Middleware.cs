@@ -34,8 +34,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         private bool VerifyFileMd5(string fileName, string md5)
         {
             var packetMD5 = FileUtil.GetFileMD5(fileName);
-            if (md5.ToUpper().Equals(packetMD5.ToUpper())) return true;
-            return false;
+            return md5.ToUpper().Equals(packetMD5.ToUpper());
         }
     }
 }
