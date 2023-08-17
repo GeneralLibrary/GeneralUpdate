@@ -144,7 +144,7 @@ namespace GeneralUpdate.Differential
         /// Apply patch [Cannot contain files with the same name but different extensions] .
         /// </summary>
         /// <param name="appPath">Client application directory .</param>
-        /// <param name="patchPath"></param>
+        /// <param name="patchPath">Patch file path.</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public async Task Dirty(string appPath, string patchPath)
@@ -228,7 +228,7 @@ namespace GeneralUpdate.Differential
         /// Add new files .
         /// </summary>
         /// <param name="appPath">Client application directory .</param>
-        /// <param name="patchPath"></param>
+        /// <param name="patchPath">Patch file path.</param>
         private Task DirtyUnknow(string appPath, string patchPath)
         {
             try
