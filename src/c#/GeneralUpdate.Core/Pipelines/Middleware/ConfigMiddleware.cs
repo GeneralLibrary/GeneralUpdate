@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Pipelines.Middleware
 {
+    [Obsolete("This feature is temporarily deprecated in the current version pending refactoring.")]
     public class ConfigMiddleware : IMiddleware
     {
         public async Task InvokeAsync(BaseContext context, MiddlewareStack stack)
