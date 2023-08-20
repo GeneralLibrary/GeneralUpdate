@@ -24,8 +24,14 @@ namespace GeneralUpdate.Core.Pipelines.Context
 
         public Encoding Encoding { get; set; }
 
+        /// <summary>
+        /// Blacklist file list.
+        /// </summary>
         public List<string> BlackFiles { get; set; }
 
+        /// <summary>
+        /// Blacklist File suffix list.
+        /// </summary>
         public List<string> BlackFileFormats { get; set; }
 
         public BaseContext(VersionInfo version, string zipfilePath, string targetPath, string sourcePath, string format, Encoding encoding, List<string> files, List<string> fileFormats)

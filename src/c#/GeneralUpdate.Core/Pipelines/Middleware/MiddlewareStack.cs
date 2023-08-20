@@ -8,11 +8,17 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
 {
     public sealed class MiddlewareNode
     {
+        /// <summary>
+        /// Go to the next middleware node.
+        /// </summary>
         public Func<BaseContext, MiddlewareStack, Task> Next { get; set; }
 
         public MiddlewareNode(Func<BaseContext, MiddlewareStack, Task> next) => Next = next;
     }
 
+    /// <summary>
+    /// Middleware stack space.
+    /// </summary>
     public sealed class MiddlewareStack
     {
         private int maxSize;
@@ -36,6 +42,10 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
 
         public bool IsEmpty() => top == -1;
 
+        /// <summary>
+        /// Add middleware.
+        /// </summary>
+        /// <param name="value"></param>
         public void Push(MiddlewareNode value)
         {
             if (IsFull()) return;
