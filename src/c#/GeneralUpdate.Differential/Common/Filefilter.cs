@@ -20,8 +20,16 @@ namespace GeneralUpdate.Differential.Common
             _blackFileFormats = blackFileFormats;
         }
 
+        /// <summary>
+        /// These files will be skipped when updating.
+        /// </summary>
+        /// <returns></returns>
         public static List<string> GetBlackFiles() => _blackFiles ?? new List<string>() { "Newtonsoft.Json.dll" };
 
+        /// <summary>
+        /// These files that contain the file suffix will be skipped when updating.
+        /// </summary>
+        /// <returns></returns>
         public static List<string> GetBlackFileFormats() => _blackFileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar", ".json" };
     }
 }
