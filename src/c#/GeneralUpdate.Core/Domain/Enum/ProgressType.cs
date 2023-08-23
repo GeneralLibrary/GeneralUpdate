@@ -13,7 +13,7 @@
         Download,
 
         /// <summary>
-        /// 更新文件
+        /// update file
         /// </summary>
         Updatefile,
 
