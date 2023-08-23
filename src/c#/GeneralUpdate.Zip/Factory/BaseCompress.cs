@@ -64,7 +64,7 @@ namespace GeneralUpdate.Zip.Factory
 
         public abstract void Configs(string name, string sourcePath, string destinationPath, Encoding encoding, bool includeBaseDirectory = false);
 
-        public abstract bool CreatZip();
+        public abstract bool CreateZip();
 
         public abstract bool UnZip();
 

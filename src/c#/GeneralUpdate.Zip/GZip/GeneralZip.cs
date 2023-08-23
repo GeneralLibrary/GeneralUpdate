@@ -282,7 +282,7 @@ namespace GeneralUpdate.Zip.GZip
             return fList;
         }
 
-        public override bool CreatZip() => CreatZip(SOURSE_PATH, Path.Combine(_destinationPath, COMPRESS_NAME), CompressionLevel.Optimal, _includeBaseDirectory);
+        public override bool CreateZip() => CreatZip(SOURSE_PATH, Path.Combine(_destinationPath, COMPRESS_NAME), CompressionLevel.Optimal, _includeBaseDirectory);
 
         public override bool UnZip() => UnZip(SOURSE_PATH, _destinationPath);
 

@@ -86,7 +86,7 @@ namespace GeneralUpdate.Zip
         {
             try
             {
-                _operation.CreatZip();
+                _operation.CreateZip();
             }
             catch (Exception ex)
             {

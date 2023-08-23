@@ -19,7 +19,7 @@ namespace GeneralUpdate.Zip.Factory
         /// Create a compressed package.
         /// </summary>
         /// <returns></returns>
-        bool CreatZip();
+        bool CreateZip();
 
         /// <summary>
         /// unzip

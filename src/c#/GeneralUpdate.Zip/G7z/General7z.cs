@@ -25,7 +25,7 @@ namespace GeneralUpdate.Zip.G7z
         private int _unZipCount = 0;
         private int _unzipTotalCount = 0;
 
-        public override bool CreatZip()
+        public override bool CreateZip()
         {
             try
             {
