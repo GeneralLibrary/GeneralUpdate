@@ -293,7 +293,7 @@ namespace GeneralUpdate.Zip.GZip
             COMPRESS_NAME = $"{name}.zip";
             _destinationPath = string.IsNullOrWhiteSpace(destinationPath) ? SOLUTION_BASE_PATH : destinationPath;
             _includeBaseDirectory = includeBaseDirectory;
-            Verifypath(sourcePath, destinationPath);
+            VerifyPath(sourcePath, destinationPath);
         }
     }
 }

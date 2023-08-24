@@ -50,9 +50,9 @@ namespace GeneralUpdate.Zip.Factory
             if (UnZipProgress != null) UnZipProgress(sender, e);
         }
 
-        public void Verifypath(string soursePath, string destinationPath)
+        public void VerifyPath(string sourcePath, string destinationPath)
         {
-            if (string.IsNullOrWhiteSpace(soursePath) || string.IsNullOrWhiteSpace(destinationPath)) throw new ArgumentNullException("'Sourse path' or 'Destination path' Is null or empty.");
+            if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath)) throw new ArgumentNullException("'Source path' or 'Destination path' Is null or empty.");
             if (!Directory.Exists(destinationPath)) throw new Exception("The destination directory does not exist !");
         }
 

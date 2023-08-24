@@ -97,7 +97,7 @@ namespace GeneralUpdate.Zip.G7z
             COMPRESS_NAME = $"{name}.7z";
             _destinationPath = destinationPath ?? SOLUTION_BASE_PATH;
             _encoding = encoding ?? Encoding.Default;
-            Verifypath(sourcePath, destinationPath);
+            VerifyPath(sourcePath, destinationPath);
         }
     }
 }
