@@ -43,16 +43,16 @@ namespace GeneralUpdate.Core.Utils
             }
             foreach (var file in dir.GetFiles())
             {
-                var temppath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(temppath, isOverWrite);
+                var tempPath = Path.Combine(destDirName, file.Name);
+                file.CopyTo(tempPath, isOverWrite);
                 if (action != null) action.Invoke(file.Name);
             }
             if (copySubDirs)
             {
                 foreach (var subdir in dirs)
                 {
-                    var temppath = Path.Combine(destDirName, subdir.Name);
-                    DirectoryCopy(subdir.FullName, temppath, true, isOverWrite, action);
+                    var tempPath = Path.Combine(destDirName, subdir.Name);
+                    DirectoryCopy(subdir.FullName, tempPath, true, isOverWrite, action);
                 }
             }
             Directory.Delete(sourceDirName, true);
@@ -114,8 +114,8 @@ namespace GeneralUpdate.Core.Utils
             {
                 var files = new List<FileInfo>();
                 files.AddRange(new DirectoryInfo(path).GetFiles());
-                var tmpdics = new DirectoryInfo(path).GetDirectories();
-                foreach (var dic in tmpdics)
+                var tmpDics = new DirectoryInfo(path).GetDirectories();
+                foreach (var dic in tmpDics)
                 {
                     files.AddRange(GetAllFiles(dic.FullName));
                 }

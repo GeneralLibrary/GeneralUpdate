@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core
         #region Public Methods
 
         /// <summary>
-        /// Starting an OSS update for windows,linux,mac platform.
+        /// Starting an OSS update for windows,Linux,mac platform.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="parameter"></param>
