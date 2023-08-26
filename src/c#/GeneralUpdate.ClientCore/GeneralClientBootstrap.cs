@@ -87,8 +87,8 @@ namespace GeneralUpdate.ClientCore
                 Packet.AppName = appName;
                 string clienVersion = GetFileVersion(Path.Combine(basePath, $"{Packet.AppName}.exe"));
                 Packet.ClientVersion = clienVersion;
-                Packet.AppType = AppType.UpgradeApp;
-                Packet.UpdateUrl = $"{url}/versions/{AppType.UpgradeApp}/{clienVersion}/{Packet.AppSecretKey}";
+                Packet.AppType = AppType.ClientApp;
+                Packet.UpdateUrl = $"{url}/versions/{AppType.ClientApp}/{clienVersion}/{Packet.AppSecretKey}";
                 //main app.
                 string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
                 string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
