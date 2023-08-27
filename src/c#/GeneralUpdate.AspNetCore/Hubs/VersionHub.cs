@@ -70,7 +70,7 @@ namespace GeneralUpdate.AspNetCore.Hubs
     public static class HubProvider
     {
         private const string GroupName = "VersionGroup";
-        private const string ReceiveMessageflag = "ReceiveMessage";
+        private const string ReceiveMessageFlag = "ReceiveMessage";
 
         public static async Task SendMessage(this IHubContext<Hub> hub, string user, string message)
         {
@@ -80,7 +80,7 @@ namespace GeneralUpdate.AspNetCore.Hubs
             try
             {
                 var clientParameter = SerializeUtil.Serialize(message);
-                await hub.Clients.Groups(GroupName).SendAsync(ReceiveMessageflag, user, clientParameter);
+                await hub.Clients.Groups(GroupName).SendAsync(ReceiveMessageFlag, user, clientParameter);
             }
             catch (Exception ex)
             {
