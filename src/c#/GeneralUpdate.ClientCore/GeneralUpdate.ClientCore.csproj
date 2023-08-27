@@ -45,6 +45,8 @@
     <None Remove="Domain\Service\.gitkeep" />
     <None Remove="Domain\VO\.gitkeep" />
     <None Remove="Download\.gitkeep" />
+    <None Remove="Events\CommonArgs\.gitkeep" />
+    <None Remove="Events\MultiEventArgs\.gitkeep" />
     <None Remove="Exceptions\.gitkeep" />
     <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
     <None Remove="GeneralUpdate.ClientCore.nuspec" />
@@ -201,6 +203,8 @@
     <Folder Include="Download\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
+    <Folder Include="Events\CommonArgs\" />
+    <Folder Include="Events\MultiEventArgs\" />
     <Folder Include="Events\CommonArgs\" />
     <Folder Include="Events\MultiEventArgs\" />
     <Folder Include="Exceptions\CustomArgs\" />
