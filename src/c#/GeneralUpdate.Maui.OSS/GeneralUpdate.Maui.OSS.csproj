@@ -46,6 +46,7 @@
 	<ItemGroup>
 	  <None Remove="Domain\DO\.gitkeep" />
 	  <None Remove="Domain\Enum\.gitkeep" />
+	  <None Remove="Domain\PO\Assembler\.gitkeep" />
 	  <None Remove="Utils\.gitkeep" />
 	</ItemGroup>
 
@@ -72,6 +73,7 @@
 	<ItemGroup>
 	  <Folder Include="Domain\DO\Assembler\" />
 	  <Folder Include="Domain\Enum\" />
+	  <Folder Include="Domain\PO\Assembler\" />
 	  <Folder Include="Domain\PO\Assembler\" />
 	  <Folder Include="Utils\" />
 	</ItemGroup>
