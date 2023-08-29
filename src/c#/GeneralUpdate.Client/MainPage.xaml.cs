@@ -24,9 +24,11 @@ namespace GeneralUpdate.Client
         private void OnLoaded(object sender, EventArgs e)
         {
             //var md5 = FileUtil.GetFileMD5(@"F:\test\update.zip");
+            //Receive sample code pushed by the server
             //VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
         }
 
+        //Receive sample code pushed by the server
         private async void GetMessage(string msg)
         {
             var isUpdate = await Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "update", "cancel");
