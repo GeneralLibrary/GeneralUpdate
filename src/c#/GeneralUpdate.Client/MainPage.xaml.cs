@@ -99,7 +99,7 @@ namespace GeneralUpdate.Client
         /// 获取Windows平台所需的配置参数
         /// </summary>
         /// <returns></returns>
-        private Configinfo GetWindowsConfiginfo()
+        private Configinfo GetWindowsConfigInfo()
         {
             //该对象用于主程序客户端与更新组件进程之间交互用的对象
             var config = new Configinfo();
@@ -130,7 +130,7 @@ namespace GeneralUpdate.Client
         /// 获取Android平台所需要的参数
         /// </summary>
         /// <returns></returns>
-        private Configinfo GetAndroidConfiginfo()
+        private Configinfo GetAndroidConfigInfo()
         {
             var config = new Configinfo();
             config.InstallPath = System.Threading.Thread.GetDomain().BaseDirectory;
@@ -154,7 +154,7 @@ namespace GeneralUpdate.Client
         {
             return await Shell.Current.Dispatcher.DispatchAsync(() =>
             {
-                return Shell.Current.DisplayAlert("Upgrad Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "skip", "update");
+                return Shell.Current.DisplayAlert("Upgrade Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "skip", "update");
             });
         }
 
