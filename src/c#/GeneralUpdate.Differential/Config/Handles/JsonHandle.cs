@@ -126,6 +126,29 @@ namespace GeneralUpdate.Differential.Config.Handles
             return result;
         }
 
+        private void Read(string originalJson,string diffJson) {
+            JObject originalObject = JObject.Parse(originalJson);
+            JObject diffObject = JObject.Parse(diffJson);
+        }
+
+        private string MergeJsonObjects(JObject original, JObject diff)
+        {
+            foreach (var property in diff.Properties())
+            {
+                // 如果差分对象中的属性值不为 null，则更新原始对象的属性值
+                if (property.Value.Type != JTokenType.Null)
+                {
+                    original[property.Name] = property.Value;
+                }
+                else
+                {
+                    // 如果差分对象中的属性值为 null，则从原始对象中删除该属性
+                    original.Remove(property.Name);
+                }
+            }
+            return original.ToString(Formatting.Indented);
+        }
+
         public JsonHandle<TContent> GetAwaiter() => this;
 
         public JsonHandle<TContent> GetResult()
