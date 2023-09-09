@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using GeneralUpdate.Core.Domain.PO;
+using System;
 using System.IO;
-using System.Text;
+using GeneralUpdate.Core.Utils;
 
 namespace GeneralUpdate.Core.Testament
 {
@@ -11,26 +9,23 @@ namespace GeneralUpdate.Core.Testament
     {
         private const string PYTHON_INSATLL = "install.py";
         private const string TESTAMENT = "testament.json";
-        private string _testamentPath,_pythonPath;
+        private string _testamentPath, _pythonPath;
+        private TestamentPO _testamentPO;
+        private string path;
 
-        public TestamentManager(string path) 
+        public TestamentManager()
         {
-            if(string.IsNullOrWhiteSpace(path)) throw new ArgumentNullException("path");
             _testamentPath = Path.Combine(path, TESTAMENT);
             _pythonPath = Path.Combine(path, PYTHON_INSATLL);
         }
 
-        public void Read() 
+        public void Demolish()
         {
-
+            _testamentPO = FileUtil.ReadJsonFile<TestamentPO>(_testamentPath);
+            File.Delete(_testamentPath);
         }
 
-        public TestamentManager Build() 
-        {
-            return this;
-        }
-
-        public void Launch() 
+        public void Build()
         {
         }
     }
