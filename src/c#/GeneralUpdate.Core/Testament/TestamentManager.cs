@@ -2,21 +2,27 @@
 using System;
 using System.IO;
 using GeneralUpdate.Core.Utils;
+using System.Diagnostics;
+using Microsoft.Diagnostics.NETCore.Client;
+using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Testament
 {
     public sealed class TestamentManager
     {
-        private const string PYTHON_INSATLL = "install.py";
         private const string TESTAMENT = "testament.json";
-        private string _testamentPath, _pythonPath;
+        private string _testamentPath;
         private TestamentPO _testamentPO;
-        private string path;
+        private string _path;
 
         public TestamentManager()
         {
-            _testamentPath = Path.Combine(path, TESTAMENT);
-            _pythonPath = Path.Combine(path, PYTHON_INSATLL);
+            _testamentPath = Path.Combine(_path, TESTAMENT);
+        }
+
+        public void Preconditioning(List<string> files)
+        {
+            
         }
 
         public void Demolish()
@@ -25,8 +31,26 @@ namespace GeneralUpdate.Core.Testament
             File.Delete(_testamentPath);
         }
 
-        public void Build()
+        public void Build(TestamentPO testament)
         {
+            FileUtil.CreateJsonFile(_testamentPath, TESTAMENT, _testamentPO);
+            Dump();
+        }
+
+        public void Dump() {
+            var currentProcess = Process.GetCurrentProcess();
+            int pid = currentProcess.Id;
+            try
+            {
+                DumpType dumpType = DumpType.Full;
+                string dumpFilePath = @"./minidump.dmp";
+                var client = new DiagnosticsClient(pid);
+                client.WriteDump(dumpType, dumpFilePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Could not create dump: {ex.Message}");
+            }
         }
     }
 }
