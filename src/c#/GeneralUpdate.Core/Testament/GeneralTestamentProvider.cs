@@ -5,29 +5,22 @@ using GeneralUpdate.Core.Utils;
 using System.Diagnostics;
 using Microsoft.Diagnostics.NETCore.Client;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Testament
 {
     public sealed class GeneralTestamentProvider
     {
-        private const string TESTAMENT = "testament.json";
-        private string _testamentPath;
-        private TestamentPO _testamentPO;
+        private const string TESTAMENT_FILE = "testament.json";
+        private const string DUMP_FILE = "generaldump.dmp";
+        private string _testamentPath, _dumpPath;
         private string _url;
 
         public GeneralTestamentProvider(string url, string path)
         {
             _url = url;
-            _testamentPath = Path.Combine(path, TESTAMENT);
-        }
-
-        /// <summary>
-        /// Before the update, the files that need to be updated are backed up by a complete directory structure.
-        /// </summary>
-        /// <param name="files"></param>
-        public void Preconditioning(List<string> files)
-        {
-            
+            _testamentPath = Path.Combine(path, TESTAMENT_FILE);
+            _dumpPath = Path.Combine(path, DUMP_FILE);
         }
 
         /// <summary>
@@ -35,7 +28,8 @@ namespace GeneralUpdate.Core.Testament
         /// </summary>
         public void Demolish()
         {
-            _testamentPO = FileUtil.ReadJsonFile<TestamentPO>(_testamentPath);
+            //TODO: If the backup file is rolled back to the current process, the restoration file will fail...
+            var testamentPO = FileUtil.ReadJsonFile<TestamentPO>(_testamentPath);
             File.Delete(_testamentPath);
         }
 
@@ -43,25 +37,35 @@ namespace GeneralUpdate.Core.Testament
         /// Generate the contents of the last word, read the last word when the next program starts for backup restoration or re-update.
         /// </summary>
         /// <param name="testament"></param>
-        public void Build(TestamentPO testament)
+        public void Build(VersionPO version,Exception exception)
         {
-            FileUtil.CreateJsonFile(_testamentPath, TESTAMENT, _testamentPO);
-            Dump();
-            //HttpUtil.GetTaskAsync("");
+            if (version == null) return;
+
+            Task.Run(async () => 
+            {
+                //Generate last words locally.
+                var testament = new TestamentPO();
+                testament.Exception = exception;
+                testament.Version = version;
+                FileUtil.CreateJsonFile(_testamentPath, TESTAMENT_FILE, testament);
+
+                //dump files locally everywhere.
+                CreateDump();
+
+                //Report the current update failure to the server.
+                await HttpUtil.GetTaskAsync<string>(_url);
+            });
         }
 
         /// <summary>
         /// Export the dump file of the current application when an unknown exception occurs.
         /// </summary>
-        public void Dump() {
-            var currentProcess = Process.GetCurrentProcess();
-            int pid = currentProcess.Id;
+        private void CreateDump() {
             try
             {
-                DumpType dumpType = DumpType.Full;
-                string dumpFilePath = @"./minidump.dmp";
-                var client = new DiagnosticsClient(pid);
-                client.WriteDump(dumpType, dumpFilePath);
+                var currentProcess = Process.GetCurrentProcess();
+                var client = new DiagnosticsClient(currentProcess.Id);
+                client.WriteDump(DumpType.Full, _dumpPath);
             }
             catch (Exception ex)
             {
