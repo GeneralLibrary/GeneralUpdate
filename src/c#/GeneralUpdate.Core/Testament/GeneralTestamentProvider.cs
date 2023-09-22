@@ -4,7 +4,6 @@ using System.IO;
 using GeneralUpdate.Core.Utils;
 using System.Diagnostics;
 using Microsoft.Diagnostics.NETCore.Client;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Testament
@@ -47,6 +46,7 @@ namespace GeneralUpdate.Core.Testament
                 var testament = new TestamentPO();
                 testament.Exception = exception;
                 testament.Version = version;
+                testament.DumpPath = _dumpPath;
                 FileUtil.CreateJsonFile(_testamentPath, TESTAMENT_FILE, testament);
 
                 //dump files locally everywhere.
