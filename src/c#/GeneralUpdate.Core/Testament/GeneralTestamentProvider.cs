@@ -5,6 +5,7 @@ using GeneralUpdate.Core.Utils;
 using System.Diagnostics;
 using Microsoft.Diagnostics.NETCore.Client;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Testament
 {
@@ -23,37 +24,23 @@ namespace GeneralUpdate.Core.Testament
         }
 
         /// <summary>
-        /// When the program is started, the contents of the last note will be analyzed to restore the backup or continue to update the last note.
-        /// </summary>
-        public void Demolish()
-        {
-            //TODO: If the backup file is rolled back to the current process, the restoration file will fail...
-            var testamentPO = FileUtil.ReadJsonFile<TestamentPO>(_testamentPath);
-            File.Delete(_testamentPath);
-        }
-
-        /// <summary>
         /// Generate the contents of the last word, read the last word when the next program starts for backup restoration or re-update.
         /// </summary>
         /// <param name="testament"></param>
-        public void Build(VersionPO version,Exception exception)
+        public void Build(TestamentPO testament)
         {
-            if (version == null) return;
+            if (testament == null) return;
 
             Task.Run(async () => 
             {
-                //Generate last words locally.
-                var testament = new TestamentPO();
-                testament.Exception = exception;
-                testament.Version = version;
-                testament.DumpPath = _dumpPath;
                 FileUtil.CreateJsonFile(_testamentPath, TESTAMENT_FILE, testament);
-
-                //dump files locally everywhere.
                 CreateDump();
-
-                //Report the current update failure to the server.
-                await HttpUtil.GetTaskAsync<string>(_url);
+                var parameters = new Dictionary<string, string>
+                {
+                    { "TrackID", testament.TrackID },
+                    { "Exception", testament.Exception.ToString() }
+                };
+                await HttpUtil.PostFileTaskAsync<string>(_url, parameters, _dumpPath);
             });
         }
 

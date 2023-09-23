@@ -4,20 +4,24 @@ namespace GeneralUpdate.Core.Domain.PO
 {
     public class TestamentPO
     {
-        public TestamentPO() 
-        {
-            UUID = Guid.NewGuid().ToString();
-            CreateTime = DateTime.Now;
-        }
+        /// <summary>
+        /// The tracking id of this update request
+        /// </summary>
+        public string TrackID { get; set; }
 
-        public string UUID { get; private set; }
-
+        /// <summary>
+        /// dump files everywhere after an exception occurs.
+        /// </summary>
         public string DumpPath { get; set; }
 
-        public DateTime CreateTime { get; private set; }
+        /// <summary>
+        /// Backup the file path that needs to be updated before updating.
+        /// </summary>
+        public string BackupPath { get; set; }
 
+        /// <summary>
+        /// Exception information that occurs when updating fails.
+        /// </summary>
         public Exception Exception { get; set; }
-
-        public VersionPO Version { get; set; }
     }
 }
