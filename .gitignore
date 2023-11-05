@@ -17,6 +17,7 @@ build/
 bld/
 [Bb]in/
 [Oo]bj/
+*.vs/
 
 # Roslyn cache directories
 *.ide/
@@ -184,25 +185,10 @@ FakesAssemblies/
 
 # SVN Repo
 .svn/
-src/c\#/GeneralUpdate.Single/Properties/Settings.Designer.cs
-src/c\#/GeneralUpdate.Single/Properties/Resources.Designer.cs
-src/c\#/GeneralUpdate.Single/Properties/Settings.Designer.cs
-src/c\#/GeneralUpdate.Single/Properties/Resources.Designer.cs
-src/c\#/GeneralUpdate.Single/Properties/Settings.Designer.cs
-src/c\#/GeneralUpdate.Single/Properties/Resources.Designer.cs
-*.cs
-src/c\#/GeneralUpdate.Single/Properties/Resources.Designer.cs
 *.vsidx
 *.v2
 *.lock
 *.txt
 *.v3
 *.v5
-src/c\#/.vs/ProjectEvaluation/generalupdate.projects.v5
-src/c\#/.vs/ProjectEvaluation/generalupdate.metadata.v5
-/example/winform/TestWinForms/.vs
-/example/fileserver/.vs
-/example/fileserver/.vs
-/example/fileserver/.vs
-/example/fileserver/.vs
 src/c\#/.vs
