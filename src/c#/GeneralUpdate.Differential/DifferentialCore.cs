@@ -18,6 +18,9 @@ namespace GeneralUpdate.Differential
     {
         #region Private Members
 
+        private List<string> _files;
+        private List<string> _backupFiles;
+        private const string BACKUP = "_bak";
         private static readonly object _lockObj = new object();
         private static DifferentialCore _instance;
 
@@ -198,6 +201,38 @@ namespace GeneralUpdate.Differential
         /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
         public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
+
+        public async Task Backup(string appPath, string targetPath)
+        {
+            var fileProvider = new FileProvider();
+            var nodes = await fileProvider.Compare(appPath, targetPath);
+
+            _files = nodes.Item3.Select(i=> i.FullName).ToList();
+            _backupFiles = new List<string>();
+
+            foreach (var file in _files)
+            {
+                string dirName = Path.GetDirectoryName(file);
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+                string extension = Path.GetExtension(file);
+                string newFullPath = Path.Combine(dirName, fileNameWithoutExtension + BACKUP + extension);
+                _backupFiles.Add(newFullPath);
+                File.Copy(file, newFullPath);
+            }
+        }
+
+        public async Task Restore()
+        {
+            await Task.Run(() =>
+            {
+                for (int i = 0; i < _backupFiles.Count; i++)
+                {
+                    string restorePath = _files[i];
+                    File.Delete(restorePath);
+                    File.Move(_backupFiles[i], restorePath);
+                }
+            });
+        }
 
         #endregion Public Methods
 
