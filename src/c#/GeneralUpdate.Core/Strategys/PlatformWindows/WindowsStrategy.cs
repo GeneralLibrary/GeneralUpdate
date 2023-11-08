@@ -73,7 +73,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 {
                     case AppType.ClientApp:
                         Process.Start(path, Packet.ProcessBase64);
-                        Process.GetCurrentProcess().Kill();
                         break;
 
                     case AppType.UpgradeApp:
