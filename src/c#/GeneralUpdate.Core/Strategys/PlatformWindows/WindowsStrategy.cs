@@ -72,7 +72,8 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 switch (appType)
                 {
                     case AppType.ClientApp:
-                        Process.Start(path, Packet.ProcessBase64);
+                        Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64);
+                        Process.Start(path);
                         break;
 
                     case AppType.UpgradeApp:

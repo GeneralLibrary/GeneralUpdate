@@ -14,17 +14,17 @@ namespace GeneralUpdate.Core
     {
         public GeneralUpdateBootstrap() : base()
         {
+            Remote();
         }
 
         /// <summary>
-        /// Set parameter.
+        /// Gets values from system environment variables (ClientParameter object to base64 string).
         /// </summary>
-        /// <param name="base64">ClientParameter object to base64 string.</param>
-        /// <returns></returns>
-        public GeneralUpdateBootstrap Remote(string base64)
+        private void Remote()
         {
             try
             {
+                var base64 = Environment.GetEnvironmentVariable("ProcessBase64");
                 var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
                 Packet = ProcessAssembler.ToPacket(processInfo);
                 Packet.AppType = AppType.UpgradeApp;
@@ -34,7 +34,6 @@ namespace GeneralUpdate.Core
             {
                 throw new ArgumentException($"Client parameter json conversion failed, please check whether the parameter content is legal : {ex.Message},{ex.StackTrace}.");
             }
-            return this;
         }
 
         /// <summary>
