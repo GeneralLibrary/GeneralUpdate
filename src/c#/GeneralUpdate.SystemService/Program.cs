@@ -1,4 +1,5 @@
 using GeneralUpdate.SystemService.services;
+using System.IO.Pipes;
 
 namespace GeneralUpdate.SystemService
 {

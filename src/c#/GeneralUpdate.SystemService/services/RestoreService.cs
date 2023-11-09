@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
+
+using Newtonsoft.Json;
 
 namespace GeneralUpdate.SystemService.services
 {
     internal class RestoreService : BackgroundService
     {
         private readonly ILogger<RestoreService> _logger;
+        private const string UPGRADE_STATUS = "upgrade_status";
+        private const string FAIL = "fail";
+        private const string RESTORE = "restore";
 
         public RestoreService(ILogger<RestoreService> logger)
         {
@@ -17,24 +18,28 @@ namespace GeneralUpdate.SystemService.services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            await Task.Run(async () => 
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                while (stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    await Task.Delay(1000 * 10);
+                    var status = Environment.GetEnvironmentVariable(UPGRADE_STATUS, EnvironmentVariableTarget.Machine);
+                    if (status.Equals(FAIL)) 
+                    {
+                        Restore();
+                    }
                 }
-                await Task.Delay(1000, stoppingToken);
+            });
+        }
+
+        private void Restore() 
+        {
+            var restoreJson = Environment.GetEnvironmentVariable(RESTORE, EnvironmentVariableTarget.Machine);
+            if (!string.IsNullOrWhiteSpace(restoreJson))
+            {
+                var restoreObj = JsonConvert.DeserializeObject<Stack<List<string>>>(restoreJson);
+                //TODO: Restore
             }
-        }
-
-        public override Task StartAsync(CancellationToken cancellationToken)
-        {
-            return base.StartAsync(cancellationToken);
-        }
-
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            return base.StopAsync(cancellationToken);
         }
     }
 }
