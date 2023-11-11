@@ -54,7 +54,6 @@ namespace GeneralUpdate.Upgrad
                 Option(UpdateOption.Encoding, Encoding.Default).
                 Option(UpdateOption.DownloadTimeOut, 60).
                 Option(UpdateOption.Format, Format.ZIP).
-                Remote(args[0]).
                 LaunchTaskAsync();
             });
             Console.Read();
