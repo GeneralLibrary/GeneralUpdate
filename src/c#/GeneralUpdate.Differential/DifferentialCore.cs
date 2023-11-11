@@ -20,6 +20,8 @@ namespace GeneralUpdate.Differential
 
         private static readonly object _lockObj = new object();
         private static DifferentialCore _instance;
+        private Stack<List<string>> _backupFiles = null;
+        private string _backupRootDir;
 
         /// <summary>
         /// Differential file format .
@@ -43,7 +45,10 @@ namespace GeneralUpdate.Differential
         #region Constructors
 
         private DifferentialCore()
-        { }
+        {
+            _backupFiles = new Stack<List<string>>();
+            CreateRootDirInTemp();
+        }
 
         #endregion Constructors
 
@@ -57,7 +62,10 @@ namespace GeneralUpdate.Differential
                 {
                     lock (_lockObj)
                     {
-                        if (_instance == null) _instance = new DifferentialCore();
+                        if (_instance == null) 
+                        {
+                            _instance = new DifferentialCore();
+                        }
                     }
                 }
                 return _instance;
@@ -199,6 +207,37 @@ namespace GeneralUpdate.Differential
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
         public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="appPath"></param>
+        /// <param name="patchPath"></param>
+        public void Backup(string appPath, string patchPath) 
+        {
+            var destinationPath = CreateSubfolderInRootDir();
+            var files = new List<string>();
+            foreach (string filePath in Directory.GetFiles(patchPath, "*.*", SearchOption.AllDirectories))
+            {
+                string correspondingPathInA = filePath.Replace(patchPath, appPath);
+
+                if (File.Exists(correspondingPathInA))
+                {
+                    string correspondingPathInC = filePath.Replace(patchPath, destinationPath);
+
+                    string directoryName = Path.GetDirectoryName(correspondingPathInC);
+                    if (!Directory.Exists(directoryName))
+                    {
+                        Directory.CreateDirectory(directoryName);
+                    }
+                    files.Add(correspondingPathInA);
+                    File.Copy(correspondingPathInA, correspondingPathInC, true);
+                }
+            }
+            _backupFiles.Push(files);
+        }
+
+        public Stack<List<string>> GetBackups() => _backupFiles;
+
         #endregion Public Methods
 
         #region Private Methods
@@ -254,6 +293,23 @@ namespace GeneralUpdate.Differential
         }
 
         private void OnCompressProgress(object sender, BaseCompressProgressEventArgs e) => _compressProgressCallback(sender, e);
+
+        private void CreateRootDirInTemp()
+        {
+            if (!string.IsNullOrEmpty(_backupRootDir)) return;
+            string tempPath = Path.GetTempPath();
+            string uniqueFolderName = Guid.NewGuid().ToString();
+            _backupRootDir = Path.Combine(tempPath, uniqueFolderName);
+            if (!Directory.Exists(_backupRootDir)) Directory.CreateDirectory(_backupRootDir);
+        }
+
+        private string CreateSubfolderInRootDir()
+        {
+            string subFolderName = DateTime.Now.ToString("yyyyMMddHHmmssffff");
+            string subFolderPath = Path.Combine(_backupRootDir, subFolderName);
+            if (!Directory.Exists(subFolderPath)) Directory.CreateDirectory(subFolderPath);
+            return subFolderPath;
+        }
 
         #endregion Private Methods
     }

@@ -43,7 +43,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.Maui.OSS", "G
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeneralUpdate.OSSClient", "GeneralUpdate.OSSClient\GeneralUpdate.OSSClient.csproj", "{2877DCA1-7EA6-42E9-A1C2-399B51E24893}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "system_service", "system_service", "{7DC3D1E6-0C07-4DC0-86B0-CC8CE48E795F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "service", "service", "{0315E141-AF1C-426D-A032-8D3A20502E3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.ProtectService", "GeneralUpdate.ProtectService\GeneralUpdate.ProtectService.csproj", "{ABEE5D49-CC5A-4366-BD50-E7625905D481}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,6 +127,10 @@ Global
 		{2877DCA1-7EA6-42E9-A1C2-399B51E24893}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2877DCA1-7EA6-42E9-A1C2-399B51E24893}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2877DCA1-7EA6-42E9-A1C2-399B51E24893}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{ABEE5D49-CC5A-4366-BD50-E7625905D481}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABEE5D49-CC5A-4366-BD50-E7625905D481}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABEE5D49-CC5A-4366-BD50-E7625905D481}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABEE5D49-CC5A-4366-BD50-E7625905D481}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -147,6 +153,7 @@ Global
 		{9A28F525-124A-4019-8F09-BC48030E0E70} = {50B6BB53-63A9-414B-9BB0-79A69EEF6785}
 		{C4BDA544-2A6E-442C-B7D0-32CD7A996933} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 		{2877DCA1-7EA6-42E9-A1C2-399B51E24893} = {74BE0282-A10D-4A81-A0F0-FAA79A6152B7}
+		{ABEE5D49-CC5A-4366-BD50-E7625905D481} = {0315E141-AF1C-426D-A032-8D3A20502E3F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A7B2D0AD-E000-4749-BAC0-FF21B9872805}

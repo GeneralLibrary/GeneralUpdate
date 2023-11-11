@@ -114,8 +114,8 @@ namespace GeneralUpdate.Core.Utils
             {
                 var files = new List<FileInfo>();
                 files.AddRange(new DirectoryInfo(path).GetFiles());
-                var tmpDics = new DirectoryInfo(path).GetDirectories();
-                foreach (var dic in tmpDics)
+                var tmpDir = new DirectoryInfo(path).GetDirectories();
+                foreach (var dic in tmpDir)
                 {
                     files.AddRange(GetAllFiles(dic.FullName));
                 }

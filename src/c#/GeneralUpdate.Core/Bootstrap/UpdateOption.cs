@@ -39,6 +39,11 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
 
+        /// <summary>
+        /// Should the rollback current backup feature be enabled.
+        /// </summary>
+        public static readonly UpdateOption<bool> Restore = ValueOf<bool>("RESTORE");
+
         #endregion parameter configuration
 
         internal UpdateOption(int id, string name)
