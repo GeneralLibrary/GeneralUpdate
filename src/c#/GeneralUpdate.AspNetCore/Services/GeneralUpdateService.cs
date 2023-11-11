@@ -63,9 +63,5 @@ namespace GeneralUpdate.AspNetCore.Services
             if (versions == null) throw new ArgumentNullException(@"versions cannot be null !");
             if (string.IsNullOrEmpty(clientAppkey) || string.IsNullOrEmpty(appSecretKey)) throw new NullReferenceException("The APP key does not exist !");
         }
-
-        public void Testament(VersionDTO version, string exception)
-        {
-        }
     }
 }
