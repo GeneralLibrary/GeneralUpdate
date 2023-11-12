@@ -10,6 +10,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys.PlatformWindows
@@ -45,7 +46,19 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
-                            var pipelineBuilder = new PipelineBuilder<BaseContext>(new BaseContext(version, zipFilePath, patchPath, Packet.InstallPath, Packet.Format, Packet.Encoding, Packet.BlackFiles, Packet.BlackFormats)).
+
+                            var context = new BaseContext.Builder()
+                                                      .SetVersion(version)
+                                                      .SetZipfilePath(zipFilePath)
+                                                      .SetTargetPath(patchPath)
+                                                      .SetSourcePath(Packet.InstallPath)
+                                                      .SetFormat(Packet.Format)
+                                                      .SetEncoding(Packet.Encoding)
+                                                      .SetBlackFiles(Packet.BlackFiles)
+                                                      .SetBlackFileFormats(Packet.BlackFormats)
+                                                      .Build();
+
+                            var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
                                 UseMiddleware<MD5Middleware>().
                                 UseMiddleware<ZipMiddleware>().
                                 UseMiddleware<PatchMiddleware>();
