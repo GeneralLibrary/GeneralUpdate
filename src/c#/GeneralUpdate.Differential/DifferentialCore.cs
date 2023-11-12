@@ -208,7 +208,7 @@ namespace GeneralUpdate.Differential
         public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
 
         /// <summary>
-        /// 
+        /// Back up the corresponding local collection of files in the update package.
         /// </summary>
         /// <param name="appPath"></param>
         /// <param name="patchPath"></param>
@@ -233,10 +233,16 @@ namespace GeneralUpdate.Differential
                     File.Copy(correspondingPathInA, correspondingPathInC, true);
                 }
             }
-            _backupFiles.Push(files);
+            _backupFiles?.Push(files);
         }
 
         public Stack<List<string>> GetBackups() => _backupFiles;
+
+        public void DeleteRootDir()
+        {
+            if (Directory.Exists(_backupRootDir))
+                Directory.Delete(_backupRootDir, true);
+        }
 
         #endregion Public Methods
 
