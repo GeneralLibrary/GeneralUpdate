@@ -117,8 +117,8 @@ namespace GeneralUpdate.Core.Strategys
                         isCompleted = e.IsCompleted;
                         if(File.Exists(zipFilePath))  File.Delete(zipFilePath);
                     };
-                    zipFactory.CreateOperate(OperationType.GZip, version.Name, zipFilePath, _appPath, false, _encoding)
-                        .UnZip();
+                    zipFactory.CreateOperate(OperationType.GZip, version.Name, zipFilePath, _appPath, false, _encoding);
+                    zipFactory.UnZip();
                 }
                 return isCompleted;
             }

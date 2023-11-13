@@ -84,7 +84,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 switch (appType)
                 {
                     case AppType.ClientApp:
-                        Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64);
+                        Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.Machine);
                         Process.Start(path);
                         break;
 

@@ -24,7 +24,7 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var base64 = Environment.GetEnvironmentVariable("ProcessBase64");
+                var base64 = Environment.GetEnvironmentVariable("ProcessBase64", EnvironmentVariableTarget.Machine);
                 var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
                 Packet = ProcessAssembler.ToPacket(processInfo);
                 Packet.AppType = AppType.UpgradeApp;

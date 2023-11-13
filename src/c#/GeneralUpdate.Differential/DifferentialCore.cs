@@ -240,6 +240,8 @@ namespace GeneralUpdate.Differential
 
         public void DeleteRootDir()
         {
+            if (string.IsNullOrWhiteSpace(_backupRootDir)) return;
+
             if (Directory.Exists(_backupRootDir))
                 Directory.Delete(_backupRootDir, true);
         }
