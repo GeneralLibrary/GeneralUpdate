@@ -10,6 +10,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Strategys.PlatformWindows
@@ -85,11 +86,11 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 {
                     case AppType.ClientApp:
                         Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.Machine);
-                        Process.Start(path);
+                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60));
                         break;
 
                     case AppType.UpgradeApp:
-                        Process.Start(path);
+                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60));
                         break;
                 }
                 return true;
@@ -128,6 +129,29 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
             {
                 EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Waits for the specified process to start within a given time.
+        /// </summary>
+        /// <param name="applicationPath">Process objects to monitor</param>
+        /// <param name="timeout">The maximum interval for waiting for the process to start (The default value is 60 seconds).</param>
+        /// <param name="callbackAction">If the startup fails, the result is notified to the protection service.</param>
+        private void WaitForProcessToStart(string applicationPath, TimeSpan timeout, Action<string,string> callbackAction = null)
+        {
+            using (Process process = Process.Start(applicationPath))
+            {
+                var startTime = DateTime.UtcNow;
+                while (DateTime.UtcNow - startTime < timeout)
+                {
+                    if (!process.HasExited)
+                    {
+                        callbackAction?.Invoke(applicationPath, Packet.TempPath);
+                        return;
+                    }
+                    Thread.Sleep(2 * 1000);
+                }
             }
         }
 
