@@ -236,14 +236,42 @@ namespace GeneralUpdate.Differential
             _backupFiles?.Push(files);
         }
 
-        public Stack<List<string>> GetBackups() => _backupFiles;
-
+        /// <summary>
+        /// Delete the backup file directory and recursively delete all backup content.
+        /// </summary>
         public void DeleteRootDir()
         {
             if (string.IsNullOrWhiteSpace(_backupRootDir)) return;
 
             if (Directory.Exists(_backupRootDir))
                 Directory.Delete(_backupRootDir, true);
+        }
+
+        /// <summary>
+        /// Restore the backup files of each version to the original directory.
+        /// </summary>
+        /// <param name="targetDirectory"></param>
+        /// <returns></returns>
+        public bool Restore(string targetDirectory)
+        {
+            try
+            {
+                while (_backupFiles?.Count > 0)
+                {
+                    List<string> currentList = _backupFiles.Pop();
+                    foreach (var filePath in currentList)
+                    {
+                        string fileName = Path.GetFileName(filePath);
+                        string destFile = Path.Combine(targetDirectory, fileName);
+                        File.Copy(filePath, destFile, true);
+                    }
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         #endregion Public Methods
@@ -302,6 +330,9 @@ namespace GeneralUpdate.Differential
 
         private void OnCompressProgress(object sender, BaseCompressProgressEventArgs e) => _compressProgressCallback(sender, e);
 
+        /// <summary>
+        /// Create a root directory for backup files
+        /// </summary>
         private void CreateRootDirInTemp()
         {
             if (!string.IsNullOrEmpty(_backupRootDir)) return;
@@ -311,6 +342,10 @@ namespace GeneralUpdate.Differential
             if (!Directory.Exists(_backupRootDir)) Directory.CreateDirectory(_backupRootDir);
         }
 
+        /// <summary>
+        /// Create a subfolder based on the root directory of the backup file for version-by-version backup.
+        /// </summary>
+        /// <returns></returns>
         private string CreateSubfolderInRootDir()
         {
             string subFolderName = DateTime.Now.ToString("yyyyMMddHHmmssffff");

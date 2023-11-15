@@ -6,7 +6,9 @@ using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
 using GeneralUpdate.Core.Utils;
+using GeneralUpdate.Differential;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -86,11 +88,11 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 {
                     case AppType.ClientApp:
                         Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.Machine);
-                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60));
+                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60), Restore);
                         break;
 
                     case AppType.UpgradeApp:
-                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60));
+                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60), Restore);
                         break;
                 }
                 return true;
@@ -137,23 +139,25 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         /// </summary>
         /// <param name="applicationPath">Process objects to monitor</param>
         /// <param name="timeout">The maximum interval for waiting for the process to start (The default value is 60 seconds).</param>
-        /// <param name="callbackAction">If the startup fails, the result is notified to the protection service.</param>
-        private void WaitForProcessToStart(string applicationPath, TimeSpan timeout, Action<string,string> callbackAction = null)
+        /// <param name="callbackAction"></param>
+        private void WaitForProcessToStart(string applicationPath, TimeSpan timeout, Action<string> callbackAction = null)
         {
             using (Process process = Process.Start(applicationPath))
             {
                 var startTime = DateTime.UtcNow;
                 while (DateTime.UtcNow - startTime < timeout)
                 {
+                    Thread.Sleep(2 * 1000);
                     if (!process.HasExited)
                     {
-                        callbackAction?.Invoke(applicationPath, Packet.TempPath);
+                        callbackAction?.Invoke(applicationPath);
                         return;
                     }
-                    Thread.Sleep(2 * 1000);
                 }
             }
         }
+
+        private void Restore(string targetDir) => DifferentialCore.Instance.Restore(targetDir);
 
         #endregion Private Methods
     }
