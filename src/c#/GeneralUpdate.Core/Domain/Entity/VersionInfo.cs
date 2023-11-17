@@ -41,5 +41,10 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// Remote service url address.
         /// </summary>
         public string Url { get; set; }
+
+        public override string ToString()
+        {
+            return Version;
+        }
     }
 }
