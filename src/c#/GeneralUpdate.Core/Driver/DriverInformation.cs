@@ -9,8 +9,20 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class DriverInformation
     {
+        /// <summary>
+        /// Directory for storing the driver to be installed (Update the driver file in the package).
+        /// </summary>
         public string InstallDirectory { get; private set; }
+
+        /// <summary>
+        /// All driver backup directories.
+        /// </summary>
         public string OutPutDirectory { get; private set; }
+
+        /// <summary>
+        /// A collection of driver files to be backed up.
+        /// </summary>
+        public List<string> DriverNames { get; private set; }
 
         private DriverInformation(){}
 
@@ -30,10 +42,17 @@ namespace GeneralUpdate.Core.Driver
                 return this;
             }
 
+            public Builder SetDriverNames(List<string> driverNames)
+            {
+                _information.DriverNames = driverNames;
+                return this;
+            }
+
             public DriverInformation Build()
             {
                 if (string.IsNullOrWhiteSpace(_information.InstallDirectory) || 
-                    string.IsNullOrWhiteSpace(_information.OutPutDirectory))
+                    string.IsNullOrWhiteSpace(_information.OutPutDirectory) || 
+                    !_information.DriverNames.Any())
                 {
                     throw new InvalidOperationException("Cannot create DriverInformation, not all fields are set.");
                 }

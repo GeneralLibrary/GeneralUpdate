@@ -15,6 +15,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             var information = new DriverInformation.Builder()
                 .SetInstallDirectory(Path.Combine(context.SourcePath,context.Version.ToString()))
                 .SetOutPutDirectory(Path.Combine(context.TargetPath,context.Version.ToString()))
+                .SetDriverNames(null)
                 .Build();
 
             var processor = new DriverProcessor();

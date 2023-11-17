@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.IO;
 using System.Text;
 
 namespace GeneralUpdate.Core.Driver
@@ -18,11 +18,14 @@ namespace GeneralUpdate.Core.Driver
         
         public void Execute()
         {
-            var command = new StringBuilder("/c dism /online /export-driver /destination:\"")
-                .Append(_information.OutPutDirectory)
+            foreach (var driverName in _information.DriverNames)
+            {
+                var command = new StringBuilder("/c dism /online /export-driver /destination:\"")
+                .Append(Path.Combine(_information.OutPutDirectory, driverName))
                 .Append("\"")
                 .ToString();
-            CommandExecutor.ExecuteCommand(command);
+                CommandExecutor.ExecuteCommand(command);
+            }
         }
     }
 }
