@@ -192,3 +192,5 @@ FakesAssemblies/
 *.v3
 *.v5
 src/c\#/.vs
+src/c\#/.idea
+src/c\#/global.json
