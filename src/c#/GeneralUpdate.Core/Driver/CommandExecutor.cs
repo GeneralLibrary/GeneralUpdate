@@ -25,6 +25,7 @@ If possible, use pre-tested drivers that are proven to work.
             
             var processStartInfo = new ProcessStartInfo
             {
+                WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = "cmd.exe",
                 Arguments = command,
                 UseShellExecute = false,
