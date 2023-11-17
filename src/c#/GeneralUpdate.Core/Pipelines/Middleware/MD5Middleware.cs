@@ -25,9 +25,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             }
             catch (Exception ex)
             {
-                exception = exception ?? ex;
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
-                throw exception;
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception ?? ex));
             }
         }
 
