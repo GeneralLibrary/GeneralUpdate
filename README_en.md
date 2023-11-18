@@ -26,6 +26,8 @@
 | Upgrade each other                                | yes              | The main program updates the upgrade program, and the upgrade program updates the main program. |
 | Black list                                        | yes              | Files and file extensions from the blacklist are skipped during the update process. |
 | OSS(MAUI)                                         | yes              | Minimal updates require only the version configuration file of version.json to be placed on the file server. Components are updated and downloaded based on the version information in the configuration file.(Supported windows，MAUI Android) |
+| Restore                                           | test             | Each version is backed up during a version-by-version update and rolled back version-by-version if the update fails. |
+| Driver upgrade                                    | test             | The driver file (.INF) of each version is backed up during the version-by-version update and is rolled back version-by-version if the update fails. |
 
 ### 2.Help documentation ###
 
