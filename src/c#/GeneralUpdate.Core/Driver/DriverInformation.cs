@@ -42,6 +42,11 @@ namespace GeneralUpdate.Core.Driver
                 return this;
             }
 
+            /// <summary>
+            /// Find the collection of driver names that need to be updated from the update package.
+            /// </summary>
+            /// <param name="driverNames"></param>
+            /// <returns></returns>
             public Builder SetDriverNames(List<string> driverNames)
             {
                 _information.DriverNames = driverNames;
