@@ -16,6 +16,7 @@ namespace GeneralUpdate.Core.Driver
         {
             try
             {
+                //Install all drivers in the specified directory, and if the installation fails, restore all the drivers in the backup directory.
                 var command = new StringBuilder("/c pnputil /add-driver \"")
                     .Append(_information.InstallDirectory)
                     .Append("\"")

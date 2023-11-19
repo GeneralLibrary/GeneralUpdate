@@ -13,6 +13,7 @@ namespace GeneralUpdate.Core.Driver
 
         public void Execute()
         {
+            //Restore all drives in the backup directory.
             var command = new StringBuilder("/c pnputil /add-driver \"")
                 .Append(_information.OutPutDirectory)
                 .Append("\"")
