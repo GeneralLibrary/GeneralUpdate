@@ -18,6 +18,9 @@ namespace GeneralUpdate.Core.Driver
         
         public void Execute()
         {
+            /*
+             * Back up the specified list of drives.
+             */
             foreach (var driverName in _information.DriverNames)
             {
                 var command = new StringBuilder("/c dism /online /export-driver /destination:\"")
