@@ -131,5 +131,10 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// File formats in the blacklist will skip the update.
         /// </summary>
         public List<string> BlackFormats { get; set; }
+
+        /// <summary>
+        /// Whether to enable automatic backup during the upgrade.
+        /// </summary>
+        public bool IsRestore { get; set; }
     }
 }
