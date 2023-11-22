@@ -94,10 +94,7 @@ namespace GeneralUpdate.Core.Bootstrap
             return _strategy;
         }
 
-        protected string GetPlatform()
-        {
-            return _strategy.GetPlatform();
-        }
+        protected string GetPlatform()=> _strategy.GetPlatform();
 
         protected IStrategy ExecuteStrategy()
         {
