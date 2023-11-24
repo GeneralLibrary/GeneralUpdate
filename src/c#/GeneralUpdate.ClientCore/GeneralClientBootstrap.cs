@@ -8,6 +8,7 @@ using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using GeneralUpdate.Core.Strategys;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -21,11 +22,16 @@ namespace GeneralUpdate.ClientCore
     /// </summary>
     public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
     {
-        private Func<bool> _customOption;
-        private Func<Task<bool>> _customTaskOption;
+        private Func<bool> _customSkipOption;
+        private Func<Task<bool>> _customSkipTaskOption;
+
+        private List<Func<bool>> _customOptions;
+        private List<Func<Task<bool>>> _customTaskOptions;
 
         public GeneralClientBootstrap() : base()
         {
+            _customOptions = new List<Func<bool>>();
+            _customTaskOptions = new List<Func<Task<bool>>>();
         }
 
         #region Public Methods
@@ -48,6 +54,8 @@ namespace GeneralUpdate.ClientCore
 
         private async Task<GeneralClientBootstrap> BaseLaunch()
         {
+            //bool isSuccess = await ExecuteCustomOptions();
+            //if (!isSuccess) return this;
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
             var upgradeResp = await versionService.ValidationVersion(Packet.UpdateUrl);
@@ -126,10 +134,10 @@ namespace GeneralUpdate.ClientCore
         /// </summary>
         /// <param name="func">Custom function ,Custom actions to let users decide whether to update. true update false do not update .</param>
         /// <returns></returns>
-        public GeneralClientBootstrap SetCustomOption(Func<bool> func)
+        public GeneralClientBootstrap SetCustomSkipOption(Func<bool> func)
         {
             if (func == null) throw new ArgumentNullException(nameof(func));
-            _customOption = func;
+            _customSkipOption = func;
             return this;
         }
 
@@ -139,10 +147,38 @@ namespace GeneralUpdate.ClientCore
         /// <param name="func">Custom function ,Custom actions to let users decide whether to update. true update false do not update .</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public GeneralClientBootstrap SetCustomOption(Func<Task<bool>> func)
+        public GeneralClientBootstrap SetCustomSkipOption(Func<Task<bool>> func)
         {
             if (func == null) throw new ArgumentNullException(nameof(func));
-            _customTaskOption = func;
+            _customSkipTaskOption = func;
+            return this;
+        }
+
+        /// <summary>
+        /// Add an asynchronous custom operation. 
+        /// In theory, any custom operation can be done. It is recommended to register the environment check method to ensure that there are normal dependencies and environments after the update is completed.
+        /// </summary>
+        /// <param name="func"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public GeneralClientBootstrap AddCustomOption(Func<bool> func) 
+        {
+            if(func == null) throw new ArgumentNullException(nameof(func));
+            _customOptions.Add(func);
+            return this; 
+        }
+
+        /// <summary>
+        /// Add a synchronization custom operation. 
+        /// In theory, any custom operation can be done. It is recommended to register the environment check method to ensure that there are normal dependencies and environments after the update is completed.
+        /// </summary>
+        /// <param name="func"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public GeneralClientBootstrap AddCustomOption(Func<Task<bool>> func) 
+        {
+            if (func == null) throw new ArgumentNullException(nameof(func));
+            _customTaskOptions.Add(func);
             return this;
         }
 
@@ -173,14 +209,38 @@ namespace GeneralUpdate.ClientCore
             {
                 bool isSkip = false;
                 if (isForcibly) return false;
-                if (_customTaskOption != null) isSkip = await _customTaskOption.Invoke();
-                if (_customOption != null) isSkip = _customOption.Invoke();
+                if (_customSkipTaskOption != null) isSkip = await _customSkipTaskOption.Invoke();
+                if (_customSkipOption != null) isSkip = _customSkipOption.Invoke();
                 return isSkip;
             }
             catch (Exception ex)
             {
                 throw new GeneralUpdateException<ExceptionArgs>($"The injected user skips this update with an exception ! {ex.Message}", ex.InnerException);
             }
+        }
+
+        /// <summary>
+        /// Performs all injected custom operations. 
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> ExecuteCustomOptions() 
+        {
+            if (_customOptions.Any())
+            {
+                _customOptions.ForEach(option => option.Invoke());
+                return true;
+            }
+
+            if (_customTaskOptions.Any())
+            {
+                foreach (var option in _customTaskOptions)
+                {
+                    await option.Invoke();
+                }
+                return true;
+            }
+
+            return true;
         }
 
         #endregion Private Methods

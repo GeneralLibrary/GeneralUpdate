@@ -141,7 +141,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         /// <param name="callbackAction"></param>
         private void WaitForProcessToStart(string applicationPath, TimeSpan timeout, Action<string> callbackAction = null)
         {
-            using (Process process = Process.Start(applicationPath))
+            using (var process = Process.Start(applicationPath))
             {
                 var startTime = DateTime.UtcNow;
                 while (DateTime.UtcNow - startTime < timeout)
