@@ -12,10 +12,7 @@ namespace GeneralUpdate.Core
 {
     public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
     {
-        public GeneralUpdateBootstrap() : base()
-        {
-            Remote();
-        }
+        public GeneralUpdateBootstrap() : base()=> Remote();
 
         /// <summary>
         /// Gets values from system environment variables (ClientParameter object to base64 string).
