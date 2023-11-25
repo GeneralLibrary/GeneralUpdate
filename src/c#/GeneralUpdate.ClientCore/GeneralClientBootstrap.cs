@@ -54,8 +54,7 @@ namespace GeneralUpdate.ClientCore
 
         private async Task<GeneralClientBootstrap> BaseLaunch()
         {
-            //bool isSuccess = await ExecuteCustomOptions();
-            //if (!isSuccess) return this;
+            await ExecuteCustomOptions();
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
             var upgradeResp = await versionService.ValidationVersion(Packet.UpdateUrl);
@@ -161,11 +160,11 @@ namespace GeneralUpdate.ClientCore
         /// <param name="func"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public GeneralClientBootstrap AddCustomOption(Func<bool> func) 
+        public GeneralClientBootstrap AddCustomOption(List<Func<bool>> funcs)
         {
-            if(func == null) throw new ArgumentNullException(nameof(func));
-            _customOptions.Add(func);
-            return this; 
+            if (funcs == null || !funcs.Any()) throw new ArgumentNullException(nameof(funcs));
+            _customOptions.AddRange(funcs);
+            return this;
         }
 
         /// <summary>
@@ -175,10 +174,10 @@ namespace GeneralUpdate.ClientCore
         /// <param name="func"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public GeneralClientBootstrap AddCustomOption(Func<Task<bool>> func) 
+        public GeneralClientBootstrap AddCustomOption(List<Func<Task<bool>>> funcs)
         {
-            if (func == null) throw new ArgumentNullException(nameof(func));
-            _customTaskOptions.Add(func);
+            if (funcs == null || !funcs.Any()) throw new ArgumentNullException(nameof(funcs));
+            _customTaskOptions.AddRange(funcs);
             return this;
         }
 
@@ -223,24 +222,26 @@ namespace GeneralUpdate.ClientCore
         /// Performs all injected custom operations. 
         /// </summary>
         /// <returns></returns>
-        private async Task<bool> ExecuteCustomOptions() 
+        private async Task ExecuteCustomOptions() 
         {
-            if (_customOptions.Any())
-            {
-                _customOptions.ForEach(option => option.Invoke());
-                return true;
-            }
-
             if (_customTaskOptions.Any())
             {
                 foreach (var option in _customTaskOptions)
                 {
-                    await option.Invoke();
+                    var isSuccess = await option.Invoke();
+                    if (!isSuccess)
+                        Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
                 }
-                return true;
             }
-
-            return true;
+            else if (_customOptions.Any())
+            {
+                foreach (var option in _customOptions)
+                {
+                    var isSuccess = option.Invoke();
+                    if (!isSuccess) 
+                        Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
+                }
+            }
         }
 
         #endregion Private Methods
