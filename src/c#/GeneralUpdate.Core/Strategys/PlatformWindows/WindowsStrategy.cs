@@ -146,7 +146,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 var startTime = DateTime.UtcNow;
                 while (DateTime.UtcNow - startTime < timeout)
                 {
-                    Thread.Sleep(10 * 1000);
+                    Thread.Sleep(2 * 1000);
                     if (!process.HasExited)
                     {
                         callbackAction?.Invoke(applicationPath);
