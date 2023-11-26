@@ -73,7 +73,7 @@ namespace GeneralUpdate.Client
                 .Option(UpdateOption.Format, Format.ZIP)
                 .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                .SetCustomOption(ShowCustomOption)
+                .SetCustomSkipOption(ShowCustomOption)
                 //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
                 //如果不需要扩展，需要重新传入黑名单集合来覆盖。
                 .SetBlacklist(GetBlackFiles(), GetBlackFormats())
