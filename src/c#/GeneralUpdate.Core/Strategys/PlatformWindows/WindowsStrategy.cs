@@ -60,7 +60,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                                                       .Build();
 
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
-                                UseMiddleware<MD5Middleware>().
+                                UseMiddleware<HashMiddleware>().
                                 UseMiddleware<ZipMiddleware>().
                                 UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Launch();
@@ -146,7 +146,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 var startTime = DateTime.UtcNow;
                 while (DateTime.UtcNow - startTime < timeout)
                 {
-                    Thread.Sleep(2 * 1000);
+                    Thread.Sleep(3 * 1000);
                     if (!process.HasExited)
                     {
                         callbackAction?.Invoke(applicationPath);

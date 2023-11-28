@@ -7,11 +7,11 @@ namespace GeneralUpdate.Core.Domain.Entity
         public VersionInfo()
         { }
 
-        public VersionInfo(long pubTime, string name, string mD5, string version, string url)
+        public VersionInfo(long pubTime, string name, string hash, string version, string url)
         {
             PubTime = pubTime;
             Name = name ?? throw new ArgumentNullException(nameof(name));
-            MD5 = mD5 ?? throw new ArgumentNullException(nameof(mD5));
+            Hash = hash ?? throw new ArgumentNullException(nameof(hash));
             Version = version ?? throw new ArgumentNullException(nameof(version));
             Url = url ?? throw new ArgumentNullException(nameof(Url));
             if (!IsURL(Url)) throw new Exception($"Illegal url {nameof(Url)}");
@@ -30,7 +30,7 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// <summary>
         /// Compare and verify with the downloaded update package.
         /// </summary>
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         /// <summary>
         /// The version number.

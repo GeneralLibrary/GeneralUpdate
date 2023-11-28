@@ -10,9 +10,9 @@ namespace GeneralUpdate.Differential.Config.Cache
         public string Name { get; set; }
 
         /// <summary>
-        /// file md5 code .
+        /// file hash code .
         /// </summary>
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         /// <summary>
         /// configuation file content.

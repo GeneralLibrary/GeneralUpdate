@@ -36,7 +36,7 @@ app.MapPost("/push", async Task<string> (HttpContext context) =>
 app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientType, string clientVersion, string clientAppKey, IUpdateService updateService) =>
 {
     var versions = new List<VersionDTO>();
-    var md5 = "9bf414990a67e74f11752d03f49b15d8";//生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
+    var hash = "9bf414990a67e74f11752d03f49b15d8";//生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
     var pubTime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
     string version = null;
     if (clientType == AppType.ClientApp)
@@ -53,7 +53,7 @@ app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientT
     }
     var url = $"http://192.168.50.203/update.zip";//更新包的下载地址
     var name = "update";
-    versions.Add(new VersionDTO(md5, pubTime, version, url, name));
+    versions.Add(new VersionDTO(hash, pubTime, version, url, name));
     return updateService.Update(clientType, clientVersion, version, clientAppKey, GetAppSecretKey(), false, versions);
 });
 
@@ -69,7 +69,7 @@ app.MapPost("/upload", async Task<string> (HttpContext context, HttpRequest requ
         int.TryParse(contextReq.Form["clientType"], out int clientType);
         var version = contextReq.Form["clientType"].ToString();
         var clientAppKey = contextReq.Form["clientAppKey"].ToString();
-        var md5 = contextReq.Form["md5"].ToString();
+        var hash = contextReq.Form["hash"].ToString();
 
         if (!request.HasFormContentType) throw new Exception("ContentType was not included in the request !");
         var form = await request.ReadFormAsync();

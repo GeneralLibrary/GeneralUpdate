@@ -51,6 +51,7 @@
     <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
     <None Remove="GeneralUpdate.ClientCore.nuspec" />
     <None Remove="GeneralUpdate.ico" />
+    <None Remove="HashAlgorithms\.gitkeep" />
     <None Remove="nuget.exe" />
     <None Remove="Pipelines\Attributes\.gitkeep" />
     <None Remove="Pipelines\Context\.gitkeep" />
@@ -113,13 +114,17 @@
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha256HashAlgorithm.cs" Link="HashAlgorithms\Sha256HashAlgorithm.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" Link="Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" Link="Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Context\BaseContext.cs" Link="Pipelines\Context\BaseContext.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" Link="Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\ConfigMiddleware.cs" Link="Pipelines\Middleware\ConfigMiddleware.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\HashMiddleware.cs" Link="Pipelines\Middleware\HashMiddleware.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\IMiddleware.cs" Link="Pipelines\Middleware\IMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MD5Middleware.cs" Link="Pipelines\Middleware\MD5Middleware.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareExtensions.cs" Link="Pipelines\Middleware\MiddlewareExtensions.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareStack.cs" Link="Pipelines\Middleware\MiddlewareStack.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\PatchMiddleware.cs" Link="Pipelines\Middleware\PatchMiddleware.cs" />
@@ -209,6 +214,7 @@
     <Folder Include="Events\MultiEventArgs\" />
     <Folder Include="Exceptions\CustomArgs\" />
     <Folder Include="Exceptions\CustomException\" />
+    <Folder Include="HashAlgorithms\" />
     <Folder Include="Pipelines\MiddlewareResolver\" />
     <Folder Include="Pipelines\Middleware\" />
     <Folder Include="Pipelines\Context\" />

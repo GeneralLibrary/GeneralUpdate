@@ -14,7 +14,7 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public string Path { get; set; }
 
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         public FileNode Left { get; set; }
 
@@ -127,16 +127,16 @@ namespace GeneralUpdate.Differential.ContentProvider
         }
 
         /// <summary>
-        /// Compare tree nodes equally by MD5 and file names.
+        /// Compare tree nodes equally by Hash and file names.
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            if (obj == null) return false; //throw new ArgumentNullException(nameof(obj));
+            if (obj == null) return false;
             var tempNode = obj as FileNode;
             if (tempNode == null) throw new ArgumentException(nameof(tempNode));
-            return MD5.Equals(tempNode.MD5) && Name.Equals(tempNode.Name);
+            return Hash.Equals(tempNode.Hash) && Name.Equals(tempNode.Name);
         }
 
         public override int GetHashCode() => base.GetHashCode();

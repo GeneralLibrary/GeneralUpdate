@@ -15,9 +15,9 @@ namespace GeneralUpdate.Core.Domain.DO
         public string Url { get; set; }
 
         /// <summary>
-        /// MD5 verification code
+        /// Hash verification code
         /// </summary>
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         /// <summary>
         /// Update the package name.
@@ -44,17 +44,17 @@ namespace GeneralUpdate.Core.Domain.DO
         /// </summary>
         /// <param name="guid"></param>
         /// <param name="url"></param>
-        /// <param name="mD5"></param>
+        /// <param name="hash"></param>
         /// <param name="name"></param>
         /// <param name="format"></param>
         /// <param name="version"></param>
         /// <param name="pubTime"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        public VersionConfigDO(string guid, string url, string mD5, string name, string format, string version, long pubTime)
+        public VersionConfigDO(string guid, string url, string hash, string name, string format, string version, long pubTime)
         {
             Guid = guid ?? throw new ArgumentNullException(nameof(guid));
             Url = url ?? throw new ArgumentNullException(nameof(url));
-            MD5 = mD5 ?? throw new ArgumentNullException(nameof(mD5));
+            Hash = hash ?? throw new ArgumentNullException(nameof(hash));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Format = format ?? throw new ArgumentNullException(nameof(format));
             Version = version ?? throw new ArgumentNullException(nameof(version));

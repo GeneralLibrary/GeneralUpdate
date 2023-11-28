@@ -8,7 +8,7 @@ namespace GeneralUpdate.MiniBowl
 {
     internal class MiniBowlBootstrap
     {
-        void Config() { }
+        void WithConfig() { }
 
         void Launch() { }
     }

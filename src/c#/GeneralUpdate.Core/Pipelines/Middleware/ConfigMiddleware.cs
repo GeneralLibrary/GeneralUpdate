@@ -16,7 +16,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         {
             try
             {
-                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.MD5, "Update configuration file ..."));
+                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Hash, "Update configuration file ..."));
                 await ConfigFactory.Instance.Deploy();
                 var node = stack.Pop();
                 if (node != null) await node.Next.Invoke(context, stack);

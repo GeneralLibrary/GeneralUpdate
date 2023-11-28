@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Domain.DO.Assembler
 
         public static VersionInfo ToDataObject(VersionConfigDO versionDO)
         {
-            return new VersionInfo(versionDO.PubTime, versionDO.Name, versionDO.MD5, versionDO.Version, versionDO.Url);
+            return new VersionInfo(versionDO.PubTime, versionDO.Name, versionDO.Hash, versionDO.Version, versionDO.Url);
         }
     }
 }

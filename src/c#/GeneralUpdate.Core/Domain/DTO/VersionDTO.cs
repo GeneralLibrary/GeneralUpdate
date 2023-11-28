@@ -2,16 +2,16 @@
 {
     public class VersionDTO
     {
-        public VersionDTO(string md5, long pubTime, string version, string url, string name)
+        public VersionDTO(string hash, long pubTime, string version, string url, string name)
         {
-            MD5 = md5;
+            Hash = hash;
             PubTime = pubTime;
             Version = version;
             Url = url;
             Name = name;
         }
 
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         public long PubTime { get; set; }
 
