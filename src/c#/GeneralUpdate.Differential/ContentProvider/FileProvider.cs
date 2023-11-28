@@ -1,9 +1,11 @@
-﻿using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -77,9 +79,11 @@ namespace GeneralUpdate.Differential.ContentProvider
             foreach (var subPath in Directory.GetFiles(path))
             {
                 if (IsMatchBlacklist(subPath)) continue;
-                var md5 = FileUtil.GetFileMD5(subPath);
+
+                var hashAlgorithm = new Sha256HashAlgorithm();
+                var hash = hashAlgorithm.ComputeHash(subPath);
                 var subFileInfo = new FileInfo(subPath);
-                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, MD5 = md5, FullName = subFileInfo.FullName });
+                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, Hash = hash, FullName = subFileInfo.FullName });
             }
             foreach (var subPath in Directory.GetDirectories(path))
             {

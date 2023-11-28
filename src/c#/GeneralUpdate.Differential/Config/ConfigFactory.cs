@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Common;
 using GeneralUpdate.Differential.Config.Cache;
 using GeneralUpdate.Differential.Config.Handles;
@@ -74,8 +75,9 @@ namespace GeneralUpdate.Differential.Config
                     {
                         var value = cacheItem.Value;
                         if (value == null) continue;
-                        var fileMD5 = FileUtil.GetFileMD5(value.OldPath);
-                        var oldEntity = await Handle(value.OldPath, fileMD5);
+                        var hashAlgorithm = new Sha256HashAlgorithm();
+                        var hash = hashAlgorithm.ComputeHash(value.OldPath);
+                        var oldEntity = await Handle(value.OldPath, hash);
                         await InitHandle<ConfigEntity>(value.Handle).Write(oldEntity, value);
                     }
                     Dispose();
@@ -179,9 +181,10 @@ namespace GeneralUpdate.Differential.Config
             {
                 foreach (var file in files)
                 {
-                    var fileMD5 = FileUtil.GetFileMD5(file);
-                    var entity = await Handle(file, fileMD5);
-                    _configCache.TryAdd(fileMD5, entity);
+                    var hashAlgorithm = new Sha256HashAlgorithm();
+                    var hash = hashAlgorithm.ComputeHash(file);
+                    var entity = await Handle(file, hash);
+                    _configCache.TryAdd(hash, entity);
                 }
                 _configCache.Build();
             }
@@ -195,15 +198,15 @@ namespace GeneralUpdate.Differential.Config
         /// Process file content.
         /// </summary>
         /// <param name="file">file path</param>
-        /// <param name="fileMD5">md5</param>
+        /// <param name="hash">hash</param>
         /// <returns></returns>
-        private async Task<ConfigEntity> Handle(string file, string fileMD5)
+        private async Task<ConfigEntity> Handle(string file, string hash)
         {
             var entity = new ConfigEntity();
             entity.Path = file;
             entity.Name = Path.GetFileName(file);
             entity.OldPath = Path.Combine(_appPath, entity.Name);
-            entity.MD5 = fileMD5;
+            entity.Hash = hash;
             entity.Handle = ToEnum(file);
             entity.Content = await InitHandle<object>(entity.Handle).Read(file);
             return entity;

@@ -18,7 +18,7 @@
         /// <summary>
         /// Compare and verify with the downloaded update package.
         /// </summary>
-        public string MD5 { get; set; }
+        public string Hash { get; set; }
 
         /// <summary>
         /// The version number.

@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Domain.DTO.Assembler
 
         public static VersionInfo ToEntity(VersionDTO versionDTO)
         {
-            return new VersionInfo(versionDTO.PubTime, versionDTO.Name, versionDTO.MD5, versionDTO.Version, versionDTO.Url);
+            return new VersionInfo(versionDTO.PubTime, versionDTO.Name, versionDTO.Hash, versionDTO.Version, versionDTO.Url);
         }
     }
 }

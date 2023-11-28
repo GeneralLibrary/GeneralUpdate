@@ -62,7 +62,7 @@ namespace GeneralUpdate.Maui.OSS
                     => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
                 var apkFile = new Java.IO.File(file);
                 if (!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
-                if (!versionConfig.MD5.Equals(GetFileMD5(apkFile, 64))) throw new Exception("The apk MD5 value does not match !");
+                if (!versionConfig.Hash.Equals(GetFileMD5(apkFile, 64))) throw new Exception("The apk MD5 value does not match !");
 
                 //5.Launch the apk to install.
                 var intent = new Android.Content.Intent(Android.Content.Intent.ActionView);

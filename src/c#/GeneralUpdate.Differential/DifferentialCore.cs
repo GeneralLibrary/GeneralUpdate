@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
 using GeneralUpdate.Differential.ContentProvider;
@@ -168,9 +169,10 @@ namespace GeneralUpdate.Differential
                 if (deleteListJson != null) 
                 {
                     var deleteFiles = FileUtil.ReadJsonFile<IEnumerable<FileNode>>(deleteListJson.FullName);
+                    var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {
-                        var resultFile = oldFiles.FirstOrDefault(i => FileUtil.GetFileMD5(i.FullName).ToUpper().Equals(file.MD5.ToUpper()));
+                        var resultFile = oldFiles.FirstOrDefault(i => string.Equals(hashAlgorithm.ComputeHash(i.FullName), file.Hash, StringComparison.OrdinalIgnoreCase));
                         if (resultFile == null) continue;
                         if (File.Exists(resultFile.FullName)) File.Delete(resultFile.FullName);
                     }

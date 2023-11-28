@@ -38,8 +38,8 @@
         Patch,
 
         /// <summary>
-        /// MD5 code
+        /// Hash code
         /// </summary>
-        MD5
+        Hash
     }
 }

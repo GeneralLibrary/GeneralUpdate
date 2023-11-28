@@ -3,34 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace GeneralUpdate.Core.Utils
 {
     public static class FileUtil
     {
-        public static string GetFileMD5(string fileName)
-        {
-            try
-            {
-                var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var md5 = new MD5CryptoServiceProvider();
-                var retVal = md5.ComputeHash(file);
-                file.Close();
-                var sb = new StringBuilder();
-                for (var i = 0; i < retVal.Length; i++)
-                {
-                    sb.Append(retVal[i].ToString("x2"));
-                }
-                return sb.ToString();
-            }
-            catch (Exception)
-            {
-                return string.Empty;
-            }
-        }
-
         public static void DirectoryCopy(string sourceDirName, string destDirName,
           bool copySubDirs, bool isOverWrite, Action<string> action)
         {
