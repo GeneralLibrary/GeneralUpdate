@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GeneralUpdate.MiniBowl.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace GeneralUpdate.MiniBowl
 {
     internal class MiniBowlBootstrap
     {
-        void WithConfig() { }
+        void WithConfig(ProcessInfo processInfo) { }
 
         void Launch() { }
     }
