@@ -7,7 +7,7 @@ namespace GeneralUpdate.SystemService
         public static void Main(string[] args)
         {
             var builder = Host.CreateApplicationBuilder(args);
-            builder.Services.AddHostedService<QuartzService>();
+            builder.Services.AddHostedService<WillMessageService>();
             var host = builder.Build();
             host.Run();
         }
