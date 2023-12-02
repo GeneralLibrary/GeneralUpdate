@@ -21,8 +21,6 @@ namespace GeneralUpdate.Differential
 
         private static readonly object _lockObj = new object();
         private static DifferentialCore _instance;
-        private Stack<List<string>> _backupFiles = null;
-        private string _backupRootDir;
 
         /// <summary>
         /// Differential file format .
@@ -42,16 +40,6 @@ namespace GeneralUpdate.Differential
         private Action<object, BaseCompressProgressEventArgs> _compressProgressCallback;
 
         #endregion Private Members
-
-        #region Constructors
-
-        private DifferentialCore()
-        {
-            _backupFiles = new Stack<List<string>>();
-            CreateRootDirInTemp();
-        }
-
-        #endregion Constructors
 
         #region Public Properties
 
@@ -209,74 +197,6 @@ namespace GeneralUpdate.Differential
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
         public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
 
-        /// <summary>
-        /// Back up the corresponding local collection of files in the update package.
-        /// </summary>
-        /// <param name="appPath"></param>
-        /// <param name="patchPath"></param>
-        public void Backup(string appPath, string patchPath) 
-        {
-            var destinationPath = CreateSubfolderInRootDir();
-            var files = new List<string>();
-            foreach (string filePath in Directory.GetFiles(patchPath, "*.*", SearchOption.AllDirectories))
-            {
-                string correspondingPathInA = filePath.Replace(patchPath, appPath);
-
-                if (File.Exists(correspondingPathInA))
-                {
-                    string correspondingPathInC = filePath.Replace(patchPath, destinationPath);
-
-                    string directoryName = Path.GetDirectoryName(correspondingPathInC);
-                    if (!Directory.Exists(directoryName))
-                    {
-                        Directory.CreateDirectory(directoryName);
-                    }
-                    files.Add(correspondingPathInA);
-                    File.Copy(correspondingPathInA, correspondingPathInC, true);
-                }
-            }
-            _backupFiles?.Push(files);
-        }
-
-        /// <summary>
-        /// Delete the backup file directory and recursively delete all backup content.
-        /// </summary>
-        public void DeleteRootDir()
-        {
-            if (string.IsNullOrWhiteSpace(_backupRootDir)) return;
-
-            if (Directory.Exists(_backupRootDir))
-                Directory.Delete(_backupRootDir, true);
-        }
-
-        /// <summary>
-        /// Restore the backup files of each version to the original directory.
-        /// </summary>
-        /// <param name="targetDirectory"></param>
-        /// <returns></returns>
-        public bool Restore(string targetDirectory)
-        {
-            try
-            {
-                while (_backupFiles?.Count > 0)
-                {
-                    List<string> currentList = _backupFiles.Pop();
-                    foreach (var filePath in currentList)
-                    {
-                        string fileName = Path.GetFileName(filePath);
-                        string destFile = Path.Combine(targetDirectory, fileName);
-                        File.Copy(filePath, destFile, true);
-                    }
-                }
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-        
         #endregion Public Methods
 
         #region Private Methods
@@ -332,30 +252,6 @@ namespace GeneralUpdate.Differential
         }
 
         private void OnCompressProgress(object sender, BaseCompressProgressEventArgs e) => _compressProgressCallback(sender, e);
-
-        /// <summary>
-        /// Create a root directory for backup files
-        /// </summary>
-        private void CreateRootDirInTemp()
-        {
-            if (!string.IsNullOrEmpty(_backupRootDir)) return;
-            string tempPath = Path.GetTempPath();
-            string uniqueFolderName = Guid.NewGuid().ToString();
-            _backupRootDir = Path.Combine(tempPath, uniqueFolderName);
-            if (!Directory.Exists(_backupRootDir)) Directory.CreateDirectory(_backupRootDir);
-        }
-
-        /// <summary>
-        /// Create a subfolder based on the root directory of the backup file for version-by-version backup.
-        /// </summary>
-        /// <returns></returns>
-        private string CreateSubfolderInRootDir()
-        {
-            string subFolderName = DateTime.Now.ToString("yyyyMMddHHmmssffff");
-            string subFolderPath = Path.Combine(_backupRootDir, subFolderName);
-            if (!Directory.Exists(subFolderPath)) Directory.CreateDirectory(subFolderPath);
-            return subFolderPath;
-        }
 
         #endregion Private Methods
     }

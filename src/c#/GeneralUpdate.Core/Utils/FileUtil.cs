@@ -106,6 +106,7 @@ namespace GeneralUpdate.Core.Utils
 
         public static void CreateJsonFile<T>(string targetPath,string fileName,T obj) 
         {
+            if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
             var fileFullPath = Path.Combine(targetPath,fileName);
             if (File.Exists(fileFullPath)) File.Delete(fileFullPath);
             var jsonString = JsonConvert.SerializeObject(obj);
@@ -123,6 +124,11 @@ namespace GeneralUpdate.Core.Utils
                 }
             }
             return default(T);
+        }
+
+        public static void DeleteFile(string path) 
+        {
+            if (File.Exists(path)) File.Delete(path);
         }
     }
 
