@@ -8,7 +8,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Domain\PO\.gitkeep" />
+    <None Remove="Utils\.gitkeep" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\Domain\PO\WillMessagePO.cs" Link="Domain\PO\WillMessagePO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
+    <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="Services\WillMessageManager.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Quartz" Version="3.8.0" />
   </ItemGroup>
 </Project>

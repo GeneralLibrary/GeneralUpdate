@@ -1,13 +1,27 @@
-﻿using GeneralUpdate.SystemService.PersistenceObjects;
+﻿using GeneralUpdate.Core.Domain.PO;
+using GeneralUpdate.Core.WillMessage;
 
 namespace GeneralUpdate.SystemService.Services
 {
     internal class WillMessageService : BackgroundService
     {
+        #region Private Members
+
         private readonly string? _path;
         private FileSystemWatcher _fileWatcher;
 
+        #endregion
+
+        #region Constructors
+
         public WillMessageService(IConfiguration configuration) => _path = configuration.GetValue<string>("WatcherPath");
+
+        #endregion
+
+        #region Public Properties
+        #endregion
+
+        #region Public Methods
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -22,24 +36,35 @@ namespace GeneralUpdate.SystemService.Services
             return Task.CompletedTask;
         }
 
+        #endregion
+
+        #region Private Methods
+
         private void OnChanged(object sender, FileSystemEventArgs e)
         {
-            var willMessage = new WillMessagePersistence<ProcessPersistence>();
-            switch (willMessage.Status)
+            var message = WillMessageManager.Instance.GetWillMessage();
+            if (message == null) return;
+            switch (message.Status)
             {
-                case ProcessStatus.NotStarted:
+                case WillMessageStatus.NotStarted:
+                    return;
+                case WillMessageStatus.Failed:
+                    //WillMessageManager.Instance.Restore();
                     break;
-                case ProcessStatus.Failed:
-                    break;
-                case ProcessStatus.Completed: 
+                case WillMessageStatus.Completed:
+                    WillMessageManager.Instance.Clear();
                     break;
             }
         }
 
         private void OnStopping()
         {
+            if (_fileWatcher == null) return;
             _fileWatcher.EnableRaisingEvents = false;
             _fileWatcher.Dispose();
         }
+
+
+        #endregion
     }
 }
