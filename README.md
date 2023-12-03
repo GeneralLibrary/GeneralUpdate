@@ -30,6 +30,40 @@
 | OSS                            | 支持     | 极简化更新，是一套独立的更新机制。只需要在文件服务器中放置version.json的版本配置文件。组件会根据配置文件中的版本信息进行更新下载。(支持Windows，MAUI Android) |
 | 回滚                           | 待测试   | 逐版本更新时会备份每个版本，如果更新失败则逐版本回滚。       |
 | 驱动更新                       | 待测试   | 逐版本更新时会备份每个版本的驱动文件（.inf），如果更新失败则逐版本回滚。 |
+| 系统服务                       | 待测试   | 开机时和升级时会检查升级是否成功，如果失败则根据遗言还原之前的备份。遗言是更新之前就已经自动创建在C:\generalupdate_willmessages目录下的will_message.json文件。will_message.json的内容是持久化回滚备份的文件目录相关信息。（需要部署GeneralUpdate.SystemService系统服务） |
+| 自定义方法列表                 | 待测试   | 注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境） |
+
+
+
+**GeneralUpdate.SystemService发布/部署**
+
+GeneralUpdate.SystemService是一个windows系统服务，并不是部署在服务端的web api。它的主要作用是监听更新过程，以及更新崩溃之后还原。
+
+**发布：**
+
+推荐发布Single file，如果想发布AOT版本需要移除源码中映射代码。
+
+```shell
+dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
+```
+
+**创建/部署windows服务：**
+
+```shell
+sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
+```
+
+**启动已部署的windows服务：**
+
+```shell
+sc start GeneralUpdate.SystemService
+```
+
+**删除已部署的windows服务：**
+
+```shell
+sc delete GeneralUpdate.SystemService
+```
 
 
 

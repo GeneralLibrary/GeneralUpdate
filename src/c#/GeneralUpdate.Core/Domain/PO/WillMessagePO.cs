@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Domain.PO
 {
-    internal enum WillMessageStatus
+    public enum WillMessageStatus
     {
         /// <summary>
         /// Processing has not yet begun.
@@ -19,11 +19,9 @@ namespace GeneralUpdate.Core.Domain.PO
         Failed
     }
 
-    internal class BackupPO 
+    public class BackupPO 
     {
-        public string Name { get; set; }
-
-        public string InstallPath { get; set; }
+        public string AppPath { get; set; }
 
         public string BackupPath { get; set; }
 
@@ -32,14 +30,48 @@ namespace GeneralUpdate.Core.Domain.PO
         public int AppType { get; set; }
     }
 
-    internal class WillMessagePO
+    public class WillMessagePO
     {
-        public Stack<List<BackupPO>> Message { get; set; }
+        public Stack<BackupPO> Message { get; private set; }
+        public WillMessageStatus Status { get; private set; }
+        public DateTime CreateTime { get; private set; }
+        public DateTime ChangeTime { get; private set; }
 
-        public WillMessageStatus Status { get; set; }
+        private WillMessagePO() { }
 
-        public DateTime CreateTime { get; set; }
+        public class Builder
+        {
+            private readonly WillMessagePO _messagePO = new WillMessagePO();
 
-        public DateTime ChangeTime { get; set; }
+            public Builder SetMessage(Stack<BackupPO> message)
+            {
+                _messagePO.Message = message ?? throw new ArgumentNullException($"{nameof(message)} cannot be null");
+                return this;
+            }
+
+            public Builder SetStatus(WillMessageStatus status)
+            {
+                _messagePO.Status = status;
+                return this;
+            }
+
+            public Builder SetCreateTime(DateTime createTime)
+            {
+                _messagePO.CreateTime = createTime;
+                return this;
+            }
+
+            public Builder SetChangeTime(DateTime changeTime)
+            {
+                _messagePO.ChangeTime = changeTime;
+                return this;
+            }
+
+            public WillMessagePO Build()
+            {
+                return _messagePO;
+            }
+        }
     }
+
 }

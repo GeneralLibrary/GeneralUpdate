@@ -13,20 +13,12 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
     {
         public async Task InvokeAsync(BaseContext context, MiddlewareStack stack)
         {
-            Exception exception = null;
-            try
-            {
-                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Hash, "Verify file MD5 code ..."));
-                var version = context.Version;
-                bool isVerify = VerifyFileHash(context.ZipfilePath, version.Hash);
-                if (!isVerify) exception = new Exception($"The update package hash code is inconsistent ! version-{version.Version}  hash-{version.Hash} .");
-                var node = stack.Pop();
-                if (node != null) await node.Next.Invoke(context, stack);
-            }
-            catch (Exception ex)
-            {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception ?? ex));
-            }
+            EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Hash, "Verify file MD5 code ..."));
+            var version = context.Version;
+            bool isVerify = VerifyFileHash(context.ZipfilePath, version.Hash);
+            if (!isVerify) throw new Exception($"The update package hash code is inconsistent ! version-{version.Version}  hash-{version.Hash} .");
+            var node = stack.Pop();
+            if (node != null) await node.Next.Invoke(context, stack);
         }
 
         private bool VerifyFileHash(string fileName, string hash)

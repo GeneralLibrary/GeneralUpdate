@@ -49,7 +49,7 @@ namespace GeneralUpdate.Core.Strategys
                     if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
                     //2.Parse the JSON version configuration file content.
-                    var versions = FileUtil.ReadJsonFile<List<VersionPO>>(jsonPath);
+                    var versions = FileUtil.GetJson<List<VersionPO>>(jsonPath);
                     if (versions == null) throw new NullReferenceException(nameof(versions));
 
                     //3.Download version by version according to the version of the configuration file.

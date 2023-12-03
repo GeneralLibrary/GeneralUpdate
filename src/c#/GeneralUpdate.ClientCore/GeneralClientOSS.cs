@@ -32,7 +32,7 @@ namespace GeneralUpdate.ClientCore
                     var versionsFilePath = Path.Combine(basePath, configParams.VersionFileName);
                     DownloadFile(configParams.Url + "/" + configParams.VersionFileName, versionsFilePath);
                     if (!File.Exists(versionsFilePath)) return;
-                    var versions = FileUtil.ReadJsonFile<List<VersionPO>>(versionsFilePath);
+                    var versions = FileUtil.GetJson<List<VersionPO>>(versionsFilePath);
                     if (versions == null || versions.Count == 0) return;
                     versions = versions.OrderByDescending(x => x.PubTime).ToList();
                     var newVersion = versions.First();

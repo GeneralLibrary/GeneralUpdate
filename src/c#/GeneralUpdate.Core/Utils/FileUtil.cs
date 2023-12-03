@@ -104,7 +104,7 @@ namespace GeneralUpdate.Core.Utils
             }
         }
 
-        public static void CreateJsonFile<T>(string targetPath,string fileName,T obj) 
+        public static void CreateJson<T>(string targetPath,string fileName,T obj) 
         {
             if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
             var fileFullPath = Path.Combine(targetPath,fileName);
@@ -113,7 +113,7 @@ namespace GeneralUpdate.Core.Utils
             File.WriteAllText(fileFullPath, jsonString);
         }
 
-        public static T ReadJsonFile<T>(string path)
+        public static T GetJson<T>(string path)
         {
             if (File.Exists(path)) 
             {
@@ -126,9 +126,14 @@ namespace GeneralUpdate.Core.Utils
             return default(T);
         }
 
-        public static void DeleteFile(string path) 
+        /// <summary>
+        /// Delete the backup file directory and recursively delete all backup content.
+        /// </summary>
+        public static void DeleteDir(string path)
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (string.IsNullOrWhiteSpace(path)) return;
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
         }
     }
 

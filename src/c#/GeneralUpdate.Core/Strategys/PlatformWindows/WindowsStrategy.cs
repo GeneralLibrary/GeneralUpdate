@@ -6,7 +6,7 @@ using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
 using GeneralUpdate.Core.Utils;
-using GeneralUpdate.Differential;
+using GeneralUpdate.Core.WillMessage;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -47,7 +47,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
-
+                            
                             var context = new BaseContext.Builder()
                                                       .SetVersion(version)
                                                       .SetZipfilePath(zipFilePath)
@@ -57,11 +57,14 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                                                       .SetEncoding(Packet.Encoding)
                                                       .SetBlackFiles(Packet.BlackFiles)
                                                       .SetBlackFileFormats(Packet.BlackFormats)
+                                                      .SetAppType(Packet.AppType)
                                                       .Build();
 
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
                                 UseMiddleware<HashMiddleware>().
                                 UseMiddleware<ZipMiddleware>().
+                                UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled).
+                                UseMiddlewareIf<WillMessageMiddleware>(Packet.WillMessageEnabled).
                                 UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Launch();
                         }
@@ -87,11 +90,11 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 {
                     case AppType.ClientApp:
                         Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.Machine);
-                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60), Restore);
+                        WaitForProcessToStart(path, 20, ()=> WillMessageManager.Instance.Check());
                         break;
 
                     case AppType.UpgradeApp:
-                        WaitForProcessToStart(path, TimeSpan.FromSeconds(60), Restore);
+                        WaitForProcessToStart(path, 20, () => WillMessageManager.Instance.Check());
                         break;
                 }
                 return true;
@@ -109,7 +112,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         public override string GetPlatform() => PlatformType.Windows;
 
-        #endregion Public Methods
+#endregion Public Methods
 
         #region Private Methods
 
@@ -139,24 +142,23 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         /// <param name="applicationPath">Process objects to monitor</param>
         /// <param name="timeout">The maximum interval for waiting for the process to start (The default value is 60 seconds).</param>
         /// <param name="callbackAction"></param>
-        private void WaitForProcessToStart(string applicationPath, TimeSpan timeout, Action<string> callbackAction = null)
+        private void WaitForProcessToStart(string applicationPath, int timeout, Action callbackAction = null)
         {
             using (var process = Process.Start(applicationPath))
             {
                 var startTime = DateTime.UtcNow;
-                while (DateTime.UtcNow - startTime < timeout)
+                var timeSpan = TimeSpan.FromSeconds(timeout);
+                while (DateTime.UtcNow - startTime < timeSpan)
                 {
-                    Thread.Sleep(3 * 1000);
+                    Thread.Sleep(2 * 1000);
                     if (!process.HasExited)
                     {
-                        callbackAction?.Invoke(applicationPath);
+                        callbackAction?.Invoke();
                         return;
                     }
                 }
             }
         }
-
-        private void Restore(string targetDir) => DifferentialCore.Instance.Restore(targetDir);
 
         #endregion Private Methods
     }

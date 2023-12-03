@@ -40,9 +40,14 @@ namespace GeneralUpdate.Core.Bootstrap
         public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
 
         /// <summary>
-        /// Should the rollback current backup feature be enabled.
+        /// Whether to enable the driver upgrade function.
         /// </summary>
-        public static readonly UpdateOption<bool> Restore = ValueOf<bool>("RESTORE");
+        public static readonly UpdateOption<bool> Drive = ValueOf<bool>("DRIVE");
+
+        /// <summary>
+        /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
+        /// </summary>
+        public static readonly UpdateOption<bool> WillMessage = ValueOf<bool>("WILLMESSAGE");
 
         #endregion parameter configuration
 

@@ -16,6 +16,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
         public string TargetPath { get; private set; }
         public string SourcePath { get; private set; }
         public string Format { get; private set; }
+        public int AppType { get; private set; }
         public Encoding Encoding { get; private set; }
         public List<string> BlackFiles { get; private set; }
         public List<string> BlackFileFormats { get; private set; }
@@ -74,11 +75,16 @@ namespace GeneralUpdate.Core.Pipelines.Context
                 return this;
             }
 
+            public Builder SetAppType(int type)
+            {
+                _context.AppType = type;
+                return this;
+            }
+
             public BaseContext Build()
             {
                 return _context;
             }
         }
     }
-
 }
