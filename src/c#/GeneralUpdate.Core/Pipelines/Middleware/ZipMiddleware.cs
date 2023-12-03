@@ -14,21 +14,12 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
     {
         public async Task InvokeAsync(BaseContext context, MiddlewareStack stack)
         {
-            Exception exception = null;
-            try
-            {
-                EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "In the unzipped file ..."));
-                var version = context.Version;
-                bool isUnzip = UnZip(context);
-                if (!isUnzip) throw exception = new Exception($"Unzip file failed , Version-{version.Version}  MD5-{version.Hash} !");
-                //await ConfigFactory.Instance.Scan(context.SourcePath, context.TargetPath);
-                var node = stack.Pop();
-                if (node != null) await node.Next.Invoke(context, stack);
-            }
-            catch (Exception ex)
-            {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception ?? ex));
-            }
+            EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(context.Version, ProgressType.Updatefile, "In the unzipped file ..."));
+            var version = context.Version;
+            bool isUnzip = UnZip(context);
+            if (!isUnzip) throw new Exception($"Unzip file failed , Version-{version.Version}  Hash-{version.Hash} !");
+            var node = stack.Pop();
+            if (node != null) await node.Next.Invoke(context, stack);
         }
 
         /// <summary>

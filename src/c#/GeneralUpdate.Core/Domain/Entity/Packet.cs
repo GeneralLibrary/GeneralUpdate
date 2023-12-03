@@ -133,8 +133,13 @@ namespace GeneralUpdate.Core.Domain.Entity
         public List<string> BlackFormats { get; set; }
 
         /// <summary>
-        /// Whether to enable automatic backup during the upgrade.
+        /// Whether to enable the driver upgrade function.
         /// </summary>
-        public bool IsRestore { get; set; }
+        public bool DriveEnabled { get; set; }
+
+        /// <summary>
+        /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
+        /// </summary>
+        public bool WillMessageEnabled { get; set; }
     }
 }

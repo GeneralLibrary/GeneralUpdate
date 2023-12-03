@@ -63,7 +63,8 @@ namespace GeneralUpdate.Core.Bootstrap
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
                 Packet.AppName = $"{Packet.AppName ?? GetOption(UpdateOption.MainApp)}{EXECUTABLE_FILE}";
                 Packet.TempPath = $"{FileUtil.GetTempDirectory(Packet.LastVersion)}{Path.DirectorySeparatorChar}";
-                Packet.IsRestore = GetOption(UpdateOption.Restore);
+                Packet.DriveEnabled = GetOption(UpdateOption.Drive);
+                Packet.WillMessageEnabled = GetOption(UpdateOption.WillMessage);
                 var manager = new DownloadManager<VersionInfo>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
                 manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
                 manager.MultiDownloadCompleted += OnMultiDownloadCompleted;

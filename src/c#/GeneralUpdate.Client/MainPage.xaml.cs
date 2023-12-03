@@ -71,6 +71,8 @@ namespace GeneralUpdate.Client
                 .Option(UpdateOption.DownloadTimeOut, 60)
                 .Option(UpdateOption.Encoding, Encoding.Default)
                 .Option(UpdateOption.Format, Format.ZIP)
+                .Option(UpdateOption.Drive, true)
+                .Option(UpdateOption.WillMessage, true)
                 .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 .SetCustomSkipOption(ShowCustomOption)

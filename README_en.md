@@ -28,6 +28,42 @@
 | OSS(MAUI)                                         | yes              | Minimal updates require only the version configuration file of version.json to be placed on the file server. Components are updated and downloaded based on the version information in the configuration file.(Supported windows，MAUI Android) |
 | Restore                                           | test             | Each version is backed up during a version-by-version update and rolled back version-by-version if the update fails. |
 | Driver upgrade                                    | test             | The driver file (.INF) of each version is backed up during the version-by-version update and is rolled back version-by-version if the update fails. |
+| System service                                    | test             | The upgrade is checked for success at boot and upgrade, and if it fails, the previous backup is restored according to the last word. The last word is that the will_message.json file in the C:\generalupdate_willmessages directory was automatically created before the update. will_message.json is about the file directory of the persistent rollback backup.(need to deploy GeneralUpdate. SystemService system service) |
+| A list of custom methods                          | test             | Inject a custom collection of methods that are executed before the update starts. Execute a custom method list, and if there are any exceptions, you will be notified by exception subscription.(It is recommended to check the current software environment before updating) |
+
+
+
+**GeneralUpdate.SystemService Publish/Deploy**
+
+GeneralUpdate.SystemService is a Windows system service, not a web API deployed on the server. Its main purpose is to listen for the update process and restore after an update crash.
+
+**Publish：**
+
+It is recommended to release a single file, if you want to release the AOT version, you need to remove the mapping code from the source code.
+
+```shell
+dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
+```
+
+**Create/deploy Windows services：**
+
+```shell
+sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
+```
+
+**Start the deployed Windows service：**
+
+```shell
+sc start GeneralUpdate.SystemService
+```
+
+**Delete the deployed Windows service：**
+
+```shell
+sc delete GeneralUpdate.SystemService
+```
+
+
 
 ### 2.Help documentation ###
 

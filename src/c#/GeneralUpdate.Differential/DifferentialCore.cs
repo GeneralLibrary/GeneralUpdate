@@ -122,7 +122,7 @@ namespace GeneralUpdate.Differential
                 //If a file is found that needs to be deleted, a list of files is written to the update package.
                 var exceptFiles = await fileProvider.Except(appPath, targetPath);
                 if(exceptFiles != null && exceptFiles.Count() > 0) 
-                    FileUtil.CreateJsonFile(patchPath, DELETE_FILES_NAME, exceptFiles);
+                    FileUtil.CreateJson(patchPath, DELETE_FILES_NAME, exceptFiles);
 
                 var factory = new GeneralZipFactory();
                 _compressProgressCallback = compressProgressCallback;
@@ -156,7 +156,7 @@ namespace GeneralUpdate.Differential
                 var deleteListJson =  patchFiles.FirstOrDefault(i=>i.Name.Equals(DELETE_FILES_NAME));
                 if (deleteListJson != null) 
                 {
-                    var deleteFiles = FileUtil.ReadJsonFile<IEnumerable<FileNode>>(deleteListJson.FullName);
+                    var deleteFiles = FileUtil.GetJson<IEnumerable<FileNode>>(deleteListJson.FullName);
                     var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {
