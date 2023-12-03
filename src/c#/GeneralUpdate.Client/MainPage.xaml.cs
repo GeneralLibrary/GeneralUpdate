@@ -71,17 +71,25 @@ namespace GeneralUpdate.Client
                 .Option(UpdateOption.DownloadTimeOut, 60)
                 .Option(UpdateOption.Encoding, Encoding.Default)
                 .Option(UpdateOption.Format, Format.ZIP)
+                //开启驱动更新
                 .Option(UpdateOption.Drive, true)
+                //开启遗言功能，需要部署GeneralUpdate.SystemService Windows服务。
                 .Option(UpdateOption.WillMessage, true)
                 .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 .SetCustomSkipOption(ShowCustomOption)
+                //注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境）
+                .AddCustomOption(new List<Func<bool>>() { ()=> Check1(), () => Check2() })
                 //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
                 //如果不需要扩展，需要重新传入黑名单集合来覆盖。
                 .SetBlacklist(GetBlackFiles(), GetBlackFormats())
                 .LaunchTaskAsync();
             });
         }
+
+        private bool Check1() => true;
+
+        private bool Check2() => true;
 
         private List<string> GetBlackFiles()
         {
