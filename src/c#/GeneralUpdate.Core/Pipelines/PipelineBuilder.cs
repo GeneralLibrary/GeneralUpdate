@@ -37,7 +37,7 @@ namespace GeneralUpdate.Core.Pipelines
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public async Task<IPipelineBuilder> Launch()
+        public async Task<IPipelineBuilder> Build()
         {
             if (nodes == null || nodes.Count == 0) throw new ArgumentNullException(nameof(nodes));
             _components = new MiddlewareStack(nodes);

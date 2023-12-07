@@ -16,6 +16,6 @@ namespace GeneralUpdate.Core.Pipelines.Pipeline
         /// start the pipeline.
         /// </summary>
         /// <returns></returns>
-        Task<IPipelineBuilder> Launch();
+        Task<IPipelineBuilder> Build();
     }
 }
