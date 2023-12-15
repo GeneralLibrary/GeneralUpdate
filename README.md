@@ -35,38 +35,6 @@
 
 
 
-**GeneralUpdate.SystemService发布/部署**
-
-GeneralUpdate.SystemService是一个windows系统服务，并不是部署在服务端的web api。它的主要作用是监听更新过程，以及更新崩溃之后还原。
-
-**发布：**
-
-推荐发布Single file，如果想发布AOT版本需要移除源码中映射代码。
-
-```shell
-dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
-```
-
-**创建/部署windows服务：**
-
-```shell
-sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
-```
-
-**启动已部署的windows服务：**
-
-```shell
-sc start GeneralUpdate.SystemService
-```
-
-**删除已部署的windows服务：**
-
-```shell
-sc delete GeneralUpdate.SystemService
-```
-
-
-
 ## 2.帮助文档 ##
 
 - 讲解视频： https://www.bilibili.com/video/BV1aX4y137dd
@@ -131,3 +99,36 @@ sc delete GeneralUpdate.SystemService
 | 树莓派(IoT)  | 待验证 |
 | 麒麟V10(飞腾S2500)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
+
+
+
+## 6.GeneralUpdate.SystemService发布/部署
+
+GeneralUpdate.SystemService是一个windows系统服务，并不是部署在服务端的web api。它的主要作用是监听更新过程，以及更新崩溃之后还原。
+
+**发布：**
+
+推荐发布Single file，如果想发布AOT版本需要移除源码中映射代码。
+
+```shell
+dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
+```
+
+**创建/部署windows服务：**
+
+```shell
+sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
+```
+
+**启动已部署的windows服务：**
+
+```shell
+sc start GeneralUpdate.SystemService
+```
+
+**删除已部署的windows服务：**
+
+```shell
+sc delete GeneralUpdate.SystemService
+```
+
