@@ -1,27 +1,24 @@
 ﻿using GeneralUpdate.ClientCore;
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Events.CommonArgs;
 
 namespace GeneralUpdate.Client
 {
-    public partial class MainPage : ContentPage
+    internal class MySample
     {
         private const string baseUrl = @"http://127.0.0.1:5001";
         private const string hubName = "versionhub";
 
-        public MainPage()
-        {
-            InitializeComponent();
-            MyButton.Clicked += OnClicked;
-            Loaded += OnLoaded;
-        }
-
-        private void OnLoaded(object sender, EventArgs e)
+        internal MySample() 
         {
             //var md5 = FileUtil.GetFileMD5(@"F:\test\update.zip");
             //Receive sample code pushed by the server
@@ -31,7 +28,7 @@ namespace GeneralUpdate.Client
         //Receive sample code pushed by the server
         private async void GetMessage(string msg)
         {
-            var isUpdate = await Shell.Current.DisplayAlert("New Version", "There are new version push messages !", "update", "cancel");
+            var isUpdate = true;
             if (isUpdate) Upgrade();
         }
 
@@ -79,7 +76,7 @@ namespace GeneralUpdate.Client
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
                 .SetCustomSkipOption(ShowCustomOption)
                 //注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境）
-                .AddCustomOption(new List<Func<bool>>() { ()=> Check1(), () => Check2() })
+                .AddCustomOption(new List<Func<bool>>() { () => Check1(), () => Check2() })
                 //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
                 //如果不需要扩展，需要重新传入黑名单集合来覆盖。
                 .SetBlacklist(GetBlackFiles(), GetBlackFormats())
@@ -145,7 +142,7 @@ namespace GeneralUpdate.Client
             var config = new Configinfo();
             config.InstallPath = System.Threading.Thread.GetDomain().BaseDirectory;
             //主程序客户端当前版本号
-            config.ClientVersion = VersionTracking.Default.CurrentVersion.ToString();
+            config.ClientVersion = "1.0.0.0"; //VersionTracking.Default.CurrentVersion.ToString();
             config.AppType = AppType.ClientApp;
             config.AppSecretKey = "41A54379-C7D6-4920-8768-21A3468572E5";
             //主程序客户端exe名称
@@ -162,10 +159,7 @@ namespace GeneralUpdate.Client
         /// <returns></returns>
         private async Task<bool> ShowCustomOption()
         {
-            return await Shell.Current.Dispatcher.DispatchAsync(() =>
-            {
-                return Shell.Current.DisplayAlert("Upgrade Tip", "A discrepancy between the local and server versions has been detected. Do you want to update?", "skip", "update");
-            });
+            return await Task.FromResult(true);
         }
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
@@ -184,7 +178,7 @@ namespace GeneralUpdate.Client
             //e.Type 当前正在执行的操作  1.ProgressType.Check 检查版本信息中 2.ProgressType.Donwload 正在下载当前版本 3. ProgressType.Updatefile 更新当前版本 4. ProgressType.Done更新完成 5.ProgressType.Fail 更新失败
             //e.BytesReceived 已下载大小
             DispatchMessage($"{e.ProgressPercentage}%");
-            MyProgressBar.ProgressTo(e.ProgressValue, 100, Easing.Default);
+            //MyProgressBar.ProgressTo(e.ProgressValue, 100, Easing.Default);
         }
 
         private void OnException(object sender, ExceptionEventArgs e)
@@ -212,10 +206,7 @@ namespace GeneralUpdate.Client
 
         private void DispatchMessage(string message)
         {
-            Shell.Current.Dispatcher.DispatchAsync(() =>
-            {
-                MyLabel.Text = message;
-            });
+            
         }
     }
 }

@@ -66,7 +66,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                                 UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled).
                                 UseMiddlewareIf<WillMessageMiddleware>(Packet.WillMessageEnabled).
                                 UseMiddleware<PatchMiddleware>();
-                            await pipelineBuilder.Launch();
+                            await pipelineBuilder.Build();
                         }
                     }
                     Clear();
