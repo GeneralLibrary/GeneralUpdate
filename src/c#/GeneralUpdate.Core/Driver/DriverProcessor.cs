@@ -19,11 +19,14 @@ namespace GeneralUpdate.Core.Driver
         /// </summary>
         public void ProcessCommands()
         {
+            /*
+             * This section describes the PnPUtil command.
+             * https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax
+             */
             foreach (var command in _commands)
             {
                 command.Execute();
             }
-
             _commands.Clear();
         }
     }
