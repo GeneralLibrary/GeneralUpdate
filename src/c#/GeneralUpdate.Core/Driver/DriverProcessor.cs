@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -19,6 +20,8 @@ namespace GeneralUpdate.Core.Driver
         /// </summary>
         public void ProcessCommands()
         {
+            if (!_commands.Any()) return;
+
             /*
              * This section describes the PnPUtil command.
              * https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax

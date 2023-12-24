@@ -107,6 +107,7 @@
     <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
     <Compile Include="..\GeneralUpdate.Core\Driver\BackupDriverCommand.cs" Link="Driver\BackupDriverCommand.cs" />
     <Compile Include="..\GeneralUpdate.Core\Driver\CommandExecutor.cs" Link="Driver\CommandExecutor.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Driver\DeleteDriverCommand.cs" Link="Driver\DeleteDriverCommand.cs" />
     <Compile Include="..\GeneralUpdate.Core\Driver\DriverInformation.cs" Link="Driver\DriverInformation.cs" />
     <Compile Include="..\GeneralUpdate.Core\Driver\DriverProcessor.cs" Link="Driver\DriverProcessor.cs" />
     <Compile Include="..\GeneralUpdate.Core\Driver\IDriverCommand.cs" Link="Driver\IDriverCommand.cs" />

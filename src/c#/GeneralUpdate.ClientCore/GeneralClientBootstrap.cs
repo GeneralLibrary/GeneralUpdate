@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.ClientCore
@@ -54,6 +55,7 @@ namespace GeneralUpdate.ClientCore
 
         private async Task<GeneralClientBootstrap> BaseLaunch()
         {
+            ClearEnvironmentVariable();
             await ExecuteCustomOptions();
             var versionService = new VersionService();
             var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
@@ -241,6 +243,25 @@ namespace GeneralUpdate.ClientCore
                     if (!isSuccess) 
                         Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
                 }
+            }
+        }
+
+        /// <summary>
+        /// The values passed between processes during previous updates are cleared when the client starts.
+        /// </summary>
+        private void ClearEnvironmentVariable() 
+        {
+            try
+            {
+                Environment.SetEnvironmentVariable("ProcessBase64", null, EnvironmentVariableTarget.Machine);
+            }
+            catch (SecurityException ex)
+            {
+                Trace.WriteLine($"Error: You do not have sufficient permissions to delete this environment variable.{ex}");
+            }
+            catch (ArgumentException ex)
+            {
+                Trace.WriteLine($"Error: The environment variable name is invalid. {ex}");
             }
         }
 

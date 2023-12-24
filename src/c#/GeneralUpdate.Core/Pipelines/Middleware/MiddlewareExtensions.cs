@@ -32,7 +32,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
             MethodInfo invokeMethod = null;
             foreach (var method in methods)
             {
-                if (string.Equals(method.Name, InvokeAsyncMethodName, StringComparison.Ordinal))
+                if (string.Equals(method.Name, InvokeAsyncMethodName, StringComparison.OrdinalIgnoreCase))
                 {
                     if (method == null) throw new InvalidOperationException(InvokeAsyncMethodName);
                     invokeMethod = method;
