@@ -4,6 +4,9 @@ using System.Text;
 
 namespace GeneralUpdate.Core.Driver
 {
+    /// <summary>
+    /// Install the new driver, and if the installation fails, the backup is automatically restored.
+    /// </summary>
     public class InstallDriverCommand : IDriverCommand
     {
         private DriverInformation _information;
