@@ -136,7 +136,7 @@ namespace GeneralUpdate.Differential.ContentProvider
             if (obj == null) return false;
             var tempNode = obj as FileNode;
             if (tempNode == null) throw new ArgumentException(nameof(tempNode));
-            return Hash.Equals(tempNode.Hash) && Name.Equals(tempNode.Name);
+            return string.Equals(Hash, tempNode.Hash,StringComparison.OrdinalIgnoreCase) && string.Equals(Name, tempNode.Name,StringComparison.OrdinalIgnoreCase);
         }
 
         public override int GetHashCode() => base.GetHashCode();

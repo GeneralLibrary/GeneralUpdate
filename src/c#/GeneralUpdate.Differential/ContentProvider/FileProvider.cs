@@ -1,11 +1,9 @@
 ﻿using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,11 +11,7 @@ namespace GeneralUpdate.Differential.ContentProvider
 {
     public class FileProvider
     {
-        #region Private Members
-
         private long _fileCount = 0;
-
-        #endregion Private Members
 
         #region Public Methods
 
@@ -54,14 +48,21 @@ namespace GeneralUpdate.Differential.ContentProvider
             {
                 var leftFileNodes = Read(leftPath);
                 var rightFileNodes = Read(rightPath);
-                var resultNodes = new List<FileNode>();
-                foreach (var leftNode in leftFileNodes)
-                {
-                    var findObj = rightFileNodes.FirstOrDefault(i => i.Equals(leftNode));
-                    if (findObj == null) resultNodes.Add(leftNode);
-                }
-                return resultNodes;
+                Dictionary<string, FileNode> dictB = rightFileNodes.ToDictionary(x => x.Name, x => x);
+                List<FileNode> filesOnlyInA = leftFileNodes.Where(f => !dictB.ContainsKey(f.Name)).ToList();
+                return filesOnlyInA;
             });
+        }
+
+        private void Get(string leftPath, string rightPath)
+        {
+            var leftFileNodes = Directory.GetFiles(leftPath, "*", SearchOption.AllDirectories)
+                                                 .Select(f => f.Substring(leftPath.Length)).ToList();
+
+            var rightFileNodes = Directory.GetFiles(rightPath, "*", SearchOption.AllDirectories)
+                                              .Select(f => f.Substring(rightPath.Length)).ToList();
+
+            leftFileNodes.Except(rightFileNodes).Select(x => leftPath + x).ToList();
         }
 
         #endregion Public Methods

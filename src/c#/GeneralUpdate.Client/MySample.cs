@@ -10,17 +10,19 @@ using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Differential;
 
 namespace GeneralUpdate.Client
 {
     internal class MySample
     {
+        #region 推送功能
+
         private const string baseUrl = @"http://127.0.0.1:5001";
         private const string hubName = "versionhub";
 
-        internal MySample() 
+        internal MySample()
         {
-            //var md5 = FileUtil.GetFileMD5(@"F:\test\update.zip");
             //Receive sample code pushed by the server
             //VersionHub<string>.Instance.Subscribe($"{baseUrl}/{hubName}", "TESTNAME", new Action<string>(GetMessage));
         }
@@ -32,19 +34,21 @@ namespace GeneralUpdate.Client
             if (isUpdate) Upgrade();
         }
 
-        private void OnClicked(object sender, EventArgs e) => Upgrade();
+        #endregion
 
-        private void Upgrade()
+        #region 常规更新
+
+        public void Upgrade()
         {
-            Task.Run(async () =>
-            {
-                var url = "http://192.168.50.203";
-                var appName = "GeneralUpdate.Client";
-                var version = "1.0.0.0";
-                var versionFileName = "version.json";
-                ParamsOSS @params = new ParamsOSS(url, appName, version, versionFileName);
-                await GeneralClientOSS.Start(@params);
-            });
+            //Task.Run(async () =>
+            //{
+            //    var url = "http://192.168.50.203";
+            //    var appName = "GeneralUpdate.Client";
+            //    var version = "1.0.0.0";
+            //    var versionFileName = "version.json";
+            //    ParamsOSS @params = new ParamsOSS(url, appName, version, versionFileName);
+            //    await GeneralClientOSS.Start(@params);
+            //});
 
             Task.Run(async () =>
             {
@@ -71,15 +75,15 @@ namespace GeneralUpdate.Client
                 //开启驱动更新
                 .Option(UpdateOption.Drive, true)
                 //开启遗言功能，需要部署GeneralUpdate.SystemService Windows服务。
-                .Option(UpdateOption.WillMessage, true)
+                //.Option(UpdateOption.WillMessage, true)
                 .Strategy<WindowsStrategy>()
                 //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-                .SetCustomSkipOption(ShowCustomOption)
+                //.SetCustomSkipOption(ShowCustomOption)
                 //注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境）
-                .AddCustomOption(new List<Func<bool>>() { () => Check1(), () => Check2() })
+                //.AddCustomOption(new List<Func<bool>>() { () => Check1(), () => Check2() })
                 //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
                 //如果不需要扩展，需要重新传入黑名单集合来覆盖。
-                .SetBlacklist(GetBlackFiles(), GetBlackFormats())
+                //.SetBlacklist(GetBlackFiles(), GetBlackFormats())
                 .LaunchTaskAsync();
             });
         }
@@ -206,7 +210,21 @@ namespace GeneralUpdate.Client
 
         private void DispatchMessage(string message)
         {
-            
+
         }
+
+        #endregion
+
+        #region 测试二进制更新包整理
+
+        public async Task TestDifferentialClean() 
+        {
+            var path1 = "D:\\packet\\source";
+            var path2 = "D:\\packet\\target";
+            var path3 = "D:\\packet\\patchs";
+            await DifferentialCore.Instance.Clean(path1, path2, path3);
+        }
+
+        #endregion
     }
 }

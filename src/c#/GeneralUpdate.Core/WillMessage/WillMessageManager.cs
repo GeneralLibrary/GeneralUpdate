@@ -77,7 +77,7 @@ namespace GeneralUpdate.Core.WillMessage
             FileUtil.DeleteDir(BACKUP_ROOT_PATH);
         }
 
-        internal void Backup(string appPath, string packetPath, string version,int appType)
+        internal void Backup(string appPath, string packetPath, string version,string hash,int appType)
         {
             if (!Directory.Exists(BACKUP_ROOT_PATH))
                 Directory.CreateDirectory(BACKUP_ROOT_PATH);
@@ -90,7 +90,7 @@ namespace GeneralUpdate.Core.WillMessage
             _packetPath = packetPath;
             _backupPath = versionDir;
             ProcessDirectory(_packetPath, _appPath, _backupPath);
-            _backupStack.Push(new BackupPO { Version = version,  AppType = appType, AppPath = _appPath, BackupPath = _backupPath });
+            _backupStack.Push(new BackupPO { Version = version,  AppType = appType, AppPath = _appPath, BackupPath = _backupPath , Hash = hash });
         }
 
         internal void Restore()

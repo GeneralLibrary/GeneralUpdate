@@ -16,10 +16,8 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         public async Task InvokeAsync(BaseContext context, MiddlewareStack stack)
         {
             var drivers = GetAllDriverDirectories(context.TargetPath);
-
             var information = new DriverInformation.Builder()
                 .SetInstallDirectory(Path.Combine(context.SourcePath,context.Version.ToString()))
-                //TODO: TargetPath to CachePath
                 .SetOutPutDirectory(Path.Combine(context.TargetPath,context.Version.ToString()))
                 .SetDriverNames(drivers)
                 .Build();
@@ -47,9 +45,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
                 foreach (string filePath in Directory.GetFiles(path))
                 {
                     if (IsDriverFile(filePath))
-                    {
                         driverDirectories.Add(filePath);
-                    }
                 }
 
                 foreach (string directory in Directory.GetDirectories(path))

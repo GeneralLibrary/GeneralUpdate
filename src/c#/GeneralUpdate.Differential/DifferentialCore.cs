@@ -3,14 +3,11 @@ using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
 using GeneralUpdate.Differential.ContentProvider;
-using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Events;
-using GeneralUpdate.Zip.Factory;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Differential
@@ -68,14 +65,14 @@ namespace GeneralUpdate.Differential
         /// <summary>
         /// Generate patch file [Cannot contain files with the same name but different extensions] .
         /// </summary>
-        /// <param name="appPath">Previous version folder path .</param>
+        /// <param name="sourcePath">Previous version folder path .</param>
         /// <param name="targetPath">Recent version folder path.</param>
         /// <param name="patchPath">Store discovered incremental update files in a temporary directory .</param>
         /// <param name="compressProgressCallback">Incremental package generation progress callback function.</param>
         /// <param name="type">7z or zip</param>
         /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
-        public async Task Clean(string appPath, string targetPath, string patchPath = null, Action<object, BaseCompressProgressEventArgs> compressProgressCallback = null, OperationType type = OperationType.GZip, Encoding encoding = null, string name = null)
+        public async Task Clean(string sourcePath, string targetPath, string patchPath = null)
         {
             try
             {
@@ -84,7 +81,7 @@ namespace GeneralUpdate.Differential
 
                 //Take the left tree as the center to match the files that are not in the right tree .
                 var fileProvider = new FileProvider();
-                var nodes = await fileProvider.Compare(appPath, targetPath);
+                var nodes = await fileProvider.Compare(sourcePath, targetPath);
                 
                 //Binary differencing of like terms .
                 foreach (var file in nodes.Item3)
@@ -120,16 +117,9 @@ namespace GeneralUpdate.Differential
                 }
 
                 //If a file is found that needs to be deleted, a list of files is written to the update package.
-                var exceptFiles = await fileProvider.Except(appPath, targetPath);
+                var exceptFiles = await fileProvider.Except(sourcePath, targetPath);
                 if(exceptFiles != null && exceptFiles.Count() > 0) 
                     FileUtil.CreateJson(patchPath, DELETE_FILES_NAME, exceptFiles);
-
-                var factory = new GeneralZipFactory();
-                _compressProgressCallback = compressProgressCallback;
-                if (_compressProgressCallback != null) factory.CompressProgress += OnCompressProgress;
-                //The update package exists in the 'target path' directory.
-                name = name ?? new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
-                factory.CreateOperate(type, name, patchPath, targetPath, true, encoding).CreateZip();
             }
             catch (Exception ex)
             {
@@ -231,7 +221,8 @@ namespace GeneralUpdate.Differential
         {
             try
             {
-                var listExcept = FileUtil.Compare(patchPath, appPath);
+                var dirCompare = new DirectoryComparer(patchPath, appPath);
+                var listExcept = dirCompare.Comparer();
                 foreach (var file in listExcept)
                 {
                     var extensionName = Path.GetExtension(file.FullName);
@@ -250,8 +241,6 @@ namespace GeneralUpdate.Differential
                 throw new Exception($" DirtyNew error : {ex.Message} !", ex.InnerException);
             }
         }
-
-        private void OnCompressProgress(object sender, BaseCompressProgressEventArgs e) => _compressProgressCallback(sender, e);
 
         #endregion Private Methods
     }

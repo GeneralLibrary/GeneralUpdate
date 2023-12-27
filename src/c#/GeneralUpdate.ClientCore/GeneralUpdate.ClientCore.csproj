@@ -158,6 +158,7 @@
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Common\DirectoryComparer.cs" Link="Differential\Common\DirectoryComparer.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Common\Filefilter.cs" Link="Differential\Common\Filefilter.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigCache.cs" Link="Differential\Config\Cache\ConfigCache.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigEntity.cs" Link="Differential\Config\Cache\ConfigEntity.cs" />
