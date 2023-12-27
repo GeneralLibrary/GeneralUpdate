@@ -14,21 +14,21 @@ var app = builder.Build();
 /**
  * Push the latest version information in real time.
  */
-app.MapHub<VersionHub>("/versionhub");
+//app.MapHub<VersionHub>("/versionhub");
 
-app.MapPost("/push", async Task<string> (HttpContext context) =>
-{
-    try
-    {
-        var hubContext = context.RequestServices.GetRequiredService<IHubContext<VersionHub>>();
-        await hubContext.SendMessage("TESTNAME", "123");
-    }
-    catch (Exception ex)
-    {
-        return ex.Message;
-    }
-    return "OK";
-});
+//app.MapPost("/push", async Task<string> (HttpContext context) =>
+//{
+//    try
+//    {
+//        var hubContext = context.RequestServices.GetRequiredService<IHubContext<VersionHub>>();
+//        await hubContext.SendMessage("TESTNAME", "123");
+//    }
+//    catch (Exception ex)
+//    {
+//        return ex.Message;
+//    }
+//    return "OK";
+//});
 
 /**
  * Check if an update is required.

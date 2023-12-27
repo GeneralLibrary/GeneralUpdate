@@ -29,10 +29,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         #region Public Methods
 
-        public override void Create<T>(T parameter)
-        {
-            Packet = parameter as Packet;
-        }
+        public override void Create<T>(T parameter)=> Packet = parameter as Packet;
 
         public override void Execute()
         {
@@ -46,7 +43,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         foreach (var version in updateVersions)
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
-                            var zipFilePath = $"{Packet.TempPath}{version.Name}{Packet.Format}";
+                            var zipFilePath = Path.Combine(Packet.TempPath, $"{version.Name}{Packet.Format}");
                             
                             var context = new BaseContext.Builder()
                                                       .SetVersion(version)
@@ -124,7 +121,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         {
             try
             {
-                if (System.IO.File.Exists(Packet.TempPath)) System.IO.File.Delete(Packet.TempPath);
+                if (File.Exists(Packet.TempPath)) File.Delete(Packet.TempPath);
                 var dirPath = Path.GetDirectoryName(Packet.TempPath);
                 if (Directory.Exists(dirPath)) Directory.Delete(dirPath, true);
                 return true;

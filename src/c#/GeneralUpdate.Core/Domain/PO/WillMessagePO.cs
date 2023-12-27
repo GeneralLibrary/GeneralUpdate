@@ -27,6 +27,8 @@ namespace GeneralUpdate.Core.Domain.PO
 
         public string Version { get; set; }
 
+        public string Hash { get; set; }
+
         public int AppType { get; set; }
     }
 
