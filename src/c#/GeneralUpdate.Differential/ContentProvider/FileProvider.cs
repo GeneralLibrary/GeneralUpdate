@@ -48,21 +48,10 @@ namespace GeneralUpdate.Differential.ContentProvider
             {
                 var leftFileNodes = Read(leftPath);
                 var rightFileNodes = Read(rightPath);
-                Dictionary<string, FileNode> dictB = rightFileNodes.ToDictionary(x => x.Name, x => x);
-                List<FileNode> filesOnlyInA = leftFileNodes.Where(f => !dictB.ContainsKey(f.Name)).ToList();
-                return filesOnlyInA;
+                var rightNodeDic = rightFileNodes.ToDictionary(x => x.Name, x => x);
+                var filesOnlyInLeft = leftFileNodes.Where(f => !rightNodeDic.ContainsKey(f.Name)).ToList();
+                return filesOnlyInLeft;
             });
-        }
-
-        private void Get(string leftPath, string rightPath)
-        {
-            var leftFileNodes = Directory.GetFiles(leftPath, "*", SearchOption.AllDirectories)
-                                                 .Select(f => f.Substring(leftPath.Length)).ToList();
-
-            var rightFileNodes = Directory.GetFiles(rightPath, "*", SearchOption.AllDirectories)
-                                              .Select(f => f.Substring(rightPath.Length)).ToList();
-
-            leftFileNodes.Except(rightFileNodes).Select(x => leftPath + x).ToList();
         }
 
         #endregion Public Methods

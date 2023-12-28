@@ -34,8 +34,6 @@ namespace GeneralUpdate.Differential
         /// </summary>
         private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
 
-        private Action<object, BaseCompressProgressEventArgs> _compressProgressCallback;
-
         #endregion Private Members
 
         #region Public Properties
