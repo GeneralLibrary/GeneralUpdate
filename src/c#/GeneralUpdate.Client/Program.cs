@@ -7,7 +7,8 @@
             Task.Run(async() => 
             {
                 MySample sample = new MySample();
-                await sample.TestDifferentialClean();
+                //await sample.TestDifferentialClean();
+                //await sample.TestDifferentialDirty();
             });
             Console.Read();
         }

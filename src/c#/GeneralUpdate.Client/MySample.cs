@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Differential;
+using System.IO;
 
 namespace GeneralUpdate.Client
 {
@@ -223,6 +224,13 @@ namespace GeneralUpdate.Client
             var path2 = "D:\\packet\\target";
             var path3 = "D:\\packet\\patchs";
             await DifferentialCore.Instance.Clean(path1, path2, path3);
+        }
+
+        public async Task TestDifferentialDirty() 
+        {
+            var path1 = "D:\\packet\\source";
+            var path2 = "D:\\packet\\patchs";
+            await DifferentialCore.Instance.Dirty(path1, path2);
         }
 
         #endregion
