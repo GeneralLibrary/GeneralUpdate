@@ -9,6 +9,7 @@
                 MySample sample = new MySample();
                 //await sample.TestDifferentialClean();
                 //await sample.TestDifferentialDirty();
+                await sample.Upgrade();
             });
             Console.Read();
         }
