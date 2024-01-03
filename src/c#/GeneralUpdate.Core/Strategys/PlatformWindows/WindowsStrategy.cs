@@ -29,7 +29,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         #region Public Methods
 
-        public override void Create<T>(T parameter)=> Packet = parameter as Packet;
+        public override void Create<T>(T parameter) => Packet = parameter as Packet;
 
         public override void Execute()
         {
@@ -44,7 +44,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                         {
                             var patchPath = FileUtil.GetTempDirectory(PATCHS);
                             var zipFilePath = Path.Combine(Packet.TempPath, $"{version.Name}{Packet.Format}");
-                            
+
                             var context = new BaseContext.Builder()
                                                       .SetVersion(version)
                                                       .SetZipfilePath(zipFilePath)
@@ -65,6 +65,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                                 UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Build();
                         }
+                        if (!string.IsNullOrEmpty(Packet.UpdateLogUrl)) Process.Start("explorer.exe", Packet.UpdateLogUrl);
                     }
                     Clear();
                     StartApp(Packet.AppName, Packet.AppType);
@@ -81,13 +82,12 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
         {
             try
             {
-                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl)) Process.Start("explorer.exe", Packet.UpdateLogUrl);
                 var path = Path.Combine(Packet.InstallPath, appName);
                 switch (appType)
                 {
                     case AppType.ClientApp:
                         Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.Machine);
-                        WaitForProcessToStart(path, 20, ()=> WillMessageManager.Instance.Check());
+                        WaitForProcessToStart(path, 20, () => WillMessageManager.Instance.Check());
                         break;
 
                     case AppType.UpgradeApp:
@@ -109,7 +109,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         public override string GetPlatform() => PlatformType.Windows;
 
-#endregion Public Methods
+        #endregion Public Methods
 
         #region Private Methods
 
