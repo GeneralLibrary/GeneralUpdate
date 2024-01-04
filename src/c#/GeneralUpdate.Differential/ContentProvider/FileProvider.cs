@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
@@ -48,8 +48,8 @@ namespace GeneralUpdate.Differential.ContentProvider
             {
                 var leftFileNodes = Read(leftPath);
                 var rightFileNodes = Read(rightPath);
-                var rightNodeDic = rightFileNodes.ToDictionary(x => x.Name, x => x);
-                var filesOnlyInLeft = leftFileNodes.Where(f => !rightNodeDic.ContainsKey(f.Name)).ToList();
+                var rightNodeDic = rightFileNodes.ToDictionary(x => x.RelativePath, x => x);
+                var filesOnlyInLeft = leftFileNodes.Where(f => !rightNodeDic.ContainsKey(f.RelativePath)).ToList();
                 return filesOnlyInLeft;
             });
         }
@@ -62,10 +62,14 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// Recursively read all files in the folder path.
         /// </summary>
         /// <param name="path">folder path.</param>
+        /// <param name="rootPath">folder root path.</param>
         /// <returns>different chalders.</returns>
-        private IEnumerable<FileNode> Read(string path)
+        private IEnumerable<FileNode> Read(string path, string rootPath = null)
         {
             var resultFiles = new List<FileNode>();
+            if (string.IsNullOrEmpty(rootPath)) rootPath = path;
+            if (!rootPath.EndsWith("/")) rootPath += "/";
+            Uri rootUri = new Uri(rootPath);
             foreach (var subPath in Directory.GetFiles(path))
             {
                 if (IsMatchBlacklist(subPath)) continue;
@@ -73,11 +77,12 @@ namespace GeneralUpdate.Differential.ContentProvider
                 var hashAlgorithm = new Sha256HashAlgorithm();
                 var hash = hashAlgorithm.ComputeHash(subPath);
                 var subFileInfo = new FileInfo(subPath);
-                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, Hash = hash, FullName = subFileInfo.FullName });
+                Uri subUri = new Uri(subFileInfo.FullName);
+                resultFiles.Add(new FileNode() { Id = GetId(), Path = path, Name = subFileInfo.Name, Hash = hash, FullName = subFileInfo.FullName, RelativePath = rootUri.MakeRelativeUri(subUri).ToString() });
             }
             foreach (var subPath in Directory.GetDirectories(path))
             {
-                resultFiles.AddRange(Read(subPath));
+                resultFiles.AddRange(Read(subPath, rootPath));
             }
             return resultFiles;
         }
