@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace GeneralUpdate.Differential.ContentProvider
 {
@@ -24,6 +24,8 @@ namespace GeneralUpdate.Differential.ContentProvider
 
         public int RightType { get; set; }
 
+        public string RelativePath { get; set; }
+        
         #endregion Public Properties
 
         #region Constructors
