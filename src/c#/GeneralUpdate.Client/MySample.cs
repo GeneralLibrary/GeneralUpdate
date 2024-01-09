@@ -19,7 +19,7 @@ namespace GeneralUpdate.Client
     {
         #region 推送功能
 
-        private const string baseUrl = @"http://127.0.0.1:5001";
+        private const string baseUrl = @"http://localhost:5051";
         private const string hubName = "versionhub";
 
         internal MySample()
@@ -113,7 +113,7 @@ namespace GeneralUpdate.Client
             //该对象用于主程序客户端与更新组件进程之间交互用的对象
             var config = new Configinfo();
             //本机的客户端程序应用地址
-            config.InstallPath = @"F:\test\Run";
+            config.InstallPath = @"D:\packet\source";
             //更新公告网页
             config.UpdateLogUrl = "https://www.baidu.com/";
             //客户端当前版本号
@@ -125,9 +125,9 @@ namespace GeneralUpdate.Client
             //更新组件更新包下载地址
             config.UpdateUrl = $"{baseUrl}/versions/{config.AppType}/{config.ClientVersion}/{config.AppSecretKey}";
             //更新程序exe名称
-            config.AppName = "AutoUpdate.Core";
+            config.AppName = "GeneralUpdate.Core";
             //主程序客户端exe名称
-            config.MainAppName = "AutoUpdate.ClientCore";
+            config.MainAppName = "GeneralUpdate.ClientCore";
             //主程序信息
             var mainVersion = "1.1.1.1";
             //主程序客户端更新包下载地址
