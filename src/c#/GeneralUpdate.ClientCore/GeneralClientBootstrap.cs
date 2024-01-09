@@ -255,7 +255,7 @@ namespace GeneralUpdate.ClientCore
         {
             try
             {
-                Environment.SetEnvironmentVariable("ProcessBase64", null, EnvironmentVariableTarget.Machine);
+                Environment.SetEnvironmentVariable("ProcessBase64", null, EnvironmentVariableTarget.User);
             }
             catch (SecurityException ex)
             {
