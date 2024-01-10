@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace GeneralUpdate.Core.Domain.Entity
 {
@@ -15,7 +16,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             ClientVersion = clientVersion ?? throw new ArgumentNullException(nameof(clientVersion));
             UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
             UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
-            InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
+            InstallPath = installPath ?? Directory.GetCurrentDirectory();
             MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(mainUpdateUrl));
             MainAppName = mainAppName ?? throw new ArgumentNullException(nameof(mainAppName));
         }
