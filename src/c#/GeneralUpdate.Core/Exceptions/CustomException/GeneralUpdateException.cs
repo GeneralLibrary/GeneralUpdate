@@ -15,8 +15,7 @@ namespace GeneralUpdate.Core.Exceptions.CustomException
         private const String c_args = "Args";
         private readonly TExceptionArgs m_args;
 
-        public TExceptionArgs Args
-        { get { return m_args; } }
+        public TExceptionArgs Args=> m_args;
 
         public GeneralUpdateException(String message = null, Exception innerException = null) : this(null, message, innerException)
         {

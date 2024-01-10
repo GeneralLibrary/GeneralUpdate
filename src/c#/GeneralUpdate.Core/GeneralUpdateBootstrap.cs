@@ -2,6 +2,7 @@
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Exceptions;
 using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Utils;
 using System;
@@ -21,7 +22,7 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var base64 = Environment.GetEnvironmentVariable("ProcessBase64", EnvironmentVariableTarget.Machine);
+                var base64 = Environment.GetEnvironmentVariable("ProcessBase64", EnvironmentVariableTarget.User);
                 var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
                 Packet = ProcessAssembler.ToPacket(processInfo);
                 Packet.AppType = AppType.UpgradeApp;
