@@ -36,7 +36,7 @@ var app = builder.Build();
 app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientType, string clientVersion, string clientAppKey, IUpdateService updateService) =>
 {
     var versions = new List<VersionDTO>();
-    var hash = "9bf414990a67e74f11752d03f49b15d8";//生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
+    var hash = "415eed05eb310f480d1e4d15516fa00e484ddb9f416908b217f17b782ded2030";//生成好的更新包文件的MD5码，因为返回给客户端的时候需要同这个来验证是否可用
     var pubTime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
     string version = null;
     if (clientType == AppType.ClientApp)
@@ -48,10 +48,10 @@ app.MapGet("/versions/{clientType}/{clientVersion}/{clientAppKey}", (int clientT
     else if (clientType == AppType.UpgradeApp)
     {
         //upgrad
-        //version = "0.0.0.0";
-        version = "9.9.9.9"; //这里设置为9是让程序认为需要更新
+        version = "0.0.0.0";
+        //version = "9.9.9.9"; //这里设置为9是让程序认为需要更新
     }
-    var url = $"http://192.168.50.203/update.zip";//更新包的下载地址
+    var url = $"http://127.0.0.1/WpfClient_1_24.1.5.1218.zip";//更新包的下载地址
     var name = "update";
     versions.Add(new VersionDTO(hash, pubTime, version, url, name));
     return updateService.Update(clientType, clientVersion, version, clientAppKey, GetAppSecretKey(), false, versions);

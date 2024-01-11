@@ -1,5 +1,6 @@
 ﻿using GeneralUpdate.Core.Exceptions.CustomArgs;
 using System;
+using System.IO;
 
 namespace GeneralUpdate.Core.Exceptions
 {
@@ -10,11 +11,9 @@ namespace GeneralUpdate.Core.Exceptions
 
         #region Common
 
-        public static void ThrowIfNull(object obj)
-        {
-            if (obj == null)
-                Throw<ArgumentException>("Parameter cannot be null");
-        }
+        public static void ThrowFileNotFound(string file) => Throw<FileNotFoundException>($"File cannot be accessed {file}!");
+
+        public static void ThrowIfNull()=> Throw<ArgumentException>("Parameter cannot be null");
 
         /// <summary>
         /// Checks if an object is empty and throws an exception if it is

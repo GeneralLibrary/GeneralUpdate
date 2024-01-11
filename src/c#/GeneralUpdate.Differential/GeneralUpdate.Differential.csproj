@@ -16,6 +16,9 @@
   <ItemGroup>
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Domain\PO\.gitkeep" />
+    <None Remove="Exceptions\.gitkeep" />
+    <None Remove="Exceptions\CustomArgs\.gitkeep" />
+    <None Remove="Exceptions\CustomException\.gitkeep" />
     <None Remove="GeneralUpdate.ico" />
     <None Remove="WillMessage\.gitkeep" />
   </ItemGroup>
@@ -25,6 +28,13 @@
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\PO\WillMessagePO.cs" Link="Domain\PO\WillMessagePO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\ThrowExceptionUtility.cs" Link="Exceptions\ThrowExceptionUtility.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />

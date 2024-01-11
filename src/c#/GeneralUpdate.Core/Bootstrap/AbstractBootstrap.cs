@@ -166,35 +166,17 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Callback event.
 
-        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)=> AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)=> AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)=> AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)=> AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)=> AddListener(callbackAction);
 
-        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)=> AddListener(callbackAction);
 
         protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {

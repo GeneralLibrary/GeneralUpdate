@@ -19,7 +19,7 @@ namespace GeneralUpdate.Client
     {
         #region 推送功能
 
-        private const string baseUrl = @"http://localhost:5051";
+        private const string baseUrl = @"http://127.0.0.1:5001";
         private const string hubName = "versionhub";
 
         internal MySample()
@@ -119,7 +119,7 @@ namespace GeneralUpdate.Client
             //客户端当前版本号
             config.ClientVersion = "1.1.1.1";
             //客户端类型：1.主程序客户端 2.更新组件
-            config.AppType = AppType.ClientApp;
+            config.AppType = AppType.UpgradeApp;
             //指定应用密钥，用于区分客户端应用
             config.AppSecretKey = "B8A7FADD-386C-46B0-B283-C9F963420C7C";
             //更新组件更新包下载地址
