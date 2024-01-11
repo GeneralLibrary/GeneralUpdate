@@ -127,6 +127,7 @@
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
     <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\ThrowExceptionUtility.cs" Link="Exceptions\ThrowExceptionUtility.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />

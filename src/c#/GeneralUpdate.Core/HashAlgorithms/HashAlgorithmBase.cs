@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using GeneralUpdate.Core.Exceptions;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -8,6 +9,9 @@ namespace GeneralUpdate.Core.HashAlgorithms
     {
         public string ComputeHash(string fileName)
         {
+            if (!File.Exists(fileName))
+                ThrowExceptionUtility.ThrowFileNotFound(fileName);
+
             using (var hashAlgorithm = GetHashAlgorithm())
             {
                 using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
