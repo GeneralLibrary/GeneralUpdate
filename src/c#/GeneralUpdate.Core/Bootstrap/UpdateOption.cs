@@ -42,12 +42,12 @@ namespace GeneralUpdate.Core.Bootstrap
         /// <summary>
         /// Whether to enable the driver upgrade function.
         /// </summary>
-        public static readonly UpdateOption<bool> Drive = ValueOf<bool>("DRIVE");
+        public static readonly UpdateOption<bool?> Drive = ValueOf<bool?>("DRIVE");
 
         /// <summary>
         /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
         /// </summary>
-        public static readonly UpdateOption<bool> WillMessage = ValueOf<bool>("WILLMESSAGE");
+        public static readonly UpdateOption<bool?> WillMessage = ValueOf<bool?>("WILLMESSAGE");
 
         #endregion parameter configuration
 

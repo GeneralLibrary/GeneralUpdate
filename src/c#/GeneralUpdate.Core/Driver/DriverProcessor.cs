@@ -8,7 +8,7 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class DriverProcessor
     {
-        private List<IDriverCommand> _commands = new List<IDriverCommand>();
+        private readonly List<IDriverCommand> _commands = new List<IDriverCommand>();
 
         public void AddCommand(IDriverCommand command)
         {

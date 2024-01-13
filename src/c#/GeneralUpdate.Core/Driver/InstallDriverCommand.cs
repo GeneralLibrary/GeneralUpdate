@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GeneralUpdate.Core.Exceptions;
+using System;
 using System.IO;
 using System.Text;
 
@@ -38,7 +39,7 @@ namespace GeneralUpdate.Core.Driver
             {
                 //restore all the drivers in the backup directory.
                 new RestoreDriverCommand(_information).Execute();
-                throw new Exception($"Failed to execute install command for {_information.InstallDirectory}", ex);
+                ThrowExceptionUtility.Throw<Exception>($"Failed to execute install command for {_information.InstallDirectory}", ex);
             }
         }
     }
