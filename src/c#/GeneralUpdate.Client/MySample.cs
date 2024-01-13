@@ -12,6 +12,9 @@ using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Differential;
 using System.IO;
+using GeneralUpdate.Core.Driver;
+using Microsoft.VisualBasic;
+using System.Diagnostics;
 
 namespace GeneralUpdate.Client
 {
@@ -229,6 +232,71 @@ namespace GeneralUpdate.Client
             var path2 = "D:\\packet\\patchs";
             await DifferentialCore.Instance.Dirty(path1, path2);
         }
+
+        #endregion
+
+        #region 测试驱动功能
+
+        public void TestDrive()
+        {
+            var path1 = "D:\\packet\\source";
+            var path2 = "D:\\packet\\target";
+
+            var drivers = GetAllDriverDirectories(path1);
+
+            var information = new DriverInformation.Builder()
+                .SetInstallDirectory(path1)
+                .SetOutPutDirectory(path2)
+                .SetDriverNames(drivers)
+                .Build();
+
+            var processor = new DriverProcessor();
+            processor.AddCommand(new BackupDriverCommand(information));
+            processor.AddCommand(new DeleteDriverCommand(information));
+            processor.AddCommand(new InstallDriverCommand(information));
+            processor.ProcessCommands();
+        }
+
+        /// <summary>
+        /// Identifies all folders containing driver files in the specified directory and returns the directory collection.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private List<string> GetAllDriverDirectories(string path)
+        {
+            var driverDirectories = new HashSet<string>();
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(path))
+                {
+                    if (IsDriverFile(filePath))
+                        driverDirectories.Add(filePath);
+                }
+
+                foreach (string directory in Directory.GetDirectories(path))
+                {
+                    driverDirectories.UnionWith(GetAllDriverDirectories(directory));
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Trace.WriteLine("No access directory：" + path);
+            }
+            catch (PathTooLongException)
+            {
+                Trace.WriteLine("Path overlength：" + path);
+            }
+
+            return new List<string>(driverDirectories);
+        }
+
+        /// <summary>
+        /// Match the driver installation boot file.
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private bool IsDriverFile(string filePath) =>
+            string.Equals(Path.GetExtension(filePath), ".inf", StringComparison.OrdinalIgnoreCase);
 
         #endregion
     }
