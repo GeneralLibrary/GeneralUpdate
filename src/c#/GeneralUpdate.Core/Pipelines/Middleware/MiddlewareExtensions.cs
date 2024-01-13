@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
 
         public static IPipelineBuilder UseMiddleware<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline) => pipeline.UseMiddleware(typeof(TMiddleware),true);
 
-        public static IPipelineBuilder UseMiddlewareIf<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline,bool condition) => pipeline.UseMiddleware(typeof(TMiddleware), condition);
+        public static IPipelineBuilder UseMiddlewareIf<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline,bool condition = false) => pipeline.UseMiddleware(typeof(TMiddleware), condition);
 
         public static IPipelineBuilder UseMiddleware(
     this IPipelineBuilder pipeline,

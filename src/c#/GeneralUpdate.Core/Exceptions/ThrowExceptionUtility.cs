@@ -13,7 +13,11 @@ namespace GeneralUpdate.Core.Exceptions
 
         public static void ThrowFileNotFound(string file) => Throw<FileNotFoundException>($"File cannot be accessed {file}!");
 
-        public static void ThrowIfNull()=> Throw<ArgumentException>("Parameter cannot be null");
+        public static void ThrowIfNull(string errorMessage = null) 
+        {
+            errorMessage = errorMessage ?? "Parameter cannot be null";
+            Throw<ArgumentException>(errorMessage);
+        }
 
         /// <summary>
         /// Checks if an object is empty and throws an exception if it is

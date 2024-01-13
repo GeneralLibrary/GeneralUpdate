@@ -19,7 +19,7 @@ namespace GeneralUpdate.Client
     {
         #region 推送功能
 
-        private const string baseUrl = @"http://127.0.0.1:5001";
+        private const string baseUrl = @"http://127.0.0.1:5000";
         private const string hubName = "versionhub";
 
         internal MySample()
@@ -74,7 +74,7 @@ namespace GeneralUpdate.Client
             //开启驱动更新
             .Option(UpdateOption.Drive, true)
             //开启遗言功能，需要部署GeneralUpdate.SystemService Windows服务。
-            .Option(UpdateOption.WillMessage, true)
+            //.Option(UpdateOption.WillMessage, false)
             .Strategy<WindowsStrategy>()
             //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
             //.SetCustomSkipOption(ShowCustomOption)
