@@ -72,9 +72,9 @@ namespace GeneralUpdate.Client
             .Option(UpdateOption.Encoding, Encoding.Default)
             .Option(UpdateOption.Format, Format.ZIP)
             //开启驱动更新
-            .Option(UpdateOption.Drive, true)
+            //.Option(UpdateOption.Drive, true)
             //开启遗言功能，需要部署GeneralUpdate.SystemService Windows服务。
-            //.Option(UpdateOption.WillMessage, false)
+            .Option(UpdateOption.WillMessage, true)
             .Strategy<WindowsStrategy>()
             //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
             //.SetCustomSkipOption(ShowCustomOption)
