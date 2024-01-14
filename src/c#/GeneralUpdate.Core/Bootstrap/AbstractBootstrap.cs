@@ -63,8 +63,8 @@ namespace GeneralUpdate.Core.Bootstrap
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
                 Packet.AppName = $"{Packet.AppName ?? GetOption(UpdateOption.MainApp)}{EXECUTABLE_FILE}";
                 Packet.TempPath = $"{FileUtil.GetTempDirectory(Packet.LastVersion)}{Path.DirectorySeparatorChar}";
-                Packet.DriveEnabled = GetOption(UpdateOption.Drive);
-                Packet.WillMessageEnabled = GetOption(UpdateOption.WillMessage);
+                Packet.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
+                Packet.WillMessageEnabled = GetOption(UpdateOption.WillMessage) ?? false;
                 var manager = new DownloadManager<VersionInfo>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
                 manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
                 manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
@@ -156,10 +156,17 @@ namespace GeneralUpdate.Core.Bootstrap
 
         public virtual T GetOption<T>(UpdateOption<T> option)
         {
-            if (_options == null || _options.Count == 0) return default(T);
-            var val = _options[option];
-            if (val != null) return (T)val.GetValue();
-            return default(T);
+            try
+            {
+                if (_options == null || _options.Count == 0) return default(T);
+                var val = _options[option];
+                if (val != null) return (T)val.GetValue();
+                return default(T);
+            }
+            catch
+            {
+                return default(T);
+            }
         }
 
         #endregion Config option.

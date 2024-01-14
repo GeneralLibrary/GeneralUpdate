@@ -7,18 +7,18 @@ using System.Linq;
 
 namespace GeneralUpdate.Core.WillMessage
 {
-    internal class WillMessageManager
+    public class WillMessageManager
     {
         #region Private Members
 
-        internal const string DEFULT_WILL_MESSAGE_DIR = @"C:\generalupdate_willmessages";
-        internal const string DEFULT_WILL_MESSAGE_FILE = "will_message.json";
+        public const string DEFULT_WILL_MESSAGE_DIR = @"C:\generalupdate_willmessages";
+        public const string DEFULT_WILL_MESSAGE_FILE = "will_message.json";
 
-        internal const string BACKUP_ROOT_PATH = @"C:\generalupdate_backup";
+        public const string BACKUP_ROOT_PATH = @"C:\generalupdate_backup";
         private string _packetPath;
         private string _appPath;
         private string _backupPath;
-        private Stack<BackupPO> _backupStack = new Stack<BackupPO>();
+        private readonly Stack<BackupPO> _backupStack = new Stack<BackupPO>();
 
         private string _willMessageFile;
         private WillMessagePO _willMessage;
@@ -37,7 +37,7 @@ namespace GeneralUpdate.Core.WillMessage
 
         #region Public Properties
 
-        internal static WillMessageManager Instance
+        public static WillMessageManager Instance
         {
             get
             {
@@ -59,13 +59,13 @@ namespace GeneralUpdate.Core.WillMessage
 
         #region Public Methods
 
-        internal WillMessagePO GetWillMessage(string path = null)
+        public WillMessagePO GetWillMessage(string path = null)
         {
             _willMessageFile = string.IsNullOrWhiteSpace(path) ? GetWillMessagePath() : path;
             return _willMessage = FileUtil.GetJson<WillMessagePO>(_willMessageFile);
         }
 
-        internal void Clear()
+        public void Clear()
         {
             _packetPath = null;
             _appPath = null;
@@ -77,7 +77,7 @@ namespace GeneralUpdate.Core.WillMessage
             FileUtil.DeleteDir(BACKUP_ROOT_PATH);
         }
 
-        internal void Backup(string appPath, string packetPath, string version,string hash,int appType)
+        public void Backup(string appPath, string packetPath, string version,string hash,int appType)
         {
             if (!Directory.Exists(BACKUP_ROOT_PATH))
                 Directory.CreateDirectory(BACKUP_ROOT_PATH);
@@ -93,7 +93,7 @@ namespace GeneralUpdate.Core.WillMessage
             _backupStack.Push(new BackupPO { Version = version,  AppType = appType, AppPath = _appPath, BackupPath = _backupPath , Hash = hash });
         }
 
-        internal void Restore()
+        public void Restore()
         {
             if (_willMessage == null || _willMessage.Message == null) return;
             while (_willMessage.Message.Any())
@@ -105,7 +105,7 @@ namespace GeneralUpdate.Core.WillMessage
             }
         }
 
-        internal void Builder() 
+        public void Builder() 
         {
             if (!_backupStack.Any()) return;
 
@@ -118,7 +118,7 @@ namespace GeneralUpdate.Core.WillMessage
             FileUtil.CreateJson(Path.Combine(DEFULT_WILL_MESSAGE_DIR, DateTime.Now.ToString("yyyyMMdd")), DEFULT_WILL_MESSAGE_FILE, _willMessage);
         }
 
-        internal void Check()
+        public void Check()
         {
             var message = GetWillMessage();
             if (message == null) return;

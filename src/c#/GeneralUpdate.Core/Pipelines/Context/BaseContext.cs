@@ -81,10 +81,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
                 return this;
             }
 
-            public BaseContext Build()
-            {
-                return _context;
-            }
+            public BaseContext Build() => _context;
         }
     }
 }
