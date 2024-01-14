@@ -15,6 +15,7 @@ using System.IO;
 using GeneralUpdate.Core.Driver;
 using Microsoft.VisualBasic;
 using System.Diagnostics;
+using GeneralUpdate.Core.WillMessage;
 
 namespace GeneralUpdate.Client
 {
@@ -297,6 +298,28 @@ namespace GeneralUpdate.Client
         /// <returns></returns>
         private bool IsDriverFile(string filePath) =>
             string.Equals(Path.GetExtension(filePath), ".inf", StringComparison.OrdinalIgnoreCase);
+
+        #endregion
+
+        #region 测试WillMessage
+
+        public void TestWillMessage()
+        {
+            var path1 = "D:\\packet\\source";
+            var path2 = "D:\\packet\\target";
+            var hash = "";
+
+            for (int i = 0; i < 1; i++)
+            {
+                var version = "1.0.0" + i;
+                WillMessageManager.Instance.Backup(path1,path2, version, hash, 1);
+            }
+            WillMessageManager.Instance.Builder();
+            WillMessageManager.Instance.GetWillMessage();
+            WillMessageManager.Instance.Check();
+            WillMessageManager.Instance.Restore();
+            WillMessageManager.Instance.Clear();
+        }
 
         #endregion
     }
