@@ -37,13 +37,12 @@ namespace GeneralUpdate.Core.Utils
             }
         }
 
-        public static void CreateJson<T>(string targetPath,string fileName,T obj) 
+        public static void CreateJson<T>(string targetPath,T obj) 
         {
             if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
-            var fileFullPath = Path.Combine(targetPath,fileName);
-            if (File.Exists(fileFullPath)) File.Delete(fileFullPath);
+            if (File.Exists(targetPath)) File.Delete(targetPath);
             var jsonString = JsonConvert.SerializeObject(obj);
-            File.WriteAllText(fileFullPath, jsonString);
+            File.WriteAllText(targetPath, jsonString);
         }
 
         public static T GetJson<T>(string path)
