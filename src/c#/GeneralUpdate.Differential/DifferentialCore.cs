@@ -117,7 +117,7 @@ namespace GeneralUpdate.Differential
                 //If a file is found that needs to be deleted, a list of files is written to the update package.
                 var exceptFiles = await fileProvider.Except(sourcePath, targetPath);
                 if(exceptFiles != null && exceptFiles.Count() > 0) 
-                    FileUtil.CreateJson(patchPath, DELETE_FILES_NAME, exceptFiles);
+                    FileUtil.CreateJson(Path.Combine(patchPath, DELETE_FILES_NAME), exceptFiles);
             }
             catch (Exception ex)
             {

@@ -301,24 +301,25 @@ namespace GeneralUpdate.Client
 
         #endregion
 
+        
         #region 测试WillMessage
 
         public void TestWillMessage()
         {
             var path1 = "D:\\packet\\source";
             var path2 = "D:\\packet\\target";
-            var hash = "";
+            var hash = "28d10f1fc2a23dd1afe0af40d132b25c72ea56005963f653c27889f03d381c8d";
 
             for (int i = 0; i < 1; i++)
             {
-                var version = "1.0.0" + i;
+                var version = "1.0.0." + i;
                 WillMessageManager.Instance.Backup(path1,path2, version, hash, 1);
             }
             WillMessageManager.Instance.Builder();
-            WillMessageManager.Instance.GetWillMessage();
+            var obj = WillMessageManager.Instance.GetWillMessage();
             WillMessageManager.Instance.Check();
             WillMessageManager.Instance.Restore();
-            WillMessageManager.Instance.Clear();
+            //WillMessageManager.Instance.Clear();
         }
 
         #endregion

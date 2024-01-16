@@ -10,11 +10,11 @@ namespace GeneralUpdate.Core.WillMessage
     public class WillMessageManager
     {
         #region Private Members
-
-        public const string DEFULT_WILL_MESSAGE_DIR = @"C:\generalupdate_willmessages";
+        private string TempPath = Path.GetTempPath();
+        public const string DEFULT_WILL_MESSAGE_DIR = "generalupdate_willmessages";
+        public const string BACKUP_DIR = "generalupdate_backup";
         public const string DEFULT_WILL_MESSAGE_FILE = "will_message.json";
-
-        public const string BACKUP_ROOT_PATH = @"C:\generalupdate_backup";
+        
         private string _packetPath;
         private string _appPath;
         private string _backupPath;
@@ -74,15 +74,15 @@ namespace GeneralUpdate.Core.WillMessage
             _willMessageFile = null;
             _backupStack.Clear();
             FileUtil.DeleteDir(DEFULT_WILL_MESSAGE_DIR);
-            FileUtil.DeleteDir(BACKUP_ROOT_PATH);
+            FileUtil.DeleteDir(GetBackupPath());
         }
 
         public void Backup(string appPath, string packetPath, string version,string hash,int appType)
         {
-            if (!Directory.Exists(BACKUP_ROOT_PATH))
-                Directory.CreateDirectory(BACKUP_ROOT_PATH);
+            if (!Directory.Exists(GetBackupPath()))
+                Directory.CreateDirectory(GetBackupPath());
 
-            var versionDir = Path.Combine(BACKUP_ROOT_PATH, version, appType == 1 ? "ClientApp" : "UpgradeApp");
+            var versionDir = Path.Combine(GetBackupPath(), version, appType == 1 ? "ClientApp" : "UpgradeApp");
             if (!Directory.Exists(versionDir))
                 Directory.CreateDirectory(versionDir);
 
@@ -115,7 +115,7 @@ namespace GeneralUpdate.Core.WillMessage
                                                .SetCreateTime(DateTime.Now)
                                                .SetChangeTime(DateTime.Now)
                                                .Build();
-            FileUtil.CreateJson(Path.Combine(DEFULT_WILL_MESSAGE_DIR, DateTime.Now.ToString("yyyyMMdd")), DEFULT_WILL_MESSAGE_FILE, _willMessage);
+            FileUtil.CreateJson(GetWillMessagePath(), _willMessage);
         }
 
         public void Check()
@@ -146,7 +146,11 @@ namespace GeneralUpdate.Core.WillMessage
 
         #region Private Methods
 
-        private string GetWillMessagePath() => Path.Combine(DEFULT_WILL_MESSAGE_DIR, DateTime.Now.ToString("yyyyMMdd"), DEFULT_WILL_MESSAGE_FILE);
+        private string GetWillMessagePath() =>
+            Path.Combine(TempPath, DEFULT_WILL_MESSAGE_DIR, DateTime.Now.ToString("yyyyMMdd"), DEFULT_WILL_MESSAGE_FILE);
+
+        private string GetBackupPath() =>
+            Path.Combine(TempPath, BACKUP_DIR);
 
         private void ProcessDirectory(string targetDirectory, string basePath, string destPath)
         {
