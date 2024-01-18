@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="ContentProvider\.gitkeep" />
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Domain\Entity\.gitkeep" />
     <None Remove="Domain\PO\.gitkeep" />
@@ -25,6 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="ContentProvider\FileProvider-Manage.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="ContentProvider\FileProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
@@ -54,6 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="ContentProvider\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />

@@ -1,9 +1,8 @@
-﻿using GeneralUpdate.Core.HashAlgorithms;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
-using GeneralUpdate.Differential.ContentProvider;
-using GeneralUpdate.Zip.Events;
 using System;
 using System.Collections.Generic;
 using System.IO;

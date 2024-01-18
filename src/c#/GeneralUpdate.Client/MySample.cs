@@ -13,9 +13,9 @@ using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Differential;
 using System.IO;
 using GeneralUpdate.Core.Driver;
-using Microsoft.VisualBasic;
 using System.Diagnostics;
 using GeneralUpdate.Core.WillMessage;
+using GeneralUpdate.Core.ContentProvider;
 
 namespace GeneralUpdate.Client
 {
@@ -301,7 +301,6 @@ namespace GeneralUpdate.Client
 
         #endregion
 
-        
         #region 测试WillMessage
 
         public void TestWillMessage()
@@ -320,6 +319,16 @@ namespace GeneralUpdate.Client
             WillMessageManager.Instance.Check();
             WillMessageManager.Instance.Restore();
             //WillMessageManager.Instance.Clear();
+        }
+
+        #endregion
+
+        #region 文件管理测试
+
+        public void TestFileProvider() 
+        {
+            //FileProvider fileProvider = new FileProvider();
+            //fileProvider.Handle();
         }
 
         #endregion

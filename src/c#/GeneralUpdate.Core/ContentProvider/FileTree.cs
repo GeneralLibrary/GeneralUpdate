@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace GeneralUpdate.Differential.ContentProvider
+namespace GeneralUpdate.Core.ContentProvider
 {
     /// <summary>
     /// Simple file binary tree.

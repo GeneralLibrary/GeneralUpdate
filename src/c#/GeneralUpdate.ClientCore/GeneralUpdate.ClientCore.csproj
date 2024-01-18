@@ -74,6 +74,10 @@
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\AbstractBootstrap.cs" Link="Bootstrap\AbstractBootstrap.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
@@ -169,9 +173,6 @@
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\IniHandle.cs" Link="Differential\Config\Handles\IniHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\JsonHandle.cs" Link="Differential\Config\Handles\JsonHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\XmlHandle.cs" Link="Differential\Config\Handles\XmlHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
