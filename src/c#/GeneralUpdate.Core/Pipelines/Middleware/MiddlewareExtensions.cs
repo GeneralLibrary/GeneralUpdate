@@ -15,15 +15,15 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         private const DynamicallyAccessedMemberTypes MiddlewareAccessibility =
             DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicMethods;
 
-        public static IPipelineBuilder UseMiddleware<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline) => pipeline.UseMiddleware(typeof(TMiddleware),true);
+        public static IPipelineBuilder UseMiddleware<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline) => pipeline.UseMiddleware(typeof(TMiddleware), true);
 
-        public static IPipelineBuilder UseMiddlewareIf<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline,bool condition = false) => pipeline.UseMiddleware(typeof(TMiddleware), condition);
+        public static IPipelineBuilder UseMiddlewareIf<[DynamicallyAccessedMembers(MiddlewareAccessibility)] TMiddleware>(this IPipelineBuilder pipeline, bool condition = false) => pipeline.UseMiddleware(typeof(TMiddleware), condition);
 
         public static IPipelineBuilder UseMiddleware(
     this IPipelineBuilder pipeline,
     [DynamicallyAccessedMembers(MiddlewareAccessibility)] Type middleware, bool condition)
         {
-            if(!condition) return pipeline;
+            if (!condition) return pipeline;
 
             if (!typeof(IMiddleware).IsAssignableFrom(middleware))
                 throw new ArgumentException($"The middleware type must implement \"{typeof(IMiddleware)}\".");

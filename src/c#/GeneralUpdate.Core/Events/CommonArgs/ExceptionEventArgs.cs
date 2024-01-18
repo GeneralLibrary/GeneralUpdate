@@ -11,7 +11,7 @@ namespace GeneralUpdate.Core.Events.CommonArgs
             _exception = exception;
         }
 
-        public ExceptionEventArgs(string mesage)=> _exception = new Exception(mesage);
+        public ExceptionEventArgs(string mesage) => _exception = new Exception(mesage);
 
         public Exception Exception => _exception;
     }

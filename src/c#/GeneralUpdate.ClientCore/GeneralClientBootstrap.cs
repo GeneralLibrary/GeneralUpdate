@@ -158,7 +158,7 @@ namespace GeneralUpdate.ClientCore
         }
 
         /// <summary>
-        /// Add an asynchronous custom operation. 
+        /// Add an asynchronous custom operation.
         /// In theory, any custom operation can be done. It is recommended to register the environment check method to ensure that there are normal dependencies and environments after the update is completed.
         /// </summary>
         /// <param name="func"></param>
@@ -172,7 +172,7 @@ namespace GeneralUpdate.ClientCore
         }
 
         /// <summary>
-        /// Add a synchronization custom operation. 
+        /// Add a synchronization custom operation.
         /// In theory, any custom operation can be done. It is recommended to register the environment check method to ensure that there are normal dependencies and environments after the update is completed.
         /// </summary>
         /// <param name="func"></param>
@@ -223,10 +223,10 @@ namespace GeneralUpdate.ClientCore
         }
 
         /// <summary>
-        /// Performs all injected custom operations. 
+        /// Performs all injected custom operations.
         /// </summary>
         /// <returns></returns>
-        private async Task ExecuteCustomOptions() 
+        private async Task ExecuteCustomOptions()
         {
             if (_customTaskOptions.Any())
             {
@@ -242,7 +242,7 @@ namespace GeneralUpdate.ClientCore
                 foreach (var option in _customOptions)
                 {
                     var isSuccess = option.Invoke();
-                    if (!isSuccess) 
+                    if (!isSuccess)
                         Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
                 }
             }
@@ -251,7 +251,7 @@ namespace GeneralUpdate.ClientCore
         /// <summary>
         /// The values passed between processes during previous updates are cleared when the client starts.
         /// </summary>
-        private void ClearEnvironmentVariable() 
+        private void ClearEnvironmentVariable()
         {
             try
             {
@@ -278,7 +278,7 @@ namespace GeneralUpdate.ClientCore
             foreach (var item in Packet.UpdateVersions)
             {
                 var msg = willMessage.Message.Peek();
-                if (string.Equals(msg.Version, item.Version,StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(msg.Version, item.Version, StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }

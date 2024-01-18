@@ -18,6 +18,6 @@ namespace GeneralUpdate.Core.Strategys
 
         public virtual void Create<T>(T parameter) where T : class => throw new NotImplementedException();
 
-        public virtual void Create<T>(T parameter,Encoding encoding) where T : class => throw new NotImplementedException();
+        public virtual void Create<T>(T parameter, Encoding encoding) where T : class => throw new NotImplementedException();
     }
 }

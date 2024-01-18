@@ -1,14 +1,12 @@
-﻿using GeneralUpdate.Core.HashAlgorithms;
-
-namespace GeneralUpdate.Client
+﻿namespace GeneralUpdate.Client
 {
     internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             MySample sample = new MySample();
-            sample.TestWillMessage();
-            //Task.Run(async() => 
+            sample.TestFileProvider();
+            //Task.Run(async() =>
             //{
             //    //415eed05eb310f480d1e4d15516fa00e484ddb9f416908b217f17b782ded2030
             //    //var zip1 = @"D:\github_project\WpfClient\WebApi\UpdateFiles\WpfClient_1_24.1.5.1218.zip";

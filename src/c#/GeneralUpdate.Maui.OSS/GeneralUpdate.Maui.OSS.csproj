@@ -43,13 +43,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="ContentProvider\.gitkeep" />
 	  <None Remove="Domain\DO\.gitkeep" />
 	  <None Remove="Domain\Enum\.gitkeep" />
 	  <None Remove="Domain\PO\Assembler\.gitkeep" />
-	  <None Remove="Utils\.gitkeep" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="ContentProvider\FileNode.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="ContentProvider\FileProvider-Manage.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="ContentProvider\FileProvider-Serialization.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="ContentProvider\FileProvider.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="ContentProvider\FileTree.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\Assembler\VersionAssembler.cs" Link="Domain\DO\Assembler\VersionAssembler.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\DO\VersionConfigDO.cs" Link="Domain\DO\VersionConfigDO.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
@@ -66,7 +71,7 @@
 	  <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\OSSArgs\OSSDownloadArgs.cs" Link="Events\OSSDownloadArgs.cs" />
-	  <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
+	  <Compile Include="..\GeneralUpdate.Differential\Common\Filefilter.cs" Link="ContentProvider\Filefilter.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -74,7 +79,6 @@
 	  <Folder Include="Domain\Enum\" />
 	  <Folder Include="Domain\PO\Assembler\" />
 	  <Folder Include="Domain\PO\Assembler\" />
-	  <Folder Include="Utils\" />
 	</ItemGroup>
 
 	<ItemGroup>

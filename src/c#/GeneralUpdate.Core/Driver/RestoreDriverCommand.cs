@@ -1,7 +1,7 @@
-﻿using System.IO;
+﻿using GeneralUpdate.Core.Exceptions;
 using System;
+using System.IO;
 using System.Text;
-using GeneralUpdate.Core.Exceptions;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -9,7 +9,7 @@ namespace GeneralUpdate.Core.Driver
     {
         private DriverInformation _information;
 
-        public RestoreDriverCommand(DriverInformation information)=> _information = information;
+        public RestoreDriverCommand(DriverInformation information) => _information = information;
 
         public void Execute()
         {

@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.DTO;
 using GeneralUpdate.Core.Domain.DTO.Assembler;
-using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,13 +21,47 @@ namespace GeneralUpdate.Core.Domain.Entity
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
             LogUrl = logUrl;
             compressEncoding = compressEncoding ?? Encoding.Default;
-            CompressEncoding = ConvertUtil.ToEncodingType(compressEncoding);
+            CompressEncoding = ToEncodingType(compressEncoding);
             CompressFormat = compressFormat;
             if (downloadTimeOut < 0) throw new ArgumentException("Timeout must be greater than 0 !");
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
             UpdateVersions = VersionAssembler.ToEntitys(updateVersions);
+        }
+
+        private int ToEncodingType(Encoding encoding)
+        {
+            int type = -1;
+            if (encoding == Encoding.UTF8)
+            {
+                type = 1;
+            }
+            else if (encoding == Encoding.UTF7)
+            {
+                type = 2;
+            }
+            else if (encoding == Encoding.UTF32)
+            {
+                type = 3;
+            }
+            else if (encoding == Encoding.Unicode)
+            {
+                type = 4;
+            }
+            else if (encoding == Encoding.BigEndianUnicode)
+            {
+                type = 5;
+            }
+            else if (encoding == Encoding.ASCII)
+            {
+                type = 6;
+            }
+            else if (encoding == Encoding.Default)
+            {
+                type = 7;
+            }
+            return type;
         }
 
         /// <summary>

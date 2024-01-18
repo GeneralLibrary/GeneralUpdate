@@ -44,7 +44,7 @@ namespace GeneralUpdate.Core.ContentProvider
         /// <returns>Except collection</returns>
         public async Task<IEnumerable<FileNode>> Except(string leftPath, string rightPath)
         {
-            return await Task.Run(() => 
+            return await Task.Run(() =>
             {
                 var leftFileNodes = Read(leftPath);
                 var rightFileNodes = Read(rightPath);

@@ -1,5 +1,4 @@
 ﻿using GeneralUpdate.Core.Exceptions;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -25,12 +24,13 @@ namespace GeneralUpdate.Core.Driver
         /// </summary>
         public List<string> Drivers { get; private set; }
 
-        private DriverInformation(){}
+        private DriverInformation()
+        { }
 
         public class Builder
         {
             private DriverInformation _information = new DriverInformation();
-            
+
             public Builder SetInstallDirectory(string installDirectory)
             {
                 _information.InstallDirectory = installDirectory;
@@ -56,8 +56,8 @@ namespace GeneralUpdate.Core.Driver
 
             public DriverInformation Build()
             {
-                if (string.IsNullOrWhiteSpace(_information.InstallDirectory) || 
-                    string.IsNullOrWhiteSpace(_information.OutPutDirectory) || 
+                if (string.IsNullOrWhiteSpace(_information.InstallDirectory) ||
+                    string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
                     !_information.Drivers.Any())
                 {
                     ThrowExceptionUtility.ThrowIfNull("Cannot create DriverInformation, not all fields are set.");

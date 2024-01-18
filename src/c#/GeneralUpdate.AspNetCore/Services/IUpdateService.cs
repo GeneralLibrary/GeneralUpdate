@@ -20,8 +20,8 @@ namespace GeneralUpdate.AspNetCore.Services
         string Update(int clientType, string clientVersion, string serverLastVersion, string clientAppKey, string appSecretKey, bool isForce, List<VersionDTO> versions);
 
         /// <summary>
-        /// When this web api is called at the end of the automatic update, it does not mean that every call is successful. 
-        /// Failure, rollback, and success scenarios will inform the server of the result of the update through this web api. 
+        /// When this web api is called at the end of the automatic update, it does not mean that every call is successful.
+        /// Failure, rollback, and success scenarios will inform the server of the result of the update through this web api.
         /// If there is an exception let the decision maker decide whether to fix the problem by pushing the latest version of the update again.
         /// </summary>
         /// <param name="clientType">1:ClientApp 2:UpdateApp</param>

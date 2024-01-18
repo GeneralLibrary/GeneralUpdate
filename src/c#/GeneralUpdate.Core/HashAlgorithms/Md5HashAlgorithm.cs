@@ -4,6 +4,6 @@ namespace GeneralUpdate.Core.HashAlgorithms
 {
     public class Md5HashAlgorithm : HashAlgorithmBase
     {
-        protected override HashAlgorithm GetHashAlgorithm()=> MD5.Create();
+        protected override HashAlgorithm GetHashAlgorithm() => MD5.Create();
     }
 }

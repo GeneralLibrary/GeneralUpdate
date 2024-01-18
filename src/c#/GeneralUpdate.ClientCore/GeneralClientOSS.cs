@@ -1,7 +1,7 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Domain.PO;
-using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,7 +32,7 @@ namespace GeneralUpdate.ClientCore
                     var versionsFilePath = Path.Combine(basePath, configParams.VersionFileName);
                     DownloadFile(configParams.Url + "/" + configParams.VersionFileName, versionsFilePath);
                     if (!File.Exists(versionsFilePath)) return;
-                    var versions = FileUtil.GetJson<List<VersionPO>>(versionsFilePath);
+                    var versions = FileProvider.GetJson<List<VersionPO>>(versionsFilePath);
                     if (versions == null || versions.Count == 0) return;
                     versions = versions.OrderByDescending(x => x.PubTime).ToList();
                     var newVersion = versions.First();
@@ -49,7 +49,7 @@ namespace GeneralUpdate.ClientCore
                     GeneralUpdate.Core.Events.EventManager.Instance.Dispatch<Action<object, GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs>>(typeof(GeneralClientOSS), new GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs(ex));
                     throw new Exception($"GeneralClientOSS update exception ! {ex.Message}", ex.InnerException);
                 }
-                finally 
+                finally
                 {
                     Process.GetCurrentProcess().Kill();
                 }
@@ -62,19 +62,19 @@ namespace GeneralUpdate.ClientCore
         /// <param name="clientVersion"></param>
         /// <param name="serverVersion"></param>
         /// <returns>true: Upgrade required , false: No upgrade is required</returns>
-        private static bool IsUpgrade(string clientVersion,string serverVersion) 
+        private static bool IsUpgrade(string clientVersion, string serverVersion)
         {
             if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion)) return false;
             Version currentClientVersion = null;
             Version currentServerVersion = null;
             bool isParseClientVersion = Version.TryParse(clientVersion, out currentClientVersion);
             bool isParseServerVersion = Version.TryParse(serverVersion, out currentServerVersion);
-            if(!isParseClientVersion || !isParseServerVersion) return false;
+            if (!isParseClientVersion || !isParseServerVersion) return false;
             if (currentClientVersion < currentServerVersion) return true;
             return false;
         }
 
-        private static void DownloadFile(string url,string path) 
+        private static void DownloadFile(string url, string path)
         {
             using (var webClient = new WebClient())
             {

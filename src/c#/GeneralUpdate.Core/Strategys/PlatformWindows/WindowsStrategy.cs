@@ -1,11 +1,11 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
-using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Core.WillMessage;
 using System;
 using System.Diagnostics;
@@ -42,7 +42,7 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                     {
                         foreach (var version in updateVersions)
                         {
-                            var patchPath = FileUtil.GetTempDirectory(PATCHS);
+                            var patchPath = FileProvider.GetTempDirectory(PATCHS);
                             var zipFilePath = Path.Combine(Packet.TempPath, $"{version.Name}{Packet.Format}");
 
                             var context = new BaseContext.Builder()

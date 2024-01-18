@@ -1,5 +1,6 @@
 ﻿using GeneralUpdate.Core.WillMessage;
 using System.Diagnostics;
+
 #if WINDOWS
 using System.Runtime.InteropServices;
 #endif
@@ -21,17 +22,17 @@ namespace GeneralUpdate.SystemService.Services
         private FileSystemWatcher _fileWatcher;
         private ILogger<WillMessageService> _logger;
 
-#endregion
+        #endregion Private Members
 
         #region Constructors
 
-        public WillMessageService(IConfiguration configuration, ILogger<WillMessageService> logger) 
+        public WillMessageService(IConfiguration configuration, ILogger<WillMessageService> logger)
         {
             _path = configuration.GetValue<string>("WatcherPath");
             _logger = logger;
         }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
@@ -56,7 +57,7 @@ namespace GeneralUpdate.SystemService.Services
                 _logger.LogInformation("File watcher executed.");
                 stoppingToken.Register(() => OnStopping());
                 _fileWatcher = new FileSystemWatcher(_path);
-                // Watch for changes in LastAccess and LastWrite times, and the renaming of files or directories. 
+                // Watch for changes in LastAccess and LastWrite times, and the renaming of files or directories.
                 _fileWatcher.NotifyFilter = NotifyFilters.LastWrite;
                 // Only watch text files.
                 _fileWatcher.Filter = "*.*";
@@ -84,11 +85,11 @@ namespace GeneralUpdate.SystemService.Services
             return base.StopAsync(cancellationToken);
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
-        private void OnChanged(object sender, FileSystemEventArgs e) 
+        private void OnChanged(object sender, FileSystemEventArgs e)
         {
             try
             {
@@ -116,7 +117,7 @@ namespace GeneralUpdate.SystemService.Services
             }
         }
 
-        private void Diagnosis(string processName) 
+        private void Diagnosis(string processName)
         {
             try
             {
@@ -140,6 +141,6 @@ namespace GeneralUpdate.SystemService.Services
             }
         }
 
-#endregion
+        #endregion Private Methods
     }
 }

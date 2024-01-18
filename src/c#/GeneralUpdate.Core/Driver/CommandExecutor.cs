@@ -22,7 +22,7 @@ Hardware problems: If the hardware device fails or the hardware configuration ch
 Before doing anything, create a system restore point so that it can be restored to its previous state if something goes wrong.
 Update the driver regularly to ensure that the driver is compatible with the current operating system version.
 If possible, use pre-tested drivers that are proven to work.
-             * 
+             *
              */
             var processStartInfo = new ProcessStartInfo
             {

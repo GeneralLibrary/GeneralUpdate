@@ -1,4 +1,5 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Domain.PO;
 using GeneralUpdate.Core.Domain.PO.Assembler;
@@ -6,7 +7,6 @@ using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
 using System;
@@ -28,7 +28,7 @@ namespace GeneralUpdate.Core.Strategys
         private ParamsOSS _parameter;
         private Encoding _encoding;
 
-        #endregion
+        #endregion Private Members
 
         #region Public Methods
 
@@ -49,7 +49,7 @@ namespace GeneralUpdate.Core.Strategys
                     if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
                     //2.Parse the JSON version configuration file content.
-                    var versions = FileUtil.GetJson<List<VersionPO>>(jsonPath);
+                    var versions = FileProvider.GetJson<List<VersionPO>>(jsonPath);
                     if (versions == null) throw new NullReferenceException(nameof(versions));
 
                     //3.Download version by version according to the version of the configuration file.
@@ -70,7 +70,7 @@ namespace GeneralUpdate.Core.Strategys
             });
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -106,16 +106,16 @@ namespace GeneralUpdate.Core.Strategys
             try
             {
                 bool isCompleted = true;
-                foreach (VersionInfo version in versions) 
+                foreach (VersionInfo version in versions)
                 {
-                    var zipFilePath = Path.Combine(_appPath,$"{version.Name}.zip");
+                    var zipFilePath = Path.Combine(_appPath, $"{version.Name}.zip");
                     var zipFactory = new GeneralZipFactory();
                     zipFactory.UnZipProgress += (sender, e) =>
                     EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
-                    zipFactory.Completed += (sender, e) => 
+                    zipFactory.Completed += (sender, e) =>
                     {
                         isCompleted = e.IsCompleted;
-                        if(File.Exists(zipFilePath))  File.Delete(zipFilePath);
+                        if (File.Exists(zipFilePath)) File.Delete(zipFilePath);
                     };
                     zipFactory.CreateOperate(OperationType.GZip, version.Name, zipFilePath, _appPath, false, _encoding);
                     zipFactory.UnZip();
@@ -129,6 +129,6 @@ namespace GeneralUpdate.Core.Strategys
             }
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

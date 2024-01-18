@@ -8,7 +8,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
     {
         public async Task InvokeAsync(BaseContext context, MiddlewareStack stack)
         {
-            WillMessageManager.Instance.Backup(context.SourcePath, context.TargetPath, context.Version.ToString(), context.Version.Hash ,context.AppType);
+            WillMessageManager.Instance.Backup(context.SourcePath, context.TargetPath, context.Version.ToString(), context.Version.Hash, context.AppType);
             var node = stack.Pop();
             if (node != null) await node.Next.Invoke(context, stack);
         }
