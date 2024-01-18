@@ -1,6 +1,6 @@
 using System;
 
-namespace GeneralUpdate.Differential.ContentProvider
+namespace GeneralUpdate.Core.ContentProvider
 {
     public class FileNode
     {
