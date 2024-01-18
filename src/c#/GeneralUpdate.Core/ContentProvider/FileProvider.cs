@@ -141,14 +141,8 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <param name="recursion">整个方法里的操作是否递归执行</param>
         /// <param name="integrality">是否保持目录结构的完整性</param>
         /// <returns></returns>
-        //public List<FileNode> Handle(string sourceDir,string targetDir, string resultDir, List<string> condition, FileOperations fileOption, SetOperations setOperations,bool recursion,bool integrality) 
-        //{
-        //    return new List<FileNode>();
-        //}
-
         public List<FileNode> Handle(string sourceDir, string targetDir, string resultDir, List<string> condition, FileOperations fileOption, SetOperations setOperations, bool recursion, bool integrality)
         {
-            // 首先获取源目录和目标目录中所有的文件信息
             IEnumerable<FileNode> sourceFiles = Directory.EnumerateFiles(sourceDir, "*.*", recursion ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
                 .Select(path => new FileInfo(path))
                 .Select(fileInfo => new FileNode
@@ -174,7 +168,6 @@ namespace GeneralUpdate.Differential.ContentProvider
             IEnumerable<FileNode> filteredSourceFiles = sourceFiles.Where(file => condition.Any(c => file.Name.Contains(c) || file.Name.EndsWith(c)));
             IEnumerable<FileNode> filteredTargetFiles = targetFiles.Where(file => condition.Any(c => file.Name.Contains(c) || file.Name.EndsWith(c)));
 
-            // 进行集合运算以得到最终的结果
             IEnumerable<FileNode> resultFiles;
             switch (setOperations)
             {
@@ -191,8 +184,7 @@ namespace GeneralUpdate.Differential.ContentProvider
                     throw new ArgumentException("Invalid operation.", nameof(setOperations));
             }
 
-            // 执行文件操作
-            foreach (FileNode file in resultFiles)
+            foreach (var file in resultFiles)
             {
                 ExecuteFileOperation(file, fileOption, resultDir, integrality);
             }
@@ -200,15 +192,10 @@ namespace GeneralUpdate.Differential.ContentProvider
             return resultFiles.ToList();
         }
 
-        /// <summary>
-        /// 计算文件的哈希值.
-        /// </summary>
-        /// <param name="file">文件对象.</param>
-        /// <returns></returns>
         private string CalculateFileHash(FileInfo file)
         {
-            // 这里只是一个占位符，实际上你需要实现一个方法来计算文件哈希值.
-            return string.Empty;
+            var hashAlgorithm = new Sha256HashAlgorithm();
+            return hashAlgorithm.ComputeHash(file.FullName);
         }
 
         /// <summary>

@@ -62,7 +62,6 @@
     <None Remove="Pipelines\Middleware\.gitkeep" />
     <None Remove="Pipelines\Pipeline\.gitkeep" />
     <None Remove="Strategys\PlatformLinux\.gitkeep" />
-    <None Remove="Strategys\PlatformMac\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
     <None Remove="Utils\.gitkeep" />
     <None Remove="ZipFactory\Events\.gitkeep" />
@@ -150,7 +149,6 @@
     <Compile Include="..\GeneralUpdate.Core\Strategys\AbstractStrategy.cs" Link="Strategys\AbstractStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformMac\MacStrategy.cs" Link="Strategys\PlatformMac\MacStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\ConvertUtil.cs" Link="Utils\ConvertUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
@@ -244,10 +242,8 @@
     <Folder Include="Pipelines\MiddlewareResolver\" />
     <Folder Include="Pipelines\Pipeline\" />
     <Folder Include="Strategys\PlatformWindows\" />
-    <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformLinux\" />
-    <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformWindows\" />
     <Folder Include="Utils\" />
     <Folder Include="Pipelines\Attributes\" />
