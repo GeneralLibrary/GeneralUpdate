@@ -16,7 +16,7 @@ namespace GeneralUpdate.Maui.OSS
         private GeneralUpdateOSS()
         { }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
@@ -53,7 +53,7 @@ namespace GeneralUpdate.Maui.OSS
             AddListener(callbackAction);
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -78,6 +78,6 @@ namespace GeneralUpdate.Maui.OSS
             if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

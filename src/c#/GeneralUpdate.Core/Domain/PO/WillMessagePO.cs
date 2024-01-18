@@ -9,17 +9,19 @@ namespace GeneralUpdate.Core.Domain.PO
         /// Processing has not yet begun.
         /// </summary>
         NotStarted,
+
         /// <summary>
         /// Processing completed.
         /// </summary>
         Completed,
+
         /// <summary>
         /// Processing failure.
         /// </summary>
         Failed
     }
 
-    public class BackupPO 
+    public class BackupPO
     {
         public string AppPath { get; set; }
 
@@ -39,7 +41,8 @@ namespace GeneralUpdate.Core.Domain.PO
         public DateTime CreateTime { get; private set; }
         public DateTime ChangeTime { get; private set; }
 
-        private WillMessagePO() { }
+        private WillMessagePO()
+        { }
 
         public class Builder
         {
@@ -75,5 +78,4 @@ namespace GeneralUpdate.Core.Domain.PO
             }
         }
     }
-
 }

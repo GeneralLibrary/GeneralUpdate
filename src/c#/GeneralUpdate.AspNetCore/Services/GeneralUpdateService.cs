@@ -64,10 +64,9 @@ namespace GeneralUpdate.AspNetCore.Services
             if (string.IsNullOrEmpty(clientAppkey) || string.IsNullOrEmpty(appSecretKey)) throw new NullReferenceException("The APP key does not exist !");
         }
 
-
         public string Report(int clientType, string clientVersion, string clientAppkey, string appSecretKey, string meesage, string dumpBase64, string logBase64, Exception exception) => string.Empty;
 
-
-        private void ParameterVerification(int clientType, string clientVersion, string clientAppkey, string appSecretKey, string meesage, string dumpBase64, string logBase64, Exception exception) { }
+        private void ParameterVerification(int clientType, string clientVersion, string clientAppkey, string appSecretKey, string meesage, string dumpBase64, string logBase64, Exception exception)
+        { }
     }
 }

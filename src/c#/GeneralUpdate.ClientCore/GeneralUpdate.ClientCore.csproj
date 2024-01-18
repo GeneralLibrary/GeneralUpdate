@@ -64,6 +64,7 @@
     <None Remove="Strategys\PlatformLinux\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
     <None Remove="Utils\.gitkeep" />
+    <None Remove="WillMessage\.gitkeep" />
     <None Remove="ZipFactory\Events\.gitkeep" />
     <None Remove="ZipFactory\Factory\.gitkeep" />
     <None Remove="ZipFactory\G7z\.gitkeep" />
@@ -76,6 +77,7 @@
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="Differential\ContentProvider\FileProvider-Serialization.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
@@ -154,9 +156,6 @@
     <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\ConvertUtil.cs" Link="Utils\ConvertUtil.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\HttpUtil.cs" Link="Utils\HttpUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utils\SerializeUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />

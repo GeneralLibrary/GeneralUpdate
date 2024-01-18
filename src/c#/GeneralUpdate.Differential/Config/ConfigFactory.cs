@@ -1,5 +1,4 @@
 ﻿using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Common;
 using GeneralUpdate.Differential.Config.Cache;
 using GeneralUpdate.Differential.Config.Handles;

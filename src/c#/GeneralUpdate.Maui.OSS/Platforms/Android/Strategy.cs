@@ -24,7 +24,7 @@ namespace GeneralUpdate.Maui.OSS
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private ParamsAndroid _parameter;
 
-        #endregion
+        #endregion Private Members
 
         #region Public Methods
 
@@ -85,7 +85,7 @@ namespace GeneralUpdate.Maui.OSS
             }
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -152,6 +152,6 @@ namespace GeneralUpdate.Maui.OSS
             return bigInt.ToString(radix);
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

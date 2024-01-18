@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.Domain.PO;
-using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.Domain.PO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,11 +10,12 @@ namespace GeneralUpdate.Core.WillMessage
     public class WillMessageManager
     {
         #region Private Members
+
         private string TempPath = Path.GetTempPath();
         public const string DEFULT_WILL_MESSAGE_DIR = "generalupdate_willmessages";
         public const string BACKUP_DIR = "generalupdate_backup";
         public const string DEFULT_WILL_MESSAGE_FILE = "will_message.json";
-        
+
         private string _packetPath;
         private string _appPath;
         private string _backupPath;
@@ -25,15 +26,16 @@ namespace GeneralUpdate.Core.WillMessage
         private bool _isFirstTime = true;
 
         private static WillMessageManager _instance;
-        private readonly static object _instanceLock = new object();
+        private static readonly object _instanceLock = new object();
 
-        #endregion
+        #endregion Private Members
 
         #region Constructors
 
-        private WillMessageManager() { }
+        private WillMessageManager()
+        { }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Properties
 
@@ -55,14 +57,14 @@ namespace GeneralUpdate.Core.WillMessage
             }
         }
 
-        #endregion
+        #endregion Public Properties
 
         #region Public Methods
 
         public WillMessagePO GetWillMessage(string path = null)
         {
             _willMessageFile = string.IsNullOrWhiteSpace(path) ? GetWillMessagePath() : path;
-            return _willMessage = FileUtil.GetJson<WillMessagePO>(_willMessageFile);
+            return _willMessage = FileProvider.GetJson<WillMessagePO>(_willMessageFile);
         }
 
         public void Clear()
@@ -73,11 +75,11 @@ namespace GeneralUpdate.Core.WillMessage
             _willMessage = null;
             _willMessageFile = null;
             _backupStack.Clear();
-            FileUtil.DeleteDir(DEFULT_WILL_MESSAGE_DIR);
-            FileUtil.DeleteDir(GetBackupPath());
+            FileProvider.DeleteDir(DEFULT_WILL_MESSAGE_DIR);
+            FileProvider.DeleteDir(GetBackupPath());
         }
 
-        public void Backup(string appPath, string packetPath, string version,string hash,int appType)
+        public void Backup(string appPath, string packetPath, string version, string hash, int appType)
         {
             if (!Directory.Exists(GetBackupPath()))
                 Directory.CreateDirectory(GetBackupPath());
@@ -90,7 +92,7 @@ namespace GeneralUpdate.Core.WillMessage
             _packetPath = packetPath;
             _backupPath = versionDir;
             ProcessDirectory(_packetPath, _appPath, _backupPath);
-            _backupStack.Push(new BackupPO { Version = version,  AppType = appType, AppPath = _appPath, BackupPath = _backupPath , Hash = hash });
+            _backupStack.Push(new BackupPO { Version = version, AppType = appType, AppPath = _appPath, BackupPath = _backupPath, Hash = hash });
         }
 
         public void Restore()
@@ -105,7 +107,7 @@ namespace GeneralUpdate.Core.WillMessage
             }
         }
 
-        public void Builder() 
+        public void Builder()
         {
             if (!_backupStack.Any()) return;
 
@@ -115,7 +117,7 @@ namespace GeneralUpdate.Core.WillMessage
                                                .SetCreateTime(DateTime.Now)
                                                .SetChangeTime(DateTime.Now)
                                                .Build();
-            FileUtil.CreateJson(GetWillMessagePath(), _willMessage);
+            FileProvider.CreateJson(GetWillMessagePath(), _willMessage);
         }
 
         public void Check()
@@ -133,16 +135,18 @@ namespace GeneralUpdate.Core.WillMessage
             {
                 case WillMessageStatus.NotStarted:
                     return;
+
                 case WillMessageStatus.Failed:
                     Restore();
                     break;
+
                 case WillMessageStatus.Completed:
                     Clear();
                     break;
             }
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -196,6 +200,6 @@ namespace GeneralUpdate.Core.WillMessage
             return relativePath.Replace('/', Path.DirectorySeparatorChar);
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }

@@ -1,9 +1,7 @@
 using GeneralUpdate.AspNetCore.DTO;
-using GeneralUpdate.AspNetCore.Hubs;
 using GeneralUpdate.AspNetCore.Services;
 using GeneralUpdate.Core.Domain.DTO;
 using GeneralUpdate.Core.Domain.Enum;
-using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);

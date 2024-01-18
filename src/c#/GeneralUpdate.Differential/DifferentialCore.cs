@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Core.ContentProvider;
 using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Core.Utils;
 using GeneralUpdate.Differential.Binary;
 using GeneralUpdate.Differential.Common;
 using System;
@@ -45,7 +44,7 @@ namespace GeneralUpdate.Differential
                 {
                     lock (_lockObj)
                     {
-                        if (_instance == null) 
+                        if (_instance == null)
                         {
                             _instance = new DifferentialCore();
                         }
@@ -79,7 +78,7 @@ namespace GeneralUpdate.Differential
                 //Take the left tree as the center to match the files that are not in the right tree .
                 var fileProvider = new FileProvider();
                 var nodes = await fileProvider.Compare(sourcePath, targetPath);
-                
+
                 //Binary differencing of like terms .
                 foreach (var file in nodes.Item3)
                 {
@@ -115,8 +114,8 @@ namespace GeneralUpdate.Differential
 
                 //If a file is found that needs to be deleted, a list of files is written to the update package.
                 var exceptFiles = await fileProvider.Except(sourcePath, targetPath);
-                if(exceptFiles != null && exceptFiles.Count() > 0) 
-                    FileUtil.CreateJson(Path.Combine(patchPath, DELETE_FILES_NAME), exceptFiles);
+                if (exceptFiles != null && exceptFiles.Count() > 0)
+                    FileProvider.CreateJson(Path.Combine(patchPath, DELETE_FILES_NAME), exceptFiles);
             }
             catch (Exception ex)
             {
@@ -136,14 +135,14 @@ namespace GeneralUpdate.Differential
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
             try
             {
-                var patchFiles = FileUtil.GetAllFiles(patchPath);
-                var oldFiles = FileUtil.GetAllFiles(appPath);
+                var patchFiles = FileProvider.GetAllFiles(patchPath);
+                var oldFiles = FileProvider.GetAllFiles(appPath);
 
                 //If a JSON file for the deletion list is found in the update package, it will be deleted based on its contents.
-                var deleteListJson =  patchFiles.FirstOrDefault(i=>i.Name.Equals(DELETE_FILES_NAME));
-                if (deleteListJson != null) 
+                var deleteListJson = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
+                if (deleteListJson != null)
                 {
-                    var deleteFiles = FileUtil.GetJson<IEnumerable<FileNode>>(deleteListJson.FullName);
+                    var deleteFiles = FileProvider.GetJson<IEnumerable<FileNode>>(deleteListJson.FullName);
                     var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {

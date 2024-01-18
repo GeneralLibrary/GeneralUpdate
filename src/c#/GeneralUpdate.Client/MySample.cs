@@ -1,21 +1,16 @@
 ﻿using GeneralUpdate.ClientCore;
 using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.ContentProvider;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Driver;
+using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Differential;
-using System.IO;
-using GeneralUpdate.Core.Driver;
-using System.Diagnostics;
 using GeneralUpdate.Core.WillMessage;
-using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Differential;
+using System.Diagnostics;
+using System.Text;
 
 namespace GeneralUpdate.Client
 {
@@ -39,7 +34,7 @@ namespace GeneralUpdate.Client
             if (isUpdate) Upgrade();
         }
 
-        #endregion
+        #endregion 推送功能
 
         #region 常规更新
 
@@ -212,14 +207,13 @@ namespace GeneralUpdate.Client
 
         private void DispatchMessage(string message)
         {
-
         }
 
-        #endregion
+        #endregion 常规更新
 
         #region 测试二进制更新包整理
 
-        public async Task TestDifferentialClean() 
+        public async Task TestDifferentialClean()
         {
             var path1 = "D:\\packet\\source";
             var path2 = "D:\\packet\\target";
@@ -227,14 +221,14 @@ namespace GeneralUpdate.Client
             await DifferentialCore.Instance.Clean(path1, path2, path3);
         }
 
-        public async Task TestDifferentialDirty() 
+        public async Task TestDifferentialDirty()
         {
             var path1 = "D:\\packet\\source";
             var path2 = "D:\\packet\\patchs";
             await DifferentialCore.Instance.Dirty(path1, path2);
         }
 
-        #endregion
+        #endregion 测试二进制更新包整理
 
         #region 测试驱动功能
 
@@ -299,7 +293,7 @@ namespace GeneralUpdate.Client
         private bool IsDriverFile(string filePath) =>
             string.Equals(Path.GetExtension(filePath), ".inf", StringComparison.OrdinalIgnoreCase);
 
-        #endregion
+        #endregion 测试驱动功能
 
         #region 测试WillMessage
 
@@ -312,7 +306,7 @@ namespace GeneralUpdate.Client
             for (int i = 0; i < 1; i++)
             {
                 var version = "1.0.0." + i;
-                WillMessageManager.Instance.Backup(path1,path2, version, hash, 1);
+                WillMessageManager.Instance.Backup(path1, path2, version, hash, 1);
             }
             WillMessageManager.Instance.Builder();
             var obj = WillMessageManager.Instance.GetWillMessage();
@@ -321,16 +315,22 @@ namespace GeneralUpdate.Client
             //WillMessageManager.Instance.Clear();
         }
 
-        #endregion
+        #endregion 测试WillMessage
 
         #region 文件管理测试
 
-        public void TestFileProvider() 
+        public void TestFileProvider()
         {
-            //FileProvider fileProvider = new FileProvider();
-            //fileProvider.Handle();
+            var sourcePath = "D:\\packet\\source";
+            var targetPath = "D:\\packet\\target";
+            var resultPath = "D:\\packet\\patchs";
+
+            FileProvider fileProvider = new FileProvider();
+            var list = fileProvider.Handle(sourcePath, targetPath, resultPath, null, FileOperations.Query, SetOperations.Intersection, true, true);
+            foreach (var item in list)
+                Console.WriteLine(item.Name);
         }
 
-        #endregion
+        #endregion 文件管理测试
     }
 }

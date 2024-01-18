@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Driver
     {
         private DriverInformation _information;
 
-        public BackupDriverCommand(DriverInformation information)=> _information = information;
+        public BackupDriverCommand(DriverInformation information) => _information = information;
 
         public void Execute()
         {
@@ -31,7 +31,7 @@ namespace GeneralUpdate.Core.Driver
                  * If no test driver files are available, you can run the following command to export all installed driver files.
                  *  (1) dism /online /export-driver /destination:"D:\packet\cache\"
                  *  (2) pnputil /export-driver * D:\packet\cache
-                 *  
+                 *
                  *  The following code example exports the specified driver to the specified directory.
                  *  pnputil /export-driver oem14.inf D:\packet\cache
                  */

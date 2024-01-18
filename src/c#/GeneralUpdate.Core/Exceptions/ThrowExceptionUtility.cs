@@ -6,14 +6,14 @@ namespace GeneralUpdate.Core.Exceptions
 {
     internal sealed class ThrowExceptionUtility
     {
-        public static void ThrowGeneralUpdateException(ExceptionArgs args) 
+        public static void ThrowGeneralUpdateException(ExceptionArgs args)
             => Throw<Exception>(args.ToString(), args);
 
         #region Common
 
         public static void ThrowFileNotFound(string file) => Throw<FileNotFoundException>($"File cannot be accessed {file}!");
 
-        public static void ThrowIfNull(string errorMessage = null) 
+        public static void ThrowIfNull(string errorMessage = null)
         {
             errorMessage = errorMessage ?? "Parameter cannot be null";
             Throw<ArgumentException>(errorMessage);
@@ -52,6 +52,6 @@ namespace GeneralUpdate.Core.Exceptions
         public static void Throw<T>(string message, params object[] args) where T : Exception, new()
             => throw (T)Activator.CreateInstance(typeof(T), message, args);
 
-        #endregion
+        #endregion Common
     }
 }

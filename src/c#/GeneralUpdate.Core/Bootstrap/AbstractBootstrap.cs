@@ -1,11 +1,11 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Events;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -62,7 +62,7 @@ namespace GeneralUpdate.Core.Bootstrap
                 Packet.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
                 Packet.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut);
                 Packet.AppName = $"{Packet.AppName ?? GetOption(UpdateOption.MainApp)}{EXECUTABLE_FILE}";
-                Packet.TempPath = $"{FileUtil.GetTempDirectory(Packet.LastVersion)}{Path.DirectorySeparatorChar}";
+                Packet.TempPath = $"{FileProvider.GetTempDirectory(Packet.LastVersion)}{Path.DirectorySeparatorChar}";
                 Packet.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
                 Packet.WillMessageEnabled = GetOption(UpdateOption.WillMessage) ?? false;
                 var manager = new DownloadManager<VersionInfo>(Packet.TempPath, Packet.Format, Packet.DownloadTimeOut);
@@ -95,7 +95,7 @@ namespace GeneralUpdate.Core.Bootstrap
             return _strategy;
         }
 
-        protected string GetPlatform()=> _strategy.GetPlatform();
+        protected string GetPlatform() => _strategy.GetPlatform();
 
         protected IStrategy ExecuteStrategy()
         {
@@ -173,17 +173,17 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Callback event.
 
-        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction) => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction) => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction) => AddListener(callbackAction);
 
-        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)=> AddListener(callbackAction);
+        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction) => AddListener(callbackAction);
 
         protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {

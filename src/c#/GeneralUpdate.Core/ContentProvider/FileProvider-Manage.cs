@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.ContentProvider
         Difference
     }
 
-    public partial class FileProvider 
+    public partial class FileProvider
     {
         /// <summary>
         /// 根据参数内容筛选出sourceDir、targetDir两个文件路径中符合要求的文件信息
@@ -69,12 +69,15 @@ namespace GeneralUpdate.Core.ContentProvider
                 case SetOperations.Intersection:
                     resultFiles = filteredSourceFiles.Intersect(filteredTargetFiles);
                     break;
+
                 case SetOperations.Union:
                     resultFiles = filteredSourceFiles.Union(filteredTargetFiles);
                     break;
+
                 case SetOperations.Difference:
                     resultFiles = filteredSourceFiles.Except(filteredTargetFiles);
                     break;
+
                 default:
                     throw new ArgumentException("Invalid operation.", nameof(setOperations));
             }
@@ -110,16 +113,19 @@ namespace GeneralUpdate.Core.ContentProvider
                     // 如果文件已存在，此操作将覆盖现有文件
                     File.Copy(file.Path, destinationPath, true);
                     break;
+
                 case FileOperations.Delete:
                     if (File.Exists(destinationPath))
                     {
                         File.Delete(destinationPath);
                     }
                     break;
+
                 case FileOperations.Update:
                     // 在这里，我们假定更新操作意味着复制源文件到目标位置，覆盖现有文件
                     File.Copy(file.Path, destinationPath, true);
                     break;
+
                 case FileOperations.Copy:
                     // 确保目标目录存在
                     string directoryName = Path.GetDirectoryName(destinationPath);
@@ -130,14 +136,55 @@ namespace GeneralUpdate.Core.ContentProvider
                     // 拷贝文件到新的位置
                     File.Copy(file.Path, destinationPath, true);
                     break;
+
                 case FileOperations.Query:
                     // 对于“查询”操作，我们不执行任何文件操作，只在控制台中打印出相关信息
                     Console.WriteLine($"Found file: {file.FullName}");
                     break;
+
                 default:
                     throw new ArgumentException("Invalid operation", nameof(operation));
             }
         }
 
+        public static string GetTempDirectory(string name)
+        {
+            var path2 = $"generalupdate_{DateTime.Now.ToString("yyyy-MM-dd")}_{name}";
+            var tempDir = Path.Combine(Path.GetTempPath(), path2);
+            if (!Directory.Exists(tempDir))
+            {
+                Directory.CreateDirectory(tempDir);
+            }
+            return tempDir;
+        }
+
+        public static FileInfo[] GetAllFiles(string path)
+        {
+            try
+            {
+                var files = new List<FileInfo>();
+                files.AddRange(new DirectoryInfo(path).GetFiles());
+                var tmpDir = new DirectoryInfo(path).GetDirectories();
+                foreach (var dic in tmpDir)
+                {
+                    files.AddRange(GetAllFiles(dic.FullName));
+                }
+                return files.ToArray();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Delete the backup file directory and recursively delete all backup content.
+        /// </summary>
+        public static void DeleteDir(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return;
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+        }
     }
 }

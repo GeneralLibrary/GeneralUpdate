@@ -126,7 +126,8 @@ namespace GeneralUpdate.Differential.Config.Handles
             return result;
         }
 
-        private void Read(string originalJson,string diffJson) {
+        private void Read(string originalJson, string diffJson)
+        {
             JObject originalObject = JObject.Parse(originalJson);
             JObject diffObject = JObject.Parse(diffJson);
         }
