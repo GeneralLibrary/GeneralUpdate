@@ -3,21 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace GeneralUpdate.Differential.Common
+namespace GeneralUpdate.Core.ContentProvider
 {
-    internal class DirectoryComparer
+    public partial class FileProvider
     {
-        private readonly string _directoryA;
-        private readonly string _directoryB;
+        private string _directoryA;
+        private string _directoryB;
 
-        public DirectoryComparer(string directoryA, string directoryB)
+        public List<FileInfo> Comparer(string directoryA, string directoryB)
         {
-            this._directoryA = directoryA.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            this._directoryB = directoryB.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        }
-
-        public List<FileInfo> Comparer()
-        {
+            _directoryA = directoryA.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            _directoryB = directoryB.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             var filesInDirectoryA = new HashSet<string>(GetAllFiles(_directoryA).Select(file => file.Substring(_directoryA.Length)), StringComparer.InvariantCultureIgnoreCase);
             var missingFilesPath = GetAllFiles(_directoryB).Where(fileB => !filesInDirectoryA.Contains(fileB.Substring(_directoryB.Length))).ToList();
             var missingFiles = missingFilesPath.Select(path => new FileInfo(path)).ToList();

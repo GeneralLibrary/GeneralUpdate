@@ -1,5 +1,4 @@
 using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -102,7 +101,7 @@ namespace GeneralUpdate.Core.ContentProvider
         /// <returns></returns>
         private bool IsMatchBlacklist(string subPath)
         {
-            var blackList = Filefilter.GetBlackFiles();
+            var blackList = GetBlackFiles();
             if (blackList == null) return false;
             foreach (var file in blackList)
             {

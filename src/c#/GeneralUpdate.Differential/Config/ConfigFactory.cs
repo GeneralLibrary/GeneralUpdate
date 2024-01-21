@@ -1,5 +1,5 @@
-﻿using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Differential.Common;
+﻿using GeneralUpdate.Core.ContentProvider;
+using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Differential.Config.Cache;
 using GeneralUpdate.Differential.Config.Handles;
 using System;
@@ -158,7 +158,7 @@ namespace GeneralUpdate.Differential.Config
             foreach (var file in rootDirectoryInfo.GetFiles())
             {
                 var extensionName = Path.GetExtension(file.Name);
-                if (!Filefilter.GetBlackFileFormats().Contains(extensionName)) continue;
+                if (!FileProvider.GetBlackFileFormats().Contains(extensionName)) continue;
                 var fullName = file.FullName;
                 files.Add(fullName);
             }

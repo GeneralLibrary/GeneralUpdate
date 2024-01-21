@@ -51,6 +51,8 @@
 
 	<ItemGroup>
 	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="ContentProvider\FileNode.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="ContentProvider\FileProvider-Comparer.cs" />
+	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="ContentProvider\FileProvider-Filter.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="ContentProvider\FileProvider-Manage.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="ContentProvider\FileProvider-Serialization.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="ContentProvider\FileProvider.cs" />
@@ -71,7 +73,6 @@
 	  <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
 	  <Compile Include="..\GeneralUpdate.Core\Events\OSSArgs\OSSDownloadArgs.cs" Link="Events\OSSDownloadArgs.cs" />
-	  <Compile Include="..\GeneralUpdate.Differential\Common\Filefilter.cs" Link="ContentProvider\Filefilter.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
