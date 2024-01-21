@@ -325,10 +325,20 @@ namespace GeneralUpdate.Client
             var targetPath = "D:\\packet\\target";
             var resultPath = "D:\\packet\\patchs";
 
-            FileProvider fileProvider = new FileProvider();
-            var list = fileProvider.Handle(sourcePath, targetPath, resultPath, null, FileOperations.Query, SetOperations.Intersection, true, true);
-            foreach (var item in list)
-                Console.WriteLine(item.Name);
+            //FileProvider fileProvider = new FileProvider();
+            //var list = fileProvider.ExecuteOperation(sourcePath, targetPath,new List<string>(), new List<string>());
+            //foreach (var item in list) {
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("total" + list.Count());
+            //Console.WriteLine("--------------------------------------");
+            //FileProvider fileProvider1 = new FileProvider();
+            //var list1 = fileProvider1.ExecuteOperation(targetPath, sourcePath, new List<string>(), new List<string>());
+            //foreach (var item in list1)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("total" + list1.Count());
         }
 
         #endregion 文件管理测试

@@ -1,7 +1,6 @@
 ﻿using GeneralUpdate.Core.ContentProvider;
 using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Differential.Binary;
-using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -101,7 +100,7 @@ namespace GeneralUpdate.Differential
                     var oldfile = finOldFile == null ? "" : finOldFile.FullName;
                     var newfile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (File.Exists(oldfile) && File.Exists(newfile) && !Filefilter.GetBlackFileFormats().Contains(extensionName))
+                    if (File.Exists(oldfile) && File.Exists(newfile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
                     {
                         //Generate the difference file to the difference directory .
                         await new BinaryHandle().Clean(oldfile, newfile, tempPath0);
@@ -135,8 +134,8 @@ namespace GeneralUpdate.Differential
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
             try
             {
-                var patchFiles = FileProvider.GetAllFiles(patchPath);
-                var oldFiles = FileProvider.GetAllFiles(appPath);
+                var patchFiles = FileProvider.GetAllfiles(patchPath);
+                var oldFiles = FileProvider.GetAllfiles(appPath);
 
                 //If a JSON file for the deletion list is found in the update package, it will be deleted based on its contents.
                 var deleteListJson = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
@@ -181,7 +180,7 @@ namespace GeneralUpdate.Differential
         /// </summary>
         /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
-        public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => Filefilter.SetBlacklist(blackFiles, blackFileFormats);
+        public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => FileProvider.SetBlacklist(blackFiles, blackFileFormats);
 
         #endregion Public Methods
 
@@ -217,12 +216,12 @@ namespace GeneralUpdate.Differential
         {
             try
             {
-                var dirCompare = new DirectoryComparer(patchPath, appPath);
-                var listExcept = dirCompare.Comparer();
+                var fileProvider = new FileProvider();
+                var listExcept = fileProvider.Comparer(appPath, patchPath);
                 foreach (var file in listExcept)
                 {
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (Filefilter.GetBlackFileFormats().Contains(extensionName)) continue;
+                    if (FileProvider.GetBlackFileFormats().Contains(extensionName)) continue;
                     var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
                     var targetPath = Path.Combine(appPath, targetFileName);
                     var parentFolder = Directory.GetParent(targetPath);

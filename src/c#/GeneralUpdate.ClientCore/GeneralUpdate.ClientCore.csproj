@@ -32,7 +32,6 @@
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Differential\.gitkeep" />
     <None Remove="Differential\Binary\.gitkeep" />
-    <None Remove="Differential\Common\.gitkeep" />
     <None Remove="Differential\Config\.gitkeep" />
     <None Remove="Differential\Config\Cache\.gitkeep" />
     <None Remove="Differential\Config\Handles\.gitkeep" />
@@ -76,6 +75,8 @@
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="Differential\ContentProvider\FileProvider-Comparer.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="Differential\ContentProvider\FileProvider-Filter.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="Differential\ContentProvider\FileProvider-Serialization.cs" />
     <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
@@ -160,8 +161,6 @@
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Common\DirectoryComparer.cs" Link="Differential\Common\DirectoryComparer.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Common\Filefilter.cs" Link="Differential\Common\Filefilter.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigCache.cs" Link="Differential\Config\Cache\ConfigCache.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigEntity.cs" Link="Differential\Config\Cache\ConfigEntity.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ICache.cs" Link="Differential\Config\Cache\ICache.cs" />
@@ -201,19 +200,14 @@
   <ItemGroup>
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\ContentProvider\" />
     <Folder Include="Domain\DTO\Assembler\" />

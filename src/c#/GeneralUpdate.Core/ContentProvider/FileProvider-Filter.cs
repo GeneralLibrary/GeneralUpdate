@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace GeneralUpdate.Differential.Common
+namespace GeneralUpdate.Core.ContentProvider
 {
-    /// <summary>
-    /// Used to filter out non-updatable file formats during the update process.
-    /// </summary>
-    public class Filefilter
+    public partial class FileProvider
     {
         private static List<string> _blackFiles, _blackFileFormats;
 
