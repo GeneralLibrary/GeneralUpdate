@@ -8,18 +8,58 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="ContentProvider\.gitkeep" />
+    <None Remove="Domain\Entity\Assembler\.gitkeep" />
     <None Remove="Domain\PO\.gitkeep" />
+    <None Remove="Exceptions\CustomArgs\.gitkeep" />
+    <None Remove="Exceptions\CustomException\.gitkeep" />
+    <None Remove="HashAlgorithms\.gitkeep" />
     <None Remove="Utils\.gitkeep" />
+    <None Remove="Utrils\.gitkeep" />
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="ContentProvider\FileProvider-Comparer.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="ContentProvider\FileProvider-Filter.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="ContentProvider\FileProvider-Manage.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="ContentProvider\FileProvider-Serialization.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="ContentProvider\FileProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="ContentProvider\FileTree.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\Assembler\VersionAssembler.cs" Link="Domain\DTO\Assembler\VersionAssembler.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="Domain\DTO\BaseResponseDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="Domain\DTO\VersionDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="Domain\DTO\VersionRespDTO.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Assembler\ProcessAssembler.cs" Link="Domain\Entity\Assembler\ProcessAssembler.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Configinfo.cs" Link="Domain\Entity\Configinfo.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ParamsOSS.cs" Link="Domain\Entity\ParamsOSS.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
     <Compile Include="..\GeneralUpdate.Core\Domain\PO\WillMessagePO.cs" Link="Domain\PO\WillMessagePO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Exceptions\ThrowExceptionUtility.cs" Link="Exceptions\ThrowExceptionUtility.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />
+    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha256HashAlgorithm.cs" Link="HashAlgorithms\Sha256HashAlgorithm.cs" />
+    <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utrils\SerializeUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="Services\WillMessageManager.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
+    <Folder Include="Utrils\" />
   </ItemGroup>
 </Project>

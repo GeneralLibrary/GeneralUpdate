@@ -32,7 +32,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             throw new NotImplementedException();
         }
 
-        Dictionary<string, Dictionary<string, string>> ParseIniFile(string filePath)
+        private Dictionary<string, Dictionary<string, string>> ParseIniFile(string filePath)
         {
             Dictionary<string, Dictionary<string, string>> iniData = new Dictionary<string, Dictionary<string, string>>();
             string currentSection = "";
@@ -58,7 +58,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             return iniData;
         }
 
-        static Dictionary<string, Dictionary<string, string>> GetIniFileDiff(
+        private static Dictionary<string, Dictionary<string, string>> GetIniFileDiff(
             Dictionary<string, Dictionary<string, string>> originalIni,
             Dictionary<string, Dictionary<string, string>> targetIni)
         {
@@ -88,7 +88,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             return diffIni;
         }
 
-        void MergeIniFiles(
+        private void MergeIniFiles(
             Dictionary<string, Dictionary<string, string>> targetIni,
             Dictionary<string, Dictionary<string, string>> diffIni)
         {
@@ -109,7 +109,7 @@ namespace GeneralUpdate.Differential.Config.Handles
             }
         }
 
-        void SaveIniFile(string filePath, Dictionary<string, Dictionary<string, string>> iniData)
+        private void SaveIniFile(string filePath, Dictionary<string, Dictionary<string, string>> iniData)
         {
             using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
             {

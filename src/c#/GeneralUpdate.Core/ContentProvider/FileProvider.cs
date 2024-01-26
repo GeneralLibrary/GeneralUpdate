@@ -1,5 +1,4 @@
 using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Differential.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,9 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GeneralUpdate.Differential.ContentProvider
+namespace GeneralUpdate.Core.ContentProvider
 {
-    public class FileProvider
+    public partial class FileProvider
     {
         private long _fileCount = 0;
 
@@ -44,7 +43,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns>Except collection</returns>
         public async Task<IEnumerable<FileNode>> Except(string leftPath, string rightPath)
         {
-            return await Task.Run(() => 
+            return await Task.Run(() =>
             {
                 var leftFileNodes = Read(leftPath);
                 var rightFileNodes = Read(rightPath);
@@ -102,7 +101,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         /// <returns></returns>
         private bool IsMatchBlacklist(string subPath)
         {
-            var blackList = Filefilter.GetBlackFiles();
+            var blackList = GetBlackFiles();
             if (blackList == null) return false;
             foreach (var file in blackList)
             {

@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Core.Pipelines.Context;

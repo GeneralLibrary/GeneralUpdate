@@ -21,7 +21,8 @@ namespace GeneralUpdate.Core.Pipelines.Context
         public List<string> BlackFiles { get; private set; }
         public List<string> BlackFileFormats { get; private set; }
 
-        private BaseContext() { }
+        private BaseContext()
+        { }
 
         public class Builder
         {
@@ -81,10 +82,7 @@ namespace GeneralUpdate.Core.Pipelines.Context
                 return this;
             }
 
-            public BaseContext Build()
-            {
-                return _context;
-            }
+            public BaseContext Build() => _context;
         }
     }
 }

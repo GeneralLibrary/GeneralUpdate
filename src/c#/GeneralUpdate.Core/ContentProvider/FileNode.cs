@@ -1,6 +1,6 @@
 using System;
 
-namespace GeneralUpdate.Differential.ContentProvider
+namespace GeneralUpdate.Core.ContentProvider
 {
     public class FileNode
     {
@@ -25,7 +25,7 @@ namespace GeneralUpdate.Differential.ContentProvider
         public int RightType { get; set; }
 
         public string RelativePath { get; set; }
-        
+
         #endregion Public Properties
 
         #region Constructors
@@ -138,7 +138,7 @@ namespace GeneralUpdate.Differential.ContentProvider
             if (obj == null) return false;
             var tempNode = obj as FileNode;
             if (tempNode == null) throw new ArgumentException(nameof(tempNode));
-            return string.Equals(Hash, tempNode.Hash,StringComparison.OrdinalIgnoreCase) && string.Equals(Name, tempNode.Name,StringComparison.OrdinalIgnoreCase);
+            return string.Equals(Hash, tempNode.Hash, StringComparison.OrdinalIgnoreCase) && string.Equals(Name, tempNode.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         public override int GetHashCode() => base.GetHashCode();

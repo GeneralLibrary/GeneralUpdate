@@ -12,7 +12,7 @@ namespace GeneralUpdate.Core.Driver
     {
         private DriverInformation _information;
 
-        public InstallDriverCommand(DriverInformation information)=> _information = information;
+        public InstallDriverCommand(DriverInformation information) => _information = information;
 
         public void Execute()
         {
@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Driver
                 {
                     /*
                      * 1.It is best to ensure that the installed file is OEM INF, otherwise PnPUtil may indicate that non-OEM INF cannot perform the current operation.
-                     * 
+                     *
                      * 2.Before installation, you need to delete the previously installed driver, otherwise PnPUtil will prompt 259 to exit the code.
                      * (On Windows, an ExitCode value of 259 (STILL_ACTIVE) means that the process is still running)
                      * If you do not remove the previous installation 259 prompt will give you a misleading impression of what is running.

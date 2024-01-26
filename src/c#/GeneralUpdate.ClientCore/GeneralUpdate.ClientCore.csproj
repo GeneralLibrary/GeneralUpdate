@@ -32,7 +32,6 @@
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Differential\.gitkeep" />
     <None Remove="Differential\Binary\.gitkeep" />
-    <None Remove="Differential\Common\.gitkeep" />
     <None Remove="Differential\Config\.gitkeep" />
     <None Remove="Differential\Config\Cache\.gitkeep" />
     <None Remove="Differential\Config\Handles\.gitkeep" />
@@ -62,9 +61,9 @@
     <None Remove="Pipelines\Middleware\.gitkeep" />
     <None Remove="Pipelines\Pipeline\.gitkeep" />
     <None Remove="Strategys\PlatformLinux\.gitkeep" />
-    <None Remove="Strategys\PlatformMac\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
     <None Remove="Utils\.gitkeep" />
+    <None Remove="WillMessage\.gitkeep" />
     <None Remove="ZipFactory\Events\.gitkeep" />
     <None Remove="ZipFactory\Factory\.gitkeep" />
     <None Remove="ZipFactory\G7z\.gitkeep" />
@@ -75,6 +74,13 @@
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\AbstractBootstrap.cs" Link="Bootstrap\AbstractBootstrap.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
     <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="Differential\ContentProvider\FileProvider-Comparer.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="Differential\ContentProvider\FileProvider-Filter.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="Differential\ContentProvider\FileProvider-Serialization.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
     <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
@@ -150,17 +156,11 @@
     <Compile Include="..\GeneralUpdate.Core\Strategys\AbstractStrategy.cs" Link="Strategys\AbstractStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformMac\MacStrategy.cs" Link="Strategys\PlatformMac\MacStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\ConvertUtil.cs" Link="Utils\ConvertUtil.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\FileUtil.cs" Link="Utils\FileUtil.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\HttpUtil.cs" Link="Utils\HttpUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utils\SerializeUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Common\DirectoryComparer.cs" Link="Differential\Common\DirectoryComparer.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Common\Filefilter.cs" Link="Differential\Common\Filefilter.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigCache.cs" Link="Differential\Config\Cache\ConfigCache.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigEntity.cs" Link="Differential\Config\Cache\ConfigEntity.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ICache.cs" Link="Differential\Config\Cache\ICache.cs" />
@@ -171,9 +171,6 @@
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\IniHandle.cs" Link="Differential\Config\Handles\IniHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\JsonHandle.cs" Link="Differential\Config\Handles\JsonHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Config\Handles\XmlHandle.cs" Link="Differential\Config\Handles\XmlHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
@@ -203,19 +200,14 @@
   <ItemGroup>
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\Common\" />
     <Folder Include="Differential\GStream\" />
     <Folder Include="Differential\ContentProvider\" />
     <Folder Include="Domain\DTO\Assembler\" />
@@ -244,10 +236,8 @@
     <Folder Include="Pipelines\MiddlewareResolver\" />
     <Folder Include="Pipelines\Pipeline\" />
     <Folder Include="Strategys\PlatformWindows\" />
-    <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformLinux\" />
-    <Folder Include="Strategys\PlatformMac\" />
     <Folder Include="Strategys\PlatformWindows\" />
     <Folder Include="Utils\" />
     <Folder Include="Pipelines\Attributes\" />

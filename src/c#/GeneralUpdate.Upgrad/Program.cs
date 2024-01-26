@@ -1,10 +1,8 @@
 ﻿using GeneralUpdate.Core;
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Core.Strategys;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
 using System.Text;
 

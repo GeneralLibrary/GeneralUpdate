@@ -1,20 +1,16 @@
 ﻿using GeneralUpdate.ClientCore;
 using GeneralUpdate.Core.Bootstrap;
+using GeneralUpdate.Core.ContentProvider;
 using GeneralUpdate.Core.Domain.Entity;
+using GeneralUpdate.Core.Domain.Enum;
+using GeneralUpdate.Core.Driver;
+using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events.CommonArgs;
+using GeneralUpdate.Core.WillMessage;
 using GeneralUpdate.Differential;
-using System.IO;
-using GeneralUpdate.Core.Driver;
-using Microsoft.VisualBasic;
 using System.Diagnostics;
+using System.Text;
 
 namespace GeneralUpdate.Client
 {
@@ -38,7 +34,7 @@ namespace GeneralUpdate.Client
             if (isUpdate) Upgrade();
         }
 
-        #endregion
+        #endregion 推送功能
 
         #region 常规更新
 
@@ -211,14 +207,13 @@ namespace GeneralUpdate.Client
 
         private void DispatchMessage(string message)
         {
-
         }
 
-        #endregion
+        #endregion 常规更新
 
         #region 测试二进制更新包整理
 
-        public async Task TestDifferentialClean() 
+        public async Task TestDifferentialClean()
         {
             var path1 = "D:\\packet\\source";
             var path2 = "D:\\packet\\target";
@@ -226,14 +221,14 @@ namespace GeneralUpdate.Client
             await DifferentialCore.Instance.Clean(path1, path2, path3);
         }
 
-        public async Task TestDifferentialDirty() 
+        public async Task TestDifferentialDirty()
         {
             var path1 = "D:\\packet\\source";
             var path2 = "D:\\packet\\patchs";
             await DifferentialCore.Instance.Dirty(path1, path2);
         }
 
-        #endregion
+        #endregion 测试二进制更新包整理
 
         #region 测试驱动功能
 
@@ -298,6 +293,54 @@ namespace GeneralUpdate.Client
         private bool IsDriverFile(string filePath) =>
             string.Equals(Path.GetExtension(filePath), ".inf", StringComparison.OrdinalIgnoreCase);
 
-        #endregion
+        #endregion 测试驱动功能
+
+        #region 测试WillMessage
+
+        public void TestWillMessage()
+        {
+            var path1 = "D:\\packet\\source";
+            var path2 = "D:\\packet\\target";
+            var hash = "28d10f1fc2a23dd1afe0af40d132b25c72ea56005963f653c27889f03d381c8d";
+
+            for (int i = 0; i < 1; i++)
+            {
+                var version = "1.0.0." + i;
+                WillMessageManager.Instance.Backup(path1, path2, version, hash, 1);
+            }
+            WillMessageManager.Instance.Builder();
+            var obj = WillMessageManager.Instance.GetWillMessage();
+            WillMessageManager.Instance.Check();
+            WillMessageManager.Instance.Restore();
+            //WillMessageManager.Instance.Clear();
+        }
+
+        #endregion 测试WillMessage
+
+        #region 文件管理测试
+
+        public void TestFileProvider()
+        {
+            var sourcePath = "D:\\packet\\source";
+            var targetPath = "D:\\packet\\target";
+            var resultPath = "D:\\packet\\patchs";
+
+            //FileProvider fileProvider = new FileProvider();
+            //var list = fileProvider.ExecuteOperation(sourcePath, targetPath,new List<string>(), new List<string>());
+            //foreach (var item in list) {
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("total" + list.Count());
+            //Console.WriteLine("--------------------------------------");
+            //FileProvider fileProvider1 = new FileProvider();
+            //var list1 = fileProvider1.ExecuteOperation(targetPath, sourcePath, new List<string>(), new List<string>());
+            //foreach (var item in list1)
+            //{
+            //    Console.WriteLine(item);
+            //}
+            //Console.WriteLine("total" + list1.Count());
+        }
+
+        #endregion 文件管理测试
     }
 }

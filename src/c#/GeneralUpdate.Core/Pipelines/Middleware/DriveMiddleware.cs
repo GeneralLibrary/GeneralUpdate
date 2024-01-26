@@ -1,10 +1,10 @@
-﻿using System;
+﻿using GeneralUpdate.Core.Driver;
+using GeneralUpdate.Core.Pipelines.Context;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.Driver;
-using GeneralUpdate.Core.Pipelines.Context;
 
 namespace GeneralUpdate.Core.Pipelines.Middleware
 {
@@ -17,8 +17,8 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         {
             var drivers = GetAllDriverDirectories(context.TargetPath);
             var information = new DriverInformation.Builder()
-                .SetInstallDirectory(Path.Combine(context.SourcePath,context.Version.ToString()))
-                .SetOutPutDirectory(Path.Combine(context.TargetPath,context.Version.ToString()))
+                .SetInstallDirectory(Path.Combine(context.SourcePath, context.Version.ToString()))
+                .SetOutPutDirectory(Path.Combine(context.TargetPath, context.Version.ToString()))
                 .SetDriverNames(drivers)
                 .Build();
 
@@ -70,7 +70,7 @@ namespace GeneralUpdate.Core.Pipelines.Middleware
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
-        private bool IsDriverFile(string filePath)=> 
+        private bool IsDriverFile(string filePath) =>
             string.Equals(Path.GetExtension(filePath), ".inf", StringComparison.OrdinalIgnoreCase);
     }
 }

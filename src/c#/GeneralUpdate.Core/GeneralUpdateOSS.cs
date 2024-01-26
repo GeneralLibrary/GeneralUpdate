@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core
         private GeneralUpdateOSS()
         { }
 
-        #endregion
+        #endregion Constructors
 
         #region Public Methods
 
@@ -27,7 +27,7 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public static async Task Start<TStrategy>(ParamsOSS parameter,Encoding encoding) where TStrategy : AbstractStrategy, new()
+        public static async Task Start<TStrategy>(ParamsOSS parameter, Encoding encoding) where TStrategy : AbstractStrategy, new()
         {
             await BaseStart<TStrategy, ParamsOSS>(parameter, encoding);
         }
@@ -67,7 +67,7 @@ namespace GeneralUpdate.Core
             AddListener(callbackAction);
         }
 
-        #endregion
+        #endregion Public Methods
 
         #region Private Methods
 
@@ -82,7 +82,7 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<TStrategy, TParams>(TParams parameter,Encoding encoding) where TStrategy : AbstractStrategy, new() where TParams : class
+        private static async Task BaseStart<TStrategy, TParams>(TParams parameter, Encoding encoding) where TStrategy : AbstractStrategy, new() where TParams : class
         {
             //Initializes and executes the policy.
             var strategyFunc = new Func<TStrategy>(() => new TStrategy());
@@ -92,6 +92,6 @@ namespace GeneralUpdate.Core
             await strategy.ExecuteTaskAsync();
         }
 
-        #endregion
+        #endregion Private Methods
     }
 }
