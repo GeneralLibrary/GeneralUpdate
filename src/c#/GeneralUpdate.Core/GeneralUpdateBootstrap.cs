@@ -4,7 +4,6 @@ using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Entity.Assembler;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.Utils;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -23,7 +22,7 @@ namespace GeneralUpdate.Core
             try
             {
                 var base64 = Environment.GetEnvironmentVariable("ProcessBase64", EnvironmentVariableTarget.User);
-                var processInfo = SerializeUtil.Deserialize<ProcessInfo>(base64);
+                var processInfo = FileProvider.Deserialize<ProcessInfo>(base64);
                 Packet = ProcessAssembler.ToPacket(processInfo);
                 Packet.AppType = AppType.UpgradeApp;
                 Packet.TempPath = $"{FileProvider.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}";

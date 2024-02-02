@@ -62,7 +62,6 @@
     <None Remove="Pipelines\Pipeline\.gitkeep" />
     <None Remove="Strategys\PlatformLinux\.gitkeep" />
     <None Remove="Strategys\PlatformWindows\.gitkeep" />
-    <None Remove="Utils\.gitkeep" />
     <None Remove="WillMessage\.gitkeep" />
     <None Remove="ZipFactory\Events\.gitkeep" />
     <None Remove="ZipFactory\Factory\.gitkeep" />
@@ -157,7 +156,6 @@
     <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Utils\SerializeUtil.cs" Link="Utils\SerializeUtil.cs" />
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
@@ -239,7 +237,6 @@
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformLinux\" />
     <Folder Include="Strategys\PlatformWindows\" />
-    <Folder Include="Utils\" />
     <Folder Include="Pipelines\Attributes\" />
     <Folder Include="Pipelines\Context\" />
     <Folder Include="Pipelines\Middleware\" />
@@ -259,24 +256,20 @@
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
-    <Folder Include="Utils\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
-    <Folder Include="Utils\" />
     <Folder Include="ZipFactory\Events\" />
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
-    <Folder Include="Utils\" />
     <Folder Include="ZipFactory\Events\" />
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
     <Folder Include="ZipFactory\GZip\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="Download\" />
-    <Folder Include="Utils\" />
     <Folder Include="ZipFactory\Events\" />
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="ZipFactory\G7z\" />
