@@ -1,7 +1,6 @@
-﻿using GeneralUpdate.Zip.Events;
+﻿using GeneralUpdate.Zip.CompressProvider;
+using GeneralUpdate.Zip.Events;
 using GeneralUpdate.Zip.Factory;
-using GeneralUpdate.Zip.G7z;
-using GeneralUpdate.Zip.GZip;
 using System;
 using System.Text;
 
@@ -47,12 +46,12 @@ namespace GeneralUpdate.Zip
                 switch (type)
                 {
                     case OperationType.GZip:
-                        _operation = new GeneralZip();
+                        _operation = new CompressZip();
                         _operation.Configs(name, sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
 
                     case OperationType.G7z:
-                        _operation = new General7z();
+                        _operation = new Compress7z();
                         _operation.Configs(name, sourcePath, destinationPath, encoding, includeBaseDirectory);
                         break;
                 }
@@ -84,27 +83,13 @@ namespace GeneralUpdate.Zip
 
         public IFactory CreateZip()
         {
-            try
-            {
-                _operation.CreateZip();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"'CreateZip' exception : {ex.Message} .", ex.InnerException);
-            }
+            _operation.CreateZip();
             return this;
         }
 
         public IFactory UnZip()
         {
-            try
-            {
-                _operation.UnZip();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"'CreateOperate' exception : {ex.Message} .", ex.InnerException);
-            }
+            _operation.UnZip();
             return this;
         }
     }

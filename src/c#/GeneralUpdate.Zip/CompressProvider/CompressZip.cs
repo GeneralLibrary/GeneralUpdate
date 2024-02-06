@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace GeneralUpdate.Zip.GZip
+namespace GeneralUpdate.Zip.CompressProvider
 {
     /// <summary>
     /// Source address  : https://www.cnblogs.com/Chary/p/No0000DF.html
@@ -15,7 +15,7 @@ namespace GeneralUpdate.Zip.GZip
     /// Tribute to the original author .
     /// Secondary developer : Juster Z
     /// </summary>
-    public class GeneralZip : BaseCompress
+    public class CompressZip : BaseCompress
     {
         private string _destinationPath;
         private bool _includeBaseDirectory;

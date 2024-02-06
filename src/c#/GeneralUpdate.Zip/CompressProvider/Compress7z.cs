@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace GeneralUpdate.Zip.G7z
+namespace GeneralUpdate.Zip.CompressProvider
 {
     /// <summary>
     /// Source address : https://github.com/adamhathcock/sharpcompress/blob/master/tests/SharpCompress.Test/WriterTests.cs
@@ -18,7 +18,7 @@ namespace GeneralUpdate.Zip.G7z
     /// Tribute to the original author .
     /// Secondary developer : Juster Z
     /// </summary>
-    public class General7z : BaseCompress
+    public class Compress7z : BaseCompress
     {
         private string _destinationPath;
         private Encoding _encoding;
