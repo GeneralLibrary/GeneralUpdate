@@ -17,7 +17,6 @@
 | 逐版本更新                     | 支持     | 客户端当前版本如果与服务器相差多个版本，则根据多个版本的发布日期逐个更新。（引用组件默认生效） |
 | 二进制差分更新                 | 支持     | 对比新老版本通过差分算法生成补丁文件。（引用组件默认生效）   |
 | 增量更新功能                   | 支持     | 相比上一个版本只更新当前修改过的文件，并且删除当前版本不存在的文件。（引用组件默认生效） |
-| ~~配置文件保留更新~~           | ~~支持~~ | ~~暂时下线该功能，后期考虑开放~~                             |
 | 强制更新                       | 支持     | 打开客户端之后直接强制更新。                                 |
 | 多分支更新                     | 支持     | 当一个产品有多个分支时，需要根据不同的分支更新对应的内容。   |
 | 最新版本推送                   | 支持     | 基于Signal R实现，推送当前最新版本。                         |
@@ -42,7 +41,6 @@
 - 快速启动： https://mp.weixin.qq.com/s/pRKPFe3eC0NSqv9ixXEiTg
 - 使用教程视频：https://www.bilibili.com/video/BV1FT4y1Y7hV
 - 文档：https://gitee.com/GeneralLibrary/GeneralUpdate/tree/master/doc
-- Tag ： https://github.com/GeneralLibrary/GeneralUpdate/tree/master/tag
 
 ## 3.开源地址 ##
 
