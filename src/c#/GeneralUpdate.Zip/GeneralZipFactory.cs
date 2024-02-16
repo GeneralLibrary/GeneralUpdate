@@ -83,13 +83,13 @@ namespace GeneralUpdate.Zip
 
         public IFactory CreateZip()
         {
-            _operation.CreateZip();
+            _operation?.CreateZip();
             return this;
         }
 
         public IFactory UnZip()
         {
-            _operation.UnZip();
+            _operation?.UnZip();
             return this;
         }
     }
