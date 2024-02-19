@@ -31,27 +31,21 @@ namespace GeneralUpdate.Maui.OSS
         /// <param name="versionFileName">Updated version configuration file name.</param>
         /// <exception cref="ArgumentNullException">Method entry parameter is null exception.</exception>
         public static async Task Start<TStrategy>(ParamsAndroid parameter) where TStrategy : AbstractStrategy, new()
-        {
-            await BaseStart<TStrategy, ParamsAndroid>(parameter);
-        }
+        => await BaseStart<TStrategy, ParamsAndroid>(parameter);
 
         /// <summary>
         /// Monitor download progress.
         /// </summary>
         /// <param name="callbackAction"></param>
         public static void AddListenerDownloadProcess(Action<object, OSSDownloadArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         /// <summary>
         /// Listen for internal exception information.
         /// </summary>
         /// <param name="callbackAction"></param>
         public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         #endregion Public Methods
 
