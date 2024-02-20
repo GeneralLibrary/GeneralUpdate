@@ -1,6 +1,5 @@
 ﻿using GeneralUpdate.ClientCore;
 using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.ContentProvider;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
 using GeneralUpdate.Core.Driver;

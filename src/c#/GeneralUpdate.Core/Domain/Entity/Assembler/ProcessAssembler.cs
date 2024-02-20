@@ -1,6 +1,6 @@
-﻿using System;
+﻿using GeneralUpdate.Core.ContentProvider;
+using System;
 using System.Text;
-using GeneralUpdate.Core.ContentProvider;
 
 namespace GeneralUpdate.Core.Domain.Entity.Assembler
 {
