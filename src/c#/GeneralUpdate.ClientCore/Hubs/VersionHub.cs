@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using GeneralUpdate.Core.ContentProvider;
+using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.ContentProvider;
 
 namespace GeneralUpdate.ClientCore.Hubs
 {

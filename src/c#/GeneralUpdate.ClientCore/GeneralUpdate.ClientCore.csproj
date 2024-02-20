@@ -32,9 +32,6 @@
     <None Remove="CustomAwaiter\.gitkeep" />
     <None Remove="Differential\.gitkeep" />
     <None Remove="Differential\Binary\.gitkeep" />
-    <None Remove="Differential\Config\.gitkeep" />
-    <None Remove="Differential\Config\Cache\.gitkeep" />
-    <None Remove="Differential\Config\Handles\.gitkeep" />
     <None Remove="Differential\ContentProvider\.gitkeep" />
     <None Remove="Differential\GStream\.gitkeep" />
     <None Remove="Domain\.gitkeep" />
@@ -156,16 +153,6 @@
     <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigCache.cs" Link="Differential\Config\Cache\ConfigCache.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ConfigEntity.cs" Link="Differential\Config\Cache\ConfigEntity.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Cache\ICache.cs" Link="Differential\Config\Cache\ICache.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\ConfigFactory.cs" Link="Differential\Config\ConfigFactory.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\DBHandle.cs" Link="Differential\Config\Handles\DBHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\HandleEnum.cs" Link="Differential\Config\Handles\HandleEnum.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\IHandle.cs" Link="Differential\Config\Handles\IHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\IniHandle.cs" Link="Differential\Config\Handles\IniHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\JsonHandle.cs" Link="Differential\Config\Handles\JsonHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Config\Handles\XmlHandle.cs" Link="Differential\Config\Handles\XmlHandle.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
     <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
