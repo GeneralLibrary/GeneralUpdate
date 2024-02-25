@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.ContentProvider;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Threading.Tasks;
@@ -122,7 +122,7 @@ namespace GeneralUpdate.ClientCore.Hubs
             if (_receiveMessageCallback == null || string.IsNullOrWhiteSpace(message)) return;
             try
             {
-                var clientParameter = SerializeUtil.Deserialize<TParameter>(message);
+                var clientParameter = FileProvider.Deserialize<TParameter>(message);
                 if (clientParameter == null) throw new ArgumentNullException($"'VersionHub' Receiving server push version information deserialization failed , receive content :  {message} .");
                 _receiveMessageCallback.Invoke(clientParameter);
             }

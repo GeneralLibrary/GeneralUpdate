@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Utils;
+﻿using GeneralUpdate.Core.ContentProvider;
 using System;
 using System.Text;
 
@@ -9,13 +9,13 @@ namespace GeneralUpdate.Core.Domain.Entity.Assembler
         public static string ToBase64(ProcessInfo info)
         {
             if (info == null) throw new ArgumentNullException(nameof(info));
-            return SerializeUtil.Serialize(info);
+            return FileProvider.Serialize(info);
         }
 
         public static string ToBase64(ParamsOSS info)
         {
             if (info == null) throw new ArgumentNullException(nameof(info));
-            return SerializeUtil.Serialize(info);
+            return FileProvider.Serialize(info);
         }
 
         public static Packet ToPacket(ProcessInfo info)

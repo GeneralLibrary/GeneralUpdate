@@ -145,7 +145,7 @@ namespace GeneralUpdate.Core.Bootstrap
             Contract.Requires(option != null);
             if (value == null)
             {
-                this._options.TryRemove(option, out UpdateOptionValue removed);
+                this._options.TryRemove(option, out _);
             }
             else
             {

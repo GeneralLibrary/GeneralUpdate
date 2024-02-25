@@ -28,18 +28,33 @@
 	  <Compile Remove="Bootstrap\**" />
 	  <Compile Remove="Download\**" />
 	  <Compile Remove="Pipelines\**" />
+	  <Compile Remove="Platforms\iOS\**" />
+	  <Compile Remove="Platforms\MacCatalyst\**" />
+	  <Compile Remove="Platforms\Tizen\**" />
 	  <EmbeddedResource Remove="Bootstrap\**" />
 	  <EmbeddedResource Remove="Download\**" />
 	  <EmbeddedResource Remove="Pipelines\**" />
+	  <EmbeddedResource Remove="Platforms\iOS\**" />
+	  <EmbeddedResource Remove="Platforms\MacCatalyst\**" />
+	  <EmbeddedResource Remove="Platforms\Tizen\**" />
 	  <MauiCss Remove="Bootstrap\**" />
 	  <MauiCss Remove="Download\**" />
 	  <MauiCss Remove="Pipelines\**" />
+	  <MauiCss Remove="Platforms\iOS\**" />
+	  <MauiCss Remove="Platforms\MacCatalyst\**" />
+	  <MauiCss Remove="Platforms\Tizen\**" />
 	  <MauiXaml Remove="Bootstrap\**" />
 	  <MauiXaml Remove="Download\**" />
 	  <MauiXaml Remove="Pipelines\**" />
+	  <MauiXaml Remove="Platforms\iOS\**" />
+	  <MauiXaml Remove="Platforms\MacCatalyst\**" />
+	  <MauiXaml Remove="Platforms\Tizen\**" />
 	  <None Remove="Bootstrap\**" />
 	  <None Remove="Download\**" />
 	  <None Remove="Pipelines\**" />
+	  <None Remove="Platforms\iOS\**" />
+	  <None Remove="Platforms\MacCatalyst\**" />
+	  <None Remove="Platforms\Tizen\**" />
 	</ItemGroup>
 
 	<ItemGroup>

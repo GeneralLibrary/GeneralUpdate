@@ -15,7 +15,6 @@
 | Update version-by-version                         | yes              | If the current version of the client differs from the server by more than one version, it is updated one by one according to the release date of the multiple versions. (Reference components take effect by default) |
 | Binary differential update                        | yes              | Compare the old and new versions to generate patch files by differential algorithms. (Reference components take effect by default) |
 | Incremental update functionality                  | yes              | Only the currently modified files are updated compared to the previous version，And delete files that do not exist in the current version. (Reference components take effect by default) |
-| ~~The configuration file remains updated~~        | no               | ~~This feature is temporarily offline~~                      |
 | Force an update                                   | yes              | Force an update directly after opening the client.           |
 | Multi-branch updates                              | yes              | When a product has multiple branches, you need to update the corresponding content according to different branches. |
 | The latest version push                           | yes              | Based on the SignalR implementation, push the latest version. |
@@ -40,7 +39,6 @@
 - Quick Start： https://mp.weixin.qq.com/s/pRKPFe3eC0NSqv9ixXEiTg
 - Use the tutorial video：https://www.bilibili.com/video/BV1FT4y1Y7hV
 - Doc : https://gitee.com/GeneralLibrary/GeneralUpdate/tree/master/doc
-- Tag ： https://github.com/GeneralLibrary/GeneralUpdate/tree/master/tag
 
 ### 3.Open source address ###
 

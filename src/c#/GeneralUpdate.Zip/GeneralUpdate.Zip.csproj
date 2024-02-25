@@ -15,12 +15,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="G7z\Events\**" />
-    <EmbeddedResource Remove="G7z\Events\**" />
-    <None Remove="G7z\Events\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="GeneralUpdate.ico" />
     <None Remove="GeneralUpdate.Zip.1.0.0.nupkg" />
     <None Remove="GeneralUpdate.Zip.nuspec" />
