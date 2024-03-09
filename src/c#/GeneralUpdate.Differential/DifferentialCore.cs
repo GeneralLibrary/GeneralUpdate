@@ -63,9 +63,6 @@ namespace GeneralUpdate.Differential
         /// <param name="sourcePath">Previous version folder path .</param>
         /// <param name="targetPath">Recent version folder path.</param>
         /// <param name="patchPath">Store discovered incremental update files in a temporary directory .</param>
-        /// <param name="compressProgressCallback">Incremental package generation progress callback function.</param>
-        /// <param name="type">7z or zip</param>
-        /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
         public async Task Clean(string sourcePath, string targetPath, string patchPath = null)
         {
