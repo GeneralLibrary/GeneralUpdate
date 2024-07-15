@@ -103,7 +103,8 @@ namespace GeneralUpdate.Differential
                     var extensionName = Path.GetExtension(file.FullName);
                     if (File.Exists(oldFile) && File.Exists(newFile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
                     {
-                        if (hashAlgorithm.ComputeHash(oldFile) == hashAlgorithm.ComputeHash(newFile))
+                        if (hashAlgorithm.ComputeHash(oldFile)
+                            .Equals(hashAlgorithm.ComputeHash(newFile), StringComparison.OrdinalIgnoreCase))
                         {
                             continue;
                         }
