@@ -9,8 +9,13 @@ namespace GeneralUpdate.Core.ContentProvider
     {
         public static void CreateJson<T>(string targetPath, T obj)
         {
-            if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
-            if (File.Exists(targetPath)) File.Delete(targetPath);
+            var folderPath = Path.GetDirectoryName(targetPath) ??
+                             throw new ArgumentException("invalid path", nameof(targetPath));
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            
             var jsonString = JsonConvert.SerializeObject(obj);
             File.WriteAllText(targetPath, jsonString);
         }
@@ -20,10 +25,7 @@ namespace GeneralUpdate.Core.ContentProvider
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
-                if (json != null)
-                {
-                    return JsonConvert.DeserializeObject<T>(json);
-                }
+                return JsonConvert.DeserializeObject<T>(json);
             }
             return default(T);
         }
