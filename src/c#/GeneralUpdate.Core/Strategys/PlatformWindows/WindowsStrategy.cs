@@ -33,12 +33,12 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
 
         public override void Execute()
         {
-            try
+            Task.Run(async () =>
             {
-                Task.Run(async () =>
+                try
                 {
                     var updateVersions = Packet.UpdateVersions.OrderBy(x => x.PubTime).ToList();
-                    if (updateVersions != null && updateVersions.Count > 0)
+                    if (updateVersions.Count > 0)
                     {
                         foreach (var version in updateVersions)
                         {
@@ -46,36 +46,37 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                             var zipFilePath = Path.Combine(Packet.TempPath, $"{version.Name}{Packet.Format}");
 
                             var context = new BaseContext.Builder()
-                                                      .SetVersion(version)
-                                                      .SetZipfilePath(zipFilePath)
-                                                      .SetTargetPath(patchPath)
-                                                      .SetSourcePath(Packet.InstallPath)
-                                                      .SetFormat(Packet.Format)
-                                                      .SetEncoding(Packet.Encoding)
-                                                      .SetBlackFiles(Packet.BlackFiles)
-                                                      .SetBlackFileFormats(Packet.BlackFormats)
-                                                      .SetAppType(Packet.AppType)
-                                                      .Build();
+                                .SetVersion(version)
+                                .SetZipfilePath(zipFilePath)
+                                .SetTargetPath(patchPath)
+                                .SetSourcePath(Packet.InstallPath)
+                                .SetFormat(Packet.Format)
+                                .SetEncoding(Packet.Encoding)
+                                .SetBlackFiles(Packet.BlackFiles)
+                                .SetBlackFileFormats(Packet.BlackFormats)
+                                .SetAppType(Packet.AppType)
+                                .Build();
 
-                            var pipelineBuilder = new PipelineBuilder<BaseContext>(context).
-                                UseMiddleware<HashMiddleware>().
-                                UseMiddleware<ZipMiddleware>().
-                                UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled).
-                                UseMiddlewareIf<WillMessageMiddleware>(Packet.WillMessageEnabled).
-                                UseMiddleware<PatchMiddleware>();
+                            var pipelineBuilder = new PipelineBuilder<BaseContext>(context)
+                                .UseMiddleware<HashMiddleware>().UseMiddleware<ZipMiddleware>()
+                                .UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled)
+                                .UseMiddlewareIf<WillMessageMiddleware>(Packet.WillMessageEnabled)
+                                .UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Build();
                         }
-                        if (!string.IsNullOrEmpty(Packet.UpdateLogUrl)) Process.Start("explorer.exe", Packet.UpdateLogUrl);
+
+                        if (!string.IsNullOrEmpty(Packet.UpdateLogUrl))
+                            Process.Start("explorer.exe", Packet.UpdateLogUrl);
                     }
+
                     Clear();
                     StartApp(Packet.AppName, Packet.AppType);
-                });
-            }
-            catch (Exception exception)
-            {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
-                return;
-            }
+                }
+                catch (Exception e)
+                {
+                    EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(e));
+                }
+            });
         }
 
         public override bool StartApp(string appName, int appType)
