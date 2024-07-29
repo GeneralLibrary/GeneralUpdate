@@ -81,8 +81,10 @@ namespace GeneralUpdate.Differential
                 //Binary differencing of like terms .
                 foreach (var file in nodes.Item3)
                 {
-                    var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
-                    var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
+                    var tempPath = file.FullName
+                        .Replace(targetPath, string.Empty)
+                        .Replace(Path.GetFileName(file.FullName), string.Empty)
+                        .Trim(Path.DirectorySeparatorChar);
                     var tempPath0 = string.Empty;
                     var tempDir = string.Empty;
                     if (string.IsNullOrEmpty(tempPath))
@@ -98,7 +100,7 @@ namespace GeneralUpdate.Differential
                     }
                     
                     var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
-                    var oldFile = finOldFile == null ? "" : finOldFile.FullName;
+                    var oldFile = finOldFile == null ? string.Empty : finOldFile.FullName;
                     var newFile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
                     if (File.Exists(oldFile) && File.Exists(newFile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
@@ -155,7 +157,7 @@ namespace GeneralUpdate.Differential
                     var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {
-                        var resultFile = oldFiles.FirstOrDefault(i => 
+                        var resultFile = oldFiles.Find(i => 
                             string.Equals(hashAlgorithm.ComputeHash(i.FullName), file.Hash, StringComparison.OrdinalIgnoreCase));
                         if (resultFile == null)
                         {
@@ -171,7 +173,7 @@ namespace GeneralUpdate.Differential
                 foreach (var oldFile in oldFiles)
                 {
                     //Only the difference file (.patch) can be updated here.
-                    var findFile = patchFiles.FirstOrDefault(f =>
+                    var findFile = patchFiles.Find(f =>
                     {
                         var tempName = Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "");
                         return tempName.Equals(oldFile.Name);
