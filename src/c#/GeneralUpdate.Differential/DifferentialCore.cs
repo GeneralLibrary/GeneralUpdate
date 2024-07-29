@@ -241,7 +241,7 @@ namespace GeneralUpdate.Differential
                 {
                     var extensionName = Path.GetExtension(file.FullName);
                     if (FileProvider.GetBlackFileFormats().Contains(extensionName)) continue;
-                    var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
+                    var targetFileName = file.FullName.Replace(patchPath, string.Empty).TrimStart('\\');
                     var targetPath = Path.Combine(appPath, targetFileName);
                     var parentFolder = Directory.GetParent(targetPath);
                     if (!parentFolder.Exists) parentFolder.Create();
