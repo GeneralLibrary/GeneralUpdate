@@ -63,20 +63,20 @@ namespace GeneralUpdate.Differential
         /// <param name="sourcePath">Previous version folder path .</param>
         /// <param name="targetPath">Recent version folder path.</param>
         /// <param name="patchPath">Store discovered incremental update files in a temporary directory .</param>
-        /// <param name="compressProgressCallback">Incremental package generation progress callback function.</param>
-        /// <param name="type">7z or zip</param>
-        /// <param name="encoding">Incremental packet encoding format .</param>
         /// <returns></returns>
         public async Task Clean(string sourcePath, string targetPath, string patchPath = null)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(patchPath)) patchPath = Path.Combine(Environment.CurrentDirectory, PATCHS);
-                if (!Directory.Exists(patchPath)) Directory.CreateDirectory(patchPath);
+                if (string.IsNullOrWhiteSpace(patchPath)) 
+                    patchPath = Path.Combine(Environment.CurrentDirectory, PATCHS);
+                if (!Directory.Exists(patchPath))
+                    Directory.CreateDirectory(patchPath);
 
                 //Take the left tree as the center to match the files that are not in the right tree .
                 var fileProvider = new FileProvider();
                 var nodes = await fileProvider.Compare(sourcePath, targetPath);
+                var hashAlgorithm = new Sha256HashAlgorithm();
 
                 //Binary differencing of like terms .
                 foreach (var file in nodes.Item3)
@@ -96,25 +96,35 @@ namespace GeneralUpdate.Differential
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
                         tempPath0 = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
                     }
+                    
                     var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
-                    var oldfile = finOldFile == null ? "" : finOldFile.FullName;
-                    var newfile = file.FullName;
+                    var oldFile = finOldFile == null ? "" : finOldFile.FullName;
+                    var newFile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (File.Exists(oldfile) && File.Exists(newfile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
+                    if (File.Exists(oldFile) && File.Exists(newFile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
                     {
+                        if (hashAlgorithm.ComputeHash(oldFile)
+                            .Equals(hashAlgorithm.ComputeHash(newFile), StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
                         //Generate the difference file to the difference directory .
-                        await new BinaryHandle().Clean(oldfile, newfile, tempPath0);
+                        await new BinaryHandle().Clean(oldFile, newFile, tempPath0);
                     }
                     else
                     {
-                        File.Copy(newfile, Path.Combine(tempDir, Path.GetFileName(newfile)), true);
+                        File.Copy(newFile, Path.Combine(tempDir, Path.GetFileName(newFile)), true);
                     }
                 }
 
                 //If a file is found that needs to be deleted, a list of files is written to the update package.
-                var exceptFiles = await fileProvider.Except(sourcePath, targetPath);
-                if (exceptFiles != null && exceptFiles.Count() > 0)
-                    FileProvider.CreateJson(Path.Combine(patchPath, DELETE_FILES_NAME), exceptFiles);
+                var exceptFiles = (await fileProvider.Except(sourcePath, targetPath)).ToList();
+                if (exceptFiles.Count != 0)
+                {
+                    var path = Path.Combine(patchPath, DELETE_FILES_NAME);
+                    FileProvider.CreateJson(path, exceptFiles);
+                }
             }
             catch (Exception ex)
             {
@@ -145,9 +155,16 @@ namespace GeneralUpdate.Differential
                     var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {
-                        var resultFile = oldFiles.FirstOrDefault(i => string.Equals(hashAlgorithm.ComputeHash(i.FullName), file.Hash, StringComparison.OrdinalIgnoreCase));
-                        if (resultFile == null) continue;
-                        if (File.Exists(resultFile.FullName)) File.Delete(resultFile.FullName);
+                        var resultFile = oldFiles.FirstOrDefault(i => 
+                            string.Equals(hashAlgorithm.ComputeHash(i.FullName), file.Hash, StringComparison.OrdinalIgnoreCase));
+                        if (resultFile == null)
+                        {
+                            continue;
+                        }
+                        if (File.Exists(resultFile.FullName))
+                        {
+                            File.Delete(resultFile.FullName);
+                        }
                     }
                 }
 

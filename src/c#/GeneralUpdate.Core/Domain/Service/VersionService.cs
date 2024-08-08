@@ -4,68 +4,100 @@ using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Events;
+using GeneralUpdate.Core.Events.CommonArgs;
 
 namespace GeneralUpdate.Core.Domain.Service
 {
     public class VersionService
     {
-        public async Task<VersionRespDTO> ValidationVersion(string url, Action<object, ProgressType, string> statusCallback)
-        {
-            statusCallback(this, ProgressType.Check, "Update checking...");
-            VersionRespDTO resp = await ValidationVersion(url);
-            if (resp == null) statusCallback(this, ProgressType.Check, $"Request failed , Code :{resp.Code}, Message:{resp.Message} !");
-            return await ValidationVersion(url);
-        }
-
         public async Task<VersionRespDTO> ValidationVersion(string url)
         {
             var updateResp = await GetTaskAsync<VersionRespDTO>(url);
-            if (updateResp == null || updateResp.Body == null) throw new ArgumentNullException($"The  verification request is abnormal, please check the network or parameter configuration!");
-            if (updateResp.Code != HttpStatus.OK) throw new Exception($"Request failed , Code :{updateResp.Code}, Message:{updateResp.Message} !");
-            if (updateResp.Code == HttpStatus.OK) return updateResp;
-            return null;
+            if (updateResp == null || updateResp.Body == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(updateResp),
+                    "The verification request is abnormal, please check the network or parameter configuration!"
+                );
+            }
+
+            if (updateResp.Code == HttpStatus.OK)
+            {
+                return updateResp;
+            }
+            else
+            {
+                throw new WebException(
+                    $"Request failed , Code :{updateResp.Code}, Message:{updateResp.Message} !"
+                );
+            }
         }
 
-        public static async Task<T> GetTaskAsync<T>(string http_url, string header_key = null, string header_value = null)
+        private async Task<T> GetTaskAsync<T>(
+            string httpUrl,
+            string headerKey = null,
+            string headerValue = null
+        )
         {
             HttpWebResponse response = null;
             try
             {
-                ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(CheckValidationResult);
-                string httpUri = http_url;
-                var encoding = Encoding.GetEncoding("utf-8");
-                var request = (HttpWebRequest)WebRequest.Create(httpUri);
+                ServicePointManager.ServerCertificateValidationCallback = CheckValidationResult;
+                var request = (HttpWebRequest)WebRequest.Create(httpUrl);
                 request.Method = "GET";
                 request.Accept = "text/html, application/xhtml+xml, */*";
                 request.ContentType = "application/x-www-form-urlencoded";
                 request.Timeout = 15000;
-                if (!string.IsNullOrEmpty(header_key) && !string.IsNullOrEmpty(header_value))
+                if (!string.IsNullOrEmpty(headerKey) && !string.IsNullOrEmpty(headerValue))
                 {
-                    request.Headers[header_key] = header_value;
+                    request.Headers[headerKey] = headerValue;
                 }
                 response = (HttpWebResponse)await request.GetResponseAsync();
-                if (response.StatusCode != HttpStatusCode.OK) return default(T);
-                using (var reader = new StreamReader(response.GetResponseStream(), encoding))
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    var tempStr = reader.ReadToEnd();
+                    throw new WebException(
+                        $"Response status code does not indicate success: {response.StatusCode}!"
+                    );
+                }
+                var responseStream = response.GetResponseStream();
+                if (responseStream == null)
+                {
+                    throw new WebException(
+                        "Response stream is null, please check the network or parameter configuration!"
+                    );
+                }
+                using (var reader = new StreamReader(responseStream, Encoding.UTF8))
+                {
+                    var tempStr = await reader.ReadToEndAsync();
                     var respContent = JsonConvert.DeserializeObject<T>(tempStr);
                     return respContent;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return default(T);
+                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(
+                    this,
+                    new ExceptionEventArgs(ex)
+                );
+                return default;
             }
             finally
             {
-                if (response != null) response.Close();
+                response?.Close();
             }
         }
 
-        private static bool CheckValidationResult(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) => true;
+        private static bool CheckValidationResult(
+            object sender,
+            X509Certificate certificate,
+            X509Chain chain,
+            SslPolicyErrors sslPolicyErrors
+        ) => true;
     }
 }
