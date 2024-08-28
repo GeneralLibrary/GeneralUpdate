@@ -4,7 +4,18 @@ namespace GeneralUpdate.Core.ContentProvider
 {
     public partial class FileProvider
     {
-        private static List<string> _blackFiles, _blackFileFormats;
+        private static List<string> _blackFiles,
+            _blackFileFormats;
+        private static readonly List<string> DefaultBlackFileFormats = new List<string>(6)
+        {
+            ".patch",
+            ".7z",
+            ".zip",
+            ".rar",
+            ".tar",
+            ".json"
+        };
+        private static readonly List<string> DefaultBlackFiles = new List<string>(1) { "Newtonsoft.Json.dll" };
 
         /// <summary>
         /// Set a blacklist.
@@ -21,12 +32,14 @@ namespace GeneralUpdate.Core.ContentProvider
         /// These files will be skipped when updating.
         /// </summary>
         /// <returns></returns>
-        public static List<string> GetBlackFiles() => _blackFiles ?? new List<string>() { "Newtonsoft.Json.dll" };
+        public static List<string> GetBlackFiles() =>
+            _blackFiles ?? DefaultBlackFiles;
 
         /// <summary>
         /// These files that contain the file suffix will be skipped when updating.
         /// </summary>
         /// <returns></returns>
-        public static List<string> GetBlackFileFormats() => _blackFileFormats ?? new List<string>() { ".patch", ".7z", ".zip", ".rar", ".tar", ".json" };
+        public static List<string> GetBlackFileFormats() =>
+            _blackFileFormats ?? DefaultBlackFileFormats;
     }
 }
