@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GeneralUpdate.Common.Events
+namespace GeneralUpdate.Common.Internal.Event
 {
     /// <summary>
     /// Event manager interface.

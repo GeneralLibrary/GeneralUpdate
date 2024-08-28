@@ -1,9 +1,7 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 
-namespace GeneralUpdate.Core.Driver
+namespace GeneralUpdate.Common.Driver
 {
     /// <summary>
     /// Install the new driver, and if the installation fails, the backup is automatically restored.
@@ -35,11 +33,11 @@ namespace GeneralUpdate.Core.Driver
                     CommandExecutor.ExecuteCommand(command);
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 //restore all the drivers in the backup directory.
                 new RestoreDriverCommand(_information).Execute();
-                ThrowExceptionUtility.Throw<Exception>($"Failed to execute install command for {_information.InstallDirectory}", ex);
+                throw new System.Exception($"Failed to execute install command for {_information.InstallDirectory}", ex);
             }
         }
     }

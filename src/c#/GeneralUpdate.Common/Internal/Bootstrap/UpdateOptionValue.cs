@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Core.Bootstrap
+﻿namespace GeneralUpdate.Common.Internal.Bootstrap
 {
     public abstract class UpdateOptionValue
     {

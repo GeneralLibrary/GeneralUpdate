@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace GeneralUpdate.Core.Domain.Entity
+namespace GeneralUpdate.Common.Shared
 {
-    public class VersionInfo : Entity
+    public class VersionInfo
     {
         public VersionInfo()
         { }
@@ -14,7 +14,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             Hash = hash ?? throw new ArgumentNullException(nameof(hash));
             Version = version ?? throw new ArgumentNullException(nameof(version));
             Url = url ?? throw new ArgumentNullException(nameof(Url));
-            if (!IsURL(Url)) throw new Exception($"Illegal url {nameof(Url)}");
+            if (!IsUri(Url)) throw new Exception($"Illegal url {nameof(Url)}");
         }
 
         /// <summary>
@@ -45,6 +45,12 @@ namespace GeneralUpdate.Core.Domain.Entity
         public override string ToString()
         {
             return Version;
+        }
+        
+        bool IsUri(string uriString)
+        {
+            return Uri.TryCreate(uriString, UriKind.Absolute, out Uri uriResult) 
+                   && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme == Uri.UriSchemeFtp);
         }
     }
 }

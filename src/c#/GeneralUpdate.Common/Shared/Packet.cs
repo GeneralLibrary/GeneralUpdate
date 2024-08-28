@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GeneralUpdate.Core.Domain.Entity
+namespace GeneralUpdate.Common.Shared
 {
-    public class Packet : Entity
+    public class Packet
     {
         public Packet()
         { }
 
-        public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, Encoding encoding, int downloadTimeOut, string appSecretKey, string tempPath)
+        public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, string encoding, int downloadTimeOut, string appSecretKey, string tempPath)
         {
-            if (!IsURL(mainUpdateUrl)) throw new Exception($"Illegal url {nameof(mainUpdateUrl)}");
+            if (!IsUri(mainUpdateUrl)) throw new Exception($"Illegal url {nameof(mainUpdateUrl)}");
             MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(MainUpdateUrl));
-            if (!IsURL(updateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
+            if (!IsUri(updateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
             UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
             UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
             AppType = appType;
@@ -26,7 +26,7 @@ namespace GeneralUpdate.Core.Domain.Entity
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             TempPath = tempPath ?? throw new ArgumentNullException(nameof(tempPath));
         }
-
+        
         /// <summary>
         /// Update check api address.
         /// </summary>
@@ -80,7 +80,7 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// <summary>
         /// The encoding format for file operations.
         /// </summary>
-        public Encoding Encoding { get; set; }
+        public string Encoding { get; set; }
 
         /// <summary>
         /// Time-out event for file download.
@@ -141,5 +141,11 @@ namespace GeneralUpdate.Core.Domain.Entity
         /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
         /// </summary>
         public bool WillMessageEnabled { get; set; }
+        
+        bool IsUri(string uriString)
+        {
+            return Uri.TryCreate(uriString, UriKind.Absolute, out Uri uriResult) 
+                   && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme == Uri.UriSchemeFtp);
+        }
     }
 }

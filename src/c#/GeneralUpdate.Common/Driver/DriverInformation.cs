@@ -1,8 +1,7 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace GeneralUpdate.Core.Driver
+namespace GeneralUpdate.Common.Driver
 {
     /// <summary>
     /// Driver information object.
@@ -60,7 +59,7 @@ namespace GeneralUpdate.Core.Driver
                     string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
                     !_information.Drivers.Any())
                 {
-                    ThrowExceptionUtility.ThrowIfNull("Cannot create DriverInformation, not all fields are set.");
+                    throw new System.ArgumentException("Cannot create DriverInformation, not all fields are set.");
                 }
 
                 return _information;

@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Core.Driver
+﻿namespace GeneralUpdate.Common.Driver
 {
     public interface IDriverCommand
     {

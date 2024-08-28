@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace GeneralUpdate.Common.Events
+namespace GeneralUpdate.Common.Internal.Event
 {
     /// <summary>
     /// Manage all events in the component.

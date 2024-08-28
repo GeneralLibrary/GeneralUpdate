@@ -2,7 +2,7 @@
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GeneralUpdate.Core.Strategys
+namespace GeneralUpdate.Common.Internal.Strategy
 {
     public abstract class AbstractStrategy : IStrategy
     {

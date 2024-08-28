@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace GeneralUpdate.Core.Driver
+namespace GeneralUpdate.Common.Driver
 {
     /// <summary>
     /// Handle all drive-related.

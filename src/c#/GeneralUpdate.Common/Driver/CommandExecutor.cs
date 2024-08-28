@@ -1,8 +1,6 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace GeneralUpdate.Core.Driver
+namespace GeneralUpdate.Common.Driver
 {
     /// <summary>
     /// When the process starts, PnPUtil is used to execute driver processing commands.
@@ -39,7 +37,7 @@ If possible, use pre-tested drivers that are proven to work.
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
-                    ThrowExceptionUtility.Throw<Exception>($"Operation failed code: {process.ExitCode}");
+                    throw new System.Exception($"Operation failed code: {process.ExitCode}");
             }
         }
     }

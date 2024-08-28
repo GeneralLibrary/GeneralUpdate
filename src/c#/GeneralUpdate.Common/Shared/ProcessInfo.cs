@@ -1,18 +1,16 @@
-﻿using GeneralUpdate.Core.Domain.DTO;
-using GeneralUpdate.Core.Domain.DTO.Assembler;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace GeneralUpdate.Core.Domain.Entity
+namespace GeneralUpdate.Common.Shared
 {
-    public class ProcessInfo : Entity
+    public class ProcessInfo
     {
         public ProcessInfo()
         { }
 
-        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
+        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionInfo> updateVersions)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -27,13 +25,13 @@ namespace GeneralUpdate.Core.Domain.Entity
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
-            UpdateVersions = VersionAssembler.ToEntitys(updateVersions);
+            UpdateVersions = updateVersions;
         }
 
         private int ToEncodingType(Encoding encoding)
         {
             int type = -1;
-            if (encoding == Encoding.UTF8)
+            if (Equals(encoding, Encoding.UTF8))
             {
                 type = 1;
             }

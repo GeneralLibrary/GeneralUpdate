@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace GeneralUpdate.Core.HashAlgorithms
+namespace GeneralUpdate.Common.HashAlgorithms
 {
     public class Sha1HashAlgorithm : HashAlgorithmBase
     {

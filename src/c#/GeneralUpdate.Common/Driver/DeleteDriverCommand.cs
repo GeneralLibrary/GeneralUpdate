@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace GeneralUpdate.Core.Driver
+namespace GeneralUpdate.Common.Driver
 {
     public class DeleteDriverCommand : IDriverCommand
     {

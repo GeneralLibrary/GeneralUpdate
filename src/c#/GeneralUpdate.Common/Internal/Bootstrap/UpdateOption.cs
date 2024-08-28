@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Text;
 using System.Threading;
 
-namespace GeneralUpdate.Core.Bootstrap
+namespace GeneralUpdate.Common.Internal.Bootstrap
 {
     public abstract class UpdateOption : AbstractConstant<UpdateOption>
     {
@@ -16,40 +15,6 @@ namespace GeneralUpdate.Core.Bootstrap
         private static readonly UpdateOptionPool Pool = new UpdateOptionPool();
 
         public static UpdateOption<T> ValueOf<T>(string name) => (UpdateOption<T>)Pool.ValueOf<T>(name);
-
-        #region parameter configuration
-
-        /// <summary>
-        /// Update the file format of the package.
-        /// </summary>
-        public static readonly UpdateOption<string> Format = ValueOf<string>("COMPRESSFORMAT");
-
-        /// <summary>
-        /// Compress encoding.
-        /// </summary>
-        public static readonly UpdateOption<Encoding> Encoding = ValueOf<Encoding>("COMPRESSENCODING");
-
-        /// <summary>
-        /// Main program name.
-        /// </summary>
-        public static readonly UpdateOption<string> MainApp = ValueOf<string>("MAINAPP");
-
-        /// <summary>
-        /// Timeout period (unit: second). If this parameter is not specified, the default timeout period is 30 seconds.
-        /// </summary>
-        public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
-
-        /// <summary>
-        /// Whether to enable the driver upgrade function.
-        /// </summary>
-        public static readonly UpdateOption<bool?> Drive = ValueOf<bool?>("DRIVE");
-
-        /// <summary>
-        /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
-        /// </summary>
-        public static readonly UpdateOption<bool?> WillMessage = ValueOf<bool?>("WILLMESSAGE");
-
-        #endregion parameter configuration
 
         internal UpdateOption(int id, string name)
           : base(id, name) { }
@@ -227,7 +192,7 @@ namespace GeneralUpdate.Core.Bootstrap
             long otherUV = other.Uniquifier;
             if (thisUV < otherUV) return -1;
             if (thisUV > otherUV) return 1;
-            throw new Exception("failed to compare two different constants");
+            throw new System.Exception("failed to compare two different constants");
         }
     }
 }

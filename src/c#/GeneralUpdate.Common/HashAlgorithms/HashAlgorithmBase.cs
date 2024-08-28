@@ -1,16 +1,15 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace GeneralUpdate.Core.HashAlgorithms
+namespace GeneralUpdate.Common.HashAlgorithms
 {
     public abstract class HashAlgorithmBase
     {
         public string ComputeHash(string fileName)
         {
-            if (!File.Exists(fileName))
-                ThrowExceptionUtility.ThrowFileNotFound(fileName);
+            if (!System.IO.File.Exists(fileName))
+                throw new FileNotFoundException(nameof(fileName));
 
             using (var hashAlgorithm = GetHashAlgorithm())
             {

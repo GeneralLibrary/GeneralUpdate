@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace GeneralUpdate.Core.Strategys
+namespace GeneralUpdate.Common.Internal.Strategy
 {
     /// <summary>
     /// Update the strategy, if you need to extend it, you need to inherit this interface.

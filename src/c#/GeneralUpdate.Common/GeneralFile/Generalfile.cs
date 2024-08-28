@@ -1,6 +1,6 @@
-﻿namespace GeneralUpdate.Common.File
+﻿namespace GeneralUpdate.Common.GeneralFile
 {
-    public class GeneralFile
+    public class Generalfile
     {
         
     }
