@@ -1,11 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
         <TargetFramework>netstandard2.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Internal\Pipeline\" />
+      <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
+      <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="GeneralUpdate.Common.csproj.DotSettings" />
     </ItemGroup>
 
 </Project>
