@@ -1,72 +1,116 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
+using System.Collections.Immutable;
+using GeneralUpdate.Common.Download;
 
-namespace GeneralUpdate.Common.Download
+namespace GeneralUpdate.Core.Download
 {
-    public sealed class DownloadManager<TVersion>
+    public class DownloadManager<TVersion>
     {
-        private List<TVersion> _versions;
-        private ImmutableList<Task<TVersion>> _downloadTasks;
-        
-        public DownloadManager(List<TVersion> versions)
+        #region Private Members
+
+        private readonly string _path;
+        private readonly string _format;
+        private readonly int _timeOut;
+        private readonly IList<(object, string)> _failedVersions;
+        private ImmutableList<DownloadTask<TVersion>>.Builder _downloadTasksBuilder;
+        private ImmutableList<DownloadTask<TVersion>> _downloadTasks;
+
+        #endregion Private Members
+
+        #region Constructors
+
+        public DownloadManager(string path, string format, int timeOut)
         {
-            _versions = versions;
-            _downloadTasks = ImmutableList.Create<Task<TVersion>>();
+            _path = path;
+            _format = format;
+            _timeOut = timeOut;
+            _failedVersions = new List<(object, string)>();
+            _downloadTasksBuilder = ImmutableList.Create<DownloadTask<TVersion>>().ToBuilder();
         }
-        
-        /*public async Task DownloadFilesAsync()
+
+        #endregion Constructors
+
+        #region Public Properties
+
+        public IList<(object, string)> FailedVersions => _failedVersions;
+
+        public string Path => _path;
+
+        public string Format => _format;
+
+        public int TimeOut => _timeOut;
+
+        public ImmutableList<DownloadTask<TVersion>> DownloadTasks => _downloadTasks ?? (_downloadTasksBuilder.ToImmutable());
+
+        public event EventHandler<MultiAllDownloadCompletedEventArgs> MultiAllDownloadCompleted;
+        public event EventHandler<MultiDownloadProgressChangedEventArgs> MultiDownloadProgressChanged;
+        public event EventHandler<MultiDownloadCompletedEventArgs> MultiDownloadCompleted;
+        public event EventHandler<MultiDownloadErrorEventArgs> MultiDownloadError;
+        public event EventHandler<MultiDownloadStatisticsEventArgs> MultiDownloadStatistics;
+
+        #endregion Public Properties
+
+        #region Public Methods
+
+        public async Task LaunchTasksAsync()
         {
-            foreach (var version in _versions)
+            try
             {
-                _downloadTasks.Add(DownloadFileWithResumeAsync(file.Url, file.FilePath));
+                var downloadTasks = new List<Task>();
+                foreach (var task in DownloadTasks)
+                {
+                    downloadTasks.Add(task.LaunchAsync());
+                }
+                await Task.WhenAll(downloadTasks);
+                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, _failedVersions));
             }
-
-            await Task.WhenAll(_downloadTasks);
-        }*/
-
-        private async Task DownloadFileWithResumeAsync(string url, string filePath)
-        {
-            long existingLength = 0;
-
-            if (File.Exists(filePath))
+            catch (Exception ex)
             {
-                existingLength = new FileInfo(filePath).Length;
-            }
-
-            using HttpClient client = new HttpClient();
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            if (existingLength > 0)
-            {
-                request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
-            }
-
-            using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            using Stream contentStream = await response.Content.ReadAsStreamAsync();
-            using FileStream fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None, 8192, true);
-
-            await foreach (var buffer in ReadStreamAsync(contentStream))
-            {
-                await fileStream.WriteAsync(buffer, 0, buffer.Length);
+                _failedVersions.Add((null, ex.Message));
+                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, _failedVersions));
+                throw new Exception($"Download manager error: {ex.Message}", ex);
             }
         }
-        
-        private async IAsyncEnumerable<byte[]> ReadStreamAsync(Stream stream)
+
+        public void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         {
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            MultiDownloadStatistics?.Invoke(this, e);
+        }
+
+        public void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
+        {
+            MultiDownloadProgressChanged?.Invoke(this, e);
+        }
+
+        public void OnMultiAsyncCompleted(object sender, MultiDownloadCompletedEventArgs e)
+        {
+            MultiDownloadCompleted?.Invoke(this, e);
+        }
+
+        public void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
+        {
+            MultiDownloadError?.Invoke(this, e);
+            _failedVersions.Add((e.Version, e.Exception.Message));
+        }
+
+        public void Add(DownloadTask<TVersion> task)
+        {
+            if (task != null && !_downloadTasksBuilder.Contains(task))
             {
-                byte[] actualBytes = new byte[bytesRead];
-                Array.Copy(buffer, actualBytes, bytesRead);
-                yield return actualBytes;
+                _downloadTasksBuilder.Add(task);
             }
         }
+
+        public void Remove(DownloadTask<TVersion> task)
+        {
+            if (task != null && _downloadTasksBuilder.Contains(task))
+            {
+                _downloadTasksBuilder.Remove(task);
+            }
+        }
+
+        #endregion Public Methods
     }
 }
