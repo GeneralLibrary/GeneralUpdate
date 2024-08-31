@@ -103,13 +103,7 @@ namespace GeneralUpdate.Core.Download
             }
         }
 
-        public void Remove(DownloadTask<TVersion> task)
-        {
-            if (task != null && _downloadTasksBuilder.Contains(task))
-            {
-                _downloadTasksBuilder.Remove(task);
-            }
-        }
+        public void Remove(DownloadTask<TVersion> task) => _downloadTasksBuilder.Remove(task);
 
         #endregion Public Methods
     }

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 
-namespace GeneralUpdate.Common.Shared
+namespace GeneralUpdate.Common.Shared.Object
 {
-    public class Configinfo
+    public class Configinfo : Entity
     {
         public Configinfo()
         { }

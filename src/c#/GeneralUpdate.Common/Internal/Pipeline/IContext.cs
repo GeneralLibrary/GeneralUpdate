@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Common.Pipeline
+﻿namespace GeneralUpdate.Common.Internal.Pipeline
 {
     /// <summary>
     /// Pipeline context.

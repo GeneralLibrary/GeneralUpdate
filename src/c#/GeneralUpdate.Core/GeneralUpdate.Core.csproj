@@ -17,6 +17,8 @@
     <AssemblyName>GeneralUpdate.Core</AssemblyName>
     <RootNamespace>GeneralUpdate.Core</RootNamespace>
     <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Config\**" />
@@ -42,12 +44,6 @@
     <None Remove="GeneralUpdate.ico" />
     <None Remove="nuget.exe" />
     <None Remove="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\..\imgs\GeneralUpdate128.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />

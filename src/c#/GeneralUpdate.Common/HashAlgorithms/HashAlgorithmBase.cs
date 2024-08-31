@@ -25,7 +25,21 @@ namespace GeneralUpdate.Common.HashAlgorithms
                 }
             }
         }
+        
+        public byte[] ComputeHashBytes(string fileName)
+        {
+            if (!File.Exists(fileName))
+                throw new FileNotFoundException(nameof(fileName));
 
+            using (var hashAlgorithm = GetHashAlgorithm())
+            {
+                using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    return hashAlgorithm.ComputeHash(file);
+                }
+            }
+        }
+        
         protected abstract HashAlgorithm GetHashAlgorithm();
     }
 }

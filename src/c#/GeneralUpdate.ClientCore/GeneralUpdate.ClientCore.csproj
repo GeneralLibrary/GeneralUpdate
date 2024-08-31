@@ -13,6 +13,8 @@
     <Copyright>Copyright ©  2023</Copyright>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

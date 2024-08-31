@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace GeneralUpdate.Common.Shared
+namespace GeneralUpdate.Common.Shared.Object
 {
-    public class ProcessInfo
+    public class ProcessInfo : Entity
     {
         public ProcessInfo()
         { }
 
-        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionInfo> updateVersions)
+        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -25,13 +25,13 @@ namespace GeneralUpdate.Common.Shared
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
-            UpdateVersions = updateVersions;
+            UpdateVersions = VersionAssembler.ToEntitys(updateVersions);
         }
 
         private int ToEncodingType(Encoding encoding)
         {
             int type = -1;
-            if (Equals(encoding, Encoding.UTF8))
+            if (encoding == Encoding.UTF8)
             {
                 type = 1;
             }

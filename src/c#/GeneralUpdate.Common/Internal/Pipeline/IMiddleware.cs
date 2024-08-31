@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace GeneralUpdate.Common.Pipeline
+namespace GeneralUpdate.Common.Internal.Pipeline
 {
     /// <summary>
     /// Pipeline middleware.
