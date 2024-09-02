@@ -27,11 +27,13 @@ public class LinuxStrategy : AbstractStrategy
 
     private void Install()
     {
-        //TODO: 安装路径需要调整
+        string scriptPath = "./install.sh";
+        string packageFile = GetPacketName();
+        
         ProcessStartInfo processStartInfo = new ProcessStartInfo()
         {
             FileName = "/bin/bash",
-            Arguments = $"install.sh {GetPacketName()}",
+            Arguments = $"{scriptPath} {packageFile}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
