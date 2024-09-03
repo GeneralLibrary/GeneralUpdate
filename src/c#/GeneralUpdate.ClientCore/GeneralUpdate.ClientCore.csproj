@@ -144,7 +144,6 @@
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareExtensions.cs" Link="Pipelines\Middleware\MiddlewareExtensions.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareStack.cs" Link="Pipelines\Middleware\MiddlewareStack.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\PatchMiddleware.cs" Link="Pipelines\Middleware\PatchMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\WillMessageMiddleware.cs" Link="Pipelines\Middleware\WillMessageMiddleware.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\ZipMiddleware.cs" Link="Pipelines\Middleware\ZipMiddleware.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\PipelineBuilder.cs" Link="Pipelines\PipelineBuilder.cs" />
     <Compile Include="..\GeneralUpdate.Core\Pipelines\Pipeline\IPipelineBuilder.cs" Link="Pipelines\Pipeline\IPipelineBuilder.cs" />
@@ -254,13 +253,6 @@
     <Folder Include="ZipFactory\Factory\" />
     <Folder Include="WillMessage\" />
     <Folder Include="ZipFactory\CompressProvider\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\..\imgs\GeneralUpdate128.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
   </ItemGroup>
 
 </Project>

@@ -6,7 +6,6 @@ using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Pipelines;
 using GeneralUpdate.Core.Pipelines.Context;
 using GeneralUpdate.Core.Pipelines.Middleware;
-using GeneralUpdate.Core.WillMessage;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -60,7 +59,6 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(context)
                                 .UseMiddleware<HashMiddleware>().UseMiddleware<ZipMiddleware>()
                                 .UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled)
-                                .UseMiddlewareIf<WillMessageMiddleware>(Packet.WillMessageEnabled)
                                 .UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Build();
                         }
@@ -88,11 +86,11 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                 {
                     case AppType.ClientApp:
                         Environment.SetEnvironmentVariable("ProcessBase64", Packet.ProcessBase64, EnvironmentVariableTarget.User);
-                        WaitForProcessToStart(path, 20, () => WillMessageManager.Instance.Check());
+                        WaitForProcessToStart(path, 20);
                         break;
 
                     case AppType.UpgradeApp:
-                        WaitForProcessToStart(path, 20, () => WillMessageManager.Instance.Check());
+                        WaitForProcessToStart(path, 20);
                         break;
                 }
                 return true;

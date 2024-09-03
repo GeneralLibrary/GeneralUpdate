@@ -7,7 +7,6 @@ using GeneralUpdate.Core.Domain.Service;
 using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
 using GeneralUpdate.Core.Strategys;
-using GeneralUpdate.Core.WillMessage;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -265,25 +264,6 @@ namespace GeneralUpdate.ClientCore
             {
                 Trace.WriteLine($"Error: The environment variable name is invalid. {ex}");
             }
-        }
-
-        /// <summary>
-        /// When the update version information requested by the server contains the update failed version, the update execution flow is directly interrupted
-        /// </summary>
-        /// <returns></returns>
-        private bool CheckWillMessage()
-        {
-            var willMessage = WillMessageManager.Instance.GetWillMessage();
-            if (willMessage == null) return true;
-            foreach (var item in Packet.UpdateVersions)
-            {
-                var msg = willMessage.Message.Peek();
-                if (string.Equals(msg.Version, item.Version, StringComparison.OrdinalIgnoreCase))
-                {
-                    return false;
-                }
-            }
-            return true;
         }
 
         #endregion Private Methods

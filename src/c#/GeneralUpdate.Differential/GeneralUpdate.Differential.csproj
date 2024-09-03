@@ -58,7 +58,6 @@
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />
     <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha256HashAlgorithm.cs" Link="HashAlgorithms\Sha256HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -76,7 +75,6 @@
     <Folder Include="CustomAwaiter\" />
     <Folder Include="CustomAwaiter\" />
     <Folder Include="HashAlgorithms\" />
-    <Folder Include="WillMessage\" />
   </ItemGroup>
 
   <ItemGroup>
