@@ -4,9 +4,8 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Download;
 
-namespace GeneralUpdate.Core.Download
+namespace GeneralUpdate.Common.Download
 {
     public class DownloadTask<TVersion>
     {

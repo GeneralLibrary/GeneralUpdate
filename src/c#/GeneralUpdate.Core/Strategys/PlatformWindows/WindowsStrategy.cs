@@ -57,8 +57,8 @@ namespace GeneralUpdate.Core.Strategys.PlatformWindows
                                 .Build();
 
                             var pipelineBuilder = new PipelineBuilder<BaseContext>(context)
-                                .UseMiddleware<HashMiddleware>().UseMiddleware<ZipMiddleware>()
-                                .UseMiddlewareIf<DriveMiddleware>(Packet.DriveEnabled)
+                                .UseMiddleware<HashMiddleware>()
+                                .UseMiddleware<ZipMiddleware>()
                                 .UseMiddleware<PatchMiddleware>();
                             await pipelineBuilder.Build();
                         }

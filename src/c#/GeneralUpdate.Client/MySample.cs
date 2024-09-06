@@ -2,7 +2,6 @@
 using GeneralUpdate.Core.Bootstrap;
 using GeneralUpdate.Core.Domain.Entity;
 using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Driver;
 using GeneralUpdate.Core.Events.CommonArgs;
 using GeneralUpdate.Core.Events.MultiEventArgs;
 using GeneralUpdate.Core.Strategys.PlatformWindows;
@@ -229,26 +228,6 @@ namespace GeneralUpdate.Client
         #endregion 测试二进制更新包整理
 
         #region 测试驱动功能
-
-        public void TestDrive()
-        {
-            var path1 = "D:\\packet\\source";
-            var path2 = "D:\\packet\\target";
-
-            var drivers = GetAllDriverDirectories(path1);
-
-            var information = new DriverInformation.Builder()
-                .SetInstallDirectory(path1)
-                .SetOutPutDirectory(path2)
-                .SetDriverNames(drivers)
-                .Build();
-
-            var processor = new DriverProcessor();
-            processor.AddCommand(new BackupDriverCommand(information));
-            processor.AddCommand(new DeleteDriverCommand(information));
-            processor.AddCommand(new InstallDriverCommand(information));
-            processor.ProcessCommands();
-        }
 
         /// <summary>
         /// Identifies all folders containing driver files in the specified directory and returns the directory collection.

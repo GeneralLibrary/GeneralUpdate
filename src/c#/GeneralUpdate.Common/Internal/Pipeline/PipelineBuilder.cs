@@ -11,13 +11,13 @@ namespace GeneralUpdate.Common.Internal.Pipeline
     {
         private ImmutableStack<IMiddleware> _middlewareStack = ImmutableStack<IMiddleware>.Empty;
 
-        public PipelineBuilder Use<TMiddleware>(TMiddleware middleware) where TMiddleware : IMiddleware, new()
+        public PipelineBuilder UseMiddleware<TMiddleware>(TMiddleware middleware) where TMiddleware : IMiddleware, new()
         {
             _middlewareStack = _middlewareStack.Push(middleware);
             return this;
         }
 
-        public PipelineBuilder UseIf<TMiddleware>(TMiddleware middleware, Func<bool> condition)
+        public PipelineBuilder UseMiddlewareIf<TMiddleware>(TMiddleware middleware, Func<bool> condition)
             where TMiddleware : IMiddleware, new()
         {
             if (!condition()) return this;

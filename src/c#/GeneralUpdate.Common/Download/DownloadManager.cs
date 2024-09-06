@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using System.Collections.Immutable;
 using GeneralUpdate.Common.Download;
 
-namespace GeneralUpdate.Core.Download
+namespace GeneralUpdate.Common.Download
 {
     public class DownloadManager<TVersion>
     {
