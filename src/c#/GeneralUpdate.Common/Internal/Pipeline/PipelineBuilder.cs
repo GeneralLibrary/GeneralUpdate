@@ -7,20 +7,22 @@ namespace GeneralUpdate.Common.Internal.Pipeline
     /// <summary>
     /// Pipeline builder.
     /// </summary>
-    public sealed class PipelineBuilder(IContext context = null)
+    public sealed class PipelineBuilder(PipelineContext context = null)
     {
         private ImmutableStack<IMiddleware> _middlewareStack = ImmutableStack<IMiddleware>.Empty;
 
-        public PipelineBuilder UseMiddleware<TMiddleware>(TMiddleware middleware) where TMiddleware : IMiddleware, new()
+        public PipelineBuilder UseMiddleware<TMiddleware>() where TMiddleware : IMiddleware, new()
         {
+            var middleware = new TMiddleware();
             _middlewareStack = _middlewareStack.Push(middleware);
             return this;
         }
 
-        public PipelineBuilder UseMiddlewareIf<TMiddleware>(TMiddleware middleware, Func<bool> condition)
+        public PipelineBuilder UseMiddlewareIf<TMiddleware>(Func<bool> condition)
             where TMiddleware : IMiddleware, new()
         {
             if (!condition()) return this;
+            var middleware = new TMiddleware();
             _middlewareStack = _middlewareStack.Push(middleware);
             return this;
         }

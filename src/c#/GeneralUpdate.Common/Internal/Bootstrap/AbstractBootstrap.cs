@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
 
 namespace GeneralUpdate.Common.Internal.Bootstrap
@@ -10,74 +10,31 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
            where TBootstrap : AbstractBootstrap<TBootstrap, TStrategy>
            where TStrategy : IStrategy
     {
-        #region Private Members
-
         private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
-        private volatile Func<TStrategy> _strategyFactory;
-        private IStrategy _strategy;
 
-        #endregion Private Members
-
-        #region Constructors
-
-        protected internal AbstractBootstrap() => this._options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
-
-        #endregion Constructors
-
-        #region Methods
+        protected internal AbstractBootstrap() => _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         /// <summary>
         /// Launch udpate.
         /// </summary>
         /// <returns></returns>
-        public virtual TBootstrap LaunchAsync()
-        {
-            return (TBootstrap)this;
-        }
-
-        #region Strategy
-
-        protected IStrategy InitStrategy()
-        {
-            return _strategy;
-        }
-
-        protected string GetPlatform() => _strategy.GetPlatform();
-
-        protected IStrategy ExecuteStrategy()
-        {
-            if (_strategy != null) _strategy.Execute();
-            return _strategy;
-        }
-
-        public virtual TBootstrap Validate()
-        {
-            if (this._strategyFactory == null) throw new InvalidOperationException("Strategy or strategy factory not set.");
-            return (TBootstrap)this;
-        }
-
-        public virtual TBootstrap Strategy<T>() where T : TStrategy, new() => this.StrategyFactory(() => new T());
-
-        public TBootstrap StrategyFactory(Func<TStrategy> strategyFactory)
-        {
-            this._strategyFactory = strategyFactory;
-            return (TBootstrap)this;
-        }
-
-        #endregion Strategy
-
-        #region Config option.
-
+        protected abstract TBootstrap Launch();
+        
         /// <summary>
-        /// Files in the blacklist will skip the update.
+        /// Launch async udpate.
         /// </summary>
-        /// <param name="files">blacklist file name</param>
         /// <returns></returns>
-        public virtual TBootstrap SetBlacklist(List<string> files = null, List<string> fileFormats = null)
-        {
-            return (TBootstrap)this;
-        }
+        protected abstract Task<TBootstrap> LaunchAsync();
 
+        protected abstract IStrategy InitStrategy();
+
+        protected abstract IStrategy ExecuteStrategy();
+
+        protected virtual TBootstrap Strategy<T>() where T : TStrategy, new() => this.StrategyFactory(() => new T());
+
+        protected abstract TBootstrap StrategyFactory(Func<TStrategy> strategyFactory);
+
+        
         /// <summary>
         /// Setting update configuration.
         /// </summary>
@@ -87,7 +44,7 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// <returns></returns>
         public virtual TBootstrap Option<T>(UpdateOption<T> option, T value)
         {
-            Contract.Requires(option != null);
+            Debug.Assert(option != null);
             if (value == null)
             {
                 this._options.TryRemove(option, out _);
@@ -99,24 +56,13 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
             return (TBootstrap)this;
         }
 
-        public virtual T GetOption<T>(UpdateOption<T> option)
+        public virtual T? GetOption<T>(UpdateOption<T> option)
         {
-            try
-            {
-                if (_options == null || _options.Count == 0) return default(T);
-                var val = _options[option];
-                if (val != null) return (T)val.GetValue();
-                return default(T);
-            }
-            catch
-            {
-                return default(T);
-            }
+            Debug.Assert(option != null);
+            if (_options.Count == 0) return default(T);
+            var val = _options[option];
+            if (val != null) return (T)val.GetValue();
+            return default(T);
         }
-
-        #endregion Config option.
-
-
-        #endregion Methods
     }
 }

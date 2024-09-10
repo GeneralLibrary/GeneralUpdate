@@ -9,8 +9,10 @@ namespace GeneralUpdate.Common.Internal.Strategy
         protected const string PATCHS = "patchs";
 
         public virtual void Execute() => throw new NotImplementedException();
+        
+        public virtual Task ExecuteAsync() => throw new NotImplementedException();
 
-        public virtual bool StartApp(string appName, int appType) => throw new NotImplementedException();
+        public virtual void StartApp(string appName, int appType) => throw new NotImplementedException();
 
         public virtual string GetPlatform() => throw new NotImplementedException();
 

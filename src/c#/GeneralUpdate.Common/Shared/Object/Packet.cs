@@ -116,12 +116,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// Configuration parameters for upgrading the terminal program.
         /// </summary>
         public string ProcessBase64 { get; set; }
-
-        /// <summary>
-        /// The platform to which the current strategy belongs.
-        /// </summary>
-        public string Platform { get; set; }
-
+        
         /// <summary>
         /// Files in the blacklist will skip the update.
         /// </summary>
@@ -137,9 +132,5 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         public bool DriveEnabled { get; set; }
 
-        /// <summary>
-        /// Whether open note function, if you want to start needs to be synchronized to deploy 'GeneralUpdate. SystemService' service.
-        /// </summary>
-        public bool WillMessageEnabled { get; set; }
     }
 }

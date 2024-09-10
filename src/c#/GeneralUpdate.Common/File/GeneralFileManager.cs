@@ -63,6 +63,11 @@ namespace GeneralUpdate.Common
             _blackFiles.Remove(fileName);
         }
         
+        /// <summary>
+        /// Compare two directories.
+        /// </summary>
+        /// <param name="dirA"></param>
+        /// <param name="dirB"></param>
         public void CompareDirectories(string dirA, string dirB)
         {
             ComparisonResult = new ComparisonResult();
@@ -100,7 +105,7 @@ namespace GeneralUpdate.Common
             File.WriteAllText(targetPath, jsonString);
         }
 
-        public static T GetJson<T>(string path)
+        public static T? GetJson<T>(string path)
         {
             if (File.Exists(path))
             {
@@ -115,13 +120,13 @@ namespace GeneralUpdate.Common
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public static string Serialize(object obj)
+        public static string Serialize(object? obj)
         {
             if (obj == null) return string.Empty;
             var json = JsonConvert.SerializeObject(obj);
             var bytes = Encoding.Default.GetBytes(json);
-            var base64str = Convert.ToBase64String(bytes);
-            return base64str;
+            var base64Str = Convert.ToBase64String(bytes);
+            return base64Str;
         }
 
         /// <summary>
@@ -130,7 +135,7 @@ namespace GeneralUpdate.Common
         /// <typeparam name="T"></typeparam>
         /// <param name="str"></param>
         /// <returns></returns>
-        public static T Deserialize<T>(string str)
+        public static T? Deserialize<T>(string str)
         {
             var obj = default(T);
             if (string.IsNullOrEmpty(str)) return obj;
@@ -142,7 +147,7 @@ namespace GeneralUpdate.Common
         
         public static string GetTempDirectory(string name)
         {
-            var path = $"generalupdate_{DateTime.Now.ToString("yyyy-MM-dd")}_{name}";
+            var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd}_{name}";
             var tempDir = Path.Combine(Path.GetTempPath(), path);
             if (!Directory.Exists(tempDir))
             {

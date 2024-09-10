@@ -18,7 +18,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <param name="appName"></param>
         /// <param name="appType"></param>
         /// <returns></returns>
-        bool StartApp(string appName, int appType);
+        void StartApp(string appName, int appType);
 
         /// <summary>
         /// Get the platform for the current strategy.
@@ -34,7 +34,6 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// Create a strategy.
         /// </summary>
-        /// <param name="file">Abstraction for updating package information.</param>
         void Create<T>(T parameter) where T : class;
     }
 }
