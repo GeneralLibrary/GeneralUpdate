@@ -2,7 +2,7 @@
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class ParamsOSS : Entity
+    public class ParamsOSS
     {
         public string Url { get; set; }
 

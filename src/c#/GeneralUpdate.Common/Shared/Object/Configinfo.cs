@@ -3,7 +3,7 @@ using System.IO;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class Configinfo : Entity
+    public class Configinfo
     {
         public Configinfo()
         { }

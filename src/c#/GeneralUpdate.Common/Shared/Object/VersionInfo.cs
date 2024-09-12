@@ -2,7 +2,7 @@
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class VersionInfo : Entity
+    public class VersionInfo
     {
         public VersionInfo()
         { }
@@ -14,7 +14,6 @@ namespace GeneralUpdate.Common.Shared.Object
             Hash = hash ?? throw new ArgumentNullException(nameof(hash));
             Version = version ?? throw new ArgumentNullException(nameof(version));
             Url = url ?? throw new ArgumentNullException(nameof(Url));
-            if (!IsURL(Url)) throw new Exception($"Illegal url {nameof(Url)}");
         }
 
         /// <summary>

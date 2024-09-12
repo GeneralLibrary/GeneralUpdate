@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class ProcessInfo : Entity
+    public class ProcessInfo
     {
         public ProcessInfo()
         { }

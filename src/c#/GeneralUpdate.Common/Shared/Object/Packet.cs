@@ -4,16 +4,14 @@ using System.Text;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class Packet : Entity
+    public class Packet
     {
         public Packet()
         { }
 
         public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, Encoding encoding, int downloadTimeOut, string appSecretKey, string tempPath)
         {
-            if (!IsURL(mainUpdateUrl)) throw new Exception($"Illegal url {nameof(mainUpdateUrl)}");
             MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(MainUpdateUrl));
-            if (!IsURL(updateUrl)) throw new Exception($"Illegal url {nameof(UpdateUrl)}");
             UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
             UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
             AppType = appType;
