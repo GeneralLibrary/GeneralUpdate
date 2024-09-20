@@ -24,13 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\imgs\GeneralUpdate128.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.32.1" />
   </ItemGroup>
 
