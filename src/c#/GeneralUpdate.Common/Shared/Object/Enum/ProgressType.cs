@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Common.Shared.Object
+﻿namespace GeneralUpdate.Common.Shared.Object.Enum
 {
     public enum ProgressType
     {

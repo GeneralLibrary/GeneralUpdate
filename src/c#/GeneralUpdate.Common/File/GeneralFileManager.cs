@@ -11,30 +11,43 @@ namespace GeneralUpdate.Common
     {
         #region Private Members
         
-        private static readonly List<string> _blackFileFormats = new List<string>
-        {
+        private static readonly List<string> _blackFileFormats =
+        [
             ".patch",
             ".7z",
             ".zip",
             ".rar",
             ".tar",
             ".json"
-        };
+        ];
 
-        private static readonly List<string> _blackFiles = new List<string> { "Newtonsoft.Json.dll" };
+        private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
         
         #endregion
 
         #region Public Properties
-        
-        public static IList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
-        public static IList<string> BlackFiles => _blackFiles.AsReadOnly();
+
+        public static IReadOnlyList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
+        public static IReadOnlyList<string> BlackFiles => _blackFiles.AsReadOnly();
         
         public ComparisonResult ComparisonResult { get; private set; }
         
         #endregion
 
         #region Public Methods
+        
+        public static List<FileInfo> ToFileInfoList(IReadOnlyList<string> filePaths)
+        {
+            return filePaths.Select(path => new FileInfo(path)).ToList();
+        }
+        
+        public static void AddBlackFileFormats(List<string> formats)
+        {
+            foreach (var format in formats)
+            {
+                AddBlackFileFormat(format);
+            }
+        }
         
         public static void AddBlackFileFormat(string format)
         {
@@ -43,12 +56,20 @@ namespace GeneralUpdate.Common
                 _blackFileFormats.Add(format);
             }
         }
-
+     
         public static void RemoveBlackFileFormat(string format)
         {
             _blackFileFormats.Remove(format);
         }
 
+        public static void AddBlackFiles(List<string> fileNames)
+        {
+            foreach (var fileName in fileNames)
+            {
+                AddBlackFile(fileName);
+            }
+        }
+        
         public static void AddBlackFile(string fileName)
         {
             if (!_blackFiles.Contains(fileName))
