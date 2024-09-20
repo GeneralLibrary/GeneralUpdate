@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace GeneralUpdate.Core.Driver
@@ -39,7 +38,7 @@ If possible, use pre-tested drivers that are proven to work.
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
-                    ThrowExceptionUtility.Throw<Exception>($"Operation failed code: {process.ExitCode}");
+                    throw new ApplicationException($"Operation failed code: {process.ExitCode}");
             }
         }
     }

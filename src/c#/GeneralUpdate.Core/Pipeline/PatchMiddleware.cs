@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Differential;
 
-namespace GeneralUpdate.ClientCore.Pipeline;
+namespace GeneralUpdate.Core.Pipeline;
 
 public class PatchMiddleware : IMiddleware
 {

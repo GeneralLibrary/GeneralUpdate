@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 
@@ -27,7 +26,7 @@ namespace GeneralUpdate.Core.Driver
             }
             catch (Exception ex)
             {
-                ThrowExceptionUtility.Throw<Exception>($"Failed to execute restore command for {_information.OutPutDirectory}", ex);
+                throw new ApplicationException($"Failed to execute restore command for {_information.OutPutDirectory}");
             }
         }
     }

@@ -1,12 +1,11 @@
-﻿using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Core.Events.OSSArgs;
-using GeneralUpdate.Core.Strategys;
-using System;
+﻿using System;
 using System.Text;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Internal;
 
 namespace GeneralUpdate.Core
 {
@@ -27,9 +26,9 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public static async Task Start<TStrategy>(ParamsOSS parameter, Encoding encoding) where TStrategy : AbstractStrategy, new()
+        public static async Task Start<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
         {
-            await BaseStart<TStrategy, ParamsOSS>(parameter, encoding);
+            await BaseStart<TStrategy>(parameter);
         }
 
         public static void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
@@ -82,12 +81,12 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<TStrategy, TParams>(TParams parameter, Encoding encoding) where TStrategy : AbstractStrategy, new() where TParams : class
+        private static async Task BaseStart<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
         {
             //Initializes and executes the policy.
             var strategyFunc = new Func<TStrategy>(() => new TStrategy());
             var strategy = strategyFunc();
-            strategy.Create(parameter, encoding);
+            //strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
             await strategy.ExecuteTaskAsync();
         }

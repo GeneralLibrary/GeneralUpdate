@@ -1,6 +1,8 @@
-﻿namespace GeneralUpdate.Core.Internal;
+﻿using System;
 
-public class OSSDownloadArgs
+namespace GeneralUpdate.Core.Internal;
+
+public class OSSDownloadArgs : EventArgs
 {
     
 }

@@ -1,6 +1,12 @@
-﻿namespace GeneralUpdate.Core.Pipeline;
+﻿using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal.Pipeline;
 
-public class DriverMiddleware
+namespace GeneralUpdate.Core.Pipeline;
+
+public class DriverMiddleware : IMiddleware
 {
-    
+    public Task InvokeAsync(PipelineContext context)
+    {
+        throw new System.NotImplementedException();
+    }
 }

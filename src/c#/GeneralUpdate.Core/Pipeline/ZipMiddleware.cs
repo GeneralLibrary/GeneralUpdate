@@ -4,7 +4,7 @@ using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
 
-namespace GeneralUpdate.ClientCore.Pipeline;
+namespace GeneralUpdate.Core.Pipeline;
 
 public class ZipMiddleware : IMiddleware
 {

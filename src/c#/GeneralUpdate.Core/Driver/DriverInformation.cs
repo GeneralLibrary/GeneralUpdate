@@ -1,4 +1,4 @@
-﻿using GeneralUpdate.Core.Exceptions;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -60,7 +60,7 @@ namespace GeneralUpdate.Core.Driver
                     string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
                     !_information.Drivers.Any())
                 {
-                    ThrowExceptionUtility.ThrowIfNull("Cannot create DriverInformation, not all fields are set.");
+                    throw new ArgumentNullException("Cannot create DriverInformation, not all fields are set.");
                 }
 
                 return _information;

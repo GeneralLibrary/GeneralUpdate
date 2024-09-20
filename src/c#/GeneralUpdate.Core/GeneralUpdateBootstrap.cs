@@ -1,17 +1,18 @@
-﻿using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.ContentProvider;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Entity.Assembler;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Strategys;
-using System;
+﻿using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
+using GeneralUpdate.Common;
+using GeneralUpdate.Common.Internal.Bootstrap;
+using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Core
 {
     public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
     {
+        private Packet Packet { get; set; }
+        
         public GeneralUpdateBootstrap() : base() => Remote();
 
         /// <summary>
@@ -21,11 +22,12 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var base64 = Environment.GetEnvironmentVariable("ProcessBase64", EnvironmentVariableTarget.User);
-                var processInfo = FileProvider.Deserialize<ProcessInfo>(base64);
-                Packet = ProcessAssembler.ToPacket(processInfo);
+                
+                var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+                var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+                Packet = null;
                 Packet.AppType = AppType.UpgradeApp;
-                Packet.TempPath = $"{FileProvider.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}";
+                Packet.TempPath = $"{GeneralFileManager.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}";
             }
             catch (Exception ex)
             {
@@ -33,10 +35,19 @@ namespace GeneralUpdate.Core
             }
         }
 
-        /// <summary>
-        /// Start the update.
-        /// </summary>
-        /// <returns></returns>
-        public Task<GeneralUpdateBootstrap> LaunchTaskAsync() => Task.Run(() => base.LaunchAsync());
+        public override Task<GeneralUpdateBootstrap> LaunchAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void ExecuteStrategy()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override GeneralUpdateBootstrap StrategyFactory()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

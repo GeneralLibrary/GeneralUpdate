@@ -1,13 +1,4 @@
-﻿using GeneralUpdate.Core.ContentProvider;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Domain.PO;
-using GeneralUpdate.Core.Domain.PO.Assembler;
-using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Zip;
+﻿using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
 using System;
 using System.Collections.Generic;
@@ -15,6 +6,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using GeneralUpdate.Common;
+using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Internal;
 
 namespace GeneralUpdate.Core.Strategys
 {
@@ -25,17 +22,16 @@ namespace GeneralUpdate.Core.Strategys
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
         private const string _format = ".zip";
         private const int _timeOut = 60;
-        private ParamsOSS _parameter;
+        private Packet _parameter;
         private Encoding _encoding;
 
         #endregion Private Members
 
         #region Public Methods
 
-        public override void Create<T>(T parameter, Encoding encoding)
+        public override void Create(Packet parameter)
         {
-            _parameter = parameter as ParamsOSS;
-            _encoding = encoding;
+            _parameter = parameter;
         }
 
         public override async Task ExecuteTaskAsync()
@@ -45,23 +41,23 @@ namespace GeneralUpdate.Core.Strategys
                 try
                 {
                     //1.Download the JSON version configuration file.
-                    var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
+                    var jsonPath = Path.Combine(_appPath, "version.json");
                     if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
 
                     //2.Parse the JSON version configuration file content.
-                    var versions = FileProvider.GetJson<List<VersionPO>>(jsonPath);
+                    var versions = GeneralFileManager.GetJson<List<VersionPO>>(jsonPath);
                     if (versions == null) throw new NullReferenceException(nameof(versions));
 
                     //3.Download version by version according to the version of the configuration file.
-                    var versionInfo = VersionAssembler.ToDataObjects(versions);
-                    DownloadVersions(versionInfo);
-                    UnZip(versionInfo);
+                    //var versionInfo = VersionAssembler.ToDataObjects(versions);
+                    //DownloadVersions(versionInfo);
+                    //UnZip(versionInfo);
                     //4.Launch the main application.
                     LaunchApp();
                 }
                 catch (Exception ex)
                 {
-                    EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(ex));
+                    EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex));
                 }
                 finally
                 {
@@ -80,14 +76,7 @@ namespace GeneralUpdate.Core.Strategys
         /// <param name="versions">The collection of version information to be updated as described in the configuration file.</param>
         private void DownloadVersions(List<VersionInfo> versions)
         {
-            var manager = new DownloadManager<VersionInfo>(_appPath, _format, _timeOut);
-            manager.MultiAllDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiAllDownloadCompletedEventArgs>>(this, e);
-            manager.MultiDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadCompletedEventArgs>>(this, e);
-            manager.MultiDownloadError += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadErrorEventArgs>>(this, e);
-            manager.MultiDownloadProgressChanged += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, e);
-            manager.MultiDownloadStatistics += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadStatisticsEventArgs>>(this, e);
-            versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, v)));
-            manager.LaunchTaskAsync();
+           //TODO: download version by version
         }
 
         /// <summary>
@@ -111,7 +100,7 @@ namespace GeneralUpdate.Core.Strategys
                     var zipFilePath = Path.Combine(_appPath, $"{version.Name}.zip");
                     var zipFactory = new GeneralZipFactory();
                     zipFactory.UnZipProgress += (sender, e) =>
-                    EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
+                    EventManager.Instance.Dispatch(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
                     zipFactory.Completed += (sender, e) =>
                     {
                         isCompleted = e.IsCompleted;
@@ -124,7 +113,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception exception)
             {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception));
                 return false;
             }
         }

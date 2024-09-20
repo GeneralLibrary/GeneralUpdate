@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.HashAlgorithms;
 using GeneralUpdate.Common.Internal.Pipeline;
 
-namespace GeneralUpdate.ClientCore.Pipeline;
+namespace GeneralUpdate.Core.Pipeline;
 
 public class HashMiddleware : IMiddleware
 {
