@@ -12,14 +12,11 @@ public class HashMiddleware : IMiddleware
     {
         var fileName = context.Get<string>("FileName");
         var hash = context.Get<string>("Hash");
-        
-        bool isVerify = await VerifyFileHash(fileName, hash);
-        if (!isVerify)
-        {
-            throw new CryptographicException("Hash verification failed .");
-        }
+
+        var isVerify = await VerifyFileHash(fileName, hash);
+        if (!isVerify) throw new CryptographicException("Hash verification failed .");
     }
-    
+
     private Task<bool> VerifyFileHash(string fileName, string hash)
     {
         return Task.Run(() =>

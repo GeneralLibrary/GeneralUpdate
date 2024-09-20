@@ -13,7 +13,7 @@ public class PatchMiddleware : IMiddleware
         var targetPath = context.Get<string>("TargetPath");
         var blackFiles = context.Get<List<string>>("BlackFiles");
         var blackFileFormats = context.Get<List<string>>("BlackFileFormats");
-        
+
         DifferentialCore.Instance.SetBlocklist(blackFiles, blackFileFormats);
         await DifferentialCore.Instance.Dirty(sourcePath, targetPath);
     }

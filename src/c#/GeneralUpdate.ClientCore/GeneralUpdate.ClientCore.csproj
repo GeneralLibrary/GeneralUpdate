@@ -1,110 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.12.10</Version>
-    <Authors>juster.zhu</Authors>
-    <Description>Provides functions related to upgrade and update programs.</Description>
-    <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>GeneralUpdate128.png</PackageIcon>
-    <SignAssembly>False</SignAssembly>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
-    <Copyright>Copyright ©  2023</Copyright>
-    <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
-    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
-    <LangVersion>12</LangVersion>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <Version>2.12.10</Version>
+        <Authors>juster.zhu</Authors>
+        <Description>Provides functions related to upgrade and update programs.</Description>
+        <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
+        <PackageIcon>GeneralUpdate128.png</PackageIcon>
+        <SignAssembly>False</SignAssembly>
+        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+        <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
+        <Copyright>Copyright © 2024</Copyright>
+        <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="DTOs\**" />
-    <Compile Remove="Models\**" />
-    <Compile Remove="Update\**" />
-    <EmbeddedResource Remove="DTOs\**" />
-    <EmbeddedResource Remove="Models\**" />
-    <EmbeddedResource Remove="Update\**" />
-    <None Remove="DTOs\**" />
-    <None Remove="Models\**" />
-    <None Remove="Update\**" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0-rc.1.24452.1"/>
+        <PackageReference Include="System.Collections.Immutable" Version="9.0.0-rc.1.24431.7"/>
+        <PackageReference Include="System.Net.Requests" Version="4.3.0"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Bootstrap\.gitkeep" />
-    <None Remove="CustomAwaiter\.gitkeep" />
-    <None Remove="Differential\.gitkeep" />
-    <None Remove="Differential\Binary\.gitkeep" />
-    <None Remove="Differential\ContentProvider\.gitkeep" />
-    <None Remove="Differential\GStream\.gitkeep" />
-    <None Remove="Domain\.gitkeep" />
-    <None Remove="Domain\DTO\Assembler\.gitkeep" />
-    <None Remove="Domain\Entity\Assembler\.gitkeep" />
-    <None Remove="Domain\Enum\.gitkeep" />
-    <None Remove="Domain\PO\.gitkeep" />
-    <None Remove="Domain\PO\Assembler\.gitkeep" />
-    <None Remove="Domain\Service\.gitkeep" />
-    <None Remove="Domain\VO\.gitkeep" />
-    <None Remove="Download\.gitkeep" />
-    <None Remove="Driver\.gitkeep" />
-    <None Remove="Events\CommonArgs\.gitkeep" />
-    <None Remove="Events\MultiEventArgs\.gitkeep" />
-    <None Remove="Exceptions\.gitkeep" />
-    <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
-    <None Remove="GeneralUpdate.ClientCore.nuspec" />
-    <None Remove="GeneralUpdate.ico" />
-    <None Remove="HashAlgorithms\.gitkeep" />
-    <None Remove="nuget.exe" />
-    <None Remove="Pipelines\Attributes\.gitkeep" />
-    <None Remove="Pipelines\Context\.gitkeep" />
-    <None Remove="Pipelines\MiddlewareResolver\.gitkeep" />
-    <None Remove="Pipelines\Middleware\.gitkeep" />
-    <None Remove="Pipelines\Pipeline\.gitkeep" />
-    <None Remove="Strategys\PlatformLinux\.gitkeep" />
-    <None Remove="Strategys\PlatformWindows\.gitkeep" />
-    <None Remove="WillMessage\.gitkeep" />
-    <None Remove="ZipFactory\Events\.gitkeep" />
-    <None Remove="ZipFactory\Factory\.gitkeep" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj"/>
+        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj"/>
+        <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="Differential\ContentProvider\FileProvider-Comparer.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="Differential\ContentProvider\FileProvider-Filter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="Differential\ContentProvider\FileProvider-Serialization.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2OutputStream.cs" Link="Differential\GStream\BZip2OutputStream.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\IChecksum.cs" Link="Differential\GStream\IChecksum.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\StrangeCRC.cs" Link="Differential\GStream\StrangeCRC.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\CompressProvider\Compress7z.cs" Link="ZipFactory\CompressProvider\Compress7z.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\CompressProvider\CompressZip.cs" Link="ZipFactory\CompressProvider\CompressZip.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseCompleteEventArgs.cs" Link="ZipFactory\Events\BaseCompleteEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseCompressProgressEventArgs.cs" Link="ZipFactory\Events\BaseCompressProgressEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseUnZipProgressEventArgs.cs" Link="ZipFactory\Events\BaseUnZipProgressEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\BaseCompress.cs" Link="ZipFactory\Factory\BaseCompress.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\IFactory.cs" Link="ZipFactory\Factory\IFactory.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\IOperation.cs" Link="ZipFactory\Factory\IOperation.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\OperationType.cs" Link="ZipFactory\Factory\OperationType.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\GeneralZipFactory.cs" Link="ZipFactory\GeneralZipFactory.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0-rc.1.24452.1" />
-    <PackageReference Include="SharpCompress" Version="0.32.1" />
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0-rc.1.24431.7" />
-    <PackageReference Include="System.Net.Requests" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
-    <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
-    <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+      <None Remove="GeneralUpdate.ico" />
+    </ItemGroup>
 
 </Project>

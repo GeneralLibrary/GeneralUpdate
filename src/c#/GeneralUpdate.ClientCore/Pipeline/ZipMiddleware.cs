@@ -17,7 +17,7 @@ public class ZipMiddleware : IMiddleware
             var sourcePath = context.Get<string>("SourcePath");
             var destinationPath = context.Get<string>("DestinationPath");
             var encoding = context.Get<Encoding>("Encoding");
-            
+
             var generalZipfactory = new GeneralZipFactory();
             generalZipfactory.CompressProgress += (sender, args) => { };
             generalZipfactory.Completed += (sender, args) => { };
@@ -25,7 +25,7 @@ public class ZipMiddleware : IMiddleware
             generalZipfactory.UnZip();
         });
     }
-    
+
     private static OperationType MatchType(string extensionName)
     {
         var type = extensionName switch
