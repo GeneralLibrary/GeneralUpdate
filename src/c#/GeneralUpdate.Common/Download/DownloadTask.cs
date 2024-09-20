@@ -4,16 +4,17 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Download
 {
-    public class DownloadTask<TVersion>
+    public class DownloadTask
     {
         #region Private Members
 
         private readonly HttpClient _httpClient;
-        private readonly DownloadManager<TVersion> _manager;
-        private readonly TVersion _version;
+        private readonly DownloadManager _manager;
+        private readonly VersionInfo _version;
         private const int DEFAULT_DELTA = 1048576; // 1024*1024
         private long _beforBytes;
         private long _receivedBytes;
@@ -25,7 +26,7 @@ namespace GeneralUpdate.Common.Download
 
         #region Constructors
 
-        public DownloadTask(DownloadManager<TVersion> manager, TVersion version)
+        public DownloadTask(DownloadManager manager, VersionInfo version)
         {
             _manager = manager;
             _version = version;
@@ -49,8 +50,8 @@ namespace GeneralUpdate.Common.Download
         {
             try
             {
-                var url = GetPropertyValue<string>(_version, "Url");
-                var name = GetPropertyValue<string>(_version, "Name");
+                var url = _version.Url;
+                var name = _version.Name;
                 var installPath = $"{_manager.Path}{name}{_manager.Format}";
 
                 InitStatisticsEvent();
@@ -62,7 +63,6 @@ namespace GeneralUpdate.Common.Download
             catch (Exception ex)
             {
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(ex, _version));
-                //throw new GeneralUpdateException<ExceptionArgs>("'download task' The executes abnormally !", ex);
             }
         }
 
@@ -206,30 +206,11 @@ namespace GeneralUpdate.Common.Download
         }
 
         private void OnProgressChanged(long bytesReceived, long totalBytes)
-        {
-            _manager.OnMultiDownloadProgressChanged(this, new MultiDownloadProgressChangedEventArgs(
+            => _manager.OnMultiDownloadProgressChanged(this, new MultiDownloadProgressChangedEventArgs(
                 bytesReceived, totalBytes, (float)bytesReceived / totalBytes, _version));
-        }
-
+        
         private void OnCompleted()
-        {
-            _manager.OnMultiAsyncCompleted(this, new MultiDownloadCompletedEventArgs(_version, null, false, _version));
-        }
-
-        private TResult GetPropertyValue<TResult>(TVersion entity, string propertyName)
-        {
-            TResult result = default(TResult);
-            try
-            {
-                var propertyInfo = typeof(TVersion).GetProperty(propertyName);
-                result = (TResult)propertyInfo?.GetValue(entity);
-            }
-            catch (Exception ex)
-            {
-                //throw new GeneralUpdateException<ExceptionArgs>($"Error getting property value: {ex.Message}", ex);
-            }
-            return result;
-        }
+            => _manager.OnMultiAsyncCompleted(this, new MultiDownloadCompletedEventArgs(_version, null, false, _version));
 
         private string ToUnit(long byteSize)
         {

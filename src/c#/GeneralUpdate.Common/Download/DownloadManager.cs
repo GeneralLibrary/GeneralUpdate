@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Immutable;
-using GeneralUpdate.Common.Download;
+using System.Diagnostics.Contracts;
 
 namespace GeneralUpdate.Common.Download
 {
-    public class DownloadManager<TVersion>
+    public class DownloadManager
     {
         #region Private Members
 
@@ -14,8 +14,8 @@ namespace GeneralUpdate.Common.Download
         private readonly string _format;
         private readonly int _timeOut;
         private readonly IList<(object, string)> _failedVersions;
-        private ImmutableList<DownloadTask<TVersion>>.Builder _downloadTasksBuilder;
-        private ImmutableList<DownloadTask<TVersion>> _downloadTasks;
+        private ImmutableList<DownloadTask>.Builder _downloadTasksBuilder;
+        private ImmutableList<DownloadTask> _downloadTasks;
 
         #endregion Private Members
 
@@ -27,7 +27,7 @@ namespace GeneralUpdate.Common.Download
             _format = format;
             _timeOut = timeOut;
             _failedVersions = new List<(object, string)>();
-            _downloadTasksBuilder = ImmutableList.Create<DownloadTask<TVersion>>().ToBuilder();
+            _downloadTasksBuilder = ImmutableList.Create<DownloadTask>().ToBuilder();
         }
 
         #endregion Constructors
@@ -42,7 +42,7 @@ namespace GeneralUpdate.Common.Download
 
         public int TimeOut => _timeOut;
 
-        public ImmutableList<DownloadTask<TVersion>> DownloadTasks => _downloadTasks ?? (_downloadTasksBuilder.ToImmutable());
+        private ImmutableList<DownloadTask> DownloadTasks => _downloadTasks ?? (_downloadTasksBuilder.ToImmutable());
 
         public event EventHandler<MultiAllDownloadCompletedEventArgs> MultiAllDownloadCompleted;
         public event EventHandler<MultiDownloadProgressChangedEventArgs> MultiDownloadProgressChanged;
@@ -75,19 +75,13 @@ namespace GeneralUpdate.Common.Download
         }
 
         public void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        {
-            MultiDownloadStatistics?.Invoke(this, e);
-        }
+        => MultiDownloadStatistics?.Invoke(this, e);
 
         public void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
-        {
-            MultiDownloadProgressChanged?.Invoke(this, e);
-        }
+        => MultiDownloadProgressChanged?.Invoke(this, e);
 
         public void OnMultiAsyncCompleted(object sender, MultiDownloadCompletedEventArgs e)
-        {
-            MultiDownloadCompleted?.Invoke(this, e);
-        }
+        => MultiDownloadCompleted?.Invoke(this, e);
 
         public void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
@@ -95,15 +89,16 @@ namespace GeneralUpdate.Common.Download
             _failedVersions.Add((e.Version, e.Exception.Message));
         }
 
-        public void Add(DownloadTask<TVersion> task)
+        public void Add(DownloadTask task)
         {
-            if (task != null && !_downloadTasksBuilder.Contains(task))
+            Contract.Requires(task != null);
+            if (!_downloadTasksBuilder.Contains(task))
             {
                 _downloadTasksBuilder.Add(task);
             }
         }
 
-        public void Remove(DownloadTask<TVersion> task) => _downloadTasksBuilder.Remove(task);
+        public void Remove(DownloadTask task) => _downloadTasksBuilder.Remove(task);
 
         #endregion Public Methods
     }

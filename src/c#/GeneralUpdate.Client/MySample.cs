@@ -1,13 +1,13 @@
 ﻿using GeneralUpdate.ClientCore;
-using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Core.Strategys.PlatformWindows;
 using GeneralUpdate.Differential;
 using System.Diagnostics;
 using System.Text;
+using GeneralUpdate.ClientCore.Internal;
+using GeneralUpdate.ClientCore.Strategys;
+using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.Bootstrap;
+using GeneralUpdate.Common.Shared.Object;
+using VersionInfo = GeneralUpdate.Core.Domain.Entity.VersionInfo;
 
 namespace GeneralUpdate.Client
 {
@@ -51,35 +51,32 @@ namespace GeneralUpdate.Client
             //generalClientBootstrap.Config(baseUrl, "B8A7FADD-386C-46B0-B283-C9F963420C7C").
             var configinfo = GetWindowsConfigInfo();
             var generalClientBootstrap = await new GeneralClientBootstrap()
-            //单个或多个更新包下载通知事件
-            .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
-            //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-            .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
-            //单个或多个更新包下载完成
-            .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
-            //完成所有的下载任务通知
-            .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
-            //下载过程出现的异常通知
-            .AddListenerMultiDownloadError(OnMultiDownloadError)
-            //整个更新过程出现的任何问题都会通过这个事件通知
-            .AddListenerException(OnException)
-            .Config(configinfo)
-            .Option(UpdateOption.DownloadTimeOut, 60)
-            .Option(UpdateOption.Encoding, Encoding.Default)
-            .Option(UpdateOption.Format, Format.ZIP)
-            //开启驱动更新
-            //.Option(UpdateOption.Drive, true)
-            //开启遗言功能，需要部署GeneralUpdate.SystemService Windows服务。
-            .Option(UpdateOption.WillMessage, true)
-            .Strategy<WindowsStrategy>()
-            //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
-            //.SetCustomSkipOption(ShowCustomOption)
-            //注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境）
-            //.AddCustomOption(new List<Func<bool>>() { () => Check1(), () => Check2() })
-            //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
-            //如果不需要扩展，需要重新传入黑名单集合来覆盖。
-            //.SetBlacklist(GetBlackFiles(), GetBlackFormats())
-            .LaunchTaskAsync();
+                //单个或多个更新包下载通知事件
+                .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
+                //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
+                //单个或多个更新包下载完成
+                .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
+                //完成所有的下载任务通知
+                .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
+                //下载过程出现的异常通知
+                .AddListenerMultiDownloadError(OnMultiDownloadError)
+                //整个更新过程出现的任何问题都会通过这个事件通知
+                .AddListenerException(OnException)
+                .SetConfig(configinfo)
+                .Option(UpdateOption.DownloadTimeOut, 60)
+                .Option(UpdateOption.Encoding, Encoding.Default)
+                .Option(UpdateOption.Format, Format.ZIP)
+                //开启驱动更新
+                //.Option(UpdateOption.Drive, true)
+                //注入一个func让用户决定是否跳过本次更新，如果是强制更新则不生效
+                //.SetCustomSkipOption(ShowCustomOption)
+                //注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境）
+                //.AddCustomOption(new List<Func<bool>>() { () => Check1(), () => Check2() })
+                //默认黑名单文件： { "Newtonsoft.Json.dll" } 默认黑名单文件扩展名： { ".patch", ".7z", ".zip", ".rar", ".tar" , ".json" }
+                //如果不需要扩展，需要重新传入黑名单集合来覆盖。
+                //.SetBlacklist(GetBlackFiles(), GetBlackFormats())
+                .LaunchAsync();
         }
 
         private bool Check1() => true;

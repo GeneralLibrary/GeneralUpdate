@@ -1,14 +1,15 @@
 ﻿using GeneralUpdate.Core.ContentProvider;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Entity.Assembler;
-using GeneralUpdate.Core.Domain.PO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
+using GeneralUpdate.ClientCore.Internal;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.ClientCore
 {
@@ -41,12 +42,12 @@ namespace GeneralUpdate.ClientCore
                     var appPath = Path.Combine(basePath, $"{upgradeAppName}.exe");
                     if (!File.Exists(appPath)) throw new Exception($"The application does not exist {upgradeAppName} !");
                     //If you confirm that an update is required, start the upgrade application.
-                    var processBase64 = ProcessAssembler.ToBase64(configParams);
-                    Process.Start(appPath, processBase64);
+                    var json = JsonSerializer.Serialize(configParams);
+                    //TODO: set environment variable
+                    Process.Start(appPath, json);
                 }
                 catch (Exception ex)
                 {
-                    GeneralUpdate.Core.Events.EventManager.Instance.Dispatch<Action<object, GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs>>(typeof(GeneralClientOSS), new GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs(ex));
                     throw new Exception($"GeneralClientOSS update exception ! {ex.Message}", ex.InnerException);
                 }
                 finally
@@ -82,14 +83,14 @@ namespace GeneralUpdate.ClientCore
             }
         }
 
-        public static void AddListenerException(Action<object, GeneralUpdate.Core.Events.CommonArgs.ExceptionEventArgs> callbackAction)
+        public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         {
             AddListener(callbackAction);
         }
 
         private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            if (callbackAction != null) GeneralUpdate.Core.Events.EventManager.Instance.AddListener(callbackAction);
+            if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
         }
     }
 }

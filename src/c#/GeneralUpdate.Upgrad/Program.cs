@@ -49,9 +49,9 @@ namespace GeneralUpdate.Upgrad
                 //整个更新过程出现的任何问题都会通过这个事件通知
                 .AddListenerException(OnException)
                 .Strategy<WindowsStrategy>()
-                .Option(UpdateOption.Encoding, Encoding.Default)
-                .Option(UpdateOption.DownloadTimeOut, 60)
-                .Option(UpdateOption.Format, Format.ZIP)
+                //.Option(UpdateOption.Encoding, Encoding.Default)
+                //.Option(UpdateOption.DownloadTimeOut, 60)
+                //.Option(UpdateOption.Format, Format.ZIP)
                 .LaunchTaskAsync();
             });
             Console.Read();

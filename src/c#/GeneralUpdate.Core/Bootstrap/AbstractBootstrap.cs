@@ -95,8 +95,6 @@ namespace GeneralUpdate.Core.Bootstrap
             return _strategy;
         }
 
-        protected string GetPlatform() => _strategy.GetPlatform();
-
         protected IStrategy ExecuteStrategy()
         {
             if (_strategy != null) _strategy.Execute();
@@ -126,7 +124,7 @@ namespace GeneralUpdate.Core.Bootstrap
         /// </summary>
         /// <param name="files">blacklist file name</param>
         /// <returns></returns>
-        public virtual TBootstrap SetBlacklist(List<string> files = null, List<string> fileFormats = null)
+        protected virtual TBootstrap SetBlacklist(List<string> files = null, List<string> fileFormats = null)
         {
             Packet.BlackFiles = files;
             Packet.BlackFormats = fileFormats;
@@ -140,7 +138,7 @@ namespace GeneralUpdate.Core.Bootstrap
         /// <param name="option">Configuration Action Enumeration.</param>
         /// <param name="value">Value</param>
         /// <returns></returns>
-        public virtual TBootstrap Option<T>(UpdateOption<T> option, T value)
+        protected virtual TBootstrap Option<T>(UpdateOption<T> option, T value)
         {
             Contract.Requires(option != null);
             if (value == null)
@@ -154,7 +152,7 @@ namespace GeneralUpdate.Core.Bootstrap
             return (TBootstrap)this;
         }
 
-        public virtual T GetOption<T>(UpdateOption<T> option)
+        protected virtual T GetOption<T>(UpdateOption<T> option)
         {
             try
             {
@@ -173,19 +171,25 @@ namespace GeneralUpdate.Core.Bootstrap
 
         #region Callback event.
 
-        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction) => AddListener(callbackAction);
+        public TBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction) 
+            => AddListener(callbackAction);
 
-        protected TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        private TBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
             if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
             return (TBootstrap)this;

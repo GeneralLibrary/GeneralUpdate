@@ -9,6 +9,9 @@ namespace GeneralUpdate.Common.Internal.Pipeline
     /// </summary>
     public sealed class PipelineBuilder(PipelineContext context = null)
     {
+        /// <summary>
+        /// LIFO，Last In First Out.
+        /// </summary>
         private ImmutableStack<IMiddleware> _middlewareStack = ImmutableStack<IMiddleware>.Empty;
 
         public PipelineBuilder UseMiddleware<TMiddleware>() where TMiddleware : IMiddleware, new()
@@ -29,8 +32,11 @@ namespace GeneralUpdate.Common.Internal.Pipeline
 
         public async Task Build()
         {
-            var middleware = _middlewareStack.Peek();
-            await middleware.InvokeAsync(context, _middlewareStack.Peek());
+            while (!_middlewareStack.IsEmpty)
+            {
+                _middlewareStack.Pop(out var middleware);
+                await middleware.InvokeAsync(context);
+            }
         }
     }
 }

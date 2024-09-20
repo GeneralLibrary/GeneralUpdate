@@ -1,20 +1,23 @@
-using GeneralUpdate.Core.Bootstrap;
-using GeneralUpdate.Core.Domain.DTO.Assembler;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Entity.Assembler;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Domain.Service;
-using GeneralUpdate.Core.Exceptions.CustomArgs;
 using GeneralUpdate.Core.Exceptions.CustomException;
-using GeneralUpdate.Core.Strategys;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security;
+using System.Text.Json;
 using System.Threading.Tasks;
+using GeneralUpdate.ClientCore.Internal;
+using GeneralUpdate.ClientCore.Strategys;
+using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.Bootstrap;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Service;
 
 namespace GeneralUpdate.ClientCore
 {
@@ -23,59 +26,42 @@ namespace GeneralUpdate.ClientCore
     /// </summary>
     public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
     {
+        #region Private Members
+        
+        private IStrategy _strategy;
+        
         private Func<bool> _customSkipOption;
-        private Func<Task<bool>> _customSkipTaskOption;
+        
+        private List<Func<bool>> _customOptions = new List<Func<bool>>();
+        
+        #endregion
 
-        private List<Func<bool>> _customOptions;
-        private List<Func<Task<bool>>> _customTaskOptions;
-
-        public GeneralClientBootstrap() : base()
-        {
-            _customOptions = new List<Func<bool>>();
-            _customTaskOptions = new List<Func<Task<bool>>>();
-        }
+        #region Public Properties
+        
+        /// <summary>
+        /// All update actions of the core object for automatic upgrades will be related to the Packet object.
+        /// </summary>
+        private Packet Packet { get; set; }
+        
+        #endregion
 
         #region Public Methods
-
+        
         /// <summary>
-        /// Start the update.
+        /// Main function for booting the update startup.
         /// </summary>
         /// <returns></returns>
-        public override GeneralClientBootstrap LaunchAsync()
+        public override async Task<GeneralClientBootstrap> LaunchAsync()
         {
-            Task.Run(() => BaseLaunch());
+            ExecuteCustomOptions();
+            await InitializeData();
+            var manager = new DownloadManager(Packet.InstallPath, Packet.Format, 30);
+            foreach (var versionInfo in Packet.UpdateVersions)
+            {
+                manager.Add(new DownloadTask(manager, versionInfo));
+            }
+            await manager.LaunchTasksAsync();
             return this;
-        }
-
-        /// <summary>
-        /// Start the update.
-        /// </summary>
-        /// <returns></returns>
-        public Task<GeneralClientBootstrap> LaunchTaskAsync() => BaseLaunch();
-
-        private async Task<GeneralClientBootstrap> BaseLaunch()
-        {
-            ClearEnvironmentVariable();
-            await ExecuteCustomOptions();
-            var versionService = new VersionService();
-            var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
-            var upgradeResp = await versionService.ValidationVersion(Packet.UpdateUrl);
-            //if (!CheckWillMessage()) return this;
-            Packet.IsUpgradeUpdate = upgradeResp.Body.IsUpdate;
-            Packet.IsMainUpdate = mainResp.Body.IsUpdate;
-            //No need to update, return directly.
-            if ((!Packet.IsMainUpdate) && (!Packet.IsUpgradeUpdate)) return this;
-            //If the main program needs to be forced to update, the skip will not take effect.
-            var isForcibly = mainResp.Body.IsForcibly || upgradeResp.Body.IsForcibly;
-            if (await IsSkip(isForcibly)) return this;
-            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradeResp.Body.Versions);
-            Packet.LastVersion = Packet.UpdateVersions.Last().Version;
-            var processInfo = new ProcessInfo(Packet.MainAppName, Packet.InstallPath,
-                    Packet.ClientVersion, Packet.LastVersion, Packet.UpdateLogUrl,
-                    Packet.Encoding, Packet.Format, Packet.DownloadTimeOut,
-                    Packet.AppSecretKey, mainResp.Body.Versions);
-            Packet.ProcessBase64 = ProcessAssembler.ToBase64(processInfo);
-            return base.LaunchAsync();
         }
 
         /// <summary>
@@ -85,31 +71,24 @@ namespace GeneralUpdate.ClientCore
         /// <param name="appName">The updater name does not need to contain an extension.</param>
         /// <returns></returns>
         /// <exception cref="Exception">Parameter initialization is abnormal.</exception>
-        public GeneralClientBootstrap Config(string url, string appSecretKey, string appName = "GeneralUpdate.Upgrade")
+        public GeneralClientBootstrap SetConfig(string url, string appSecretKey, string appName)
         {
             if (string.IsNullOrEmpty(url)) throw new Exception("Url cannot be empty !");
-            try
-            {
-                string basePath = System.Threading.Thread.GetDomain().BaseDirectory;
-                Packet.InstallPath = basePath;
-                Packet.AppSecretKey = appSecretKey;
-                //update app.
-                Packet.AppName = appName;
-                string clientVersion = GetFileVersion(Path.Combine(basePath, $"{Packet.AppName}.exe"));
-                Packet.ClientVersion = clientVersion;
-                Packet.AppType = AppType.ClientApp;
-                Packet.UpdateUrl = $"{url}/versions/{AppType.ClientApp}/{clientVersion}/{Packet.AppSecretKey}";
-                //main app.
-                string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
-                string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-                Packet.MainUpdateUrl = $"{url}/versions/{AppType.ClientApp}/{mainVersion}/{Packet.AppSecretKey}";
-                Packet.MainAppName = mainAppName;
-                return this;
-            }
-            catch (Exception ex)
-            {
-                throw new GeneralUpdateException<ExceptionArgs>(ex.Message, ex.InnerException);
-            }
+            string basePath = System.Threading.Thread.GetDomain().BaseDirectory;
+            Packet.InstallPath = basePath;
+            Packet.AppSecretKey = appSecretKey;
+            //update app.
+            Packet.AppName = appName;
+            string clientVersion = GetFileVersion(Path.Combine(basePath, $"{Packet.AppName}.exe"));
+            Packet.ClientVersion = clientVersion;
+            Packet.AppType = AppType.ClientApp;
+            Packet.UpdateUrl = $"{url}/versions/{AppType.ClientApp}/{clientVersion}/{Packet.AppSecretKey}";
+            //main app.
+            string mainAppName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
+            string mainVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            Packet.MainUpdateUrl = $"{url}/versions/{AppType.ClientApp}/{mainVersion}/{Packet.AppSecretKey}";
+            Packet.MainAppName = mainAppName;
+            return this;
         }
 
         /// <summary>
@@ -117,7 +96,7 @@ namespace GeneralUpdate.ClientCore
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        public GeneralClientBootstrap Config(Configinfo info)
+        public GeneralClientBootstrap SetConfig(Configinfo info)
         {
             Packet.AppType = info.AppType;
             Packet.AppName = info.AppName;
@@ -138,21 +117,8 @@ namespace GeneralUpdate.ClientCore
         /// <returns></returns>
         public GeneralClientBootstrap SetCustomSkipOption(Func<bool> func)
         {
-            if (func == null) throw new ArgumentNullException(nameof(func));
+            Contract.Requires(func != null);
             _customSkipOption = func;
-            return this;
-        }
-
-        /// <summary>
-        ///  Let the user decide whether to update in the state of non-mandatory update.
-        /// </summary>
-        /// <param name="func">Custom function ,Custom actions to let users decide whether to update. true update false do not update .</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public GeneralClientBootstrap SetCustomSkipOption(Func<Task<bool>> func)
-        {
-            if (func == null) throw new ArgumentNullException(nameof(func));
-            _customSkipTaskOption = func;
             return this;
         }
 
@@ -165,28 +131,61 @@ namespace GeneralUpdate.ClientCore
         /// <exception cref="ArgumentNullException"></exception>
         public GeneralClientBootstrap AddCustomOption(List<Func<bool>> funcs)
         {
-            if (funcs == null || !funcs.Any()) throw new ArgumentNullException(nameof(funcs));
+            Contract.Requires(funcs != null && funcs.Any());
             _customOptions.AddRange(funcs);
             return this;
         }
 
-        /// <summary>
-        /// Add a synchronization custom operation.
-        /// In theory, any custom operation can be done. It is recommended to register the environment check method to ensure that there are normal dependencies and environments after the update is completed.
-        /// </summary>
-        /// <param name="func"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public GeneralClientBootstrap AddCustomOption(List<Func<Task<bool>>> funcs)
-        {
-            if (funcs == null || !funcs.Any()) throw new ArgumentNullException(nameof(funcs));
-            _customTaskOptions.AddRange(funcs);
-            return this;
-        }
+        public GeneralClientBootstrap AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
 
+        public GeneralClientBootstrap AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction) => AddListener(callbackAction);
+
+        public GeneralClientBootstrap AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction) => AddListener(callbackAction);
+
+        public GeneralClientBootstrap AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction) => AddListener(callbackAction);
+
+        public GeneralClientBootstrap AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction) => AddListener(callbackAction);
+
+        public GeneralClientBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction) => AddListener(callbackAction);
+        
         #endregion Public Methods
 
         #region Private Methods
+        
+        private async Task InitializeData()
+        {
+            ClearEnvironmentVariable();
+            
+            //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
+            var versionService = new VersionService();
+            var mainResp = await versionService.ValidationVersion(Packet.MainUpdateUrl);
+            var upgradeResp = await versionService.ValidationVersion(Packet.UpdateUrl);
+            
+            Packet.IsUpgradeUpdate = upgradeResp.Body.IsUpdate;
+            Packet.IsMainUpdate = mainResp.Body.IsUpdate;
+            //No need to update, return directly.
+            if ((!Packet.IsMainUpdate) && (!Packet.IsUpgradeUpdate)) return;
+            
+            //If the main program needs to be forced to update, the skip will not take effect.
+            var isForcibly = mainResp.Body.IsForcibly || upgradeResp.Body.IsForcibly;
+            if (CanSkip(isForcibly)) return;
+            
+            Packet.UpdateVersions = VersionAssembler.ToEntitys(upgradeResp.Body.Versions);
+            Packet.LastVersion = Packet.UpdateVersions.Last().Version;
+            
+            //Initialize the process transfer parameter object.
+            var processInfo = new ProcessInfo(Packet.MainAppName
+                , Packet.InstallPath
+                , Packet.ClientVersion
+                , Packet.LastVersion
+                , Packet.UpdateLogUrl
+                , Packet.Encoding
+                , Packet.Format
+                , Packet.DownloadTimeOut
+                , Packet.AppSecretKey
+                , mainResp.Body.Versions);
+            Packet.ProcessInfo = JsonSerializer.Serialize(processInfo);
+        }
 
         /// <summary>
         ///Gets the application version number
@@ -197,73 +196,118 @@ namespace GeneralUpdate.ClientCore
         private string GetFileVersion(string filePath)
         {
             var fileInfo = new FileInfo(filePath);
-            if (fileInfo != null && fileInfo.Exists) return FileVersionInfo.GetVersionInfo(filePath).FileVersion;
-            throw new GeneralUpdateException<ExceptionArgs>($"Failed to obtain file '{filePath}' version. Procedure.");
+            if (fileInfo.Exists) return FileVersionInfo.GetVersionInfo(filePath).FileVersion;
+            throw new FileNotFoundException($"Failed to obtain file '{filePath}' version. Procedure.");
         }
 
         /// <summary>
         /// User decides if update is required.
         /// </summary>
         /// <returns>is false to continue execution.</returns>
-        private async Task<bool> IsSkip(bool isForcibly)
+        private bool CanSkip(bool isForcibly)
         {
-            try
-            {
-                bool isSkip = false;
-                if (isForcibly) return false;
-                if (_customSkipTaskOption != null) isSkip = await _customSkipTaskOption.Invoke();
-                if (_customSkipOption != null) isSkip = _customSkipOption.Invoke();
-                return isSkip;
-            }
-            catch (Exception ex)
-            {
-                throw new GeneralUpdateException<ExceptionArgs>($"The injected user skips this update with an exception ! {ex.Message}", ex.InnerException);
-            }
+            if (isForcibly) return false;
+            Contract.Requires(_customSkipOption != null);
+            return _customSkipOption.Invoke();
         }
 
         /// <summary>
         /// Performs all injected custom operations.
         /// </summary>
         /// <returns></returns>
-        private async Task ExecuteCustomOptions()
+        private void ExecuteCustomOptions()
         {
-            if (_customTaskOptions.Any())
+            Contract.Requires(_customOptions != null && _customOptions.Any());
+            foreach (var option in _customOptions)
             {
-                foreach (var option in _customTaskOptions)
+                if (!option.Invoke())
                 {
-                    var isSuccess = await option.Invoke();
-                    if (!isSuccess)
-                        Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
-                }
-            }
-            else if (_customOptions.Any())
-            {
-                foreach (var option in _customOptions)
-                {
-                    var isSuccess = option.Invoke();
-                    if (!isSuccess)
-                        Core.Events.EventManager.Instance.Dispatch<Action<object, Core.Events.CommonArgs.ExceptionEventArgs>>(this, new Core.Events.CommonArgs.ExceptionEventArgs($"{nameof(option)}Execution failure!"));
+                    EventManager.Instance.Dispatch(this,
+                        new ExceptionEventArgs(null ,$"{nameof(option)}Execution failure!"));
                 }
             }
         }
 
         /// <summary>
-        /// The values passed between processes during previous updates are cleared when the client starts.
+        /// Clear the environment variable information needed to start the upgrade assistant process.
         /// </summary>
         private void ClearEnvironmentVariable()
         {
             try
             {
-                Environment.SetEnvironmentVariable("ProcessBase64", null, EnvironmentVariableTarget.User);
+                Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
             }
             catch (SecurityException ex)
             {
-                Trace.WriteLine($"Error: You do not have sufficient permissions to delete this environment variable.{ex}");
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(ex,
+                        $"Error: You do not have sufficient permissions to delete this environment variable."));
             }
             catch (ArgumentException ex)
             {
-                Trace.WriteLine($"Error: The environment variable name is invalid. {ex}");
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(ex, $"Error: The environment variable name is invalid."));
             }
+            catch (IOException ex)
+            {
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(ex,
+                        $"Error: An I/O error occurred while deleting the environment variable."));
+            }
+            catch (Exception ex)
+            {
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(ex, $"Error: An unknown error occurred while deleting the environment variable."));
+            }
+        }
+        
+        protected override void ExecuteStrategy()
+        {
+            _strategy.Create(Packet);
+            _strategy.Execute();
+        }
+
+        protected override GeneralClientBootstrap StrategyFactory()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                _strategy = new WindowsStrategy();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                _strategy = new LinuxStrategy();
+            }
+            else
+            {
+                throw new PlatformNotSupportedException("The current operating system is not supported!");
+            }
+            
+            return this;
+        }
+        
+        private GeneralClientBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
+        {
+            Contract.Requires(callbackAction != null);
+            EventManager.Instance.AddListener(callbackAction);
+            return this;
+        }
+
+        private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
+        => EventManager.Instance.Dispatch(sender, e);
+
+        private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
+        => EventManager.Instance.Dispatch(sender, e);
+
+        private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
+        => EventManager.Instance.Dispatch(sender, e);
+
+        private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
+        => EventManager.Instance.Dispatch(sender, e);
+
+        private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
+        {
+            EventManager.Instance.Dispatch(sender, e);
+            ExecuteStrategy();
         }
 
         #endregion Private Methods

@@ -4,6 +4,9 @@ using GeneralUpdate.Bowl.Strategys;
 
 namespace GeneralUpdate.Bowl;
 
+/// <summary>
+/// Surveillance Main Program.
+/// </summary>
 public class Bowl
 {
     private IStrategy _strategy;

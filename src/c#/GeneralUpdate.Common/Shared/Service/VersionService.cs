@@ -2,9 +2,9 @@
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Shared.Object;
-using Newtonsoft.Json;
 
 namespace GeneralUpdate.Common.Shared.Service
 {
@@ -58,7 +58,7 @@ namespace GeneralUpdate.Common.Shared.Service
                 var response = await _httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode(); // Throw if not a success code.
                 var responseContent = await response.Content.ReadAsStringAsync();
-                var result = JsonConvert.DeserializeObject<T>(responseContent);
+                var result = JsonSerializer.Deserialize<T>(responseContent);
 
                 return result;
             }

@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Text.Json;
 using GeneralUpdate.Common.HashAlgorithms;
-using Newtonsoft.Json;
 
 namespace GeneralUpdate.Common
 {
@@ -28,8 +27,8 @@ namespace GeneralUpdate.Common
 
         #region Public Properties
         
-        public static IReadOnlyList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
-        public static IReadOnlyList<string> BlackFiles => _blackFiles.AsReadOnly();
+        public static IList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
+        public static IList<string> BlackFiles => _blackFiles.AsReadOnly();
         
         public ComparisonResult ComparisonResult { get; private set; }
         
@@ -92,7 +91,7 @@ namespace GeneralUpdate.Common
             }
         }
         
-        public static void CreateJson<T>(string targetPath, T obj)
+        public static void CreateJson<T>(string targetPath, T obj) where T : class
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
                              throw new ArgumentException("invalid path", nameof(targetPath));
@@ -101,50 +100,20 @@ namespace GeneralUpdate.Common
                 Directory.CreateDirectory(folderPath);
             }
             
-            var jsonString = JsonConvert.SerializeObject(obj);
+            var jsonString = JsonSerializer.Serialize(obj);
             File.WriteAllText(targetPath, jsonString);
         }
 
-        public static T? GetJson<T>(string path)
+        public static T? GetJson<T>(string path) where T : class
         {
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
-                return JsonConvert.DeserializeObject<T>(json);
+                return JsonSerializer.Deserialize<T>(json);
             }
-            return default(T);
+            return default;
         }
 
-        /// <summary>
-        /// Convert object to base64 string.
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        public static string Serialize(object? obj)
-        {
-            if (obj == null) return string.Empty;
-            var json = JsonConvert.SerializeObject(obj);
-            var bytes = Encoding.Default.GetBytes(json);
-            var base64Str = Convert.ToBase64String(bytes);
-            return base64Str;
-        }
-
-        /// <summary>
-        /// Convert base64 object to string.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        public static T? Deserialize<T>(string str)
-        {
-            var obj = default(T);
-            if (string.IsNullOrEmpty(str)) return obj;
-            byte[] bytes = Convert.FromBase64String(str);
-            var json = Encoding.Default.GetString(bytes);
-            var result = JsonConvert.DeserializeObject<T>(json);
-            return result;
-        }
-        
         public static string GetTempDirectory(string name)
         {
             var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd}_{name}";
@@ -159,7 +128,7 @@ namespace GeneralUpdate.Common
         #endregion
 
         #region Private Methods
-     
+        
         private IEnumerable<string> GetRelativeFilePaths(string rootDir, string currentDir)
         {
             foreach (var file in Directory.GetFiles(currentDir))

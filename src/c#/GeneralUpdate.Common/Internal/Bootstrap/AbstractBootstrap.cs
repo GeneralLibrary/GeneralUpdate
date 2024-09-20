@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
 
@@ -15,26 +14,15 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         protected internal AbstractBootstrap() => _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         /// <summary>
-        /// Launch udpate.
-        /// </summary>
-        /// <returns></returns>
-        protected abstract TBootstrap Launch();
-        
-        /// <summary>
         /// Launch async udpate.
         /// </summary>
         /// <returns></returns>
-        protected abstract Task<TBootstrap> LaunchAsync();
+        public abstract Task<TBootstrap> LaunchAsync();
 
-        protected abstract IStrategy InitStrategy();
+        protected abstract void ExecuteStrategy();
 
-        protected abstract IStrategy ExecuteStrategy();
+        protected abstract TBootstrap StrategyFactory();
 
-        protected virtual TBootstrap Strategy<T>() where T : TStrategy, new() => this.StrategyFactory(() => new T());
-
-        protected abstract TBootstrap StrategyFactory(Func<TStrategy> strategyFactory);
-
-        
         /// <summary>
         /// Setting update configuration.
         /// </summary>
@@ -44,21 +32,20 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// <returns></returns>
         public virtual TBootstrap Option<T>(UpdateOption<T> option, T value)
         {
-            Debug.Assert(option != null);
             if (value == null)
             {
-                this._options.TryRemove(option, out _);
+                _options.TryRemove(option, out _);
             }
             else
             {
-                this._options[option] = new UpdateOptionValue<T>(option, value);
+                _options[option] = new UpdateOptionValue<T>(option, value);
             }
             return (TBootstrap)this;
         }
 
         public virtual T? GetOption<T>(UpdateOption<T> option)
         {
-            Debug.Assert(option != null);
+            Contract.Requires(option != null);
             if (_options.Count == 0) return default(T);
             var val = _options[option];
             if (val != null) return (T)val.GetValue();

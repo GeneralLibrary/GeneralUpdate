@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Internal.Strategy
 {
@@ -19,13 +20,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <param name="appType"></param>
         /// <returns></returns>
         void StartApp(string appName, int appType);
-
-        /// <summary>
-        /// Get the platform for the current strategy.
-        /// </summary>
-        /// <returns></returns>
-        string GetPlatform();
-
+        
         /// <summary>
         /// Execution strategy.
         /// </summary>
@@ -34,6 +29,6 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// Create a strategy.
         /// </summary>
-        void Create<T>(T parameter) where T : class;
+        void Create(Packet parameter);
     }
 }

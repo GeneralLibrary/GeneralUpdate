@@ -6,9 +6,6 @@ namespace GeneralUpdate.Common.Shared.Object
 {
     public class Packet
     {
-        public Packet()
-        { }
-
         public Packet(string mainUpdateUrl, int appType, string updateUrl, string appName, string mainAppName, string format, bool isUpdate, string updateLogUrl, Encoding encoding, int downloadTimeOut, string appSecretKey, string tempPath)
         {
             MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(MainUpdateUrl));
@@ -113,7 +110,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Configuration parameters for upgrading the terminal program.
         /// </summary>
-        public string ProcessBase64 { get; set; }
+        public string ProcessInfo { get; set; }
         
         /// <summary>
         /// Files in the blacklist will skip the update.

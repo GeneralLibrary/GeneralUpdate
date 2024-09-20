@@ -7,6 +7,6 @@ namespace GeneralUpdate.Common.Internal.Pipeline
     /// </summary>
     public interface IMiddleware
     {
-        Task InvokeAsync(PipelineContext context, IMiddleware middleware);
+        Task InvokeAsync(PipelineContext context);
     }
 }
