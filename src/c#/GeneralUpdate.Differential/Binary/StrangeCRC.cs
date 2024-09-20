@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GeneralUpdate.Differential.GStream
+namespace GeneralUpdate.Differential.Binary
 {
     public class StrangeCRC : IChecksum
     {

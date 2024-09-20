@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Differential.GStream
+﻿namespace GeneralUpdate.Differential.Binary
 {
     internal sealed class BZip2Constants
     {

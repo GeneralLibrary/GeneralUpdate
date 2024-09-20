@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Differential.GStream
+﻿namespace GeneralUpdate.Differential.Binary
 {
     public interface IChecksum
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace GeneralUpdate.Differential.GStream
+namespace GeneralUpdate.Differential.Binary
 {
     public class BZip2InputStream : Stream
     {
