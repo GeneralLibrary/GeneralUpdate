@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GeneralUpdate.Core.Driver
 {
-    public class RestoreDriverCommand : IDriverCommand
+    public class RestoreDriverCommand
     {
         private DriverInformation _information;
 
