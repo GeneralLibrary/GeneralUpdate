@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -65,6 +66,10 @@ namespace GeneralUpdate.Core.Strategys
                     context.Add("TargetPath", Packet.InstallPath);
                     context.Add("BlackFiles", GeneralFileManager.BlackFiles);
                     context.Add("BlackFileFormats", GeneralFileManager.BlackFileFormats);
+                    //driver middleware
+                    context.Add("DriverPath", new List<string>());
+                    context.Add("Version", version.Version);
+                    
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddleware<HashMiddleware>()
