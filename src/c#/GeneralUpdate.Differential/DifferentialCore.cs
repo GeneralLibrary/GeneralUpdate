@@ -79,7 +79,7 @@ namespace GeneralUpdate.Differential
                 var result = fileManager.ComparisonResult;
                 
                 //Binary differencing of like terms .
-                foreach (var file in GeneralFileManager.ToFileInfoList(result.DifferentFiles))
+                foreach (var file in result.DifferentFiles.AsFileInfo())
                 {
                     var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
                     var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
@@ -97,11 +97,11 @@ namespace GeneralUpdate.Differential
                         tempPath0 = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
                     }
                     
-                    var finOldFile = GeneralFileManager.ToFileInfoList(result.UniqueToA).FirstOrDefault(i => i.Name.Equals(file.Name));
+                    var finOldFile = (result.UniqueToA.AsFileInfo()).FirstOrDefault(i => i.Name.Equals(file.Name));
                     var oldFile = finOldFile == null ? "" : finOldFile.FullName;
                     var newFile = file.FullName;
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (File.Exists(oldFile) && File.Exists(newFile) && !GeneralFileManager.BlackFileFormats.Contains(extensionName))
+                    if (File.Exists(oldFile) && File.Exists(newFile) && !BlackListManager.Instance.BlackFileFormats.Contains(extensionName))
                     {
                         var hashAlgorithm = new Sha256HashAlgorithm();
                         if (hashAlgorithm.ComputeHash(oldFile)
@@ -148,14 +148,14 @@ namespace GeneralUpdate.Differential
                 var fileManager = new GeneralFileManager();
                 fileManager.CompareDirectories(appPath, patchPath);
                 var result = fileManager.ComparisonResult;
-                var patchFiles = GeneralFileManager.ToFileInfoList(result.DifferentFiles);
-                var oldFiles = GeneralFileManager.ToFileInfoList(result.UniqueToA);
+                var patchFiles = result.DifferentFiles.AsFileInfo();
+                var oldFiles = result.UniqueToA.AsFileInfo();
 
                 //If a JSON file for the deletion list is found in the update package, it will be deleted based on its contents.
                 var deleteListJson = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
                 if (deleteListJson != null)
                 {
-                    var deleteFiles = GeneralFileManager.ToFileInfoList(GeneralFileManager.GetJson<List<string>>(deleteListJson.FullName)) ;
+                    var deleteFiles = GeneralFileManager.GetJson<List<string>>(deleteListJson.FullName).AsFileInfo() ;
                     var hashAlgorithm = new Sha256HashAlgorithm();
                     foreach (var file in deleteFiles)
                     {
@@ -204,8 +204,8 @@ namespace GeneralUpdate.Differential
         /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
         public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats)
         {
-            GeneralFileManager.AddBlackFiles(blackFiles);
-            GeneralFileManager.AddBlackFileFormats(blackFileFormats);
+            BlackListManager.Instance.AddBlackFiles(blackFiles);
+            BlackListManager.Instance.AddBlackFileFormats(blackFileFormats);
         }
     
         #endregion Public Methods
@@ -245,10 +245,10 @@ namespace GeneralUpdate.Differential
                 var fileManager = new GeneralFileManager();
                 fileManager.CompareDirectories(appPath, patchPath);
                 var result = fileManager.ComparisonResult;
-                foreach (var file in GeneralFileManager.ToFileInfoList(result.DifferentFiles))
+                foreach (var file in (result.DifferentFiles.AsFileInfo()))
                 {
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (GeneralFileManager.BlackFileFormats.Contains(extensionName)) continue;
+                    if (BlackListManager.Instance.BlackFileFormats.Contains(extensionName)) continue;
                     var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
                     var targetPath = Path.Combine(appPath, targetFileName);
                     var parentFolder = Directory.GetParent(targetPath);

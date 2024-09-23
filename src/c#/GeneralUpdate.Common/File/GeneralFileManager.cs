@@ -9,79 +9,13 @@ namespace GeneralUpdate.Common
 {
     public sealed class GeneralFileManager
     {
-        #region Private Members
-        
-        private static readonly List<string> _blackFileFormats =
-        [
-            ".patch",
-            ".7z",
-            ".zip",
-            ".rar",
-            ".tar",
-            ".json"
-        ];
-
-        private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
-        
-        #endregion
-
         #region Public Properties
-
-        public static IReadOnlyList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
-        public static IReadOnlyList<string> BlackFiles => _blackFiles.AsReadOnly();
         
         public ComparisonResult ComparisonResult { get; private set; }
         
         #endregion
 
         #region Public Methods
-        
-        public static List<FileInfo> ToFileInfoList(IReadOnlyList<string> filePaths)
-        {
-            return filePaths.Select(path => new FileInfo(path)).ToList();
-        }
-        
-        public static void AddBlackFileFormats(List<string> formats)
-        {
-            foreach (var format in formats)
-            {
-                AddBlackFileFormat(format);
-            }
-        }
-        
-        public static void AddBlackFileFormat(string format)
-        {
-            if (!_blackFileFormats.Contains(format))
-            {
-                _blackFileFormats.Add(format);
-            }
-        }
-     
-        public static void RemoveBlackFileFormat(string format)
-        {
-            _blackFileFormats.Remove(format);
-        }
-
-        public static void AddBlackFiles(List<string> fileNames)
-        {
-            foreach (var fileName in fileNames)
-            {
-                AddBlackFile(fileName);
-            }
-        }
-        
-        public static void AddBlackFile(string fileName)
-        {
-            if (!_blackFiles.Contains(fileName))
-            {
-                _blackFiles.Add(fileName);
-            }
-        }
-
-        public static void RemoveBlackFile(string fileName)
-        {
-            _blackFiles.Remove(fileName);
-        }
         
         /// <summary>
         /// Compare two directories.
@@ -92,8 +26,8 @@ namespace GeneralUpdate.Common
         {
             ComparisonResult = new ComparisonResult();
 
-            var filesA = GetRelativeFilePaths(dirA, dirA).Where(f => !IsBlacklisted(f)).ToList();
-            var filesB = GetRelativeFilePaths(dirB, dirB).Where(f => !IsBlacklisted(f)).ToList();
+            var filesA = GetRelativeFilePaths(dirA, dirA).Where(f => !BlackListManager.Instance.IsBlacklisted(f)).ToList();
+            var filesB = GetRelativeFilePaths(dirB, dirB).Where(f => !BlackListManager.Instance.IsBlacklisted(f)).ToList();
 
             ComparisonResult.AddUniqueToA(filesA.Except(filesB).Select(f => Path.Combine(dirA, f)));
             ComparisonResult.AddUniqueToB(filesB.Except(filesA).Select(f => Path.Combine(dirB, f)));
@@ -185,14 +119,6 @@ namespace GeneralUpdate.Common
             }
 
             return relativePath;
-        }
-
-        private bool IsBlacklisted(string relativeFilePath)
-        {
-            var fileName = Path.GetFileName(relativeFilePath);
-            var fileExtension = Path.GetExtension(relativeFilePath);
-
-            return _blackFiles.Contains(fileName) || _blackFileFormats.Contains(fileExtension);
         }
 
         private bool FilesAreEqual(string fileA, string fileB)
