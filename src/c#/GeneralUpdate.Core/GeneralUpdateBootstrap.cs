@@ -53,9 +53,7 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap AddListenerMultiAllDownloadCompleted(
             Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         public GeneralUpdateBootstrap AddListenerMultiDownloadProgress(
             Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
