@@ -13,8 +13,8 @@ namespace GeneralUpdate.Differential
     {
         #region Private Members
 
-        private static readonly object _lockObj = new object();
-        private static DifferentialCore _instance;
+        private static readonly object LockObj = new object();
+        private static DifferentialCore? _instance;
 
         /// <summary>
         /// Differential file format .
@@ -35,19 +35,14 @@ namespace GeneralUpdate.Differential
 
         #region Public Properties
 
-        public static DifferentialCore Instance
+        public static DifferentialCore? Instance
         {
             get
             {
-                if (_instance == null)
+                if (_instance != null) return _instance;
+                lock (LockObj)
                 {
-                    lock (_lockObj)
-                    {
-                        if (_instance == null)
-                        {
-                            _instance = new DifferentialCore();
-                        }
-                    }
+                    _instance ??= new DifferentialCore();
                 }
                 return _instance;
             }
@@ -64,7 +59,7 @@ namespace GeneralUpdate.Differential
         /// <param name="targetPath">Recent version folder path.</param>
         /// <param name="patchPath">Store discovered incremental update files in a temporary directory .</param>
         /// <returns></returns>
-        public async Task Clean(string sourcePath, string targetPath, string patchPath = null)
+        public async Task Clean(string sourcePath, string targetPath, string? patchPath = null)
         {
             try
             {
@@ -83,8 +78,8 @@ namespace GeneralUpdate.Differential
                 {
                     var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
                     var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
-                    var tempPath0 = string.Empty;
-                    var tempDir = string.Empty;
+                    string tempPath0;
+                    string? tempDir;
                     if (string.IsNullOrEmpty(tempPath))
                     {
                         tempDir = patchPath;
@@ -224,7 +219,7 @@ namespace GeneralUpdate.Differential
             try
             {
                 if (!File.Exists(appPath) || !File.Exists(patchPath)) return;
-                var newPath = Path.Combine(Path.GetDirectoryName(appPath), $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
+                var newPath = Path.Combine(Path.GetDirectoryName(appPath) ?? string.Empty, $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
                 await new BinaryHandler().Dirty(appPath, newPath, patchPath);
             }
             catch (Exception ex)
@@ -252,7 +247,7 @@ namespace GeneralUpdate.Differential
                     var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
                     var targetPath = Path.Combine(appPath, targetFileName);
                     var parentFolder = Directory.GetParent(targetPath);
-                    if (!parentFolder.Exists) parentFolder.Create();
+                    if (parentFolder is { Exists: false }) parentFolder.Create();
                     File.Copy(file.FullName, Path.Combine(appPath, targetPath), true);
                 }
                 if (Directory.Exists(patchPath)) Directory.Delete(patchPath, true);
