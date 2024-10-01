@@ -20,16 +20,12 @@ namespace GeneralUpdate.Core
         private Packet Packet { get; set; }
 
         private IStrategy _strategy;
-        
-        public GeneralUpdateBootstrap() : base() => Remote();
 
-        /// <summary>
-        /// Gets values from system environment variables (ClientParameter object to base64 string).
-        /// </summary>
-        private void Remote()
+        public GeneralUpdateBootstrap() : base()
         {
             try
             {
+                //Gets values from system environment variables (ClientParameter object to base64 string).
                 var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
                 var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
                 Packet.AppType = AppType.UpgradeApp;
@@ -44,7 +40,10 @@ namespace GeneralUpdate.Core
         public override async Task<GeneralUpdateBootstrap> LaunchAsync()
         {
             var manager = new DownloadManager(Packet.InstallPath, Packet.Format, 30);
-            foreach (var versionInfo in Packet.UpdateVersions) manager.Add(new DownloadTask(manager, versionInfo));
+            
+            foreach (var versionInfo in Packet.UpdateVersions) 
+                manager.Add(new DownloadTask(manager, versionInfo));
+            
             await manager.LaunchTasksAsync();
             return this;
         }
@@ -57,32 +56,22 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap AddListenerMultiDownloadProgress(
             Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         public GeneralUpdateBootstrap AddListenerMultiDownloadCompleted(
             Action<object, MultiDownloadCompletedEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         public GeneralUpdateBootstrap AddListenerMultiDownloadError(
             Action<object, MultiDownloadErrorEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         public GeneralUpdateBootstrap AddListenerMultiDownloadStatistics(
             Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         public GeneralUpdateBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-        {
-            return AddListener(callbackAction);
-        }
+        => AddListener(callbackAction);
 
         #endregion
 
@@ -112,24 +101,16 @@ namespace GeneralUpdate.Core
         }
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        {
-            EventManager.Instance.Dispatch(sender, e);
-        }
+        => EventManager.Instance.Dispatch(sender, e);
 
         private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
-        {
-            EventManager.Instance.Dispatch(sender, e);
-        }
+        => EventManager.Instance.Dispatch(sender, e);
 
         private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
-        {
-            EventManager.Instance.Dispatch(sender, e);
-        }
+        => EventManager.Instance.Dispatch(sender, e);
 
         private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
-        {
-            EventManager.Instance.Dispatch(sender, e);
-        }
+        => EventManager.Instance.Dispatch(sender, e);
 
         private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         {
