@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Contracts;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
@@ -32,39 +33,25 @@ namespace GeneralUpdate.Core
         }
 
         public static void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerMultiDownloadProgress(Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerMultiDownloadCompleted(Action<object, MultiDownloadCompletedEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerMultiDownloadError(Action<object, MultiDownloadErrorEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerMultiDownloadStatistics(Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         public static void AddListenerDownloadConfigProcess(Action<object, OSSDownloadArgs> callbackAction)
-        {
-            AddListener(callbackAction);
-        }
+            => AddListener(callbackAction);
 
         #endregion Public Methods
 
@@ -72,7 +59,8 @@ namespace GeneralUpdate.Core
 
         private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+            Contract.Requires(callbackAction != null);
+            EventManager.Instance.AddListener(callbackAction);
         }
 
         /// <summary>
