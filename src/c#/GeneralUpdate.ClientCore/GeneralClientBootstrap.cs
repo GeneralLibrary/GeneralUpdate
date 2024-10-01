@@ -56,7 +56,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         ExecuteCustomOptions();
         await InitializeData();
         var manager = new DownloadManager(Packet.InstallPath, Packet.Format, 30);
-        foreach (var versionInfo in Packet.UpdateVersions) manager.Add(new DownloadTask(manager, versionInfo));
+        foreach (var versionInfo in Packet.UpdateVersions) 
+            manager.Add(new DownloadTask(manager, versionInfo));
+        
         await manager.LaunchTasksAsync();
         return this;
     }
@@ -139,38 +141,26 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     public GeneralClientBootstrap AddListenerMultiAllDownloadCompleted(
         Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     public GeneralClientBootstrap AddListenerMultiDownloadProgress(
         Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     public GeneralClientBootstrap AddListenerMultiDownloadCompleted(
         Action<object, MultiDownloadCompletedEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     public GeneralClientBootstrap AddListenerMultiDownloadError(
         Action<object, MultiDownloadErrorEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     public GeneralClientBootstrap AddListenerMultiDownloadStatistics(
         Action<object, MultiDownloadStatisticsEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     public GeneralClientBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-    {
-        return AddListener(callbackAction);
-    }
+        => AddListener(callbackAction);
 
     #endregion Public Methods
 
@@ -308,24 +298,16 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
 
     private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-    {
-        EventManager.Instance.Dispatch(sender, e);
-    }
+        => EventManager.Instance.Dispatch(sender, e);
 
     private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
-    {
-        EventManager.Instance.Dispatch(sender, e);
-    }
+        => EventManager.Instance.Dispatch(sender, e);
 
     private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
-    {
-        EventManager.Instance.Dispatch(sender, e);
-    }
+        => EventManager.Instance.Dispatch(sender, e);
 
     private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
-    {
-        EventManager.Instance.Dispatch(sender, e);
-    }
+    => EventManager.Instance.Dispatch(sender, e);
 
     private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
     {
