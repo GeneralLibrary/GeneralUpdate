@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
@@ -7,6 +8,7 @@ using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Core.Internal;
+using GeneralUpdate.Core.Strategys;
 
 namespace GeneralUpdate.Core
 {
@@ -27,9 +29,9 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public static async Task Start<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
+        public static async Task Start(ParamsOSS parameter)
         {
-            await BaseStart<TStrategy>(parameter);
+            await BaseStart(parameter);
         }
 
         public static void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
@@ -69,14 +71,25 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart<TStrategy>(ParamsOSS parameter) where TStrategy : AbstractStrategy, new()
+        private static async Task BaseStart(ParamsOSS parameter)
         {
-            //Initializes and executes the policy.
-            var strategyFunc = new Func<TStrategy>(() => new TStrategy());
-            var strategy = strategyFunc();
+            var strategy = StrategyFactory();
             //strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
             await strategy.ExecuteTaskAsync();
+        }
+        
+        private static IStrategy StrategyFactory()
+        {
+            IStrategy strategy = null;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                strategy = new WindowsStrategy();
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                strategy = new LinuxStrategy();
+            else
+                throw new PlatformNotSupportedException("The current operating system is not supported!");
+
+            return strategy;
         }
 
         #endregion Private Methods
