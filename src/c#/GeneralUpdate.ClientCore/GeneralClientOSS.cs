@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -79,19 +80,16 @@ public sealed class GeneralClientOSS
 
     private static void DownloadFile(string url, string path)
     {
-        using (var webClient = new WebClient())
-        {
-            webClient.DownloadFile(new Uri(url), path);
-        }
+        using var webClient = new WebClient();
+        webClient.DownloadFile(new Uri(url), path);
     }
 
     public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-    {
-        AddListener(callbackAction);
-    }
+     => AddListener(callbackAction);
 
     private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
     {
-        if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+        Contract.Requires(callbackAction != null);
+        EventManager.Instance.AddListener(callbackAction);
     }
 }
