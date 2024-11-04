@@ -1,35 +1,37 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
+    /// <summary>
+    /// Global update parameters.
+    /// </summary>
     public class Configinfo
     {
-        public Configinfo()
-        { }
-
-        public Configinfo(int appType, string appName, string appSecretKey, string clientVersion, string updateUrl, string updateLogUrl, string installPath, string mainUpdateUrl, string mainAppName)
-        {
-            AppType = appType;
-            AppName = appName ?? throw new ArgumentNullException(nameof(appName));
-            AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
-            ClientVersion = clientVersion ?? throw new ArgumentNullException(nameof(clientVersion));
-            UpdateUrl = updateUrl ?? throw new ArgumentNullException(nameof(updateUrl));
-            UpdateLogUrl = updateLogUrl ?? throw new ArgumentNullException(nameof(updateLogUrl));
-            InstallPath = installPath ?? Directory.GetCurrentDirectory();
-            MainUpdateUrl = mainUpdateUrl ?? throw new ArgumentNullException(nameof(mainUpdateUrl));
-            MainAppName = mainAppName ?? throw new ArgumentNullException(nameof(mainAppName));
-        }
+        /// <summary>
+        /// Update check api address.
+        /// </summary>
+        public string UpdateUrl { get; set; }
 
         /// <summary>
-        /// 1:ClientApp 2:UpdateApp
+        /// API address for reporting update status.
         /// </summary>
-        public int AppType { get; set; }
+        public string ReportUrl { get; set; }
 
         /// <summary>
         /// Need to start the name of the app.
         /// </summary>
         public string AppName { get; set; }
+
+        /// <summary>
+        /// The name of the main application, without .exe.
+        /// </summary>
+        public string MainAppName { get; set; }
+
+        /// <summary>
+        /// Update log web address.
+        /// </summary>
+        public string UpdateLogUrl { get; set; }
 
         /// <summary>
         /// application key
@@ -40,16 +42,11 @@ namespace GeneralUpdate.Common.Shared.Object
         /// Client current version.
         /// </summary>
         public string ClientVersion { get; set; }
-
+        
         /// <summary>
-        /// Update check api address.
+        /// Upgrade Client current version.
         /// </summary>
-        public string UpdateUrl { get; set; }
-
-        /// <summary>
-        /// Update log web address.
-        /// </summary>
-        public string UpdateLogUrl { get; set; }
+        public string UpgradeClientVersion { get; set; }
 
         /// <summary>
         /// installation path (for update file logic).
@@ -57,10 +54,47 @@ namespace GeneralUpdate.Common.Shared.Object
         public string InstallPath { get; set; }
 
         /// <summary>
-        /// Update check api address.
+        /// Files in the blacklist will skip the update.
         /// </summary>
-        public string MainUpdateUrl { get; set; }
+        public List<string> BlackFiles { get; set; }
 
-        public string MainAppName { get; set; }
+        /// <summary>
+        /// File formats in the blacklist will skip the update.
+        /// </summary>
+        public List<string> BlackFormats { get; set; }
+        
+        /// <summary>
+        /// The platform of the application.
+        /// </summary>
+        public int Platform { get; set; }
+
+        /// <summary>
+        /// Product ID.
+        /// </summary>
+        public string ProductId { get; set; }
+
+        public void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(UpdateUrl) || !Uri.IsWellFormedUriString(UpdateUrl, UriKind.Absolute))
+                throw new ArgumentException("Invalid UpdateUrl");
+
+            if (!string.IsNullOrWhiteSpace(UpdateLogUrl) && !Uri.IsWellFormedUriString(UpdateLogUrl, UriKind.Absolute))
+                throw new ArgumentException("Invalid UpdateLogUrl");
+
+            if (string.IsNullOrWhiteSpace(AppName))
+                throw new ArgumentException("AppName cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(MainAppName))
+                throw new ArgumentException("MainAppName cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(AppSecretKey))
+                throw new ArgumentException("AppSecretKey cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(ClientVersion))
+                throw new ArgumentException("ClientVersion cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(InstallPath))
+                throw new ArgumentException("InstallPath cannot be empty");
+        }
     }
 }

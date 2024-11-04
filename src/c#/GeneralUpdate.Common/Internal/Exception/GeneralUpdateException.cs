@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
-namespace GeneralUpdate.Common.Internal.Exception
+namespace GeneralUpdate.Common.Internal
 {
     /// <summary>
     /// Exception of GeneralUpdate framework.

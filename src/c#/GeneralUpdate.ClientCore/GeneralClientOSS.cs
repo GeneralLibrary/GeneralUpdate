@@ -8,8 +8,8 @@ using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.ClientCore.Internal;
 using GeneralUpdate.Common;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Shared.Object;
 

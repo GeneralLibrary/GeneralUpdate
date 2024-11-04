@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GeneralUpdate.ClientCore.Internal;
+namespace GeneralUpdate.Common.Internal;
 
 public class ExceptionEventArgs : EventArgs
 {

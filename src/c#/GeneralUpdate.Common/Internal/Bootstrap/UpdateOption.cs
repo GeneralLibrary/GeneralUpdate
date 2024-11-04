@@ -8,6 +8,15 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
 {
     public abstract class UpdateOption : AbstractConstant<UpdateOption>
     {
+        private class UpdateOptionPool : ConstantPool
+        {
+            protected override IConstant NewConstant<T>(int id, string name) => new UpdateOption<T>(id, name);
+        }
+
+        private static readonly UpdateOptionPool Pool = new();
+
+        public static UpdateOption<T> ValueOf<T>(string name) => (UpdateOption<T>)Pool.ValueOf<T>(name);
+
         /// <summary>
         /// Update the file format of the package.
         /// </summary>
@@ -19,11 +28,6 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         public static readonly UpdateOption<Encoding> Encoding = ValueOf<Encoding>("COMPRESSENCODING");
 
         /// <summary>
-        /// Main program name.
-        /// </summary>
-        public static readonly UpdateOption<string> MainApp = ValueOf<string>("MAINAPP");
-
-        /// <summary>
         /// Timeout period (unit: second). If this parameter is not specified, the default timeout period is 30 seconds.
         /// </summary>
         public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
@@ -32,16 +36,7 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// Whether to enable the driver upgrade function.
         /// </summary>
         public static readonly UpdateOption<bool?> Drive = ValueOf<bool?>("DRIVE");
-
-        private class UpdateOptionPool : ConstantPool
-        {
-            protected override IConstant NewConstant<T>(int id, string name) => new UpdateOption<T>(id, name);
-        }
-
-        private static readonly UpdateOptionPool Pool = new UpdateOptionPool();
-
-        public static UpdateOption<T> ValueOf<T>(string name) => (UpdateOption<T>)Pool.ValueOf<T>(name);
-
+        
         internal UpdateOption(int id, string name)
           : base(id, name) { }
 

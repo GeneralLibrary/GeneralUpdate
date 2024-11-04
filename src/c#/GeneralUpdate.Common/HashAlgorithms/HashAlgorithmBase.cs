@@ -15,7 +15,7 @@ namespace GeneralUpdate.Common.HashAlgorithms
             {
                 using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    var dataArray = GetHashAlgorithm().ComputeHash(file);
+                    var dataArray = hashAlgorithm.ComputeHash(file);
                     var stringBuilder = new StringBuilder();
                     for (int i = 0; i < dataArray.Length; i++)
                     {

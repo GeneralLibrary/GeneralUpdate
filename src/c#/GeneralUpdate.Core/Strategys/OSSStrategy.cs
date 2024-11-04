@@ -8,10 +8,10 @@ using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Core.Internal;
 
 namespace GeneralUpdate.Core.Strategys
 {
@@ -22,14 +22,14 @@ namespace GeneralUpdate.Core.Strategys
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
         private const string _format = ".zip";
         private const int _timeOut = 60;
-        private Packet _parameter;
+        private GlobalConfigInfo _parameter;
         private Encoding _encoding;
 
         #endregion Private Members
 
         #region Public Methods
 
-        public override void Create(Packet parameter)
+        public override void Create(GlobalConfigInfo parameter)
         {
             _parameter = parameter;
         }

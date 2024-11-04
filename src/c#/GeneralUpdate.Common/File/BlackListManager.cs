@@ -16,7 +16,8 @@ public class BlackListManager
         ".zip",
         ".rar",
         ".tar",
-        ".json"
+        ".json",
+        ".pdb"
     ];
 
     private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
@@ -47,8 +48,11 @@ public class BlackListManager
     public IReadOnlyList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
     public IReadOnlyList<string> BlackFiles => _blackFiles.AsReadOnly();
     
-    public void AddBlackFileFormats(List<string> formats)
+    public void AddBlackFileFormats(List<string>? formats)
     {
+        if(formats == null)
+            return;
+        
         foreach (var format in formats)
         {
             AddBlackFileFormat(format);
@@ -57,19 +61,20 @@ public class BlackListManager
         
     public void AddBlackFileFormat(string format)
     {
+        if(string.IsNullOrWhiteSpace(format))
+            return;
+        
         if (!_blackFileFormats.Contains(format))
         {
             _blackFileFormats.Add(format);
         }
     }
-     
-    public void RemoveBlackFileFormat(string format)
+    
+    public void AddBlackFiles(List<string>? fileNames)
     {
-        _blackFileFormats.Remove(format);
-    }
-
-    public void AddBlackFiles(List<string> fileNames)
-    {
+        if(fileNames == null)
+            return;
+        
         foreach (var fileName in fileNames)
         {
             AddBlackFile(fileName);
@@ -78,17 +83,15 @@ public class BlackListManager
         
     public void AddBlackFile(string fileName)
     {
+        if(string.IsNullOrWhiteSpace(fileName))
+            return;
+        
         if (!_blackFiles.Contains(fileName))
         {
             _blackFiles.Add(fileName);
         }
     }
 
-    public void RemoveBlackFile(string fileName)
-    {
-        _blackFiles.Remove(fileName);
-    }
-    
     public bool IsBlacklisted(string relativeFilePath)
     {
         var fileName = Path.GetFileName(relativeFilePath);

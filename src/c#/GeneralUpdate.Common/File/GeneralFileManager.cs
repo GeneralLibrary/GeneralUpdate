@@ -3,49 +3,50 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using GeneralUpdate.Common.HashAlgorithms;
 
 namespace GeneralUpdate.Common
 {
     public sealed class GeneralFileManager
     {
-        #region Public Properties
-        
+        private long _fileCount = 0;
         public ComparisonResult ComparisonResult { get; private set; }
-        
-        #endregion
 
         #region Public Methods
         
         /// <summary>
+        /// Using the list on the left as a baseline, find the set of differences between the two file lists.
+        /// </summary>
+        public IEnumerable<FileNode> Except(string leftPath, string rightPath)
+        {
+            var leftFileNodes = ReadFileNode(leftPath);
+            var rightFileNodes = ReadFileNode(rightPath);
+            var rightNodeDic = rightFileNodes.ToDictionary(x => x.RelativePath);
+            return leftFileNodes.Where(f => !rightNodeDic.ContainsKey(f.RelativePath)).ToList();
+        }
+
+        /// <summary>
         /// Compare two directories.
         /// </summary>
-        /// <param name="dirA"></param>
-        /// <param name="dirB"></param>
-        public void CompareDirectories(string dirA, string dirB)
+        /// <param name="leftDir"></param>
+        /// <param name="rightDir"></param>
+        public ComparisonResult Compare(string leftDir, string rightDir)
         {
+            ResetId();
             ComparisonResult = new ComparisonResult();
-
-            var filesA = GetRelativeFilePaths(dirA, dirA).Where(f => !BlackListManager.Instance.IsBlacklisted(f)).ToList();
-            var filesB = GetRelativeFilePaths(dirB, dirB).Where(f => !BlackListManager.Instance.IsBlacklisted(f)).ToList();
-
-            ComparisonResult.AddUniqueToA(filesA.Except(filesB).Select(f => Path.Combine(dirA, f)));
-            ComparisonResult.AddUniqueToB(filesB.Except(filesA).Select(f => Path.Combine(dirB, f)));
-
-            var commonFiles = filesA.Intersect(filesB);
-
-            foreach (var file in commonFiles)
-            {
-                var fileA = Path.Combine(dirA, file);
-                var fileB = Path.Combine(dirB, file);
-
-                if (!FilesAreEqual(fileA, fileB))
-                {
-                    ComparisonResult.AddDifferentFiles(new[] { file });
-                }
-            }
+            var leftFileNodes = ReadFileNode(leftDir);
+            var rightFileNodes = ReadFileNode(rightDir);
+            var leftTree = new FileTree(leftFileNodes);
+            var rightTree = new FileTree(rightFileNodes);
+            var differentTreeNode = new List<FileNode>();
+            leftTree.Compare(leftTree.GetRoot(), rightTree.GetRoot(), ref differentTreeNode);
+            ComparisonResult.AddToLeft(leftFileNodes);
+            ComparisonResult.AddToRight(rightFileNodes);
+            ComparisonResult.AddDifferent(differentTreeNode);
+            return ComparisonResult;
         }
-        
+
         public static void CreateJson<T>(string targetPath, T obj) where T : class
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
@@ -54,7 +55,7 @@ namespace GeneralUpdate.Common
             {
                 Directory.CreateDirectory(folderPath);
             }
-            
+
             var jsonString = JsonSerializer.Serialize(obj);
             File.WriteAllText(targetPath, jsonString);
         }
@@ -66,6 +67,7 @@ namespace GeneralUpdate.Common
                 var json = File.ReadAllText(path);
                 return JsonSerializer.Deserialize<T>(json);
             }
+
             return default;
         }
 
@@ -77,59 +79,89 @@ namespace GeneralUpdate.Common
             {
                 Directory.CreateDirectory(tempDir);
             }
+
             return tempDir;
         }
-        
+
+        public static List<FileInfo> GetAllfiles(string path)
+        {
+            try
+            {
+                var files = new List<FileInfo>();
+                files.AddRange(new DirectoryInfo(path).GetFiles());
+                var tmpDir = new DirectoryInfo(path).GetDirectories();
+                foreach (var dic in tmpDir)
+                {
+                    files.AddRange(GetAllfiles(dic.FullName));
+                }
+
+                return files;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static bool HashEquals(string leftPath, string rightPath)
+        {
+            var hashAlgorithm = new Sha256HashAlgorithm();
+            var hashLeft = hashAlgorithm.ComputeHash(leftPath);
+            var hashRight = hashAlgorithm.ComputeHash(rightPath);
+            return hashLeft.SequenceEqual(hashRight);
+        }
+
         #endregion
 
         #region Private Methods
-        
-        private IEnumerable<string> GetRelativeFilePaths(string rootDir, string currentDir)
-        {
-            foreach (var file in Directory.GetFiles(currentDir))
-            {
-                yield return GetRelativePath(rootDir, file);
-            }
 
-            foreach (var dir in Directory.GetDirectories(currentDir))
+        /// <summary>
+        /// Recursively read all files in the folder path.
+        /// </summary>
+        private IEnumerable<FileNode> ReadFileNode(string path, string rootPath = null)
+        {
+            var resultFiles = new List<FileNode>();
+            rootPath ??= path;
+            if (!rootPath.EndsWith("/"))
             {
-                foreach (var file in GetRelativeFilePaths(rootDir, dir))
+                rootPath += "/";
+            }
+            var rootUri = new Uri(rootPath);
+
+            foreach (var subPath in Directory.EnumerateFiles(path))
+            {
+                if (BlackListManager.Instance.IsBlacklisted(subPath)) continue;
+
+                var hashAlgorithm = new Sha256HashAlgorithm();
+                var hash = hashAlgorithm.ComputeHash(subPath);
+                var subFileInfo = new FileInfo(subPath);
+                var subUri = new Uri(subFileInfo.FullName);
+                resultFiles.Add(new FileNode
                 {
-                    yield return file;
-                }
-            }
-        }
-
-        private string GetRelativePath(string fromPath, string toPath)
-        {
-            var fromUri = new Uri(fromPath);
-            var toUri = new Uri(toPath);
-
-            if (fromUri.Scheme != toUri.Scheme)
-            {
-                return toPath;
-            } // path can't be made relative.
-
-            var relativeUri = fromUri.MakeRelativeUri(toUri);
-            var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
-
-            if (toUri.Scheme.Equals("file", StringComparison.InvariantCultureIgnoreCase))
-            {
-                relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                    Id = GetId(),
+                    Path = path,
+                    Name = subFileInfo.Name,
+                    Hash = hash,
+                    FullName = subFileInfo.FullName,
+                    RelativePath = rootUri.MakeRelativeUri(subUri).ToString()
+                });
             }
 
-            return relativePath;
+            foreach (var subPath in Directory.EnumerateDirectories(path))
+            {
+                resultFiles.AddRange(ReadFileNode(subPath, rootPath));
+            }
+
+            return resultFiles;
         }
 
-        private bool FilesAreEqual(string fileA, string fileB)
-        {
-            var sha256 = new Sha256HashAlgorithm();
-            var hashA = sha256.ComputeHash(fileA);
-            var hashB = sha256.ComputeHash(fileB);
+        /// <summary>
+        /// Self-growing file tree node ID.
+        /// </summary>
+        private long GetId() => Interlocked.Increment(ref _fileCount);
 
-            return hashA.SequenceEqual(hashB);
-        }
-        
+        private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
+
         #endregion
     }
 }

@@ -26,9 +26,8 @@ namespace GeneralUpdate.Core.Driver
                      * (On Windows, an ExitCode value of 259 (STILL_ACTIVE) means that the process is still running)
                      * If you do not remove the previous installation 259 prompt will give you a misleading impression of what is running.
                      */
-                    var path = Path.Combine(_information.InstallDirectory, Path.GetFileNameWithoutExtension(driver), driver);
                     var command = new StringBuilder("/c pnputil /add-driver ")
-                        .Append(path)
+                        .Append(driver.FullName)
                         .Append(" /install")
                         .ToString();
                     CommandExecutor.ExecuteCommand(command);
@@ -38,8 +37,7 @@ namespace GeneralUpdate.Core.Driver
             {
                 //restore all the drivers in the backup directory.
                 new RestoreDriverCommand(_information).Execute();
-                throw new ApplicationException(
-                    $"Failed to execute install command for {_information.InstallDirectory}");
+                throw new ApplicationException("Failed to execute install command !");
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Shared.Object;
@@ -12,13 +13,11 @@ namespace GeneralUpdate.Common.Internal.Strategy
 
         public virtual void Execute() => throw new NotImplementedException();
         
-        public virtual Task ExecuteAsync() => throw new NotImplementedException();
-
-        public virtual void StartApp(string appName, int appType) => throw new NotImplementedException();
+        public virtual void StartApp(string appName) => throw new NotImplementedException();
         
         public virtual Task ExecuteTaskAsync() => throw new NotImplementedException();
 
-        public virtual void Create(Packet parameter) => throw new NotImplementedException();
+        public virtual void Create(GlobalConfigInfo parameter) => throw new NotImplementedException();
 
         protected void OpenBrowser(string url)
         {
@@ -33,6 +32,18 @@ namespace GeneralUpdate.Common.Internal.Strategy
             else
             {
                 throw new PlatformNotSupportedException("Unsupported OS platform");
+            }
+        }
+        
+        /// <summary>
+        /// Remove update redundant files.
+        /// </summary>
+        /// <returns></returns>
+        protected void Clear(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
             }
         }
     }

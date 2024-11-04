@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.Contracts;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
 
@@ -11,7 +11,8 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
     {
         private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
 
-        protected internal AbstractBootstrap() => _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
+        protected internal AbstractBootstrap() => 
+            _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
 
         /// <summary>
         /// Launch async udpate.
@@ -43,10 +44,9 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
             return (TBootstrap)this;
         }
 
-        public virtual T? GetOption<T>(UpdateOption<T> option)
+        protected virtual T? GetOption<T>(UpdateOption<T> option)
         {
-            Contract.Requires(option != null);
-            if (_options.Count == 0) return default(T);
+            Debug.Assert(option != null && _options.Count != 0);
             var val = _options[option];
             if (val != null) return (T)val.GetValue();
             return default(T);

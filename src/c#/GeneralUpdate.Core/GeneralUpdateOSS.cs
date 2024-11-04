@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;

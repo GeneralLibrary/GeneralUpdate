@@ -19,7 +19,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <param name="appName"></param>
         /// <param name="appType"></param>
         /// <returns></returns>
-        void StartApp(string appName, int appType);
+        void StartApp(string appName);
         
         /// <summary>
         /// Execution strategy.
@@ -29,6 +29,6 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// Create a strategy.
         /// </summary>
-        void Create(Packet parameter);
+        void Create(GlobalConfigInfo parameter);
     }
 }

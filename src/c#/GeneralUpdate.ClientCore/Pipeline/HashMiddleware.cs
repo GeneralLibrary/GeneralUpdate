@@ -10,19 +10,18 @@ public class HashMiddleware : IMiddleware
 {
     public async Task InvokeAsync(PipelineContext context)
     {
-        var fileName = context.Get<string>("FileName");
+        var path = context.Get<string>("ZipFilePath");
         var hash = context.Get<string>("Hash");
-
-        var isVerify = await VerifyFileHash(fileName, hash);
+        var isVerify = await VerifyFileHash(path, hash);
         if (!isVerify) throw new CryptographicException("Hash verification failed .");
     }
 
-    private Task<bool> VerifyFileHash(string fileName, string hash)
+    private Task<bool> VerifyFileHash(string path, string hash)
     {
         return Task.Run(() =>
         {
             var hashAlgorithm = new Sha256HashAlgorithm();
-            var hashSha256 = hashAlgorithm.ComputeHash(fileName);
+            var hashSha256 = hashAlgorithm.ComputeHash(path);
             return string.Equals(hash, hashSha256, StringComparison.OrdinalIgnoreCase);
         });
     }

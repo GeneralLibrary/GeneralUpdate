@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GeneralUpdate.Common.Internal.Exception
+namespace GeneralUpdate.Common.Internal
 {
     [Serializable]
     public abstract class BaseArgs

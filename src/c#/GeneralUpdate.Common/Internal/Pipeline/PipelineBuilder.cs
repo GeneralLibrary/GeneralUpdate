@@ -21,10 +21,10 @@ namespace GeneralUpdate.Common.Internal.Pipeline
             return this;
         }
 
-        public PipelineBuilder UseMiddlewareIf<TMiddleware>(Func<bool> condition)
+        public PipelineBuilder UseMiddlewareIf<TMiddleware>(bool? condition)
             where TMiddleware : IMiddleware, new()
         {
-            if (!condition()) return this;
+            if (condition == false) return this;
             var middleware = new TMiddleware();
             _middlewareStack = _middlewareStack.Push(middleware);
             return this;
@@ -32,9 +32,8 @@ namespace GeneralUpdate.Common.Internal.Pipeline
 
         public async Task Build()
         {
-            while (!_middlewareStack.IsEmpty)
+            foreach (var middleware in _middlewareStack)
             {
-                _middlewareStack.Pop(out var middleware);
                 await middleware.InvokeAsync(context);
             }
         }

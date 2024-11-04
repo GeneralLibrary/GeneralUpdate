@@ -1,27 +1,48 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class VersionRespDTO : BaseResponseDTO<VersionBodyDTO>
+    public class VersionRespDTO : BaseResponseDTO<List<VersionBodyDTO>>
     { }
 
     public class VersionBodyDTO
     {
-        public bool IsUpdate { get; set; }
+        [JsonPropertyName("recordId")]
+        public int RecordId { get; set; }
 
-        /// <summary>
-        /// Is forcibly update.
-        /// </summary>
-        public bool IsForcibly { get; set; }
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
 
-        /// <summary>
-        /// 1:ClientApp 2:UpdateApp
-        /// </summary>
-        public int ClientType { get; set; }
+        [JsonPropertyName("hash")]
+        public string? Hash { get; set; }
 
-        /// <summary>
-        /// Returns information about all versions that are different from the latest version based on the current version of the client.
-        /// </summary>
-        public List<VersionDTO> Versions { get; set; }
+        [JsonPropertyName("releaseDate")]
+        public DateTime? ReleaseDate { get; set; }
+
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
+
+        [JsonPropertyName("version")]
+        public string? Version { get; set; }
+
+        [JsonPropertyName("appType")]
+        public int? AppType { get; set; }
+
+        [JsonPropertyName("platform")]
+        public int? Platform { get; set; }
+
+        [JsonPropertyName("productId")]
+        public string? ProductId { get; set; }
+
+        [JsonPropertyName("isForcibly")]
+        public bool? IsForcibly { get; set; }
+
+        [JsonPropertyName("format")]
+        public string Format { get; set; }
+
+        [JsonPropertyName("size")]
+        public long? Size { get; set; }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +16,7 @@ namespace GeneralUpdate.Common.Download
 
         private readonly HttpClient _httpClient;
         private readonly DownloadManager _manager;
-        private readonly VersionInfo _version;
+        private readonly VersionBodyDTO _version;
         private const int DEFAULT_DELTA = 1048576; // 1024*1024
         private long _beforBytes;
         private long _receivedBytes;
@@ -26,7 +28,7 @@ namespace GeneralUpdate.Common.Download
 
         #region Constructors
 
-        public DownloadTask(DownloadManager manager, VersionInfo version)
+        public DownloadTask(DownloadManager manager, VersionBodyDTO version)
         {
             _manager = manager;
             _version = version;
@@ -50,15 +52,11 @@ namespace GeneralUpdate.Common.Download
         {
             try
             {
-                var url = _version.Url;
-                var name = _version.Name;
-                var installPath = $"{_manager.Path}{name}{_manager.Format}";
-
+                var path = Path.Combine(_manager.Path, $"{_version.Name}{_manager.Format}");
                 InitStatisticsEvent();
                 InitProgressEvent();
                 InitCompletedEvent();
-
-                await DownloadFileRangeAsync(url, installPath);
+                await DownloadFileRangeAsync(_version.Url, path);
             }
             catch (Exception ex)
             {
@@ -73,19 +71,17 @@ namespace GeneralUpdate.Common.Download
         private async Task DownloadFileRangeAsync(string url, string path)
         {
             var tempPath = path + ".temp";
-            long startPos = CheckFile(tempPath);
+            var startPos = CheckFile(tempPath);
 
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            
             if (!response.IsSuccessStatusCode)
-            {
                 throw new HttpRequestException($"Failed to download file: {response.ReasonPhrase}");
-            }
 
             var totalBytes = response.Content.Headers.ContentLength ?? 0;
             if (startPos >= totalBytes)
             {
                 File.Move(tempPath, path);
-                OnCompleted();
                 return;
             }
 
@@ -125,13 +121,11 @@ namespace GeneralUpdate.Common.Download
             using var fileStream = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None);
             await fileStream.WriteAsync(chunk, 0, chunk.Length);
             _receivedBytes += chunk.Length;
-            OnProgressChanged(_receivedBytes, totalBytes);
 
             if (_receivedBytes >= totalBytes)
             {
                 fileStream.Close();
                 File.Move(tempPath, tempPath.Replace(".temp", ""));
-                OnCompleted();
             }
         }
 
@@ -204,13 +198,6 @@ namespace GeneralUpdate.Common.Download
                 }
             };
         }
-
-        private void OnProgressChanged(long bytesReceived, long totalBytes)
-            => _manager.OnMultiDownloadProgressChanged(this, new MultiDownloadProgressChangedEventArgs(
-                bytesReceived, totalBytes, (float)bytesReceived / totalBytes, _version));
-        
-        private void OnCompleted()
-            => _manager.OnMultiAsyncCompleted(this, new MultiDownloadCompletedEventArgs(_version, null, false, _version));
 
         private string ToUnit(long byteSize)
         {

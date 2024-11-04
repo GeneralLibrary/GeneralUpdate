@@ -7,28 +7,35 @@ namespace GeneralUpdate.Common;
 /// </summary>
 public class ComparisonResult
 {
-    private readonly List<string> _uniqueToA = new List<string>();
-    private readonly List<string> _uniqueToB = new List<string>();
-    private readonly List<string> _differentFiles = new List<string>();
+    private List<FileNode> _leftNodes;
+    private List<FileNode> _rightNodes;
+    private List<FileNode> _differentNodes;
+
+    public ComparisonResult()
+    {
+        _leftNodes = new List<FileNode>();
+        _rightNodes = new List<FileNode>();
+        _differentNodes = new List<FileNode>();
+    }
 
     /// <summary>
     /// List of files that are unique to A.
     /// </summary>
-    public IReadOnlyList<string> UniqueToA => _uniqueToA.AsReadOnly();
+    public IReadOnlyList<FileNode> LeftNodes => _leftNodes.AsReadOnly();
     
     /// <summary>
     /// List of files that are unique to B.
     /// </summary>
-    public IReadOnlyList<string> UniqueToB => _uniqueToB.AsReadOnly();
+    public IReadOnlyList<FileNode> RightNodes => _rightNodes.AsReadOnly();
     
     /// <summary>
     /// List of files that are different between A and B.
     /// </summary>
-    public IReadOnlyList<string> DifferentFiles => _differentFiles.AsReadOnly();
+    public IReadOnlyList<FileNode> DifferentNodes => _differentNodes.AsReadOnly();
 
-    public void AddUniqueToA(IEnumerable<string> files) => _uniqueToA.AddRange(files);
+    public void AddToLeft(IEnumerable<FileNode> files) => _leftNodes.AddRange(files);
 
-    public void AddUniqueToB(IEnumerable<string> files) => _uniqueToB.AddRange(files);
+    public void AddToRight(IEnumerable<FileNode> files) => _rightNodes.AddRange(files);
 
-    public void AddDifferentFiles(IEnumerable<string> files) => _differentFiles.AddRange(files);
+    public void AddDifferent(IEnumerable<FileNode> files) => _differentNodes.AddRange(files);
 }

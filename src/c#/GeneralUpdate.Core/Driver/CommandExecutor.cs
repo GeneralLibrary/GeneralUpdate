@@ -32,13 +32,19 @@ If possible, use pre-tested drivers that are proven to work.
                 Verb = "runas"
             };
 
-            using (var process = new Process { StartInfo = processStartInfo })
+            var process = new Process();
+            try
             {
+                process.StartInfo = processStartInfo;
                 process.Start();
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
                     throw new ApplicationException($"Operation failed code: {process.ExitCode}");
+            }
+            finally
+            {
+                process.Dispose();
             }
         }
     }

@@ -1,5 +1,8 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
@@ -12,17 +15,24 @@ public class ZipMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            var type = MatchType(context.Get<string>("Format"));
-            var name = context.Get<string>("Name");
-            var sourcePath = context.Get<string>("SourcePath");
-            var destinationPath = context.Get<string>("DestinationPath");
-            var encoding = context.Get<Encoding>("Encoding");
+            try
+            {
+                var type = MatchType(context.Get<string>("Format"));
+                var name = context.Get<string>("Name");
+                var sourcePath = context.Get<string>("ZipFilePath");
+                var destinationPath = context.Get<string>("PatchPath");
+                var encoding = context.Get<Encoding>("Encoding");
 
-            var generalZipfactory = new GeneralZipFactory();
-            generalZipfactory.CompressProgress += (sender, args) => { };
-            generalZipfactory.Completed += (sender, args) => { };
-            generalZipfactory.CreateOperate(type, name, sourcePath, destinationPath, true, encoding);
-            generalZipfactory.UnZip();
+                var generalZipfactory = new GeneralZipFactory();
+                generalZipfactory.CompressProgress += (sender, args) => { };
+                generalZipfactory.Completed += (sender, args) => { };
+                generalZipfactory.CreateOperate(type, name, sourcePath, destinationPath, true, encoding);
+                generalZipfactory.UnZip();
+            }
+            catch (Exception e)
+            {
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            }
         });
     }
 

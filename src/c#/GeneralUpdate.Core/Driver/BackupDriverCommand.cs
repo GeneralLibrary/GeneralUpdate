@@ -20,25 +20,22 @@ namespace GeneralUpdate.Core.Driver
             foreach (var driver in _information.Drivers)
             {
                 //Export the backup according to the driver name.
-                var outPutDirectory = Path.Combine(_information.OutPutDirectory, Path.GetFileNameWithoutExtension(driver));
+                if (Directory.Exists(_information.OutPutDirectory))
+                    Directory.Delete(_information.OutPutDirectory, true);
 
-                if (Directory.Exists(outPutDirectory))
-                    Directory.Delete(outPutDirectory, true);
-
-                Directory.CreateDirectory(outPutDirectory);
-
+                Directory.CreateDirectory(_information.OutPutDirectory);
                 /*
                  * If no test driver files are available, you can run the following command to export all installed driver files.
                  *  (1) dism /online /export-driver /destination:"D:\packet\cache\"
                  *  (2) pnputil /export-driver * D:\packet\cache
                  *
                  *  The following code example exports the specified driver to the specified directory.
-                 *  pnputil /export-driver oem14.inf D:\packet\cache
+                 *  pnputil /export-driver oemXX.inf D:\packet\cache
                  */
                 var command = new StringBuilder("/c pnputil /export-driver ")
                 .Append(driver)
                 .Append(' ')
-                .Append(outPutDirectory)
+                .Append(_information.OutPutDirectory)
                 .ToString();
 
                 CommandExecutor.ExecuteCommand(command);

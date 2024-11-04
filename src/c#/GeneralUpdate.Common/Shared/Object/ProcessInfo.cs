@@ -7,65 +7,57 @@ namespace GeneralUpdate.Common.Shared.Object
 {
     public class ProcessInfo
     {
-        public ProcessInfo()
-        { }
-
-        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string logUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionDTO> updateVersions)
+        public ProcessInfo(string appName, string installPath, string currentVersion, string lastVersion, string updateLogUrl, Encoding compressEncoding, string compressFormat, int downloadTimeOut, string appSecretKey, List<VersionBodyDTO> updateVersions)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
             InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
-            LogUrl = logUrl;
-            compressEncoding = compressEncoding ?? Encoding.Default;
+            UpdateLogUrl = updateLogUrl;
             CompressEncoding = ToEncodingType(compressEncoding);
             CompressFormat = compressFormat;
             if (downloadTimeOut < 0) throw new ArgumentException("Timeout must be greater than 0 !");
             DownloadTimeOut = downloadTimeOut;
             AppSecretKey = appSecretKey ?? throw new ArgumentNullException(nameof(appSecretKey));
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
-            UpdateVersions = VersionAssembler.ToEntitys(updateVersions);
+            UpdateVersions = updateVersions;
         }
 
-        private int ToEncodingType(Encoding encoding)
+        private static int ToEncodingType(Encoding encoding)
         {
-            int type = -1;
-            if (encoding == Encoding.UTF8)
+            var type = -1;
+            if (Equals(encoding, Encoding.UTF8))
             {
                 type = 1;
             }
-            else if (encoding == Encoding.UTF7)
+            else if (Equals(encoding, Encoding.UTF7))
             {
                 type = 2;
             }
-            else if (encoding == Encoding.UTF32)
+            else if (Equals(encoding, Encoding.UTF32))
             {
                 type = 3;
             }
-            else if (encoding == Encoding.Unicode)
+            else if (Equals(encoding, Encoding.Unicode))
             {
                 type = 4;
             }
-            else if (encoding == Encoding.BigEndianUnicode)
+            else if (Equals(encoding, Encoding.BigEndianUnicode))
             {
                 type = 5;
             }
-            else if (encoding == Encoding.ASCII)
+            else if (Equals(encoding, Encoding.ASCII))
             {
                 type = 6;
             }
-            else if (encoding == Encoding.Default)
+            else if (Equals(encoding, Encoding.Default))
             {
                 type = 7;
             }
+            
             return type;
         }
-
-        /// <summary>
-        /// 1:MainApp 2:UpdateApp
-        /// </summary>
-        public int AppType { get; set; }
 
         /// <summary>
         /// Need to start the name of the app.
@@ -84,7 +76,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Update log web address.
         /// </summary>
-        public string LogUrl { get; set; }
+        public string UpdateLogUrl { get; set; }
 
         public int CompressEncoding { get; set; }
 
@@ -100,6 +92,6 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// One or more version update information.
         /// </summary>
-        public List<VersionInfo> UpdateVersions { get; set; }
+        public List<VersionBodyDTO> UpdateVersions { get; set; }
     }
 }

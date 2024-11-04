@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using GeneralUpdate.Common;
+using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Service;
 using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategys
@@ -17,96 +19,79 @@ namespace GeneralUpdate.Core.Strategys
     /// </summary>
     public class WindowsStrategy : AbstractStrategy
     {
-        private Packet Packet { get; set; }
+        private GlobalConfigInfo _configinfo = new();
 
-        #region Private Methods
+        public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
-        /// <summary>
-        ///     Remove update redundant files.
-        /// </summary>
-        /// <returns></returns>
-        private void Clear()
+        public override void Execute()
         {
-            if (File.Exists(Packet.TempPath)) File.Delete(Packet.TempPath);
-            var dirPath = Path.GetDirectoryName(Packet.TempPath);
-            if (Directory.Exists(dirPath)) Directory.Delete(dirPath, true);
-        }
-
-        #endregion Private Methods
-
-        #region Public Methods
-
-        public override void Create(Packet parameter)
-        {
-            Packet = parameter;
-        }
-
-        public override async Task ExecuteAsync()
-        {
-            var updateVersions = Packet.UpdateVersions.OrderBy(x => x.PubTime).ToList();
-            if (updateVersions.Count > 0)
+            Task.Run(async () =>
             {
-                foreach (var version in updateVersions)
+                try
                 {
+                    var status = 0;
                     var patchPath = GeneralFileManager.GetTempDirectory(PATCHS);
-                    var zipFilePath = Path.Combine(Packet.TempPath, $"{version.Name}{Packet.Format}");
+                    foreach (var version in _configinfo.UpdateVersions)
+                    {
+                        try
+                        {
+                            var context = new PipelineContext();
+                            //Common
+                            context.Add("ZipFilePath",
+                                Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format}"));
+                            //Hash middleware
+                            context.Add("Hash", version.Hash);
+                            //Zip middleware
+                            context.Add("Format", _configinfo.Format);
+                            context.Add("Name", version.Name);
+                            context.Add("Encoding", _configinfo.Encoding);
+                            //Patch middleware
+                            context.Add("SourcePath", _configinfo.InstallPath);
+                            context.Add("PatchPath", patchPath);
+                            context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
+                            context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
+                            //Driver middleware
+                            context.Add("DriverOutPut", GeneralFileManager.GetTempDirectory("DriverOutPut"));
 
-                    var context = new PipelineContext();
-                    //hash middleware
-                    context.Add("Hash", version.Hash);
-                    context.Add("FileName", zipFilePath);
-                    //zip middleware
-                    context.Add("Format", Packet.Format);
-                    context.Add("Name", zipFilePath);
-                    context.Add("SourcePath", Packet.TempPath);
-                    context.Add("DestinationPath", Packet.InstallPath);
-                    context.Add("Encoding", Packet.Encoding);
-                    //patch middleware
-                    context.Add("SourcePath", patchPath);
-                    context.Add("TargetPath", Packet.InstallPath);
-                    context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
-                    context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
-                    //driver middleware
-                    context.Add("DriverPath", new List<string>());
-                    context.Add("Version", version.Version);
-                    
+                            var pipelineBuilder = new PipelineBuilder(context)
+                                .UseMiddleware<PatchMiddleware>()
+                                .UseMiddleware<ZipMiddleware>()
+                                .UseMiddleware<HashMiddleware>()
+                                .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
+                            await pipelineBuilder.Build();
+                        }
+                        catch (Exception e)
+                        {
+                            status = 3;
+                            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                        }
+                        finally
+                        {
+                            await VersionService.Report(_configinfo.ReportUrl, version.RecordId, status,
+                                version.AppType);
+                        }
+                    }
 
-                    var pipelineBuilder = new PipelineBuilder(context)
-                        .UseMiddleware<HashMiddleware>()
-                        .UseMiddleware<ZipMiddleware>()
-                        .UseMiddleware<PatchMiddleware>()
-                        .UseMiddlewareIf<DriverMiddleware>(()=> Packet.DriveEnabled);
-                    await pipelineBuilder.Build();
+                    if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
+                    {
+                        OpenBrowser(_configinfo.UpdateLogUrl);
+                    }
+
+                    Clear(patchPath);
+                    Clear(_configinfo.TempPath);
+                    StartApp(_configinfo.AppName);
                 }
-
-                if (!string.IsNullOrEmpty(Packet.UpdateLogUrl))
-                    OpenBrowser(Packet.UpdateLogUrl);
-            }
-
-            Clear();
-            StartApp(Packet.AppName, Packet.AppType);
+                catch (Exception e)
+                {
+                    EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                }
+            });
         }
 
-        public override void StartApp(string appName, int appType)
+        public override void StartApp(string appName)
         {
-            var path = Path.Combine(Packet.InstallPath, appName);
-            switch (appType)
-            {
-                case AppType.ClientApp:
-                    Environment.SetEnvironmentVariable("ProcessInfo", Packet.ProcessInfo,
-                        EnvironmentVariableTarget.User);
-                    Process.Start(path);
-                    break;
-
-                case AppType.UpgradeApp:
-                    Process.Start(path);
-                    break;
-
-                default:
-                    throw new ArgumentException("Invalid app type");
-            }
+            var path = Path.Combine(_configinfo.InstallPath, appName);
+            Process.Start(path);
         }
-
-        #endregion Public Methods
     }
 }

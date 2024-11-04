@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.Linq;
 
 namespace GeneralUpdate.Common.Download
 {
@@ -58,11 +60,7 @@ namespace GeneralUpdate.Common.Download
         {
             try
             {
-                var downloadTasks = new List<Task>();
-                foreach (var task in DownloadTasks)
-                {
-                    downloadTasks.Add(task.LaunchAsync());
-                }
+                var downloadTasks = DownloadTasks.Select(task => task.LaunchAsync()).ToList();
                 await Task.WhenAll(downloadTasks);
                 MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, _failedVersions));
             }
@@ -91,14 +89,12 @@ namespace GeneralUpdate.Common.Download
 
         public void Add(DownloadTask task)
         {
-            Contract.Requires(task != null);
+            Debug.Assert(task != null);
             if (!_downloadTasksBuilder.Contains(task))
             {
                 _downloadTasksBuilder.Add(task);
             }
         }
-
-        public void Remove(DownloadTask task) => _downloadTasksBuilder.Remove(task);
 
         #endregion Public Methods
     }
