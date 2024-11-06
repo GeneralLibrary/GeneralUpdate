@@ -66,8 +66,8 @@ public class LinuxStrategy : AbstractStrategy
 
     private string GetPacketName()
     {
-        string packageFileName = string.Empty;
-        LinuxSystem system = GetSystem();
+        var packageFileName = string.Empty;
+        var system = GetSystem();
         if (_rocdumpAmd64.Contains(system.Name))
         {
             packageFileName = $"procdump_3.3.0_amd64.deb";
@@ -107,9 +107,7 @@ public class LinuxStrategy : AbstractStrategy
             
             return new LinuxSystem(distro, version);
         }
-        else
-        {
-            throw new FileNotFoundException("Cannot determine the Linux distribution. The /etc/os-release file does not exist.");
-        }
+        
+        throw new FileNotFoundException("Cannot determine the Linux distribution. The /etc/os-release file does not exist.");
     }
 }

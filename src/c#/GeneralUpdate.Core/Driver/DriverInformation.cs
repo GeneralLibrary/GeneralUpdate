@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using GeneralUpdate.Common;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -11,24 +8,28 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class DriverInformation
     {
+        public Dictionary<string, string> FieldMappings { get; private set; }
+        
         public string DriverFileExtension { get; private set; }
         
         /// <summary>
         /// All driver backup directories.
         /// </summary>
         public string OutPutDirectory { get; private set; }
+        
+        public string DriverDirectory { get; private set; }
 
         /// <summary>
         /// A collection of driver files to be backed up.
         /// </summary>
-        public IEnumerable<FileInfo> Drivers { get; private set; }
+        public IEnumerable<DriverInfo> Drivers { get; set; }
 
         private DriverInformation()
         { }
         
         public class Builder
         {
-            private DriverInformation _information = new DriverInformation();
+            private DriverInformation _information = new ();
 
             public Builder SetDriverFileExtension(string fileExtension)
             {
@@ -41,42 +42,28 @@ namespace GeneralUpdate.Core.Driver
                 _information.OutPutDirectory = outPutDirectory;
                 return this;
             }
-
-            /// <summary>
-            /// Find the collection of driver names that need to be updated from the update package.
-            /// </summary>
-            /// <param name="driverNames"></param>
-            /// <returns></returns>
-            public Builder SetDrivers(string driversPath, string fileExtension)
+            
+            public Builder SetDriverDirectory(string driverDirectory)
             {
-                if(string.IsNullOrWhiteSpace(driversPath) || string.IsNullOrWhiteSpace(fileExtension)) 
-                    return this;
-                
-                _information.Drivers = SearchDrivers(driversPath, fileExtension);
+                _information.DriverDirectory = driverDirectory;
+                return this;
+            }
+            
+            public Builder SetFieldMappings(Dictionary<string, string> fieldMappings)
+            {
+                _information.FieldMappings = fieldMappings;
                 return this;
             }
 
             public DriverInformation Build()
             {
                 if (string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
-                    string.IsNullOrWhiteSpace(_information.DriverFileExtension) ||
-                    !_information.Drivers.Any())
+                    string.IsNullOrWhiteSpace(_information.DriverFileExtension))
                 {
                     throw new ArgumentNullException("Cannot create DriverInformation, not all fields are set.");
                 }
 
                 return _information;
-            }
-            
-            /// <summary>
-            /// Search for driver files.
-            /// </summary>
-            /// <param name="patchPath"></param>
-            /// <returns></returns>
-            private IEnumerable<FileInfo> SearchDrivers(string patchPath, string fileExtension)
-            {
-                var files = GeneralFileManager.GetAllfiles(patchPath);
-                return files.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
             }
         }
     }

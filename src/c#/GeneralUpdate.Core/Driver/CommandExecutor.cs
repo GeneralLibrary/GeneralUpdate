@@ -8,6 +8,9 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class CommandExecutor
     {
+        private CommandExecutor()
+        { }
+
         public static void ExecuteCommand(string command)
         {
             /*
@@ -28,7 +31,9 @@ If possible, use pre-tested drivers that are proven to work.
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = "cmd.exe",
                 Arguments = command,
-                UseShellExecute = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 Verb = "runas"
             };
 
@@ -39,6 +44,17 @@ If possible, use pre-tested drivers that are proven to work.
                 process.Start();
                 process.WaitForExit();
 
+                // 读取标准输出
+                var output = process.StandardOutput.ReadToEnd();
+                Debug.WriteLine(output);
+
+                // 读取错误输出
+                var error = process.StandardError.ReadToEnd();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Debug.WriteLine("Error: " + error);
+                }
+                
                 if (process.ExitCode != 0)
                     throw new ApplicationException($"Operation failed code: {process.ExitCode}");
             }

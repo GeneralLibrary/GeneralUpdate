@@ -22,18 +22,17 @@ public class DriverMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
+            var outPutPath = context.Get<string>("DriverOutPut");
+            if(string.IsNullOrWhiteSpace(outPutPath))
+                return;
+            
             var patchPath = context.Get<string>("PatchPath");
             if(string.IsNullOrWhiteSpace(patchPath))
                 return;
             
-            var outPutPath = context.Get<string>("DriverOutPut");
-            if(string.IsNullOrWhiteSpace(outPutPath))
-                return;
-
             var information = new DriverInformation.Builder()
                 .SetDriverFileExtension(FileExtension)
                 .SetOutPutDirectory(outPutPath)
-                .SetDrivers(patchPath, FileExtension)
                 .Build();
 
             var processor = new DriverProcessor();

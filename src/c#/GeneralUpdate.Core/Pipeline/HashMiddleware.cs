@@ -13,7 +13,7 @@ public class HashMiddleware : IMiddleware
         var path = context.Get<string>("ZipFilePath");
         var hash = context.Get<string>("Hash");
         var isVerify = await VerifyFileHash(path, hash);
-        if (!isVerify) throw new CryptographicException("Hash verification failed .");
+        if (!isVerify) throw new CryptographicException("Hash verification failed !");
     }
 
     private Task<bool> VerifyFileHash(string path, string hash)

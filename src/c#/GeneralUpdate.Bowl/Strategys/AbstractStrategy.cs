@@ -11,7 +11,8 @@ public abstract class AbstractStrategy : IStrategy
     private readonly IReadOnlyList<string> _sensitiveCharacter = new List<string>
     {
         "Exit",
-        "exit"
+        "exit",
+        "EXIT"
     };
     
     public virtual void Launch()

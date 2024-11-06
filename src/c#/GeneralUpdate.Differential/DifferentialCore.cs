@@ -11,11 +11,10 @@ namespace GeneralUpdate.Differential
 {
     public sealed class DifferentialCore
     {
-        private static readonly object _lockObj = new object();
+        private static readonly object _lockObj = new ();
         private static DifferentialCore _instance;
 
         private const string PATCH_FORMAT = ".patch";
-        private const string PATCHS = "patchs";
         private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
 
         public static DifferentialCore Instance

@@ -5,18 +5,14 @@ using GeneralUpdate.Common;
 
 namespace GeneralUpdate.Core.Driver
 {
-    public class RestoreDriverCommand
+    public class RestoreDriverCommand(DriverInformation information)
     {
-        private DriverInformation _information;
-
-        public RestoreDriverCommand(DriverInformation information) => _information = information;
-
         public void Execute()
         {
             try
             {
-                var backupFiles = GeneralFileManager.GetAllfiles(_information.OutPutDirectory);
-                var fileExtension = _information.DriverFileExtension;
+                var backupFiles = GeneralFileManager.GetAllfiles(information.OutPutDirectory);
+                var fileExtension = information.DriverFileExtension;
                 var drivers = backupFiles.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
                 
                 foreach (var driver in drivers)
@@ -38,7 +34,7 @@ namespace GeneralUpdate.Core.Driver
             }
             catch
             {
-                throw new ApplicationException($"Failed to execute restore command for {_information.OutPutDirectory}");
+                throw new ApplicationException($"Failed to execute restore command for {information.OutPutDirectory}");
             }
         }
     }

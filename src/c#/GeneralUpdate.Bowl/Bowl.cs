@@ -7,7 +7,7 @@ namespace GeneralUpdate.Bowl;
 /// <summary>
 /// Surveillance Main Program.
 /// </summary>
-public class Bowl
+public sealed class Bowl
 {
     private IStrategy _strategy;
 
@@ -27,6 +27,9 @@ public class Bowl
         {
             _strategy = new LinuxStrategy();
         }
+        
+        if (_strategy == null)
+            throw new PlatformNotSupportedException("Unsupported operating system");
     }
 
     public Bowl SetParameter(MonitorParameter parameter)
