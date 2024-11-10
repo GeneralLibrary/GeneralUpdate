@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using GeneralUpdate.Common;
+using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
@@ -52,6 +52,7 @@ namespace GeneralUpdate.Core.Strategys
                             context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
                             //Driver middleware
                             context.Add("DriverOutPut", GeneralFileManager.GetTempDirectory("DriverOutPut"));
+                            context.Add("FieldMappings", _configinfo.FieldMappings);
 
                             var pipelineBuilder = new PipelineBuilder(context)
                                 .UseMiddleware<PatchMiddleware>()

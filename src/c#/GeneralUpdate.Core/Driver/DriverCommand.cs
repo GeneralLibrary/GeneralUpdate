@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using GeneralUpdate.Common;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Core.Driver
 {

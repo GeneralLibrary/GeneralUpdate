@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace GeneralUpdate.Common;
+namespace GeneralUpdate.Common.FileBasic;
 
     /// <summary>
     /// Simple file binary tree.

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace GeneralUpdate.Common;
+namespace GeneralUpdate.Common.FileBasic;
 
 public class BlackListManager
 {

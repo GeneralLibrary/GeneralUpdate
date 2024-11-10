@@ -4,6 +4,7 @@ using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Differential;
 
 namespace GeneralUpdate.Client
 {
@@ -11,7 +12,7 @@ namespace GeneralUpdate.Client
     {
         private static void Main(string[] args)
         {
-            /*Task.Run(async () =>
+            Task.Run(async () =>
             {
                 var source = @"D:\packet\app";
                 var target = @"D:\packet\release";
@@ -19,7 +20,7 @@ namespace GeneralUpdate.Client
 
                 await DifferentialCore.Instance?.Clean(source, target, patch);
                 await DifferentialCore.Instance?.Dirty(source, patch);
-            });*/
+            });
             
             /*Task.Run(() =>
             {

@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using GeneralUpdate.Common.HashAlgorithms;
 
-namespace GeneralUpdate.Common
+namespace GeneralUpdate.Common.FileBasic
 {
     public sealed class GeneralFileManager
     {

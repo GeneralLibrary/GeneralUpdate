@@ -113,4 +113,6 @@ public class GlobalConfigInfo
     public int Platform { get; set; }
 
     public string ProductId { get; set; }
+    
+    public Dictionary<string, string> FieldMappings { get; set; }
 }

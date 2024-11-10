@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace GeneralUpdate.Common;
+namespace GeneralUpdate.Common.FileBasic;
 
 /// <summary>
 /// Result of a comparison between two directories.

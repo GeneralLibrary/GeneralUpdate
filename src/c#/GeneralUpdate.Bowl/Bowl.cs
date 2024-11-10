@@ -17,7 +17,7 @@ public sealed class Bowl
         _strategy!.SetParameter(parameter);
     }
 
-    private void CreateStrategy()
+    private Bowl CreateStrategy()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -30,6 +30,8 @@ public sealed class Bowl
         
         if (_strategy == null)
             throw new PlatformNotSupportedException("Unsupported operating system");
+        
+        return this;
     }
 
     public Bowl SetParameter(MonitorParameter parameter)
@@ -41,5 +43,9 @@ public sealed class Bowl
         return this;
     }
 
-    public void Launch() => _strategy.Launch();
+    public Bowl Launch()
+    {
+        _strategy.Launch();
+        return this;
+    }
 }

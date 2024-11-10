@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common;
+using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
@@ -72,6 +73,12 @@ namespace GeneralUpdate.Core
         }
 
         #region public method
+
+        public GeneralUpdateBootstrap SetFieldMappings(Dictionary<string, string> fieldMappings)
+        {
+            _configInfo.FieldMappings = fieldMappings;
+            return this;
+        }
 
         public GeneralUpdateBootstrap AddListenerMultiAllDownloadCompleted(
             Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)

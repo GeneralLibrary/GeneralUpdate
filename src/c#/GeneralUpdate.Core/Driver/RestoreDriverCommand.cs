@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using GeneralUpdate.Common;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Core.Driver
 {

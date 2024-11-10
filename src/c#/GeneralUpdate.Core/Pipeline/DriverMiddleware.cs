@@ -30,13 +30,20 @@ public class DriverMiddleware : IMiddleware
             if(string.IsNullOrWhiteSpace(patchPath))
                 return;
             
+            var fieldMappings = context.Get<Dictionary<string, string>>("FieldMappings");
+            if(fieldMappings == null || fieldMappings.Count == 0)
+                return;
+            
             var information = new DriverInformation.Builder()
                 .SetDriverFileExtension(FileExtension)
                 .SetOutPutDirectory(outPutPath)
+                .SetDriverDirectory(patchPath)
+                .SetFieldMappings(fieldMappings)
                 .Build();
 
             var processor = new DriverProcessor();
             processor.AddCommand(new BackupDriverCommand(information));
+            processor.AddCommand(new DeleteDriverCommand(information));
             processor.AddCommand(new InstallDriverCommand(information));
             processor.ProcessCommands();
         });
