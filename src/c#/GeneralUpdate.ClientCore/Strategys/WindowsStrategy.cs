@@ -20,74 +20,84 @@ public class WindowsStrategy : AbstractStrategy
 {
     private GlobalConfigInfo _configinfo = new();
 
-    public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
+    public override void Create(GlobalConfigInfo parameter)=> _configinfo = parameter;
 
-    public override void Execute()
+    public override async Task ExecuteAsync()
     {
-        Task.Run(async () =>
+        try
         {
-            try
+            var status = 0;
+            var patchPath = GeneralFileManager.GetTempDirectory(PATCHS);
+            foreach (var version in _configinfo.UpdateVersions)
             {
-                var status = 0;
-                var patchPath = GeneralFileManager.GetTempDirectory(PATCHS);
-                foreach (var version in _configinfo.UpdateVersions)
+                try
                 {
-                    try
-                    {
-                        var context = new PipelineContext();
-                        //Common
-                        context.Add("ZipFilePath",
-                            Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format}"));
-                        //hash middleware
-                        context.Add("Hash", version.Hash);
-                        //zip middleware
-                        context.Add("Format", _configinfo.Format);
-                        context.Add("Name", version.Name);
-                        context.Add("Encoding", _configinfo.Encoding);
-                        //patch middleware
-                        context.Add("SourcePath", _configinfo.InstallPath);
-                        context.Add("PatchPath", patchPath);
-                        context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
-                        context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
+                    var context = new PipelineContext();
+                    //Common
+                    context.Add("ZipFilePath",
+                        Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format}"));
+                    //hash middleware
+                    context.Add("Hash", version.Hash);
+                    //zip middleware
+                    context.Add("Format", _configinfo.Format);
+                    context.Add("Name", version.Name);
+                    context.Add("Encoding", _configinfo.Encoding);
+                    //patch middleware
+                    context.Add("SourcePath", _configinfo.InstallPath);
+                    context.Add("PatchPath", patchPath);
+                    context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
+                    context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
 
-                        var pipelineBuilder = new PipelineBuilder(context)
-                            .UseMiddleware<PatchMiddleware>()
-                            .UseMiddleware<ZipMiddleware>()
-                            .UseMiddleware<HashMiddleware>();
-                        await pipelineBuilder.Build();
-                        status = 2;
-                    }
-                    catch (Exception e)
-                    {
-                        status = 3;
-                        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
-                    }
-                    finally
-                    {
-                        await VersionService.Report(_configinfo.ReportUrl, version.RecordId, status, version.AppType);
-                    }
+                    var pipelineBuilder = new PipelineBuilder(context)
+                        .UseMiddleware<PatchMiddleware>()
+                        .UseMiddleware<ZipMiddleware>()
+                        .UseMiddleware<HashMiddleware>();
+                    await pipelineBuilder.Build();
+                    status = 2;
                 }
-
-                if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
+                catch (Exception e)
                 {
-                    OpenBrowser(_configinfo.UpdateLogUrl);
+                    status = 3;
+                    EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
-
-                Clear(patchPath);
-                Clear(_configinfo.TempPath);
-                StartApp(_configinfo.AppName);
+                finally
+                {
+                    await VersionService.Report(_configinfo.ReportUrl, version.RecordId, status, version.AppType);
+                }
             }
-            catch (Exception e)
+
+            if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
             {
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                OpenBrowser(_configinfo.UpdateLogUrl);
             }
-        });
+
+            Clear(patchPath);
+            Clear(_configinfo.TempPath);
+        }
+        catch (Exception e)
+        {
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+        }
     }
 
-    public override void StartApp(string appName)
+    public override void StartApp()
     {
-        var path = Path.Combine(_configinfo.InstallPath, appName);
-        Environment.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo, EnvironmentVariableTarget.User);
-        Process.Start(path);
+        try
+        {
+            var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
+            if (File.Exists(appPath))
+            {
+                Environment.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo, EnvironmentVariableTarget.User);
+                Process.Start(appPath);
+            }
+        }
+        catch (Exception e)
+        {
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+        }
+        finally
+        {
+            Process.GetCurrentProcess().Kill();
+        }
     }
 }

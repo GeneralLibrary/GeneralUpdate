@@ -16,15 +16,12 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// After the update is complete.
         /// </summary>
-        /// <param name="appName"></param>
-        /// <param name="appType"></param>
-        /// <returns></returns>
-        void StartApp(string appName);
+        void StartApp();
         
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        Task ExecuteTaskAsync();
+        Task ExecuteAsync();
 
         /// <summary>
         /// Create a strategy.

@@ -19,7 +19,7 @@ using GeneralUpdate.Common.Shared.Service;
 namespace GeneralUpdate.ClientCore;
 
 /// <summary>
-///     This component is used only for client application bootstrapping classes.
+/// This component is used only for client application bootstrapping classes.
 /// </summary>
 public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
 {
@@ -41,19 +41,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     {
         ExecuteCustomOptions();
         ClearEnvironmentVariable();
-        await InitializeDataAsync();
-        
-        var manager = new DownloadManager(_configinfo.TempPath, _configinfo.Format, _configinfo.DownloadTimeOut);
-        manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
-        manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
-        manager.MultiDownloadError += OnMultiDownloadError;
-        manager.MultiDownloadProgressChanged += OnMultiDownloadProgressChanged;
-        manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
-        foreach (var versionInfo in _configinfo.UpdateVersions)
-        {
-            manager.Add(new DownloadTask(manager, versionInfo));
-        }
-        await manager.LaunchTasksAsync();
+        await ExecuteWorkflowAsync();
         return this;
     }
 
@@ -144,7 +132,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     #region Private Methods
 
-    private async Task InitializeDataAsync()
+    private async Task ExecuteWorkflowAsync()
     {
         //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
         var mainResp = await VersionService.Validate(_configinfo.UpdateUrl
@@ -160,40 +148,95 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             ,_configinfo.AppSecretKey
             ,_configinfo.Platform
             ,_configinfo.ProductId);
-
-        _configinfo.IsUpgradeUpdate = upgradeResp.Body.Count > 0;
-        _configinfo.IsMainUpdate = mainResp.Body.Count > 0;
-        //No need to update, return directly.
-        if (!_configinfo.IsMainUpdate && !_configinfo.IsUpgradeUpdate) return;
-
+        
+        _configinfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
+        _configinfo.IsMainUpdate = CheckUpgrade(mainResp);
+        
         //If the main program needs to be forced to update, the skip will not take effect.
         var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
         if (CanSkip(isForcibly)) return;
 
-        _configinfo.UpdateVersions = upgradeResp.Body.OrderBy(x => x.ReleaseDate).ToList();
-        _configinfo.LastVersion = _configinfo.UpdateVersions.Last().Version;
         _configinfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
-        _configinfo.Format = GetOption(UpdateOption.Format)?? "zip";
+        _configinfo.Format = GetOption(UpdateOption.Format) ?? ".zip";
         _configinfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0 ? 60 : GetOption(UpdateOption.DownloadTimeOut);
         _configinfo.DriveEnabled = GetOption(UpdateOption.Drive);
-        _configinfo.TempPath = GeneralFileManager.GetTempDirectory(_configinfo.LastVersion);
+        _configinfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
+
+        if (_configinfo.IsMainUpdate)
+        {
+            _configinfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
+            _configinfo.LastVersion = _configinfo.UpdateVersions.Last().Version;
+            
+            //Initialize the process transfer parameter object.
+            var processInfo = new ProcessInfo(_configinfo.MainAppName
+                , _configinfo.InstallPath
+                , _configinfo.ClientVersion
+                , _configinfo.LastVersion
+                , _configinfo.UpdateLogUrl
+                , _configinfo.Encoding
+                , _configinfo.Format
+                , _configinfo.DownloadTimeOut
+                , _configinfo.AppSecretKey
+                , mainResp.Body
+                , _configinfo.ReportUrl);
+            
+            _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo);
+        }
+
+        StrategyFactory();
         
-        //Initialize the process transfer parameter object.
-        var processInfo = new ProcessInfo(_configinfo.MainAppName
-            , _configinfo.InstallPath
-            , _configinfo.ClientVersion
-            , _configinfo.LastVersion
-            , _configinfo.UpdateLogUrl
-            , _configinfo.Encoding
-            , _configinfo.Format
-            , _configinfo.DownloadTimeOut
-            , _configinfo.AppSecretKey
-            , mainResp.Body);
-        _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo);
+        switch (_configinfo.IsUpgradeUpdate)
+        {
+            case true when _configinfo.IsMainUpdate:
+                //Both upgrade and main program update.
+                await Download();
+                await _strategy?.ExecuteAsync()!;
+                _strategy?.StartApp();
+                break;
+            case true when !_configinfo.IsMainUpdate:
+                //Upgrade program update.
+                await Download();
+                await _strategy?.ExecuteAsync()!;
+                break;
+            case false when _configinfo.IsMainUpdate:
+                //Main program update.
+                _strategy?.StartApp();
+                break;
+        }
+    }
+    
+    private async Task Download()
+    {
+        var manager = new DownloadManager(_configinfo.TempPath, _configinfo.Format, _configinfo.DownloadTimeOut);
+        manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
+        manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
+        manager.MultiDownloadError += OnMultiDownloadError;
+        manager.MultiDownloadProgressChanged += OnMultiDownloadProgressChanged;
+        manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
+        foreach (var versionInfo in _configinfo.UpdateVersions)
+        {
+            manager.Add(new DownloadTask(manager, versionInfo));
+        }
+        await manager.LaunchTasksAsync();
     }
 
+    private bool CheckUpgrade(VersionRespDTO? response)
+    {
+        if (response == null)
+        {
+            return false;
+        }
+
+        if (response.Code == HttpStatus.OK)
+        {
+            return response.Body.Count > 0;
+        }
+        
+        return false;
+    }
+    
     /// <summary>
-    ///     User decides if update is required.
+    /// User decides if update is required.
     /// </summary>
     /// <returns>is false to continue execution.</returns>
     private bool CanSkip(bool isForcibly)
@@ -221,7 +264,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
 
     /// <summary>
-    ///     Clear the environment variable information needed to start the upgrade assistant process.
+    /// Clear the environment variable information needed to start the upgrade assistant process.
     /// </summary>
     private void ClearEnvironmentVariable()
     {
@@ -237,26 +280,11 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
     }
 
-    protected override void ExecuteStrategy()
+    private bool CheckForcibly(List<VersionBodyDTO>? versions)
     {
-        _strategy?.Create(_configinfo!);
-        _strategy?.Execute();
-    }
-
-    protected override GeneralClientBootstrap StrategyFactory()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            _strategy = new WindowsStrategy();
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            _strategy = new LinuxStrategy();
-        else
-            throw new PlatformNotSupportedException("The current operating system is not supported!");
-
-        return this;
-    }
-    
-    private bool CheckForcibly(List<VersionBodyDTO> versions)
-    {
+        if (versions == null) 
+            return false;
+        
         foreach (var item in versions)
         {
             if (item.IsForcibly == true)
@@ -267,7 +295,24 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
         return false;
     }
+    
+    protected override void ExecuteStrategy()=> throw new NotImplementedException();
+    
+    protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();
 
+    protected override GeneralClientBootstrap StrategyFactory()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            _strategy = new WindowsStrategy();
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            _strategy = new LinuxStrategy();
+        else
+            throw new PlatformNotSupportedException("The current operating system is not supported!");
+
+        _strategy?.Create(_configinfo!);
+        return this;
+    }
+    
     private GeneralClientBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
     {
         Debug.Assert(callbackAction != null);
@@ -288,11 +333,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         => EventManager.Instance.Dispatch(sender, e);
 
     private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
-    {
-        EventManager.Instance.Dispatch(sender, e);
-        StrategyFactory();
-        ExecuteStrategy();
-    }
+        => EventManager.Instance.Dispatch(sender, e);
     
     #endregion Private Methods
 }

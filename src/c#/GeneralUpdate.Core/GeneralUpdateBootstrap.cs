@@ -24,40 +24,34 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap()
         {
-            try
-            {
-                //Gets values from system environment variables (ClientParameter object to base64 string).
-                var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new ArgumentException("ProcessInfo object cannot be null!");
+            var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+            if (string.IsNullOrWhiteSpace(json))
+                throw new ArgumentException("json environment variable is not defined");
                 
-                var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
-                if (processInfo == null)
-                    throw new ArgumentException("ProcessInfo object cannot be null!");
+            var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+            if (processInfo == null)
+                throw new ArgumentException("ProcessInfo object cannot be null!");
                 
-                _configInfo = new()
-                {
-                    MainAppName = processInfo.AppName,
-                    InstallPath = processInfo.InstallPath,
-                    ClientVersion = processInfo.CurrentVersion,
-                    LastVersion = processInfo.LastVersion,
-                    UpdateLogUrl = processInfo.UpdateLogUrl,
-                    Encoding = ToEncoding(processInfo.CompressEncoding),
-                    Format = processInfo.CompressFormat,
-                    DownloadTimeOut = processInfo.DownloadTimeOut,
-                    AppSecretKey = processInfo.AppSecretKey,
-                    UpdateVersions = processInfo.UpdateVersions,
-                    TempPath = $"{GeneralFileManager.GetTempDirectory(processInfo.LastVersion)}{Path.DirectorySeparatorChar}"
-                };
-            }
-            catch (Exception ex)
+            _configInfo = new()
             {
-                throw new ArgumentException($"Client parameter json conversion failed, please check whether the parameter content is legal : {ex.Message},{ex.StackTrace}.");
-            }
+                MainAppName = processInfo.AppName,
+                InstallPath = processInfo.InstallPath,
+                ClientVersion = processInfo.CurrentVersion,
+                LastVersion = processInfo.LastVersion,
+                UpdateLogUrl = processInfo.UpdateLogUrl,
+                Encoding = ToEncoding(processInfo.CompressEncoding),
+                Format = processInfo.CompressFormat,
+                DownloadTimeOut = processInfo.DownloadTimeOut,
+                AppSecretKey = processInfo.AppSecretKey,
+                UpdateVersions = processInfo.UpdateVersions,
+                TempPath = GeneralFileManager.GetTempDirectory("upgrade_temp"),
+                ReportUrl = processInfo.ReportUrl
+            };
         }
 
         public override async Task<GeneralUpdateBootstrap> LaunchAsync()
         {
+            StrategyFactory();
             var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
             manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
             manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
@@ -105,6 +99,8 @@ namespace GeneralUpdate.Core
 
         #endregion
 
+        protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();
+        
         protected override void ExecuteStrategy()
         {
             _strategy?.Create(_configInfo);

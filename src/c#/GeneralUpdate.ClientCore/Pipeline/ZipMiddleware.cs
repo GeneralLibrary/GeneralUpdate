@@ -11,7 +11,7 @@ namespace GeneralUpdate.ClientCore.Pipeline;
 
 public class ZipMiddleware : IMiddleware
 {
-    public Task InvokeAsync(PipelineContext context)
+    public Task InvokeAsync(PipelineContext? context)
     {
         return Task.Run(() =>
         {

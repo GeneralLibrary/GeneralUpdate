@@ -24,7 +24,9 @@ namespace GeneralUpdate.Common.Internal.Pipeline
         public PipelineBuilder UseMiddlewareIf<TMiddleware>(bool? condition)
             where TMiddleware : IMiddleware, new()
         {
-            if (condition == false) return this;
+            if (condition is null or false) 
+                return this;
+            
             var middleware = new TMiddleware();
             _middlewareStack = _middlewareStack.Push(middleware);
             return this;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -51,8 +50,11 @@ namespace GeneralUpdate.Core.Strategys
                             context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
                             context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
                             //Driver middleware
-                            context.Add("DriverOutPut", GeneralFileManager.GetTempDirectory("DriverOutPut"));
-                            context.Add("FieldMappings", _configinfo.FieldMappings);
+                            if (_configinfo.DriveEnabled == true)
+                            {
+                                context.Add("DriverOutPut", GeneralFileManager.GetTempDirectory("DriverOutPut"));
+                                context.Add("FieldMappings", _configinfo.FieldMappings);
+                            }
 
                             var pipelineBuilder = new PipelineBuilder(context)
                                 .UseMiddleware<PatchMiddleware>()
@@ -80,7 +82,7 @@ namespace GeneralUpdate.Core.Strategys
 
                     Clear(patchPath);
                     Clear(_configinfo.TempPath);
-                    StartApp(_configinfo.AppName);
+                    StartApp();
                 }
                 catch (Exception e)
                 {
@@ -89,10 +91,24 @@ namespace GeneralUpdate.Core.Strategys
             });
         }
 
-        public override void StartApp(string appName)
+        public override void StartApp()
         {
-            var path = Path.Combine(_configinfo.InstallPath, appName);
-            Process.Start(path);
+            try
+            {
+                var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.MainAppName);
+                if (File.Exists(appPath))
+                    Process.Start(appPath);
+                
+                Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
+            }
+            catch (Exception e)
+            {
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            }
+            finally
+            {
+                Process.GetCurrentProcess().Kill();
+            }
         }
     }
 }

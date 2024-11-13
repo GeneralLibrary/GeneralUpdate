@@ -1,10 +1,10 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using GeneralUpdate.ClientCore;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Differential;
 
 namespace GeneralUpdate.Client
 {
@@ -12,7 +12,7 @@ namespace GeneralUpdate.Client
     {
         private static void Main(string[] args)
         {
-            Task.Run(async () =>
+            /*Task.Run(async () =>
             {
                 var source = @"D:\packet\app";
                 var target = @"D:\packet\release";
@@ -20,24 +20,29 @@ namespace GeneralUpdate.Client
 
                 await DifferentialCore.Instance?.Clean(source, target, patch);
                 await DifferentialCore.Instance?.Dirty(source, patch);
-            });
+            });*/
             
-            /*Task.Run(() =>
+            Task.Run(() =>
             {
                 var configinfo = new Configinfo();
                 configinfo.UpdateLogUrl = "https://www.baidu.com";
                 configinfo.ReportUrl = "http://127.0.0.1:5008/Upgrade/Report";
                 configinfo.UpdateUrl = "http://127.0.0.1:5008/Upgrade/Verification";
                 
-                configinfo.AppName = "GeneralUpdate.Upgrade";
-                configinfo.MainAppName = "GeneralUpdate.Client";
+                configinfo.AppName = "GeneralUpdate.Upgrade.exe";
+                configinfo.MainAppName = "GeneralUpdate.Client.exe";
                 configinfo.InstallPath = Thread.GetDomain().BaseDirectory;
                 
+                //当前客户端的版本号
                 configinfo.ClientVersion = "1.0.0.0";
+                //当前升级端的版本号
                 configinfo.UpgradeClientVersion = "1.0.0.0";
                 
+                //平台
                 configinfo.Platform = 1;
-                configinfo.ProductId = "9999";
+                //产品id
+                configinfo.ProductId = "a77c9df5-45f8-4ee9-b3ad-b9431ce0b51c";
+                //应用密钥
                 configinfo.AppSecretKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 
                 _ = new GeneralClientBootstrap()//单个或多个更新包下载通知事件
@@ -58,33 +63,40 @@ namespace GeneralUpdate.Client
                     .Option(UpdateOption.Format, Format.ZIP)
                     .Option(UpdateOption.Drive, false)
                     .LaunchAsync();
-            });*/
+            });
 
             Console.Read();
         }
 
         private static void OnMultiDownloadError(object arg1, MultiDownloadErrorEventArgs arg2)
         {
+            Debug.WriteLine(arg2.Exception);
         }
 
         private static void OnMultiAllDownloadCompleted(object arg1, MultiAllDownloadCompletedEventArgs arg2)
         {
+            Debug.WriteLine(arg2.IsAllDownloadCompleted);
         }
 
         private static void OnMultiDownloadCompleted(object arg1, MultiDownloadCompletedEventArgs arg2)
         {
+            var v = arg2.Version as VersionInfo;
+            Debug.WriteLine(v.Version);
         }
 
         private static void OnMultiDownloadStatistics(object arg1, MultiDownloadStatisticsEventArgs arg2)
         {
+            Debug.WriteLine(arg2.Speed);
         }
 
         private static void OnMultiDownloadProgressChanged(object arg1, MultiDownloadProgressChangedEventArgs arg2)
         {
+            Debug.WriteLine(arg2.ProgressValue);
         }
 
         private static void OnException(object arg1, ExceptionEventArgs arg2)
         {
+            Debug.WriteLine(arg2.Exception);
         }
     }
 }

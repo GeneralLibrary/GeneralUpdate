@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,10 +50,10 @@ namespace GeneralUpdate.Common.Download
         {
             try
             {
-                var path = Path.Combine(_manager.Path, $"{_version.Name}{_manager.Format}");
                 InitStatisticsEvent();
                 InitProgressEvent();
                 InitCompletedEvent();
+                var path = Path.Combine(_manager.Path, $"{_version.Name}{_manager.Format}");
                 await DownloadFileRangeAsync(_version.Url, path);
             }
             catch (Exception ex)
@@ -81,6 +79,9 @@ namespace GeneralUpdate.Common.Download
             var totalBytes = response.Content.Headers.ContentLength ?? 0;
             if (startPos >= totalBytes)
             {
+                if (File.Exists(path))
+                    File.Delete(path);
+
                 File.Move(tempPath, path);
                 return;
             }
@@ -125,7 +126,14 @@ namespace GeneralUpdate.Common.Download
             if (_receivedBytes >= totalBytes)
             {
                 fileStream.Close();
-                File.Move(tempPath, tempPath.Replace(".temp", ""));
+
+                var path = tempPath.Replace(".temp", "");
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                File.Move(tempPath, path);
             }
         }
 

@@ -21,6 +21,8 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         public abstract Task<TBootstrap> LaunchAsync();
 
         protected abstract void ExecuteStrategy();
+        
+        protected abstract Task ExecuteStrategyAsync();
 
         protected abstract TBootstrap StrategyFactory();
 
@@ -31,7 +33,7 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// <param name="option">Configuration Action Enumeration.</param>
         /// <param name="value">Value</param>
         /// <returns></returns>
-        public virtual TBootstrap Option<T>(UpdateOption<T> option, T value)
+        public TBootstrap Option<T>(UpdateOption<T> option, T value)
         {
             if (value == null)
             {
@@ -44,12 +46,12 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
             return (TBootstrap)this;
         }
 
-        protected virtual T? GetOption<T>(UpdateOption<T> option)
+        protected T? GetOption<T>(UpdateOption<T>? option)
         {
             Debug.Assert(option != null && _options.Count != 0);
             var val = _options[option];
             if (val != null) return (T)val.GetValue();
-            return default(T);
+            return default;
         }
     }
 }

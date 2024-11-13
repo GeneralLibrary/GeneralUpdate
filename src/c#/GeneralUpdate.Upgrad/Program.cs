@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
@@ -12,10 +13,6 @@ namespace GeneralUpdate.Upgrad
     {
         private static void Main(string[] args)
         {
-            var fileExtension = ".inf";
-            var outPutPath = @"D:\drivers\";
-            var driversPath = @"D:\driverslocal\";
-
             //中文操作系统的驱动包字段映射表，用于解析所有驱动包的信息的字符串
             var fieldMappingsCN = new Dictionary<string, string>
             {
@@ -37,6 +34,10 @@ namespace GeneralUpdate.Upgrad
                 { "ClassName", "ClassName" },
                 { "Version", "Version" }
             };
+            
+            //var fileExtension = ".inf";
+            //var outPutPath = @"D:\drivers\";
+            //var driversPath = @"D:\driverslocal\";
 
             /*var information = new DriverInformation.Builder()
                 .SetDriverFileExtension(fileExtension)
@@ -53,6 +54,10 @@ namespace GeneralUpdate.Upgrad
 
             Task.Run(() =>
             {
+                var jsonPath = @"D:\packet\test.json";
+                var json = File.ReadAllText(jsonPath);
+                Environment.SetEnvironmentVariable("ProcessInfo", json, EnvironmentVariableTarget.User);
+                
                 _ = new GeneralUpdateBootstrap() //单个或多个更新包下载通知事件
                     .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
                     //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件

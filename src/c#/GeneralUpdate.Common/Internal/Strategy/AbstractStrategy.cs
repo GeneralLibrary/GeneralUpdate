@@ -13,9 +13,9 @@ namespace GeneralUpdate.Common.Internal.Strategy
 
         public virtual void Execute() => throw new NotImplementedException();
         
-        public virtual void StartApp(string appName) => throw new NotImplementedException();
+        public virtual void StartApp() => throw new NotImplementedException();
         
-        public virtual Task ExecuteTaskAsync() => throw new NotImplementedException();
+        public virtual Task ExecuteAsync() => throw new NotImplementedException();
 
         public virtual void Create(GlobalConfigInfo parameter) => throw new NotImplementedException();
 

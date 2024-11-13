@@ -34,7 +34,7 @@ namespace GeneralUpdate.Core.Strategys
             _parameter = parameter;
         }
 
-        public override async Task ExecuteTaskAsync()
+        public override async Task ExecuteAsync()
         {
             await Task.Run(() =>
             {

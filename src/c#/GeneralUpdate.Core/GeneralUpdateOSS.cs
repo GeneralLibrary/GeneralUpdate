@@ -76,7 +76,7 @@ namespace GeneralUpdate.Core
             var strategy = StrategyFactory();
             //strategy.Create(parameter);
             //Implement different update strategies depending on the platform.
-            await strategy.ExecuteTaskAsync();
+            await strategy.ExecuteAsync();
         }
         
         private static IStrategy StrategyFactory()
