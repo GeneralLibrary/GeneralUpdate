@@ -159,13 +159,16 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         _configinfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
         _configinfo.Format = GetOption(UpdateOption.Format) ?? ".zip";
         _configinfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0 ? 60 : GetOption(UpdateOption.DownloadTimeOut);
-        _configinfo.DriveEnabled = GetOption(UpdateOption.Drive);
+        _configinfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
         _configinfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
 
         if (_configinfo.IsMainUpdate)
         {
             _configinfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
             _configinfo.LastVersion = _configinfo.UpdateVersions.Last().Version;
+            
+            //var failed = CheckFail(_configinfo.LastVersion);
+            //if (failed) return;
             
             //Initialize the process transfer parameter object.
             var processInfo = new ProcessInfo(_configinfo.MainAppName
@@ -220,6 +223,31 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         await manager.LaunchTasksAsync();
     }
 
+    /// <summary>
+    /// Check if there has been a recent update failure.
+    /// </summary>
+    /// <param name="version"></param>
+    /// <returns></returns>
+    private bool CheckFail(string version)
+    {
+        /*
+          Read the version number of the last failed upgrade from the system environment variables, then compare it with the version number of the current request.
+          If it is less than or equal to the failed version number, do not perform the update.
+          */
+        var fail = Environment.GetEnvironmentVariable("UpgradeFail", EnvironmentVariableTarget.User);
+        if (string.IsNullOrEmpty(fail) || string.IsNullOrEmpty(version))
+            return false;
+        
+        var failVersion = new Version(fail);
+        var lastVersion = new Version(version);
+        return failVersion >= lastVersion;
+    }
+
+    /// <summary>
+    /// Determine whether the current version verification result indicates that an update is needed.
+    /// </summary>
+    /// <param name="response"></param>
+    /// <returns></returns>
     private bool CheckUpgrade(VersionRespDTO? response)
     {
         if (response == null)
@@ -232,6 +260,27 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             return response.Body.Count > 0;
         }
         
+        return false;
+    }
+    
+    /// <summary>
+    /// During the iteration process, if any version requires a mandatory update, all the update content from this request should be updated.
+    /// </summary>
+    /// <param name="versions"></param>
+    /// <returns></returns>
+    private bool CheckForcibly(List<VersionBodyDTO>? versions)
+    {
+        if (versions == null) 
+            return false;
+        
+        foreach (var item in versions)
+        {
+            if (item.IsForcibly == true)
+            {
+                return true;
+            }
+        }
+
         return false;
     }
     
@@ -274,28 +323,10 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception ex)
         {
-            EventManager.Instance.Dispatch(this,
-                new ExceptionEventArgs(ex,
-                    "Error: An unknown error occurred while deleting the environment variable."));
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Error: An unknown error occurred while deleting the environment variable."));
         }
     }
 
-    private bool CheckForcibly(List<VersionBodyDTO>? versions)
-    {
-        if (versions == null) 
-            return false;
-        
-        foreach (var item in versions)
-        {
-            if (item.IsForcibly == true)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-    
     protected override void ExecuteStrategy()=> throw new NotImplementedException();
     
     protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();

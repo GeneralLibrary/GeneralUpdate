@@ -141,9 +141,7 @@ namespace GeneralUpdate.Differential
             try
             {
                 if (!File.Exists(appPath) || !File.Exists(patchPath))
-                {
                     return;
-                }
 
                 var newPath = Path.Combine(Path.GetDirectoryName(appPath)!, $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
                 await new BinaryHandler().Dirty(appPath, newPath, patchPath);

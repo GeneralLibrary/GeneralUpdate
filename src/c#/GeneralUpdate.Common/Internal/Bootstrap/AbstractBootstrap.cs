@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
@@ -48,10 +49,17 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
 
         protected T? GetOption<T>(UpdateOption<T>? option)
         {
-            Debug.Assert(option != null && _options.Count != 0);
-            var val = _options[option];
-            if (val != null) return (T)val.GetValue();
-            return default;
+            try
+            {
+                Debug.Assert(option != null && _options.Count != 0);
+                var val = _options[option];
+                if (val != null) return (T)val.GetValue();
+                return default;
+            }
+            catch
+            {
+                return default;
+            }
         }
     }
 }

@@ -22,14 +22,17 @@ namespace GeneralUpdate.Client
                 await DifferentialCore.Instance?.Dirty(source, patch);
             });*/
             
-            Task.Run(() =>
+            Task.Run(async () =>
             {
+                Console.WriteLine("主程序启动辣！！！！");
+                await Task.Delay(3000);
+                
                 var configinfo = new Configinfo();
-                configinfo.UpdateLogUrl = "https://www.baidu.com";
+                //configinfo.UpdateLogUrl = "https://www.baidu.com";
                 configinfo.ReportUrl = "http://127.0.0.1:5008/Upgrade/Report";
                 configinfo.UpdateUrl = "http://127.0.0.1:5008/Upgrade/Verification";
                 
-                configinfo.AppName = "GeneralUpdate.Upgrade.exe";
+                configinfo.AppName = "GeneralUpdate.Upgrad.exe";
                 configinfo.MainAppName = "GeneralUpdate.Client.exe";
                 configinfo.InstallPath = Thread.GetDomain().BaseDirectory;
                 
@@ -59,9 +62,8 @@ namespace GeneralUpdate.Client
                     .AddListenerException(OnException)
                     .SetConfig(configinfo)
                     .Option(UpdateOption.DownloadTimeOut, 60)
-                    .Option(UpdateOption.Encoding, Encoding.Default)
+                    .Option(UpdateOption.Encoding, Encoding.UTF8)
                     .Option(UpdateOption.Format, Format.ZIP)
-                    .Option(UpdateOption.Drive, false)
                     .LaunchAsync();
             });
 

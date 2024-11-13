@@ -52,11 +52,14 @@ namespace GeneralUpdate.Upgrad
             processor.AddCommand(new InstallDriverCommand(information));
             processor.ProcessCommands();*/
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                var jsonPath = @"D:\packet\test.json";
-                var json = File.ReadAllText(jsonPath);
-                Environment.SetEnvironmentVariable("ProcessInfo", json, EnvironmentVariableTarget.User);
+                Console.WriteLine("升级程序启动辣！！！！");
+                await Task.Delay(3000);
+                
+                //var jsonPath = @"D:\packet\test.json";
+                //var json = File.ReadAllText(jsonPath);
+                //Environment.SetEnvironmentVariable("ProcessInfo", json, EnvironmentVariableTarget.User);
                 
                 _ = new GeneralUpdateBootstrap() //单个或多个更新包下载通知事件
                     .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)

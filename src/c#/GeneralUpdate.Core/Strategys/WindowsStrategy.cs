@@ -97,8 +97,14 @@ namespace GeneralUpdate.Core.Strategys
             {
                 var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.MainAppName);
                 if (File.Exists(appPath))
-                    Process.Start(appPath);
-                
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = appPath,
+                        UseShellExecute = true
+                    });
+                }
+
                 Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
             }
             catch (Exception e)
