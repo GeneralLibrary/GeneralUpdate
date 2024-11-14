@@ -76,7 +76,7 @@ public class GlobalConfigInfo
     public string UpgradeClientVersion { get; set; }
     
     /// <summary>
-    /// The latest version.
+    /// The main program latest version.
     /// </summary>
     public string LastVersion { get; set; }
 
@@ -115,4 +115,8 @@ public class GlobalConfigInfo
     public string ProductId { get; set; }
     
     public Dictionary<string, string> FieldMappings { get; set; }
+    
+    public string BackupDirectory { get; set; }
+    
+    public string Bowl { get; set; }
 }

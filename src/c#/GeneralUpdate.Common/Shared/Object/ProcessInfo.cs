@@ -20,7 +20,9 @@ namespace GeneralUpdate.Common.Shared.Object
             , int downloadTimeOut
             , string appSecretKey
             , List<VersionBodyDTO> updateVersions
-            , string reportUrl)
+            , string reportUrl
+            , string backupDirectory
+            , string bowl)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -36,6 +38,8 @@ namespace GeneralUpdate.Common.Shared.Object
             if (updateVersions == null || updateVersions.Count == 0) throw new ArgumentException("Collection cannot be null or has 0 elements !");
             UpdateVersions = updateVersions;
             ReportUrl = reportUrl ?? throw new ArgumentNullException(nameof(reportUrl));
+            BackupDirectory = backupDirectory ?? throw new ArgumentNullException(nameof(backupDirectory));
+            Bowl = bowl;
         }
 
         /// <summary>
@@ -103,6 +107,15 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         [JsonPropertyName("ReportUrl")]
         public string ReportUrl { get; set; }
+        
+        /// <summary>
+        /// Back up the current version files that have not been updated.
+        /// </summary>
+        [JsonPropertyName("BackupDirectory")]
+        public string BackupDirectory { get; set; }
+        
+        [JsonPropertyName("Bowl")]
+        public string Bowl { get; set; }
         
         private static int ToEncodingType(Encoding encoding)
         {

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using GeneralUpdate.Bowl.Strategys;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Bowl;
 
@@ -9,43 +12,49 @@ namespace GeneralUpdate.Bowl;
 /// </summary>
 public sealed class Bowl
 {
-    private IStrategy _strategy;
+    private static IStrategy? _strategy;
 
-    public Bowl(MonitorParameter parameter = null)
-    {
-        CreateStrategy();
-        _strategy!.SetParameter(parameter);
-    }
+    private Bowl() { }
 
-    private Bowl CreateStrategy()
+    private static void CreateStrategy()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             _strategy = new WindowStrategy();
         }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        /*else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             _strategy = new LinuxStrategy();
-        }
+        }*/
         
         if (_strategy == null)
             throw new PlatformNotSupportedException("Unsupported operating system");
-        
-        return this;
+    }
+    
+    public static void Launch(MonitorParameter? monitorParameter = null)
+    {
+        monitorParameter ??= CreateParameter();
+        CreateStrategy();
+        _strategy?.SetParameter(monitorParameter);
+        _strategy?.Launch();
     }
 
-    public Bowl SetParameter(MonitorParameter parameter)
+    private static MonitorParameter CreateParameter()
     {
-        if(parameter.Verify())
-            throw new ArgumentException("Parameter contains illegal values");
+        var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+        if(string.IsNullOrWhiteSpace(json))
+            throw new ArgumentNullException("ProcessInfo environment variable not set !"); 
         
-        _strategy.SetParameter(parameter);
-        return this;
-    }
-
-    public Bowl Launch()
-    {
-        _strategy.Launch();
-        return this;
+        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+        return new MonitorParameter
+        {
+            ProcessNameOrId = processInfo.AppName,
+            DumpFileName = $"{processInfo.LastVersion}_fail.dmp",
+            FailFileName = $"{processInfo.LastVersion}_fail.json",
+            TargetPath = processInfo.InstallPath,
+            FailDirectory = Path.Combine(processInfo.InstallPath, "fail", processInfo.LastVersion),
+            BackupDirectory = Path.Combine(processInfo.InstallPath, processInfo.LastVersion),
+            ExtendedField = processInfo.LastVersion
+        };
     }
 }

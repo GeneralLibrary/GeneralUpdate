@@ -25,6 +25,17 @@
       <None Update="Applications\Linux\procdump_3.3.0_amd64.deb">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="Applications\Windows\export.bat">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
     </ItemGroup>
 
 </Project>

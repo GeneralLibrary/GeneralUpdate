@@ -104,8 +104,16 @@ namespace GeneralUpdate.Core.Strategys
                         UseShellExecute = true
                     });
                 }
-
-                Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
+                
+                var bowlPath = Path.Combine(_configinfo.InstallPath, _configinfo.Bowl);
+                if (File.Exists(bowlPath))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = bowlPath,
+                        UseShellExecute = true
+                    });
+                }
             }
             catch (Exception e)
             {

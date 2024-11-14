@@ -73,6 +73,8 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         public string ProductId { get; set; }
 
+        public string Bowl { get; set; }
+
         public void Validate()
         {
             if (string.IsNullOrWhiteSpace(UpdateUrl) || !Uri.IsWellFormedUriString(UpdateUrl, UriKind.Absolute))

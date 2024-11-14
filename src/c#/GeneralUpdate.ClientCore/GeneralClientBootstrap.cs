@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -30,6 +31,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private IStrategy? _strategy;
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
+    private const string DirectoryName = "app-";
+    private readonly List<string> _notBackupDirectory = ["fail", DirectoryName];
 
     #region Public Methods
 
@@ -70,7 +73,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             BlackFiles = configInfo.BlackFiles,
             Platform = configInfo.Platform,
             ProductId = configInfo.ProductId,
-            UpgradeClientVersion = configInfo.UpgradeClientVersion
+            UpgradeClientVersion = configInfo.UpgradeClientVersion,
+            Bowl = configInfo.Bowl
         };
         return this;
     }
@@ -161,14 +165,15 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         _configinfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0 ? 60 : GetOption(UpdateOption.DownloadTimeOut);
         _configinfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
         _configinfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
-
+        _configinfo.BackupDirectory = Path.Combine(_configinfo.InstallPath, $"{DirectoryName}{_configinfo.ClientVersion}");
+        
         if (_configinfo.IsMainUpdate)
         {
             _configinfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
             _configinfo.LastVersion = _configinfo.UpdateVersions.Last().Version;
             
-            //var failed = CheckFail(_configinfo.LastVersion);
-            //if (failed) return;
+            var failed = CheckFail(_configinfo.LastVersion);
+            if (failed) return;
             
             //Initialize the process transfer parameter object.
             var processInfo = new ProcessInfo(_configinfo.MainAppName
@@ -181,11 +186,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 , _configinfo.DownloadTimeOut
                 , _configinfo.AppSecretKey
                 , mainResp.Body
-                , _configinfo.ReportUrl);
+                , _configinfo.ReportUrl
+                , _configinfo.BackupDirectory
+                , _configinfo.Bowl);
             
             _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo);
         }
 
+        GeneralFileManager.Backup(_configinfo.InstallPath, _configinfo.BackupDirectory, _notBackupDirectory);
         StrategyFactory();
         
         switch (_configinfo.IsUpgradeUpdate)
@@ -222,7 +230,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         await manager.LaunchTasksAsync();
     }
-
+    
     /// <summary>
     /// Check if there has been a recent update failure.
     /// </summary>

@@ -45,7 +45,8 @@ namespace GeneralUpdate.Core
                 AppSecretKey = processInfo.AppSecretKey,
                 UpdateVersions = processInfo.UpdateVersions,
                 TempPath = GeneralFileManager.GetTempDirectory("upgrade_temp"),
-                ReportUrl = processInfo.ReportUrl
+                ReportUrl = processInfo.ReportUrl,
+                BackupDirectory = processInfo.BackupDirectory
             };
         }
 

@@ -110,7 +110,73 @@ namespace GeneralUpdate.Common.FileBasic
             var hashRight = hashAlgorithm.ComputeHash(rightPath);
             return hashLeft.SequenceEqual(hashRight);
         }
+        
+        /// <summary>
+        /// Backup the all program.
+        /// </summary>
+        /// <param name="backupPath"></param>
+        /// <param name="sourcePath"></param>
+        /// <param name="directoryName"></param>
+        public static void Backup(string sourcePath, string backupPath, List<string> directoryNames)
+        {
+            if (Directory.Exists(backupPath))
+            {
+                Directory.Delete(backupPath, true);
+            }
+            Directory.CreateDirectory(backupPath);
+            CopyDirectory(sourcePath, backupPath, directoryNames);
+        }
 
+        private static void CopyDirectory(string sourceDir, string targetDir, List<string> directoryNames)
+        {
+            foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (!directoryNames.Any(name => Path.GetFileName(dirPath).Contains(name)))
+                {
+                    string newTargetDir = Path.Combine(targetDir, Path.GetFileName(dirPath));
+                    Directory.CreateDirectory(newTargetDir);
+                    CopyDirectory(dirPath, newTargetDir, directoryNames);
+                }
+            }
+
+            foreach (string filePath in Directory.GetFiles(sourceDir, "*.*", SearchOption.TopDirectoryOnly))
+            {
+                string newFilePath = Path.Combine(targetDir, Path.GetFileName(filePath));
+                File.Copy(filePath, newFilePath, true);
+            }
+        }
+
+        /// <summary>
+        /// Restore the all program.
+        /// </summary>
+        /// <param name="backupPath"></param>
+        /// <param name="sourcePath"></param>
+        public static void Restore(string backupPath, string sourcePath)
+        {
+            if (!Directory.Exists(sourcePath))
+            {
+                Directory.CreateDirectory(sourcePath);
+            }
+
+            CopyDirectory(backupPath, sourcePath);
+        }
+
+        private static void CopyDirectory(string sourceDir, string targetDir)
+        {
+            foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
+            {
+                string newTargetDir = Path.Combine(targetDir, Path.GetFileName(dirPath));
+                Directory.CreateDirectory(newTargetDir);
+                CopyDirectory(dirPath, newTargetDir);
+            }
+
+            foreach (string filePath in Directory.GetFiles(sourceDir, "*.*", SearchOption.TopDirectoryOnly))
+            {
+                string newFilePath = Path.Combine(targetDir, Path.GetFileName(filePath));
+                File.Copy(filePath, newFilePath, true);
+            }
+        }
+        
         #endregion
 
         #region Private Methods

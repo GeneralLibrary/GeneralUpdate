@@ -22,10 +22,10 @@ namespace GeneralUpdate.Client
                 await DifferentialCore.Instance?.Dirty(source, patch);
             });*/
             
-            Task.Run(async () =>
+            Task.Run(() =>
             {
-                Console.WriteLine("主程序启动辣！！！！");
-                await Task.Delay(3000);
+                //Console.WriteLine("主程序启动辣！！！！");
+                //await Task.Delay(3000);
                 
                 var configinfo = new Configinfo();
                 //configinfo.UpdateLogUrl = "https://www.baidu.com";
@@ -35,6 +35,7 @@ namespace GeneralUpdate.Client
                 configinfo.AppName = "GeneralUpdate.Upgrad.exe";
                 configinfo.MainAppName = "GeneralUpdate.Client.exe";
                 configinfo.InstallPath = Thread.GetDomain().BaseDirectory;
+                configinfo.Bowl = "Generalupdate.CatBowl.exe";
                 
                 //当前客户端的版本号
                 configinfo.ClientVersion = "1.0.0.0";
@@ -66,7 +67,6 @@ namespace GeneralUpdate.Client
                     .Option(UpdateOption.Format, Format.ZIP)
                     .LaunchAsync();
             });
-
             Console.Read();
         }
 
