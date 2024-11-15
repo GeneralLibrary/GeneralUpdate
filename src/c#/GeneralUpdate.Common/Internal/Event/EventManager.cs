@@ -5,10 +5,10 @@ namespace GeneralUpdate.Common.Internal.Event
 {
     public class EventManager : IDisposable
     {
-        private static readonly object _lockObj = new object();
+        private static readonly object _lockObj = new();
         private static EventManager _instance;
-        private Dictionary<Type, Delegate> _dicDelegates = new Dictionary<Type, Delegate>();
-        private bool disposed = false;
+        private Dictionary<Type, Delegate> _dicDelegates = new();
+        private bool _disposed = false;
 
         private EventManager() { }
 
@@ -67,10 +67,10 @@ namespace GeneralUpdate.Common.Internal.Event
 
         public void Dispose()
         {
-            if (!this.disposed)
+            if (!this._disposed)
             {
                 _dicDelegates.Clear();
-                disposed = true;
+                _disposed = true;
             }
         }
     }

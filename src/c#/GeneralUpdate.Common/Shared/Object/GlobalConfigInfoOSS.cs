@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
-    public class ParamsOSS
+    public class GlobalConfigInfoOSS
     {
         [JsonPropertyName("Url")]
         public string Url { get; set; }
@@ -16,12 +16,15 @@ namespace GeneralUpdate.Common.Shared.Object
 
         [JsonPropertyName("VersionFileName")]
         public string VersionFileName { get; set; }
+        
+        [JsonPropertyName("Encoding")]
+        public string Encoding { get; set; }
 
-        public ParamsOSS()
+        public GlobalConfigInfoOSS()
         {
         }
 
-        public ParamsOSS(string url, string appName, string currentVersion, string versionFileName)
+        public GlobalConfigInfoOSS(string url, string appName, string currentVersion, string versionFileName)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));

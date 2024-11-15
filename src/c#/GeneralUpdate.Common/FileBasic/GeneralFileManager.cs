@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using GeneralUpdate.Common.HashAlgorithms;
 
@@ -60,11 +61,15 @@ namespace GeneralUpdate.Common.FileBasic
             File.WriteAllText(targetPath, jsonString);
         }
 
-        public static T? GetJson<T>(string path) where T : class
+        public static T? GetJson<T>(string path, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
+                if (typeInfo != null)
+                {
+                    return JsonSerializer.Deserialize(json, typeInfo);
+                }
                 return JsonSerializer.Deserialize<T>(json);
             }
 

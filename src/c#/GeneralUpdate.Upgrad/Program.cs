@@ -80,9 +80,7 @@ namespace GeneralUpdate.Upgrad
                     .LaunchAsync();
             });*/
 
-
             GeneralUpdateOSS.Start();
-
             Console.Read();
         }
 

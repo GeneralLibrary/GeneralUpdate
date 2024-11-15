@@ -6,7 +6,7 @@ namespace GeneralUpdate.Common.Shared.Object
     /// <summary>
     /// Version data persistence.
     /// </summary>
-    public class VersionPO
+    public class VersionOSS
     {
         /// <summary>
         /// Update package release time.

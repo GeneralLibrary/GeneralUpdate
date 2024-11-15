@@ -8,7 +8,7 @@ using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Client
 {
-    internal class Progra
+    internal class Program
     {
         private static void Main(string[] args)
         {
@@ -67,8 +67,14 @@ namespace GeneralUpdate.Client
                     .Option(UpdateOption.Format, Format.ZIP)
                     .LaunchAsync();
             });*/
-
-            GeneralClientOSS.Start(new ParamsOSS("http://192.168.50.203/versions.json", "GeneralUpdate.Client.exe","1.0.0.0", "versions.json"));
+            
+            var paramsOSS = new GlobalConfigInfoOSS();
+            paramsOSS.Url = "http://192.168.50.203/versions.json";
+            paramsOSS.CurrentVersion = "1.0.0.0";
+            paramsOSS.VersionFileName = "versions.json";
+            paramsOSS.AppName = "GeneralUpdate.Client.exe";
+            paramsOSS.Encoding = Encoding.UTF8.WebName;
+            GeneralClientOSS.Start(paramsOSS);
             
             Console.Read();
         }
@@ -85,8 +91,7 @@ namespace GeneralUpdate.Client
 
         private static void OnMultiDownloadCompleted(object arg1, MultiDownloadCompletedEventArgs arg2)
         {
-            var v = arg2.Version as VersionInfo;
-            Debug.WriteLine(v.Version);
+            var v = arg2.Version;
         }
 
         private static void OnMultiDownloadStatistics(object arg1, MultiDownloadStatisticsEventArgs arg2)

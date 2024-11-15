@@ -23,7 +23,7 @@ public sealed class GeneralClientOSS
     /// <summary>
     /// Starting an OSS update for windows platform.
     /// </summary>
-    public static async Task Start(ParamsOSS configParams, string upgradeAppName = "GeneralUpdate.Upgrade.exe")
+    public static async Task Start(GlobalConfigInfoOSS configGlobalConfigInfo, string upgradeAppName = "GeneralUpdate.Upgrade.exe")
     {
         await Task.Run(() =>
         {
@@ -31,30 +31,29 @@ public sealed class GeneralClientOSS
             {
                 var basePath = Thread.GetDomain().BaseDirectory;
                 //Download the version information file from OSS to be updated.(JSON)
-                var versionsFilePath = Path.Combine(basePath, configParams.VersionFileName);
-                DownloadFile(configParams.Url, versionsFilePath);
+                var versionsFilePath = Path.Combine(basePath, configGlobalConfigInfo.VersionFileName);
+                DownloadFile(configGlobalConfigInfo.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
-                var versions = GeneralFileManager.GetJson<List<VersionPO>>(versionsFilePath);
+                var versions = GeneralFileManager.GetJson<List<VersionOSS>>(versionsFilePath);
                 if (versions == null || versions.Count == 0) return;
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();
                 //Determine whether the current client version needs to be upgraded.
-                if (!IsUpgrade(configParams.CurrentVersion, newVersion.Version)) 
+                if (!IsUpgrade(configGlobalConfigInfo.CurrentVersion, newVersion.Version)) 
                     return;
-                
-                var json = JsonSerializer.Serialize(configParams);
-                Environment.SetEnvironmentVariable("ParamsOSS", json, EnvironmentVariableTarget.User);
                 
                 //If you confirm that an update is required, start the upgrade application.
                 var appPath = Path.Combine(basePath, $"{upgradeAppName}");
                 if (!File.Exists(appPath)) 
                     throw new Exception($"The application does not exist {upgradeAppName} !");
                 
+                var json = JsonSerializer.Serialize(configGlobalConfigInfo);
+                Environment.SetEnvironmentVariable("GlobalConfigInfoOSS", json, EnvironmentVariableTarget.User);
                 Process.Start(appPath);
             }
             catch (Exception ex)
             {
-                EventManager.Instance.Dispatch(new GeneralClientOSS(), new ExceptionEventArgs(ex));
+                throw new Exception(ex.Message + "\n" + ex.StackTrace);
             }
             finally
             {
@@ -85,14 +84,5 @@ public sealed class GeneralClientOSS
     {
         using var webClient = new WebClient();
         webClient.DownloadFile(new Uri(url), path);
-    }
-
-    public static void AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
-     => AddListener(callbackAction);
-
-    private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
-    {
-        Debug.Assert(callbackAction != null);
-        EventManager.Instance.AddListener(callbackAction);
     }
 }
