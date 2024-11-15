@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Strategy;
@@ -14,25 +19,15 @@ namespace GeneralUpdate.Core
 {
     public sealed class GeneralUpdateOSS
     {
-        #region Constructors
-
-        private GeneralUpdateOSS()
-        { }
-
-        #endregion Constructors
+        private GeneralUpdateOSS() { }
 
         #region Public Methods
 
         /// <summary>
         /// Starting an OSS update for windows,Linux,mac platform.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="parameter"></param>
         /// <returns></returns>
-        public static async Task Start(ParamsOSS parameter)
-        {
-            await BaseStart(parameter);
-        }
+        public static async Task Start()=> await BaseStart();
 
         public static void AddListenerMultiAllDownloadCompleted(Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
             => AddListener(callbackAction);
@@ -61,7 +56,7 @@ namespace GeneralUpdate.Core
 
         private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            Contract.Requires(callbackAction != null);
+            Debug.Assert(callbackAction != null);
             EventManager.Instance.AddListener(callbackAction);
         }
 
@@ -71,27 +66,18 @@ namespace GeneralUpdate.Core
         /// <typeparam name="T">The class that needs to be injected with the corresponding platform update policy or inherits the abstract update policy.</typeparam>
         /// <param name="args">List of parameter.</param>
         /// <returns></returns>
-        private static async Task BaseStart(ParamsOSS parameter)
+        private static async Task BaseStart()
         {
-            var strategy = StrategyFactory();
-            //strategy.Create(parameter);
-            //Implement different update strategies depending on the platform.
+            var json = Environment.GetEnvironmentVariable("ParamsOSS", EnvironmentVariableTarget.User);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            var parameter = JsonSerializer.Deserialize<ParamsOSS>(json);
+            var strategy = new OSSStrategy();
+            strategy.Create(parameter);
             await strategy.ExecuteAsync();
         }
         
-        private static IStrategy StrategyFactory()
-        {
-            IStrategy strategy = null;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                strategy = new WindowsStrategy();
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                strategy = new LinuxStrategy();
-            else
-                throw new PlatformNotSupportedException("The current operating system is not supported!");
-
-            return strategy;
-        }
-
         #endregion Private Methods
     }
 }

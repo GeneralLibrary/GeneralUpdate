@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,15 +18,12 @@ namespace GeneralUpdate.ClientCore;
 
 public sealed class GeneralClientOSS
 {
-    private GeneralClientOSS()
-    {
-    }
+    private GeneralClientOSS() { }
 
     /// <summary>
-    ///     Starting an OSS update for windows,Linux,mac platform.
+    /// Starting an OSS update for windows platform.
     /// </summary>
-    /// <param name="configInfo"></param>
-    public static async Task Start(ParamsOSS configParams, string upgradeAppName = "GeneralUpdate.Upgrade")
+    public static async Task Start(ParamsOSS configParams, string upgradeAppName = "GeneralUpdate.Upgrade.exe")
     {
         await Task.Run(() =>
         {
@@ -34,24 +32,29 @@ public sealed class GeneralClientOSS
                 var basePath = Thread.GetDomain().BaseDirectory;
                 //Download the version information file from OSS to be updated.(JSON)
                 var versionsFilePath = Path.Combine(basePath, configParams.VersionFileName);
-                DownloadFile(configParams.Url + "/" + configParams.VersionFileName, versionsFilePath);
+                DownloadFile(configParams.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
                 var versions = GeneralFileManager.GetJson<List<VersionPO>>(versionsFilePath);
                 if (versions == null || versions.Count == 0) return;
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();
                 //Determine whether the current client version needs to be upgraded.
-                if (!IsUpgrade(configParams.CurrentVersion, newVersion.Version)) return;
-                var appPath = Path.Combine(basePath, $"{upgradeAppName}.exe");
-                if (!File.Exists(appPath)) throw new Exception($"The application does not exist {upgradeAppName} !");
-                //If you confirm that an update is required, start the upgrade application.
+                if (!IsUpgrade(configParams.CurrentVersion, newVersion.Version)) 
+                    return;
+                
                 var json = JsonSerializer.Serialize(configParams);
-                //TODO: set environment variable
-                Process.Start(appPath, json);
+                Environment.SetEnvironmentVariable("ParamsOSS", json, EnvironmentVariableTarget.User);
+                
+                //If you confirm that an update is required, start the upgrade application.
+                var appPath = Path.Combine(basePath, $"{upgradeAppName}");
+                if (!File.Exists(appPath)) 
+                    throw new Exception($"The application does not exist {upgradeAppName} !");
+                
+                Process.Start(appPath);
             }
             catch (Exception ex)
             {
-                throw new Exception($"GeneralClientOSS update exception ! {ex.Message}", ex.InnerException);
+                EventManager.Instance.Dispatch(new GeneralClientOSS(), new ExceptionEventArgs(ex));
             }
             finally
             {
@@ -61,18 +64,18 @@ public sealed class GeneralClientOSS
     }
 
     /// <summary>
-    ///     Determine whether the current client version needs to be upgraded.
+    /// Determine whether the current client version needs to be upgraded.
     /// </summary>
     /// <param name="clientVersion"></param>
     /// <param name="serverVersion"></param>
     /// <returns>true: Upgrade required , false: No upgrade is required</returns>
     private static bool IsUpgrade(string clientVersion, string serverVersion)
     {
-        if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion)) return false;
-        Version currentClientVersion = null;
-        Version currentServerVersion = null;
-        var isParseClientVersion = Version.TryParse(clientVersion, out currentClientVersion);
-        var isParseServerVersion = Version.TryParse(serverVersion, out currentServerVersion);
+        if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion)) 
+            return false;
+        
+        var isParseClientVersion = Version.TryParse(clientVersion, out var currentClientVersion);
+        var isParseServerVersion = Version.TryParse(serverVersion, out var currentServerVersion);
         if (!isParseClientVersion || !isParseServerVersion) return false;
         if (currentClientVersion < currentServerVersion) return true;
         return false;
@@ -89,7 +92,7 @@ public sealed class GeneralClientOSS
 
     private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
     {
-        Contract.Requires(callbackAction != null);
+        Debug.Assert(callbackAction != null);
         EventManager.Instance.AddListener(callbackAction);
     }
 }

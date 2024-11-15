@@ -52,7 +52,7 @@ namespace GeneralUpdate.Upgrad
             processor.AddCommand(new InstallDriverCommand(information));
             processor.ProcessCommands();*/
 
-            Task.Run(async () =>
+            /*Task.Run(async () =>
             {
                 Console.WriteLine("升级程序启动辣！！！！");
                 await Task.Delay(3000);
@@ -78,7 +78,10 @@ namespace GeneralUpdate.Upgrad
                     //是否开启驱动更新
                     //.Option(UpdateOption.Drive, true)
                     .LaunchAsync();
-            });
+            });*/
+
+
+            GeneralUpdateOSS.Start();
 
             Console.Read();
         }

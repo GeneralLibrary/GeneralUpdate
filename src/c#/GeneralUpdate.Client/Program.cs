@@ -22,7 +22,7 @@ namespace GeneralUpdate.Client
                 await DifferentialCore.Instance?.Dirty(source, patch);
             });*/
             
-            Task.Run(() =>
+            /*Task.Run(() =>
             {
                 //Console.WriteLine("主程序启动辣！！！！");
                 //await Task.Delay(3000);
@@ -66,7 +66,10 @@ namespace GeneralUpdate.Client
                     .Option(UpdateOption.Encoding, Encoding.UTF8)
                     .Option(UpdateOption.Format, Format.ZIP)
                     .LaunchAsync();
-            });
+            });*/
+
+            GeneralClientOSS.Start(new ParamsOSS("http://192.168.50.203/versions.json", "GeneralUpdate.Client.exe","1.0.0.0", "versions.json"));
+            
             Console.Read();
         }
 
