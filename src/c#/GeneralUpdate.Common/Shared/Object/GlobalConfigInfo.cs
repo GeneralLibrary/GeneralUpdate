@@ -48,7 +48,7 @@ public class GlobalConfigInfo
     /// <summary>
     /// Version information that needs to be updated.
     /// </summary>
-    public List<VersionBodyDTO> UpdateVersions { get; set; }
+    public List<VersionInfo> UpdateVersions { get; set; }
 
     /// <summary>
     /// The encoding format for file operations.

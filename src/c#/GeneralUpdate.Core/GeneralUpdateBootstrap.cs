@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
@@ -28,7 +29,7 @@ namespace GeneralUpdate.Core
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentException("json environment variable is not defined");
                 
-            var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+            var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json, ProcessInfoJsonContext.Default.ProcessInfo);
             if (processInfo == null)
                 throw new ArgumentException("ProcessInfo object cannot be null!");
                 

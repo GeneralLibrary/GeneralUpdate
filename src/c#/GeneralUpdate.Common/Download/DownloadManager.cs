@@ -65,7 +65,6 @@ namespace GeneralUpdate.Common.Download
             }
             catch (Exception ex)
             {
-                _failedVersions.Add((null, ex.Message));
                 MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, _failedVersions));
                 throw new Exception($"Download manager error: {ex.Message}", ex);
             }

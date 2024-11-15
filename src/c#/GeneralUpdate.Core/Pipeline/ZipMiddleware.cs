@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
+using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Zip;
 using GeneralUpdate.Zip.Factory;
 
@@ -40,8 +41,8 @@ public class ZipMiddleware : IMiddleware
     {
         var type = extensionName switch
         {
-            ".zip" => OperationType.GZip,
-            ".7z" => OperationType.G7z,
+            Format.ZIP => OperationType.GZip,
+            Format.SEVENZIP => OperationType.G7z,
             _ => OperationType.None
         };
         return type;

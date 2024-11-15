@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Strategys;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
@@ -141,17 +142,19 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
         var mainResp = await VersionService.Validate(_configinfo.UpdateUrl
             , _configinfo.ClientVersion
-            ,1
+            , AppType.ClientApp
             ,_configinfo.AppSecretKey
             ,_configinfo.Platform
-            ,_configinfo.ProductId);
+            ,_configinfo.ProductId
+            , VersionRespJsonContext.Default.VersionRespDTO);
         
         var upgradeResp = await VersionService.Validate(_configinfo.UpdateUrl
             , _configinfo.UpgradeClientVersion
-            ,2
+            , AppType.UpgradeApp
             ,_configinfo.AppSecretKey
             ,_configinfo.Platform
-            ,_configinfo.ProductId);
+            ,_configinfo.ProductId
+            , VersionRespJsonContext.Default.VersionRespDTO);
         
         _configinfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
         _configinfo.IsMainUpdate = CheckUpgrade(mainResp);
@@ -161,7 +164,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         if (CanSkip(isForcibly)) return;
 
         _configinfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
-        _configinfo.Format = GetOption(UpdateOption.Format) ?? ".zip";
+        _configinfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
         _configinfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0 ? 60 : GetOption(UpdateOption.DownloadTimeOut);
         _configinfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
         _configinfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
@@ -190,7 +193,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 , _configinfo.BackupDirectory
                 , _configinfo.Bowl);
             
-            _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo);
+            _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo,ProcessInfoJsonContext.Default.ProcessInfo);
         }
 
         GeneralFileManager.Backup(_configinfo.InstallPath, _configinfo.BackupDirectory, _notBackupDirectory);
@@ -263,7 +266,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             return false;
         }
 
-        if (response.Code == HttpStatus.OK)
+        if (response.Code == 200)
         {
             return response.Body.Count > 0;
         }
@@ -276,7 +279,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// </summary>
     /// <param name="versions"></param>
     /// <returns></returns>
-    private bool CheckForcibly(List<VersionBodyDTO>? versions)
+    private bool CheckForcibly(List<VersionInfo>? versions)
     {
         if (versions == null) 
             return false;
@@ -314,8 +317,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         {
             if (!option.Invoke())
             {
-                EventManager.Instance.Dispatch(this,
-                    new ExceptionEventArgs(null, $"{nameof(option)}Execution failure!"));
+                var args = new ExceptionEventArgs(null, $"{nameof(option)}Execution failure!");
+                EventManager.Instance.Dispatch(this,args);
             }
         }
     }

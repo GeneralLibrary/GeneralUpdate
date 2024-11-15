@@ -19,7 +19,7 @@ namespace GeneralUpdate.Common.Shared.Object
             , string compressFormat
             , int downloadTimeOut
             , string appSecretKey
-            , List<VersionBodyDTO> updateVersions
+            , List<VersionInfo> updateVersions
             , string reportUrl
             , string backupDirectory
             , string bowl)
@@ -100,7 +100,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// One or more version update information.
         /// </summary>
         [JsonPropertyName("UpdateVersions")]
-        public List<VersionBodyDTO> UpdateVersions { get; set; }
+        public List<VersionInfo> UpdateVersions { get; set; }
 
         /// <summary>
         /// update report web address

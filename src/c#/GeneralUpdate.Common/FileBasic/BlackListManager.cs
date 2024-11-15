@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.FileBasic;
 
@@ -12,8 +13,8 @@ public class BlackListManager
     private static readonly List<string> _blackFileFormats =
     [
         ".patch",
-        ".7z",
-        ".zip",
+        Format.SEVENZIP,
+        Format.ZIP,
         ".rar",
         ".tar",
         ".json",

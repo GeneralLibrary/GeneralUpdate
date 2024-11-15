@@ -19,7 +19,6 @@ namespace GeneralUpdate.Core.Strategys
         #region Private Members
 
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
-        private const string Format = ".zip";
         private const int TimeOut = 60;
         private GlobalConfigInfoOSS? _parameter;
 
@@ -74,15 +73,15 @@ namespace GeneralUpdate.Core.Strategys
         {
             try
             {
-                var manager = new DownloadManager(_appPath, Format, TimeOut);
+                var manager = new DownloadManager(_appPath, Format.ZIP, TimeOut);
                 foreach (var versionInfo in versions)
                 {
-                    var version = new VersionBodyDTO
+                    var version = new VersionInfo
                     {
                         Name = versionInfo.PacketName,
                         Version = versionInfo.Version,
                         Url = versionInfo.Url,
-                        Format = Format,
+                        Format = Format.ZIP,
                         Hash = versionInfo.Hash
                     };
                     manager.Add(new DownloadTask(manager, version));
@@ -112,7 +111,7 @@ namespace GeneralUpdate.Core.Strategys
             var encoding = Encoding.GetEncoding(_parameter.Encoding);
             foreach (var version in versions)
             {
-                var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format}");
+                var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
                 var zipFactory = new GeneralZipFactory();
                 zipFactory.Completed += (sender, e) =>
                 {

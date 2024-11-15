@@ -14,19 +14,19 @@ namespace GeneralUpdate.Common.Download
 
         private readonly HttpClient _httpClient;
         private readonly DownloadManager _manager;
-        private readonly VersionBodyDTO _version;
+        private readonly VersionInfo? _version;
         private const int DEFAULT_DELTA = 1048576; // 1024*1024
         private long _beforBytes;
         private long _receivedBytes;
         private long _totalBytes;
-        private Timer _speedTimer;
+        private Timer? _speedTimer;
         private DateTime _startTime;
 
         #endregion Private Members
 
         #region Constructors
 
-        public DownloadTask(DownloadManager manager, VersionBodyDTO version)
+        public DownloadTask(DownloadManager manager, VersionInfo version)
         {
             _manager = manager;
             _version = version;
@@ -53,7 +53,7 @@ namespace GeneralUpdate.Common.Download
                 InitStatisticsEvent();
                 InitProgressEvent();
                 InitCompletedEvent();
-                var path = Path.Combine(_manager.Path, $"{_version.Name}{_manager.Format}");
+                var path = Path.Combine(_manager.Path, $"{_version?.Name}{_manager.Format}");
                 await DownloadFileRangeAsync(_version.Url, path);
             }
             catch (Exception ex)
@@ -139,7 +139,8 @@ namespace GeneralUpdate.Common.Download
 
         private void InitStatisticsEvent()
         {
-            if (_speedTimer != null) return;
+            if (_speedTimer != null) 
+                return;
 
             _speedTimer = new Timer(_ =>
             {

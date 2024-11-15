@@ -1,4 +1,5 @@
 ﻿using System;
+using GeneralUpdate.Common.Shared.Object.Enum;
 
 namespace GeneralUpdate.Common.Download
 {

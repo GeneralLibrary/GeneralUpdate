@@ -5,9 +5,6 @@ namespace GeneralUpdate.Common.Download
 {
     public class MultiAllDownloadCompletedEventArgs : EventArgs
     {
-        public MultiAllDownloadCompletedEventArgs()
-        { }
-
         public MultiAllDownloadCompletedEventArgs(bool isAllDownloadCompleted, IList<(object, string)> failedVersions)
         {
             IsAllDownloadCompleted = isAllDownloadCompleted;

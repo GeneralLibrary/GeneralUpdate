@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using GeneralUpdate.Bowl.Strategys;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Bowl;
@@ -45,7 +46,10 @@ public sealed class Bowl
         if(string.IsNullOrWhiteSpace(json))
             throw new ArgumentNullException("ProcessInfo environment variable not set !"); 
         
-        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json, ProcessInfoJsonContext.Default.ProcessInfo);
+        if(processInfo == null)
+            throw new ArgumentNullException("ProcessInfo json deserialize fail!");
+        
         return new MonitorParameter
         {
             ProcessNameOrId = processInfo.AppName,

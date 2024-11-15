@@ -7,6 +7,7 @@ using System.Net.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Shared.Object;
 
@@ -14,6 +15,8 @@ namespace GeneralUpdate.Common.Shared.Service
 {
     public class VersionService
     {
+        private VersionService() { }
+        
         /// <summary>
         /// Report the result of this update: whether it was successful.
         /// </summary>
@@ -22,7 +25,7 @@ namespace GeneralUpdate.Common.Shared.Service
         /// <param name="status"></param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static async Task<BaseResponseDTO<bool>> Report(string httpUrl
+        public static async Task Report(string httpUrl
             , int recordId
             , int status
             , int? type)
@@ -33,7 +36,7 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Status", status },
                 { "Type", type }
             };
-            return await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters);
+            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters);
         }
 
         /// <summary>
@@ -50,8 +53,9 @@ namespace GeneralUpdate.Common.Shared.Service
             , string version
             , int appType
             , string appKey
-            , int platform,
-            string productId)
+            , int platform
+            , string productId
+            , JsonTypeInfo<VersionRespDTO>? typeInfo = null)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -61,10 +65,10 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Platform", platform },
                 { "ProductId", productId }
             };
-            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters);
+            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, typeInfo);
         }
 
-        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters)
+        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null)
         {
             var uri = new Uri(httpUrl);
             using var httpClient = new HttpClient(new HttpClientHandler
@@ -77,7 +81,7 @@ namespace GeneralUpdate.Common.Shared.Service
             var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
             var result = await httpClient.PostAsync(uri, stringContent);
             var reseponseJson = await result.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<T>(reseponseJson);
+            return typeInfo == null ? JsonSerializer.Deserialize<T>(reseponseJson) : JsonSerializer.Deserialize(reseponseJson, typeInfo);
         }
 
         private static bool CheckValidationResult(
