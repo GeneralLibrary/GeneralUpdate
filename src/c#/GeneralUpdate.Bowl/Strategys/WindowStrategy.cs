@@ -86,12 +86,19 @@ public class WindowStrategy : AbstractStrategy
             GeneralFileManager.Restore(_parameter.BackupDirectory, _parameter.TargetPath);
     }
 
-    
+    /// <summary>
+    /// Write the failed update version number to the local environment variable.
+    /// </summary>
     private void SetEnvironment()
     {
         if (!string.Equals(_parameter.WorkModel, WorkModel))
             return;
-        
+     
+        /*
+         * The `UpgradeFail` environment variable is used to mark an exception version number during updates.
+         * If the latest version number obtained via an HTTP request is less than or equal to the exception version number, the update is skipped.
+         * Once this version number is set, it will not be removed, and updates will not proceed until a version greater than the exception version number is obtained through the HTTP request.
+         */
         Environment.SetEnvironmentVariable("UpgradeFail", _parameter.ExtendedField, EnvironmentVariableTarget.User);
     }
 }
