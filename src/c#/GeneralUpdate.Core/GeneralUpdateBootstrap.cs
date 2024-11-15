@@ -39,7 +39,7 @@ namespace GeneralUpdate.Core
                 ClientVersion = processInfo.CurrentVersion,
                 LastVersion = processInfo.LastVersion,
                 UpdateLogUrl = processInfo.UpdateLogUrl,
-                Encoding = ToEncoding(processInfo.CompressEncoding),
+                Encoding = Encoding.GetEncoding(processInfo.CompressEncoding),
                 Format = processInfo.CompressFormat,
                 DownloadTimeOut = processInfo.DownloadTimeOut,
                 AppSecretKey = processInfo.AppSecretKey,
@@ -144,17 +144,5 @@ namespace GeneralUpdate.Core
             EventManager.Instance.Dispatch(sender, e);
             ExecuteStrategy();
         }
-        
-        private static Encoding ToEncoding(int encodingType) => encodingType switch
-        {
-            1 => Encoding.UTF8,
-            2 => Encoding.UTF7,
-            3 => Encoding.UTF32,
-            4 => Encoding.Unicode,
-            5 => Encoding.BigEndianUnicode,
-            6 => Encoding.ASCII,
-            7 => Encoding.Default,
-            _ => throw new ArgumentException("Encoding type is not supported!")
-        };
     }
 }

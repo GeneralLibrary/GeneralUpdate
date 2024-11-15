@@ -30,7 +30,7 @@ namespace GeneralUpdate.Common.Shared.Object
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
             UpdateLogUrl = updateLogUrl;
-            CompressEncoding = ToEncodingType(compressEncoding);
+            CompressEncoding = compressEncoding.WebName;
             CompressFormat = compressFormat;
             if (downloadTimeOut < 0) throw new ArgumentException("Timeout must be greater than 0 !");
             DownloadTimeOut = downloadTimeOut;
@@ -76,7 +76,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// The encoding type of the update package.
         /// </summary>
         [JsonPropertyName("CompressEncoding")]
-        public int CompressEncoding { get; set; }
+        public string CompressEncoding { get; set; }
 
         /// <summary>
         /// The compression format of the update package.
@@ -116,40 +116,5 @@ namespace GeneralUpdate.Common.Shared.Object
         
         [JsonPropertyName("Bowl")]
         public string Bowl { get; set; }
-        
-        private static int ToEncodingType(Encoding encoding)
-        {
-            var type = -1;
-            if (Equals(encoding, Encoding.UTF8))
-            {
-                type = 1;
-            }
-            else if (Equals(encoding, Encoding.UTF7))
-            {
-                type = 2;
-            }
-            else if (Equals(encoding, Encoding.UTF32))
-            {
-                type = 3;
-            }
-            else if (Equals(encoding, Encoding.Unicode))
-            {
-                type = 4;
-            }
-            else if (Equals(encoding, Encoding.BigEndianUnicode))
-            {
-                type = 5;
-            }
-            else if (Equals(encoding, Encoding.ASCII))
-            {
-                type = 6;
-            }
-            else if (Equals(encoding, Encoding.Default))
-            {
-                type = 7;
-            }
-            
-            return type;
-        }
     }
 }
