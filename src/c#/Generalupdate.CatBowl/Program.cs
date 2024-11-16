@@ -9,25 +9,19 @@ class Program
 {
     static void Main(string[] args)
     {
-        var processInfo = TestProcessInfo();
-        Bowl.Launch(processInfo);
-        Console.Read();
-    }
-    
-    private static MonitorParameter TestProcessInfo()
-    {
-        var path = @"D:\packet\test.json";
-        var json = File.ReadAllText(path);
-        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
-        return new MonitorParameter
+        var installPath = @"D:\github_project\GeneralUpdate\src\c#\GeneralUpdate.CatBowl\bin\Debug\net8.0\";
+        var lastVersion = "1.0.0.3";
+        var processInfo = new MonitorParameter
         {
-            ProcessNameOrId = processInfo.AppName,
-            DumpFileName = $"{processInfo.LastVersion}_fail.dmp",
-            FailFileName = $"{processInfo.LastVersion}_fail.json",
-            TargetPath = processInfo.InstallPath,
-            FailDirectory = Path.Combine(processInfo.InstallPath, "fail", processInfo.LastVersion),
-            BackupDirectory = Path.Combine(processInfo.InstallPath, processInfo.LastVersion),
+            ProcessNameOrId = "JsonTest.exe",
+            DumpFileName = $"{lastVersion}_fail.dmp",
+            FailFileName = $"{lastVersion}_fail.json",
+            TargetPath = installPath,
+            FailDirectory = Path.Combine(installPath, "fail", lastVersion),
+            BackupDirectory = Path.Combine(installPath, lastVersion),
             WorkModel = "Normal"
         };
+        Bowl.Launch(processInfo);
+        Console.Read();
     }
 }

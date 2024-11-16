@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using GeneralUpdate.ClientCore;
+using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
@@ -68,16 +69,27 @@ namespace GeneralUpdate.Client
                     .LaunchAsync();
             });*/
             
-            var paramsOSS = new GlobalConfigInfoOSS();
+            /*var paramsOSS = new GlobalConfigInfoOSS();
             paramsOSS.Url = "http://192.168.50.203/versions.json";
             paramsOSS.CurrentVersion = "1.0.0.0";
             paramsOSS.VersionFileName = "versions.json";
             paramsOSS.AppName = "GeneralUpdate.Client.exe";
             paramsOSS.Encoding = Encoding.UTF8.WebName;
-            GeneralClientOSS.Start(paramsOSS);
+            GeneralClientOSS.Start(paramsOSS);*/
+            
+
+            var hub = new UpgradeHubService("http://localhost:5008/UpgradeHub");
+            hub.AddReceiveListener(Receive);
+            hub.StartAsync().Wait();
             
             Console.Read();
         }
+
+        private static void Receive(string arg1, string arg2)
+        {
+            throw new NotImplementedException();
+        }
+
 
         private static void OnMultiDownloadError(object arg1, MultiDownloadErrorEventArgs arg2)
         {
