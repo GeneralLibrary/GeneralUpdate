@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.AOT.JsonContext;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Core.Internal;
 using GeneralUpdate.Core.Strategys;
 
 namespace GeneralUpdate.Core

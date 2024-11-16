@@ -11,7 +11,6 @@
         /// <param name="url">remote service address</param>
         /// <param name="filePath">download file path.</param>
         /// <param name="action">progress report.</param>
-        /// <param name="action">progress report.</param>
         /// <returns></returns>
         public async Task DownloadFileAsync(string url, string filePath, Action<long, long> action)
         {

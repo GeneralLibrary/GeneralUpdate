@@ -1,16 +1,14 @@
 ﻿using Android.Content;
 using Android.OS;
-using GeneralUpdate.Core.Domain.PO;
-using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.OSSArgs;
-using GeneralUpdate.Maui.OSS.Domain.Entity;
+using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Maui.OSS.Internal;
 using GeneralUpdate.Maui.OSS.Strategys;
 using Java.IO;
 using Java.Math;
 using Java.Security;
-using Newtonsoft.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace GeneralUpdate.Maui.OSS
 {
@@ -19,19 +17,13 @@ namespace GeneralUpdate.Maui.OSS
     /// </summary>
     public class Strategy : AbstractStrategy
     {
-        #region Private Members
-
         private readonly string _appPath = FileSystem.AppDataDirectory;
         private ParamsAndroid _parameter;
-
-        #endregion Private Members
 
         #region Public Methods
 
         public override void Create<T>(T parameter)
-        {
-            _parameter = parameter as ParamsAndroid;
-        }
+            => _parameter = parameter as ParamsAndroid;
 
         public override async Task Execute()
         {
@@ -41,14 +33,14 @@ namespace GeneralUpdate.Maui.OSS
                 var jsonUrl = $"{_parameter.Url}/{_parameter.VersionFileName}";
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
                 await DownloadFileAsync(jsonUrl, jsonPath, (readLength, totalLength)
-                    => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
+                    => EventManager.Instance.Dispatch(this, new OSSDownloadArgs(readLength, totalLength)));
                 var jsonFile = new Java.IO.File(jsonPath);
                 if (!jsonFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
 
                 //2.Parse the JSON version configuration file content.
                 byte[] jsonBytes = ReadFile(jsonFile);
                 string json = Encoding.Default.GetString(jsonBytes);
-                var versionConfig = JsonConvert.DeserializeObject<VersionPO>(json);
+                var versionConfig = JsonSerializer.Deserialize<VersionInfo>(json);
                 if (versionConfig == null) throw new NullReferenceException(nameof(versionConfig));
 
                 //3.Compare with the latest version.
@@ -59,7 +51,7 @@ namespace GeneralUpdate.Maui.OSS
                 //4.Download the apk file.
                 var file = Path.Combine(_appPath, _parameter.Apk);
                 await DownloadFileAsync(versionConfig.Url, file, (readLength, totalLength)
-                    => EventManager.Instance.Dispatch<Action<object, OSSDownloadArgs>>(this, new OSSDownloadArgs(readLength, totalLength)));
+                    => EventManager.Instance.Dispatch(this, new OSSDownloadArgs(readLength, totalLength)));
                 var apkFile = new Java.IO.File(file);
                 if (!apkFile.Exists()) throw new Java.IO.FileNotFoundException(jsonPath);
                 if (!versionConfig.Hash.Equals(GetFileMD5(apkFile, 64))) throw new Exception("The apk MD5 value does not match !");
@@ -81,7 +73,7 @@ namespace GeneralUpdate.Maui.OSS
             }
             catch (Exception ex)
             {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(ex));
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex));
             }
         }
 

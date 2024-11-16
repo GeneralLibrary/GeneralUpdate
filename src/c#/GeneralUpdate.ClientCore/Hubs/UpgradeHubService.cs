@@ -27,16 +27,16 @@ public class UpgradeHubService(string url, string? token = null, string? args = 
         .WithAutomaticReconnect(new RandomRetryPolicy())
         .Build();
     
-    public void AddReceiveListener(Action<string, string> receiveMessageCallback)
+    public void AddListenerReceive(Action<string, string> receiveMessageCallback)
         => _connection?.On(ReceiveMessageflag, receiveMessageCallback);
 
-    public void AddOnlineListener(Action<string> onlineMessageCallback)
+    public void AddListenerOnline(Action<string> onlineMessageCallback)
         => _connection?.On(Onlineflag, onlineMessageCallback);
 
-    public void AddReconnectedListener(Func<string?, Task>? reconnectedCallback)
+    public void AddListenerReconnected(Func<string?, Task>? reconnectedCallback)
         => _connection!.Reconnected += reconnectedCallback;
 
-    public void AddClosedListener(Func<Exception?, Task> closeCallback)
+    public void AddListenerClosed(Func<Exception?, Task> closeCallback)
         => _connection!.Closed += closeCallback;
     
     public async Task StartAsync()

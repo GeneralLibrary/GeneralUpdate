@@ -1,7 +1,6 @@
-﻿using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.OSSArgs;
+﻿using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Maui.OSS;
-using GeneralUpdate.Maui.OSS.Domain.Entity;
+using GeneralUpdate.Maui.OSS.Internal;
 
 namespace GeneralUpdate.OSSClient
 {
@@ -16,14 +15,17 @@ namespace GeneralUpdate.OSSClient
         {
             Task.Run(async () =>
             {
-                var url = "http://192.168.50.203";
-                var apk = "com.companyname.generalupdate.ossclient.apk";
-                var authority = "com.generalupdate.oss.fileprovider";
-                var currentVersion = "1.0.0.0";
-                var versionFileName = "version.json";
+                var paramsAndroid = new ParamsAndroid
+                {
+                    Url = "http://192.168.50.203",
+                    Apk = "com.companyname.generalupdate.ossclient.apk",
+                    Authority = "com.generalupdate.oss.fileprovider",
+                    CurrentVersion = "1.0.0.0",
+                    VersionFileName = "version.json"
+                };
                 GeneralUpdateOSS.AddListenerDownloadProcess(OnOSSDownload);
                 GeneralUpdateOSS.AddListenerException(OnException);
-                await GeneralUpdateOSS.Start<Strategy>(new ParamsAndroid(url, apk, authority, currentVersion, versionFileName));
+                await GeneralUpdateOSS.Start<Strategy>(paramsAndroid);
             });
         }
 

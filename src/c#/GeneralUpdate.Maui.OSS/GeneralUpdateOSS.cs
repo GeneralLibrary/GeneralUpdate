@@ -1,7 +1,6 @@
-﻿using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.OSSArgs;
-using GeneralUpdate.Maui.OSS.Domain.Entity;
+﻿using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Maui.OSS.Internal;
 using GeneralUpdate.Maui.OSS.Strategys;
 
 namespace GeneralUpdate.Maui.OSS
@@ -11,12 +10,7 @@ namespace GeneralUpdate.Maui.OSS
     /// </summary>
     public sealed class GeneralUpdateOSS
     {
-        #region Constructors
-
-        private GeneralUpdateOSS()
-        { }
-
-        #endregion Constructors
+        private GeneralUpdateOSS() { }
 
         #region Public Methods
 
@@ -69,7 +63,8 @@ namespace GeneralUpdate.Maui.OSS
 
         private static void AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            if (callbackAction != null) EventManager.Instance.AddListener(callbackAction);
+            if (callbackAction != null) 
+                EventManager.Instance.AddListener(callbackAction);
         }
 
         #endregion Private Methods
