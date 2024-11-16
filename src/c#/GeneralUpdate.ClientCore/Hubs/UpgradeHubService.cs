@@ -8,13 +8,22 @@ namespace GeneralUpdate.ClientCore.Hubs;
 /// Upgrade the push notification service.
 /// </summary>
 /// <param name="url">Subscription address, for example: http://127.0.0.1/UpgradeHub</param>
-public class UpgradeHubService(string url) : IUpgradeHubService
+/// <param name="token">ID4 authentication token string.</param>
+/// <param name="args">Parameters to be sent to the server upon connection (recommended as a JSON string).</param>
+public class UpgradeHubService(string url, string? token = null, string? args = null) : IUpgradeHubService
 {
     private const string Onlineflag = "Online";
     private const string ReceiveMessageflag = "ReceiveMessage";
     
     private readonly HubConnection? _connection = new HubConnectionBuilder()
-        .WithUrl(url)
+        .WithUrl(url, config =>
+        {
+            if (!string.IsNullOrWhiteSpace(token))
+                config.AccessTokenProvider = () => Task.FromResult(token);
+            
+            if (!string.IsNullOrWhiteSpace(args))
+                config.Headers.Add("client", args);
+        })
         .WithAutomaticReconnect(new RandomRetryPolicy())
         .Build();
     
