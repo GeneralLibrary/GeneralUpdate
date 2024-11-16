@@ -78,7 +78,7 @@ namespace GeneralUpdate.Client
             GeneralClientOSS.Start(paramsOSS);*/
             
 
-            var hub = new UpgradeHubService("http://localhost:5008/UpgradeHub");
+            IUpgradeHubService hub = new UpgradeHubService("http://localhost:5008/UpgradeHub", null, "GeneralUpdate");
             hub.AddReceiveListener(Receive);
             hub.StartAsync().Wait();
             
