@@ -2,13 +2,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest></ApplicationManifest>
-    <PublishAot>true</PublishAot>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!--<PublishAot>true</PublishAot>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />

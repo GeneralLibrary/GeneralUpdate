@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!--<PublishAot>true</PublishAot>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
     <PackageReference Include="System.Text.Json" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
