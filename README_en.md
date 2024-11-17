@@ -92,36 +92,3 @@
 | raspberry pie         | Not currently supported |
 | Kylin V10 (FT-S2500)  | yes                     |
 | Kylin V10 (x64)       | yes                     |
-
-
-
-## GeneralUpdate.SystemService Publish/Deploy
-
-GeneralUpdate.SystemService is a Windows system service, not a web API deployed on the server. Its main purpose is to listen for the update process and restore after an update crash.
-
-**Publish：**
-
-It is recommended to release a single file, if you want to release the AOT version, you need to remove the mapping code from the source code.
-
-```shell
-dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
-```
-
-**Create/deploy Windows services：**
-
-```shell
-sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
-```
-
-**Start the deployed Windows service：**
-
-```shell
-sc start GeneralUpdate.SystemService
-```
-
-**Delete the deployed Windows service：**
-
-```shell
-sc delete GeneralUpdate.SystemService
-```
-

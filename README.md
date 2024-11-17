@@ -11,8 +11,6 @@
 - GeneralUpdate是一款基于.NET Standard2.0开源自动升级组件。
 - 运行环境：.NET7、.NET MAUI、Visual studio 2022(Preview)
 
-![1708869360661](imgs/1708869360661.jpg)
-
 | 功能                           | 是否支持 | 备注                                                         |
 | ------------------------------ | -------- | ------------------------------------------------------------ |
 | 断点续传                       | 支持     | 单次更新失败时，下次一次启动时继续上一次更新下载更新包内容。（引用组件默认生效） |
@@ -99,36 +97,3 @@
 | 树莓派(IoT)  | 待验证 |
 | 麒麟V10(飞腾S2500)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
-
-
-
-## 6.GeneralUpdate.SystemService发布/部署
-
-GeneralUpdate.SystemService是一个windows系统服务，并不是部署在服务端的web api。它的主要作用是监听更新过程，以及更新崩溃之后还原。
-
-**发布：**
-
-推荐发布Single file，如果想发布AOT版本需要移除源码中映射代码。
-
-```shell
-dotnet publish -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
-```
-
-**创建/部署windows服务：**
-
-```shell
-sc create MyWorkerService binPath="C:\your_path\GeneralUpdate.SystemService.exe"
-```
-
-**启动已部署的windows服务：**
-
-```shell
-sc start GeneralUpdate.SystemService
-```
-
-**删除已部署的windows服务：**
-
-```shell
-sc delete GeneralUpdate.SystemService
-```
-
