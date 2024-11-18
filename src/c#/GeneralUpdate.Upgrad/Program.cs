@@ -52,40 +52,51 @@ namespace GeneralUpdate.Upgrad
             processor.AddCommand(new InstallDriverCommand(information));
             processor.ProcessCommands();*/
 
-            /*Task.Run(async () =>
+            Task.Run(async () =>
             {
-                Console.WriteLine("升级程序启动辣！！！！");
-                await Task.Delay(3000);
-                
-                //var jsonPath = @"D:\packet\test.json";
-                //var json = File.ReadAllText(jsonPath);
-                //Environment.SetEnvironmentVariable("ProcessInfo", json, EnvironmentVariableTarget.User);
-                
-                _ = new GeneralUpdateBootstrap() //单个或多个更新包下载通知事件
-                    .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
-                    //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-                    .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
-                    //单个或多个更新包下载完成
-                    .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
-                    //完成所有的下载任务通知
-                    .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
-                    //下载过程出现的异常通知
-                    .AddListenerMultiDownloadError(OnMultiDownloadError)
-                    //整个更新过程出现的任何问题都会通过这个事件通知
-                    .AddListenerException(OnException)
-                    //设置字段映射表，用于解析所有驱动包的信息的字符串
-                    //.SetFieldMappings(fieldMappingsCN)
-                    //是否开启驱动更新
-                    //.Option(UpdateOption.Drive, true)
-                    .LaunchAsync();
-            });*/
+                try
+                {
+                    Console.WriteLine("升级程序启动辣！！！！");
+                    await Task.Delay(3000);
+                    
+                    _ = new GeneralUpdateBootstrap() //单个或多个更新包下载通知事件
+                        .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
+                        //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                        .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
+                        //单个或多个更新包下载完成
+                        .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
+                        //完成所有的下载任务通知
+                        .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
+                        //下载过程出现的异常通知
+                        .AddListenerMultiDownloadError(OnMultiDownloadError)
+                        //整个更新过程出现的任何问题都会通过这个事件通知
+                        .AddListenerException(OnException)
+                        //设置字段映射表，用于解析所有驱动包的信息的字符串
+                        //.SetFieldMappings(fieldMappingsCN)
+                        //是否开启驱动更新
+                        //.Option(UpdateOption.Drive, true)
+                        .LaunchAsync();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message + "\n" + e.StackTrace);
+                }
+            });
 
-            GeneralUpdateOSS.Start();
-            Console.Read();
+            //GeneralUpdateOSS.Start();
+            while (true)
+            {
+                var input = Console.ReadLine();
+                if (input == "exit")
+                {
+                    break;
+                }
+            }
         }
 
         private static void OnMultiDownloadError(object arg1, MultiDownloadErrorEventArgs arg2)
         {
+            Console.WriteLine(arg2.Exception.Message + "\n" + arg2.Exception.StackTrace);
         }
 
         private static void OnMultiAllDownloadCompleted(object arg1, MultiAllDownloadCompletedEventArgs arg2)
@@ -106,6 +117,7 @@ namespace GeneralUpdate.Upgrad
 
         private static void OnException(object arg1, ExceptionEventArgs arg2)
         {
+            Console.WriteLine(arg2.Exception.Message + "\n" + arg2.Exception.StackTrace);
         }
     }
 }

@@ -32,8 +32,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private IStrategy? _strategy;
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
-    private const string DirectoryName = "app-";
-    private readonly List<string> _notBackupDirectory = ["fail", DirectoryName];
 
     #region Public Methods
 
@@ -168,7 +166,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         _configinfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0 ? 60 : GetOption(UpdateOption.DownloadTimeOut);
         _configinfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
         _configinfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
-        _configinfo.BackupDirectory = Path.Combine(_configinfo.InstallPath, $"{DirectoryName}{_configinfo.ClientVersion}");
+        _configinfo.BackupDirectory = Path.Combine(_configinfo.InstallPath, $"{GeneralFileManager.DirectoryName}{_configinfo.ClientVersion}");
         
         if (_configinfo.IsMainUpdate)
         {
@@ -196,7 +194,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configinfo.ProcessInfo = JsonSerializer.Serialize(processInfo,ProcessInfoJsonContext.Default.ProcessInfo);
         }
 
-        GeneralFileManager.Backup(_configinfo.InstallPath, _configinfo.BackupDirectory, _notBackupDirectory);
+        GeneralFileManager.Backup(_configinfo.InstallPath, _configinfo.BackupDirectory, GeneralFileManager.SkipDirectorys);
         StrategyFactory();
         
         switch (_configinfo.IsUpgradeUpdate)
@@ -235,7 +233,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
     
     /// <summary>
-    /// Check if there has been a recent update failure.
+    /// Check if there has been a recent update failure.(only windows)
     /// </summary>
     /// <param name="version"></param>
     /// <returns></returns>
@@ -262,14 +260,10 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private bool CheckUpgrade(VersionRespDTO? response)
     {
         if (response == null)
-        {
             return false;
-        }
 
         if (response.Code == 200)
-        {
             return response.Body.Count > 0;
-        }
         
         return false;
     }
@@ -305,12 +299,39 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         return _customSkipOption?.Invoke() == true;
     }
 
+    private void CallSmallBowlHome(string processName)
+    {
+        if(string.IsNullOrWhiteSpace(processName)) 
+            return;
+        
+        try
+        {
+            var processes = Process.GetProcessesByName(processName);
+            if (processes.Length == 0)
+            {
+                Debug.WriteLine($"No process named {processName} found.");
+                return;
+            }
+
+            foreach (var process in processes)
+            {
+                Debug.WriteLine($"Killing process {process.ProcessName} (ID: {process.Id})");
+                process.Kill();
+            }
+        }
+        catch (Exception ex)
+        {
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        }
+    }
+
     /// <summary>
     /// Performs all injected custom operations.
     /// </summary>
     /// <returns></returns>
     private void ExecuteCustomOptions()
     {
+        CallSmallBowlHome(_configinfo.Bowl);
         if (!_customOptions.Any()) return;
 
         foreach (var option in _customOptions)
@@ -330,7 +351,15 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     {
         try
         {
-            Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (File.Exists("ProcessInfo.json"))
+                    File.Delete("ProcessInfo.json");
+            }
         }
         catch (Exception ex)
         {

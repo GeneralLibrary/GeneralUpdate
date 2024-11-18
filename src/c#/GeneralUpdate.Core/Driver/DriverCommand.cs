@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using GeneralUpdate.Common.FileBasic;
@@ -17,7 +16,7 @@ namespace GeneralUpdate.Core.Driver
         /// <returns></returns>
         protected static IEnumerable<FileInfo> SearchDrivers(string patchPath, string fileExtension)
         {
-            var files = GeneralFileManager.GetAllfiles(patchPath);
+            var files = GeneralFileManager.GetAllFiles(patchPath, GeneralFileManager.SkipDirectorys);
             return files.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
         }
     }

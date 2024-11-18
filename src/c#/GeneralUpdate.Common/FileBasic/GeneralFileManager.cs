@@ -12,6 +12,8 @@ namespace GeneralUpdate.Common.FileBasic
     public sealed class GeneralFileManager
     {
         private long _fileCount = 0;
+        public const string DirectoryName = "app-";
+        public static readonly List<string> SkipDirectorys = ["fail", DirectoryName];
         public ComparisonResult ComparisonResult { get; private set; }
 
         #region Public Methods
@@ -88,6 +90,38 @@ namespace GeneralUpdate.Common.FileBasic
             return tempDir;
         }
 
+        public static List<FileInfo> GetAllFiles(string path, List<string> skipDirectorys)
+        {
+            try
+            {
+                var files = new List<FileInfo>();
+                files.AddRange(new DirectoryInfo(path).GetFiles());
+                var tmpDir = new DirectoryInfo(path).GetDirectories();
+
+                foreach (var dic in tmpDir)
+                {
+                    bool shouldSkip = false;
+                    foreach (var notBackup in skipDirectorys)
+                    {
+                        if (dic.FullName.Contains(notBackup))
+                        {
+                            shouldSkip = true;
+                            break;
+                        }
+                    }
+
+                    if (!shouldSkip)
+                        files.AddRange(GetAllfiles(dic.FullName));
+                }
+
+                return files;
+            }
+            catch
+            {
+                return new List<FileInfo>();
+            }
+        }
+        
         public static List<FileInfo> GetAllfiles(string path)
         {
             try

@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
@@ -34,7 +35,7 @@ public sealed class GeneralClientOSS
                 var versionsFilePath = Path.Combine(basePath, configGlobalConfigInfo.VersionFileName);
                 DownloadFile(configGlobalConfigInfo.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
-                var versions = GeneralFileManager.GetJson<List<VersionOSS>>(versionsFilePath);
+                var versions = GeneralFileManager.GetJson<List<VersionOSS>>(versionsFilePath, VersionOSSJsonContext.Default.ListVersionOSS);
                 if (versions == null || versions.Count == 0) return;
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();

@@ -10,6 +10,7 @@ using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;
 
 namespace GeneralUpdate.ClientCore.Strategys;
@@ -27,8 +28,8 @@ public class WindowsStrategy : AbstractStrategy
     {
         try
         {
-            var status = 0;
-            var patchPath = GeneralFileManager.GetTempDirectory(PATCHS);
+            var status = ReportType.None;
+            var patchPath = GeneralFileManager.GetTempDirectory(Patchs);
             foreach (var version in _configinfo.UpdateVersions)
             {
                 try
@@ -54,11 +55,11 @@ public class WindowsStrategy : AbstractStrategy
                         .UseMiddleware<ZipMiddleware>()
                         .UseMiddleware<HashMiddleware>();
                     await pipelineBuilder.Build();
-                    status = 2;
+                    status = ReportType.Success;
                 }
                 catch (Exception e)
                 {
-                    status = 3;
+                    status = ReportType.Failure;
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
                 finally

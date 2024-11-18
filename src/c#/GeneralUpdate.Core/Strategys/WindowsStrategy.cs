@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
@@ -8,6 +9,7 @@ using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;
 using GeneralUpdate.Core.Pipeline;
 
@@ -28,8 +30,8 @@ namespace GeneralUpdate.Core.Strategys
             {
                 try
                 {
-                    var status = 0;
-                    var patchPath = GeneralFileManager.GetTempDirectory(PATCHS);
+                    var status = ReportType.None;
+                    var patchPath = GeneralFileManager.GetTempDirectory(Patchs);
                     foreach (var version in _configinfo.UpdateVersions)
                     {
                         try
@@ -62,10 +64,11 @@ namespace GeneralUpdate.Core.Strategys
                                 .UseMiddleware<HashMiddleware>()
                                 .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
                             await pipelineBuilder.Build();
+                            status = ReportType.Success;
                         }
                         catch (Exception e)
                         {
-                            status = 3;
+                            status = ReportType.Failure;
                             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                         }
                         finally
@@ -95,25 +98,12 @@ namespace GeneralUpdate.Core.Strategys
         {
             try
             {
-                var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.MainAppName);
-                if (File.Exists(appPath))
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = appPath,
-                        UseShellExecute = true
-                    });
-                }
+                var appBowlPath = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? null : CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
+                var appPath = string.IsNullOrWhiteSpace(appBowlPath) ? CheckPath(_configinfo.InstallPath, _configinfo.MainAppName) : appBowlPath;
+                if(string.IsNullOrEmpty(appPath))
+                    throw new Exception($"Can't find the app {appPath}!");
                 
-                var bowlPath = Path.Combine(_configinfo.InstallPath, _configinfo.Bowl);
-                if (File.Exists(bowlPath))
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = bowlPath,
-                        UseShellExecute = true
-                    });
-                }
+                Process.Start(appPath);
             }
             catch (Exception e)
             {
@@ -123,6 +113,13 @@ namespace GeneralUpdate.Core.Strategys
             {
                 Process.GetCurrentProcess().Kill();
             }
+        }
+
+        private string CheckPath(string path,string name)
+        {
+            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name)) return string.Empty;
+            var tempPath = Path.Combine(path, name);
+            return File.Exists(tempPath) ? tempPath : string.Empty;
         }
     }
 }

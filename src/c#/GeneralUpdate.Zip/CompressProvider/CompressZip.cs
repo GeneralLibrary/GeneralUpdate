@@ -212,7 +212,8 @@ namespace GeneralUpdate.Zip.CompressProvider
             bool isComplete = false;
             try
             {
-                unZipDir = unZipDir.EndsWith(@"\") ? unZipDir : unZipDir + @"\";
+                var dirSeparatorChar = Path.DirectorySeparatorChar.ToString();
+                unZipDir = unZipDir.EndsWith(dirSeparatorChar) ? unZipDir : unZipDir + dirSeparatorChar;
                 var directoryInfo = new DirectoryInfo(unZipDir);
                 if (!directoryInfo.Exists) directoryInfo.Create();
                 var fileInfo = new FileInfo(zipFilePath);
@@ -225,9 +226,11 @@ namespace GeneralUpdate.Zip.CompressProvider
                         for (int i = 0; i < count; i++)
                         {
                             var entries = archive.Entries[i];
-                            if (!entries.FullName.EndsWith("/"))
+                            if (!entries.FullName.EndsWith(dirSeparatorChar))
                             {
-                                var entryFilePath = Regex.Replace(entries.FullName.Replace("/", @"\"), @"^\\*", "");
+                                //@"^\\*"
+                                var pattern = $"^{dirSeparatorChar}*";
+                                var entryFilePath = Regex.Replace(entries.FullName.Replace("/", dirSeparatorChar), pattern, "");
                                 var filePath = directoryInfo + entryFilePath;
                                 OnUnZipProgressEventHandler(this, new BaseUnZipProgressEventArgs { Size = entries.Length, Count = count, Index = i + 1, Path = entries.FullName, Name = entries.Name });
                                 var greatFolder = Directory.GetParent(filePath);

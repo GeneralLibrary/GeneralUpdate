@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.HashAlgorithms;
 
@@ -80,17 +81,18 @@ namespace GeneralUpdate.Differential
 
             try
             {
-                var patchFiles = GeneralFileManager.GetAllfiles(patchPath);
-                var oldFiles = GeneralFileManager.GetAllfiles(appPath);
+                var skipDirectory = GeneralFileManager.SkipDirectorys;
+                var patchFiles = GeneralFileManager.GetAllFiles(patchPath, skipDirectory);
+                var oldFiles = GeneralFileManager.GetAllFiles(appPath, skipDirectory);
                 //Refresh the collection after deleting the file.
                 HandleDeleteList(patchFiles, oldFiles);
-                oldFiles = GeneralFileManager.GetAllfiles(appPath);
+                oldFiles = GeneralFileManager.GetAllFiles(appPath, skipDirectory);
                 foreach (var oldFile in oldFiles)
                 {
                     var findFile = patchFiles.FirstOrDefault(f =>
                         Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "").Equals(oldFile.Name));
 
-                    if (findFile != null && Path.GetExtension(findFile.FullName).Equals(PATCH_FORMAT))
+                    if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PATCH_FORMAT))
                     {
                         await DirtyPatch(oldFile.FullName, findFile.FullName);
                     }
@@ -120,7 +122,7 @@ namespace GeneralUpdate.Differential
             if (json == null)
                 return;
             
-            var deleteFiles = GeneralFileManager.GetJson<IEnumerable<FileNode>>(json.FullName);
+            var deleteFiles = GeneralFileManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
             if (deleteFiles == null)
                 return;
             
@@ -152,38 +154,40 @@ namespace GeneralUpdate.Differential
             }
         }
 
-        private Task DirtyUnknow(string appPath, string patchPath)
+        private async Task DirtyUnknow(string appPath, string patchPath)
         {
-            try
+            await Task.Run(() =>
             {
-                var fileManager = new GeneralFileManager();
-                var comparisonResult = fileManager.Compare(appPath, patchPath);
-                foreach (var file in comparisonResult.DifferentNodes)
+                try
                 {
-                    var extensionName = Path.GetExtension(file.FullName);
-                    if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
-
-                    var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
-                    var targetPath = Path.Combine(appPath, targetFileName);
-                    var parentFolder = Directory.GetParent(targetPath);
-                    if (parentFolder?.Exists == false)
+                    var fileManager = new GeneralFileManager();
+                    var comparisonResult = fileManager.Compare(appPath, patchPath);
+                    foreach (var file in comparisonResult.DifferentNodes)
                     {
-                        parentFolder.Create();
+                        var extensionName = Path.GetExtension(file.FullName);
+                        if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
+
+                        var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
+                        var targetPath = Path.Combine(appPath, targetFileName);
+                        var parentFolder = Directory.GetParent(targetPath);
+                        if (parentFolder?.Exists == false)
+                        {
+                            parentFolder.Create();
+                        }
+
+                        File.Copy(file.FullName, targetPath, true);
                     }
 
-                    File.Copy(file.FullName, targetPath, true);
+                    if (Directory.Exists(patchPath))
+                    {
+                        Directory.Delete(patchPath, true);
+                    }
                 }
-
-                if (Directory.Exists(patchPath))
+                catch (Exception ex)
                 {
-                    Directory.Delete(patchPath, true);
+                    throw new Exception($"DirtyNew error : {ex.Message} !", ex.InnerException);
                 }
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"DirtyNew error : {ex.Message} !", ex.InnerException);
-            }
+            });
         }
 
         #endregion

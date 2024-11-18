@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -24,7 +25,7 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap()
         {
-            var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+            var json = GetProcessInfoJsonContext();
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentException("json environment variable is not defined");
                 
@@ -99,6 +100,21 @@ namespace GeneralUpdate.Core
         => AddListener(callbackAction);
 
         #endregion
+
+        private string? GetProcessInfoJsonContext()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var jsonFileName = "ProcessInfo.json";
+                if (File.Exists(jsonFileName))
+                    return File.ReadAllText(jsonFileName);
+            }
+            
+            return null;
+        }
 
         protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();
         
