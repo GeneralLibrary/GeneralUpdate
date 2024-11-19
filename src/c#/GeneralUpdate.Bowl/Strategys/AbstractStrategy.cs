@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
-public abstract class AbstractStrategy : IStrategy
+internal abstract class AbstractStrategy : IStrategy
 {
     protected MonitorParameter _parameter;
     protected List<string> OutputList = new ();

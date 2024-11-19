@@ -50,16 +50,15 @@ namespace GeneralUpdate.Common.FileBasic
             return ComparisonResult;
         }
 
-        public static void CreateJson<T>(string targetPath, T obj) where T : class
+        public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
                              throw new ArgumentException("invalid path", nameof(targetPath));
+            
             if (!Directory.Exists(folderPath))
-            {
                 Directory.CreateDirectory(folderPath);
-            }
-
-            var jsonString = JsonSerializer.Serialize(obj);
+            
+            var jsonString = typeInfo!= null ? JsonSerializer.Serialize(obj, typeInfo) : JsonSerializer.Serialize(obj);
             File.WriteAllText(targetPath, jsonString);
         }
 

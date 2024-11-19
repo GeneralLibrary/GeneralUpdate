@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using GeneralUpdate.Bowl.Internal;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
-public class LinuxStrategy : AbstractStrategy
+internal class LinuxStrategy : AbstractStrategy
 {
     /*procdump-3.3.0-0.cm2.x86_64.rpm:
       Compatible Systems: This RPM package may be suitable for certain CentOS or RHEL-based derivatives, specifically the CM2 version. CM2 typically refers to ClearOS 7.x or similar community-maintained versions.

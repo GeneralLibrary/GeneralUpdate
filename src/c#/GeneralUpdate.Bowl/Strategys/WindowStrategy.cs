@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
-public class WindowStrategy : AbstractStrategy
+internal class WindowStrategy : AbstractStrategy
 {
     private const string WorkModel = "Upgrade";
     private string? _applicationsDirectory;
@@ -62,7 +63,7 @@ public class WindowStrategy : AbstractStrategy
             ProcdumpOutPutLines = OutputList
         };
         var failJsonPath = Path.Combine(_parameter.FailDirectory, _parameter.FailFileName);
-        GeneralFileManager.CreateJson(failJsonPath, crash);
+        GeneralFileManager.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
     }
 
     /// <summary>

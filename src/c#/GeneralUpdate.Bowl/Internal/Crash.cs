@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
+using GeneralUpdate.Bowl.Strategys;
 
-namespace GeneralUpdate.Bowl.Strategys;
+namespace GeneralUpdate.Bowl.Internal;
 
-public class Crash
+internal class Crash
 {
     public MonitorParameter Parameter { get; set; }
     

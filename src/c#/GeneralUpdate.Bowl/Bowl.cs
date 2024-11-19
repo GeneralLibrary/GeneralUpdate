@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl.Strategys;
 using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.Shared.Object;

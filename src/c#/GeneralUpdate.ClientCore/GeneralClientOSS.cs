@@ -48,7 +48,7 @@ public sealed class GeneralClientOSS
                 if (!File.Exists(appPath)) 
                     throw new Exception($"The application does not exist {upgradeAppName} !");
                 
-                var json = JsonSerializer.Serialize(configGlobalConfigInfo);
+                var json = JsonSerializer.Serialize(configGlobalConfigInfo, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
                 Environment.SetEnvironmentVariable("GlobalConfigInfoOSS", json, EnvironmentVariableTarget.User);
                 Process.Start(appPath);
             }

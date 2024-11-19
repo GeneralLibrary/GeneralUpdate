@@ -1,7 +1,5 @@
-﻿using System.Text.Json;
-using GeneralUpdate.Bowl;
+﻿using GeneralUpdate.Bowl;
 using GeneralUpdate.Bowl.Strategys;
-using GeneralUpdate.Common.Shared.Object;
 
 namespace Generalupdate.CatBowl;
 

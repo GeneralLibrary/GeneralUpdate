@@ -1,4 +1,4 @@
-﻿namespace GeneralUpdate.Bowl.Strategys;
+﻿namespace GeneralUpdate.Bowl.Internal;
 
 internal class LinuxSystem
 {
