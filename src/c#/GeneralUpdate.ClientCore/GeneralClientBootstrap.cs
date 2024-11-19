@@ -41,6 +41,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <returns></returns>
     public override async Task<GeneralClientBootstrap> LaunchAsync()
     {
+        CallSmallBowlHome(_configinfo.Bowl);
         ExecuteCustomOptions();
         ClearEnvironmentVariable();
         await ExecuteWorkflowAsync();
@@ -143,16 +144,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             , AppType.ClientApp
             ,_configinfo.AppSecretKey
             ,_configinfo.Platform
-            ,_configinfo.ProductId
-            , VersionRespJsonContext.Default.VersionRespDTO);
+            ,_configinfo.ProductId);
         
         var upgradeResp = await VersionService.Validate(_configinfo.UpdateUrl
             , _configinfo.UpgradeClientVersion
             , AppType.UpgradeApp
             ,_configinfo.AppSecretKey
             ,_configinfo.Platform
-            ,_configinfo.ProductId
-            , VersionRespJsonContext.Default.VersionRespDTO);
+            ,_configinfo.ProductId);
         
         _configinfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
         _configinfo.IsMainUpdate = CheckUpgrade(mainResp);
@@ -331,7 +330,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <returns></returns>
     private void ExecuteCustomOptions()
     {
-        CallSmallBowlHome(_configinfo.Bowl);
         if (!_customOptions.Any()) return;
 
         foreach (var option in _customOptions)

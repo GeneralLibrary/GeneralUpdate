@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Shared.Service
@@ -36,7 +37,7 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Status", status },
                 { "Type", type }
             };
-            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters);
+            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters, ReportRespJsonContext.Default.BaseResponseDTOBoolean);
         }
 
         /// <summary>
@@ -54,8 +55,7 @@ namespace GeneralUpdate.Common.Shared.Service
             , int appType
             , string appKey
             , int platform
-            , string productId
-            , JsonTypeInfo<VersionRespDTO>? typeInfo = null)
+            , string productId)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -65,7 +65,7 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Platform", platform },
                 { "ProductId", productId }
             };
-            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, typeInfo);
+            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO);
         }
 
         private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null)
@@ -77,7 +77,7 @@ namespace GeneralUpdate.Common.Shared.Service
             });
             httpClient.Timeout = TimeSpan.FromSeconds(15);
             httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
-            string parametersJson = JsonSerializer.Serialize(parameters);
+            var parametersJson = JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
             var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
             var result = await httpClient.PostAsync(uri, stringContent);
             var reseponseJson = await result.Content.ReadAsStringAsync();
