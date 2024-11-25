@@ -1,6 +1,4 @@
-﻿using GeneralUpdate.Zip;
-using GeneralUpdate.Zip.Factory;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.AOT.JsonContext;
+using GeneralUpdate.Common.Compress;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Shared.Object;
@@ -112,14 +111,7 @@ namespace GeneralUpdate.Core.Strategys
             foreach (var version in versions)
             {
                 var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
-                var zipFactory = new GeneralZipFactory();
-                zipFactory.Completed += (sender, e) =>
-                {
-                    if (File.Exists(zipFilePath)) 
-                        File.Delete(zipFilePath);
-                };
-                zipFactory.CreateOperate(OperationType.GZip, version.PacketName, zipFilePath, _appPath, false, encoding);
-                zipFactory.UnZip();
+                CompressProvider.Decompress(Format.ZIP,zipFilePath,_appPath, encoding);
             }
         }
 

@@ -21,7 +21,7 @@ namespace GeneralUpdate.Common.FileBasic
         /// <summary>
         /// Using the list on the left as a baseline, find the set of differences between the two file lists.
         /// </summary>
-        public IEnumerable<FileNode> Except(string leftPath, string rightPath)
+        public IEnumerable<FileNode>? Except(string leftPath, string rightPath)
         {
             var leftFileNodes = ReadFileNode(leftPath);
             var rightFileNodes = ReadFileNode(rightPath);

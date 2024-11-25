@@ -13,7 +13,6 @@ public class BlackListManager
     private static readonly List<string> _blackFileFormats =
     [
         ".patch",
-        Format.SEVENZIP,
         Format.ZIP,
         ".rar",
         ".tar",

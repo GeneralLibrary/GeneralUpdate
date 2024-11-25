@@ -16,6 +16,7 @@ using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;
 
 namespace GeneralUpdate.ClientCore;
@@ -71,7 +72,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             AppSecretKey = configInfo.AppSecretKey,
             BlackFormats = configInfo.BlackFormats,
             BlackFiles = configInfo.BlackFiles,
-            Platform = configInfo.Platform,
             ProductId = configInfo.ProductId,
             UpgradeClientVersion = configInfo.UpgradeClientVersion,
             Bowl = configInfo.Bowl
@@ -138,20 +138,22 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private async Task ExecuteWorkflowAsync()
     {
+        Debug.Assert(_configinfo != null);
+        
         //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
         var mainResp = await VersionService.Validate(_configinfo.UpdateUrl
             , _configinfo.ClientVersion
             , AppType.ClientApp
-            ,_configinfo.AppSecretKey
-            ,_configinfo.Platform
-            ,_configinfo.ProductId);
+            , _configinfo.AppSecretKey
+            , GetPlatform()
+            , _configinfo.ProductId);
         
         var upgradeResp = await VersionService.Validate(_configinfo.UpdateUrl
             , _configinfo.UpgradeClientVersion
             , AppType.UpgradeApp
-            ,_configinfo.AppSecretKey
-            ,_configinfo.Platform
-            ,_configinfo.ProductId);
+            , _configinfo.AppSecretKey
+            , GetPlatform()
+            , _configinfo.ProductId);
         
         _configinfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
         _configinfo.IsMainUpdate = CheckUpgrade(mainResp);
@@ -230,7 +232,27 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         await manager.LaunchTasksAsync();
     }
-    
+
+    private int GetPlatform()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return PlatformType.Windows;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return PlatformType.Linux;
+        }
+        
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return PlatformType.Mac;
+        }
+
+        return -1;
+    }
+
     /// <summary>
     /// Check if there has been a recent update failure.(only windows)
     /// </summary>

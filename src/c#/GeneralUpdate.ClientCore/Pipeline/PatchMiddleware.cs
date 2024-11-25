@@ -17,6 +17,6 @@ public class PatchMiddleware : IMiddleware
 
         BlackListManager.Instance.AddBlackFiles(blackFiles);
         BlackListManager.Instance.AddBlackFileFormats(blackFileFormats);
-        await DifferentialCore.Instance?.Dirty(sourcePath, targetPath);
+        await DifferentialCore.Instance.Dirty(sourcePath, targetPath);
     }
 }

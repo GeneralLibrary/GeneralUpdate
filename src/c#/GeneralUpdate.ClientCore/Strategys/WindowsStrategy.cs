@@ -52,7 +52,7 @@ public class WindowsStrategy : AbstractStrategy
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddleware<PatchMiddleware>()
-                        .UseMiddleware<ZipMiddleware>()
+                        .UseMiddleware<CompressMiddleware>()
                         .UseMiddleware<HashMiddleware>();
                     await pipelineBuilder.Build();
                     status = ReportType.Success;

@@ -10,7 +10,7 @@ namespace GeneralUpdate.ClientCore.Hubs;
 /// <param name="url">Subscription address, for example: http://127.0.0.1/UpgradeHub</param>
 /// <param name="token">ID4 authentication token string.</param>
 /// <param name="args">Parameters to be sent to the server upon connection (recommended as a JSON string).</param>
-public class UpgradeHubService(string url, string? token = null, string? args = null) : IUpgradeHubService
+public class UpgradeHubService(string url, string? token = null, string? appkey = null) : IUpgradeHubService
 {
     private const string Onlineflag = "Online";
     private const string ReceiveMessageflag = "ReceiveMessage";
@@ -21,13 +21,13 @@ public class UpgradeHubService(string url, string? token = null, string? args = 
             if (!string.IsNullOrWhiteSpace(token))
                 config.AccessTokenProvider = () => Task.FromResult(token);
             
-            if (!string.IsNullOrWhiteSpace(args))
-                config.Headers.Add("client", args);
+            if (!string.IsNullOrWhiteSpace(appkey))
+                config.Headers.Add("appkey", appkey);
         })
         .WithAutomaticReconnect(new RandomRetryPolicy())
         .Build();
     
-    public void AddListenerReceive(Action<string, string> receiveMessageCallback)
+    public void AddListenerReceive(Action<string> receiveMessageCallback)
         => _connection?.On(ReceiveMessageflag, receiveMessageCallback);
 
     public void AddListenerOnline(Action<string> onlineMessageCallback)

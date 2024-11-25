@@ -64,11 +64,6 @@ namespace GeneralUpdate.Common.Shared.Object
         public List<string> BlackFormats { get; set; }
         
         /// <summary>
-        /// The platform of the application.
-        /// </summary>
-        public int Platform { get; set; }
-
-        /// <summary>
         /// Product ID.
         /// </summary>
         public string ProductId { get; set; }

@@ -110,8 +110,6 @@ public class GlobalConfigInfo
     /// </summary>
     public bool? DriveEnabled { get; set; }
     
-    public int Platform { get; set; }
-
     public string ProductId { get; set; }
     
     public Dictionary<string, string> FieldMappings { get; set; }

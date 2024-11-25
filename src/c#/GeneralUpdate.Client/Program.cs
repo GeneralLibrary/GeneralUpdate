@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using GeneralUpdate.ClientCore;
-using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
@@ -12,70 +10,54 @@ namespace GeneralUpdate.Client
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            /*Task.Run(async () =>
+            try
             {
-                var source = @"D:\packet\app";
-                var target = @"D:\packet\release";
-                var patch = @"D:\packet\patch";
-
-                await DifferentialCore.Instance?.Clean(source, target, patch);
-                await DifferentialCore.Instance?.Dirty(source, patch);
-            });*/
-            
-            Task.Run(async () =>
+                Console.WriteLine($"主程序初始化，{DateTime.Now}！");
+                await Task.Delay(3000);
+                var configinfo = new Configinfo
+                {
+                    //configinfo.UpdateLogUrl = "https://www.baidu.com";
+                    ReportUrl = "http://127.0.0.1:5000/Upgrade/Report",
+                    UpdateUrl = "http://127.0.0.1:5000/Upgrade/Verification",
+                    AppName = "GeneralUpdate.Upgrad.exe",
+                    MainAppName = "GeneralUpdate.Client.exe",
+                    InstallPath = @"D:\packet\installtest",
+                    //configinfo.Bowl = "Generalupdate.CatBowl.exe";
+                    //当前客户端的版本号
+                    ClientVersion = "1.0.0.0",
+                    //当前升级端的版本号
+                    UpgradeClientVersion = "1.0.0.0",
+                    //产品id
+                    ProductId = "a77c9df5-45f8-4ee9-b3ad-b9431ce0b51c",
+                    //应用密钥
+                    AppSecretKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                };
+                _ = new GeneralClientBootstrap() //单个或多个更新包下载通知事件
+                    .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
+                    //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
+                    .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
+                    //单个或多个更新包下载完成
+                    .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
+                    //完成所有的下载任务通知
+                    .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
+                    //下载过程出现的异常通知
+                    .AddListenerMultiDownloadError(OnMultiDownloadError)
+                    //整个更新过程出现的任何问题都会通过这个事件通知
+                    .AddListenerException(OnException)
+                    .SetConfig(configinfo)
+                    .Option(UpdateOption.DownloadTimeOut, 60)
+                    .Option(UpdateOption.Encoding, Encoding.UTF8)
+                    .Option(UpdateOption.Format, Format.ZIP)
+                    .LaunchAsync();
+                Console.WriteLine($"主程序已启动，{DateTime.Now}！");
+            }
+            catch (Exception e)
             {
-                try
-                {
-                    Console.WriteLine("主程序启动辣！！！！");
-                    await Task.Delay(3000);
+                Console.WriteLine(e.Message + "\n" + e.StackTrace);
+            }
 
-                    var configinfo = new Configinfo
-                    {
-                        //configinfo.UpdateLogUrl = "https://www.baidu.com";
-                        ReportUrl = "http://127.0.0.1:5000/Upgrade/Report",
-                        UpdateUrl = "http://127.0.0.1:5000/Upgrade/Verification",
-                        AppName = "GeneralUpdate.Upgrad.exe",
-                        MainAppName = "GeneralUpdate.Client.exe",
-                        InstallPath = @"D:\迅雷下载\Client", //Thread.GetDomain().BaseDirectory,
-                        //configinfo.Bowl = "Generalupdate.CatBowl.exe";
-                        //当前客户端的版本号
-                        ClientVersion = "1.0.0.0",
-                        //当前升级端的版本号
-                        UpgradeClientVersion = "1.0.0.0",
-                        //平台
-                        Platform = PlatformType.Windwos,
-                        //产品id
-                        ProductId = "a77c9df5-45f8-4ee9-b3ad-b9431ce0b51c",
-                        //应用密钥
-                        AppSecretKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    };
-
-                    _ = new GeneralClientBootstrap() //单个或多个更新包下载通知事件
-                        .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
-                        //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
-                        .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
-                        //单个或多个更新包下载完成
-                        .AddListenerMultiDownloadCompleted(OnMultiDownloadCompleted)
-                        //完成所有的下载任务通知
-                        .AddListenerMultiAllDownloadCompleted(OnMultiAllDownloadCompleted)
-                        //下载过程出现的异常通知
-                        .AddListenerMultiDownloadError(OnMultiDownloadError)
-                        //整个更新过程出现的任何问题都会通过这个事件通知
-                        .AddListenerException(OnException)
-                        .SetConfig(configinfo)
-                        .Option(UpdateOption.DownloadTimeOut, 60)
-                        .Option(UpdateOption.Encoding, Encoding.UTF8)
-                        .Option(UpdateOption.Format, Format.ZIP)
-                        .LaunchAsync();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message + "\n" + e.StackTrace);
-                }
-            });
-            
             /*var paramsOSS = new GlobalConfigInfoOSS();
             paramsOSS.Url = "http://192.168.50.203/versions.json";
             paramsOSS.CurrentVersion = "1.0.0.0";
@@ -83,19 +65,29 @@ namespace GeneralUpdate.Client
             paramsOSS.AppName = "GeneralUpdate.Client.exe";
             paramsOSS.Encoding = Encoding.UTF8.WebName;
             GeneralClientOSS.Start(paramsOSS);*/
-            
 
-            /*IUpgradeHubService hub = new UpgradeHubService("http://localhost:5008/UpgradeHub", null, "GeneralUpdate");
-            hub.AddListenerReceive(Receive);
-            hub.StartAsync().Wait();*/
+            /*var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
+                , null,"a84d21d4-3448-48d4-b418-12c5a7a039cd");
+            hub.AddListenerReceive((message) =>
+            {
+                Debug.WriteLine(message);
+            });
+            await hub.StartAsync();*/
+
+            /*Task.Run(async () =>
+           {
+               var source = @"D:\packet\app";
+               var target = @"D:\packet\release";
+               var patch = @"D:\packet\patch";
+
+               await DifferentialCore.Instance?.Clean(source, target, patch);
+               await DifferentialCore.Instance?.Dirty(source, patch);
+           });*/
 
             while (true)
             {
-                var input = Console.ReadLine();
-                if (input == "exit")
-                {
-                    break;
-                }
+                var content = Console.ReadLine();
+                if (content == "exit") break;
             }
         }
 

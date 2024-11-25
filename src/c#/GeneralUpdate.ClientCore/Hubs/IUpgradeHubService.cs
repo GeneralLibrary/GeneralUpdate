@@ -9,7 +9,7 @@ public interface IUpgradeHubService
     /// Add a listener to receive upgrade information pushed from the server.
     /// </summary>
     /// <param name="receiveMessageCallback">string : group name , string :  received message content.</param>
-    public void AddListenerReceive(Action<string, string> receiveMessageCallback);
+    public void AddListenerReceive(Action<string> receiveMessageCallback);
 
     /// <summary>
     /// Add a listener to receive online and offline notifications.

@@ -27,7 +27,6 @@
     <ItemGroup>
         <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
         <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
-        <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -21,13 +21,7 @@ public sealed class Bowl
     private static void CreateStrategy()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             _strategy = new WindowStrategy();
-        }
-        /*else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            _strategy = new LinuxStrategy();
-        }*/
         
         if (_strategy == null)
             throw new PlatformNotSupportedException("Unsupported operating system");

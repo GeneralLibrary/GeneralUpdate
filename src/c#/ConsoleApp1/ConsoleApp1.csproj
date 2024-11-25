@@ -8,8 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\GeneralUpdate.Bowl\GeneralUpdate.Bowl.csproj" />
-      <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
     </ItemGroup>
 
 </Project>

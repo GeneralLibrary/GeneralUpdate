@@ -13,8 +13,7 @@ namespace GeneralUpdate.Differential
     public sealed class DifferentialCore
     {
         private static readonly object _lockObj = new ();
-        private static DifferentialCore _instance;
-
+        private static DifferentialCore? _instance;
         private const string PATCH_FORMAT = ".patch";
         private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
 
@@ -26,10 +25,7 @@ namespace GeneralUpdate.Differential
                 {
                     lock (_lockObj)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new DifferentialCore();
-                        }
+                        _instance ??= new DifferentialCore();
                     }
                 }
                 return _instance;
@@ -48,7 +44,10 @@ namespace GeneralUpdate.Differential
                     var oldFile = comparisonResult.LeftNodes.FirstOrDefault(i => i.Name.Equals(file.Name));
                     var newFile = file;
 
-                    if (File.Exists(oldFile.FullName) && File.Exists(newFile.FullName) && string.Equals(oldFile.RelativePath, newFile.RelativePath))
+                    if (oldFile is not null
+                        && File.Exists(oldFile.FullName) 
+                        && File.Exists(newFile.FullName) 
+                        && string.Equals(oldFile.RelativePath, newFile.RelativePath))
                     {
                         if (!GeneralFileManager.HashEquals(oldFile.FullName, newFile.FullName))
                         {
@@ -63,7 +62,8 @@ namespace GeneralUpdate.Differential
                 }
 
                 var exceptFiles = fileManager.Except(sourcePath, targetPath);
-                if (exceptFiles != null && exceptFiles.Any())
+                if (exceptFiles is not null
+                    && exceptFiles.Any())
                 {
                     var path = Path.Combine(patchPath, DELETE_FILES_NAME);
                     GeneralFileManager.CreateJson(path, exceptFiles);
