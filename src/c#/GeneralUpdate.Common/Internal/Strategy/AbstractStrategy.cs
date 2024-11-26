@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Internal.Strategy
@@ -19,32 +20,27 @@ namespace GeneralUpdate.Common.Internal.Strategy
 
         public virtual void Create(GlobalConfigInfo parameter) => throw new NotImplementedException();
 
-        protected void OpenBrowser(string url)
+        protected static void OpenBrowser(string url)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Process.Start("xdg-open", url);
+                return;
             }
-            else
-            {
-                throw new PlatformNotSupportedException("Unsupported OS platform");
-            }
+            
+            throw new PlatformNotSupportedException("Unsupported OS platform");
         }
         
-        /// <summary>
-        /// Remove update redundant files.
-        /// </summary>
-        /// <returns></returns>
-        protected void Clear(string path)
+        protected static void Clear(string path)
         {
             if (Directory.Exists(path))
-            {
-                Directory.Delete(path, true);
-            }
+                GeneralFileManager.DeleteDirectory(path);
         }
     }
 }

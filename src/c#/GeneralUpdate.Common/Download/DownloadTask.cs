@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -15,80 +16,74 @@ namespace GeneralUpdate.Common.Download
         private readonly HttpClient _httpClient;
         private readonly DownloadManager _manager;
         private readonly VersionInfo? _version;
-        private const int DEFAULT_DELTA = 1048576; // 1024*1024
-        private long _beforBytes;
+        private Timer? _timer;
+        private DateTime _startTime;
         private long _receivedBytes;
         private long _totalBytes;
-        private Timer? _speedTimer;
-        private DateTime _startTime;
+        private long _currentBytes;
 
         #endregion Private Members
-
-        #region Constructors
 
         public DownloadTask(DownloadManager manager, VersionInfo version)
         {
             _manager = manager;
             _version = version;
-            _httpClient = new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(_manager.TimeOut)
-            };
+            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(_manager.TimeOut) };
+            _timer = new Timer(_=> Statistics(), null, 0, 1000);
         }
-
-        #endregion Constructors
-
-        #region Public Properties
-
-        public bool IsCompleted { get; private set; }
-
-        #endregion Public Properties
-
-        #region Public Methods
 
         public async Task LaunchAsync()
         {
             try
             {
-                InitStatisticsEvent();
-                InitProgressEvent();
-                InitCompletedEvent();
                 var path = Path.Combine(_manager.Path, $"{_version?.Name}{_manager.Format}");
                 await DownloadFileRangeAsync(_version.Url, path);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(ex, _version));
+                Debug.WriteLine(exception.Message);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
-
-        #endregion Public Methods
 
         #region Private Methods
 
         private async Task DownloadFileRangeAsync(string url, string path)
         {
-            var tempPath = path + ".temp";
-            var startPos = CheckFile(tempPath);
-
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-            
-            if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"Failed to download file: {response.ReasonPhrase}");
-
-            var totalBytes = response.Content.Headers.ContentLength ?? 0;
-            if (startPos >= totalBytes)
+            try
             {
-                if (File.Exists(path))
-                    File.Delete(path);
+                var tempPath = path + ".temp";
+                var startPos = CheckFile(tempPath);
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                if (!response.IsSuccessStatusCode)
+                    throw new HttpRequestException($"Failed to download file: {response.ReasonPhrase}");
 
-                File.Move(tempPath, path);
-                return;
+                var totalBytes = response.Content.Headers.ContentLength ?? 0;
+                Interlocked.Exchange(ref _totalBytes, totalBytes);
+
+                if (startPos >= totalBytes)
+                {
+                    if (File.Exists(path))
+                    {
+                        File.SetAttributes(path, FileAttributes.Normal);
+                        File.Delete(path);
+                    }
+
+                    File.Move(tempPath, path);
+                    OnDownloadCompleted(true);
+                    return;
+                }
+
+                await foreach (var chunk in DownloadChunksAsync(response))
+                {
+                    await WriteFileAsync(tempPath, chunk, totalBytes);
+                }
             }
-
-            await foreach (var chunk in DownloadChunksAsync(response))
+            catch (Exception exception)
             {
-                await WriteFileAsync(tempPath, chunk, totalBytes);
+                OnDownloadCompleted(false);
+                Debug.WriteLine(exception.Message);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
 
@@ -104,121 +99,189 @@ namespace GeneralUpdate.Common.Download
                 yield return chunk;
             }
         }
+        
+        private async Task WriteFileAsync(string tempPath, byte[] chunk, long totalBytes)
+        {
+            try
+            {
+                using var fileStream = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None);
+                await fileStream.WriteAsync(chunk, 0, chunk.Length);
+                Interlocked.Add(ref _receivedBytes, chunk.Length);
+                if (_receivedBytes >= totalBytes)
+                {
+                    fileStream.Close();
+                    var path = tempPath.Replace(".temp", "");
+                    if (File.Exists(path))
+                    {
+                        File.SetAttributes(path, FileAttributes.Normal);
+                        File.Delete(path);
+                    }
 
-        private long CheckFile(string tempPath)
+                    File.Move(tempPath, path);
+                    OnDownloadCompleted(true);
+                }
+            }
+            catch (Exception exception)
+            {
+                OnDownloadCompleted(false);
+                Debug.WriteLine(exception);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
+            }
+        }
+
+        private void Statistics()
+        {
+            try
+            {
+                var interval = DateTime.Now - _startTime;
+                var tempTotalBytes = Interlocked.Read(ref _totalBytes);
+                //累计已下载大小
+                var tempReceivedBytes = Interlocked.Read(ref _receivedBytes);
+                //当前下载大小
+                var tempCurrentBytes = tempReceivedBytes - Interlocked.Read(ref _currentBytes);
+                var speed = CalculateDownloadSpeed(tempCurrentBytes, interval);
+                var formatSpeed = FormatDownloadSpeed(speed);
+                var remainingTime = CalculateRemainingTime(tempTotalBytes, tempReceivedBytes, speed);
+                var progress = CalculateDownloadProgress(tempTotalBytes, tempReceivedBytes);
+                    
+                var args = new MultiDownloadStatisticsEventArgs(_version
+                    , remainingTime
+                    , formatSpeed
+                    , tempTotalBytes
+                    , tempReceivedBytes
+                    , progress);
+                _manager.OnMultiDownloadStatistics(this, args);
+                Interlocked.Exchange(ref _currentBytes, tempReceivedBytes);
+                _startTime = DateTime.Now;
+            }
+            catch (Exception exception)
+            {
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
+            }
+        }
+
+        private void OnDownloadCompleted(bool isComplated)
+        {
+            try
+            {
+                DisposeTimer();
+                var eventArgs = new MultiDownloadCompletedEventArgs(_version, isComplated);
+                _manager.OnMultiAsyncCompleted(this, eventArgs);
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine(exception.Message);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
+            }
+        }
+
+        /// <summary>
+        /// 计算剩余下载时间（单位：秒）
+        /// </summary>
+        /// <param name="totalBytes"></param>
+        /// <param name="bytesReceived"></param>
+        /// <param name="downloadSpeed"></param>
+        /// <returns></returns>
+        private static TimeSpan CalculateRemainingTime(long totalBytes, long bytesReceived, double downloadSpeed)
+        {
+            if (downloadSpeed == 0)
+            {
+                return new TimeSpan(0, 0, 0, 0);
+            }
+
+            var bytesRemaining = totalBytes - bytesReceived;
+            var secondsRemaining = bytesRemaining / downloadSpeed;
+            return TimeSpan.FromSeconds(secondsRemaining);
+        }
+        
+        /// <summary>
+        /// 计算下载速度（单位：字节/秒）
+        /// </summary>
+        /// <param name="bytesReceived"></param>
+        /// <param name="elapsedTime"></param>
+        /// <returns></returns>
+        private static double CalculateDownloadSpeed(long bytesReceived, TimeSpan elapsedTime)
+        {
+            if (elapsedTime.TotalSeconds == 0)
+                return 0;
+            
+            return bytesReceived / elapsedTime.TotalSeconds;
+        }
+        
+        /// <summary>
+        /// 计算下载进度（百分比 %）
+        /// </summary>
+        /// <param name="totalBytes"></param>
+        /// <param name="bytesReceived"></param>
+        /// <returns></returns>
+        private static double CalculateDownloadProgress(long totalBytes, long bytesReceived)
+        {
+            if (totalBytes == 0)
+                return 0;
+            
+            return (double)bytesReceived / totalBytes * 100;
+        }
+        
+        /// <summary>
+        /// 将下载速度转换为合适的单位（B、KB、MB、GB）
+        /// </summary>
+        /// <param name="speedInBytesPerSecond"></param>
+        /// <returns></returns>
+        private static string FormatDownloadSpeed(double speedInBytesPerSecond)
+        {
+            const double kiloByte = 1024;
+            const double megaByte = kiloByte * 1024;
+            const double gigaByte = megaByte * 1024;
+
+            return speedInBytesPerSecond switch
+            {
+                >= gigaByte => $"{speedInBytesPerSecond / gigaByte:F2} GB/s",
+                >= megaByte => $"{speedInBytesPerSecond / megaByte:F2} MB/s",
+                _ => speedInBytesPerSecond >= kiloByte
+                    ? $"{speedInBytesPerSecond / kiloByte:F2} KB/s"
+                    : $"{speedInBytesPerSecond:F2} B/s"
+            };
+        }
+        
+        /// <summary>
+        /// 获取已下载文件的大小，用于断点续传
+        /// </summary>
+        /// <param name="tempPath"></param>
+        /// <returns></returns>
+        private static long CheckFile(string tempPath)
         {
             long startPos = 0;
-            if (File.Exists(tempPath))
-            {
-                using var fileStream = File.OpenWrite(tempPath);
-                startPos = fileStream.Length;
-                fileStream.Seek(startPos, SeekOrigin.Current);
-            }
+            if (!File.Exists(tempPath)) return startPos;
+            using var fileStream = File.OpenWrite(tempPath);
+            startPos = fileStream.Length;
+            fileStream.Seek(startPos, SeekOrigin.Current);
             return startPos;
         }
 
-        private async Task WriteFileAsync(string tempPath, byte[] chunk, long totalBytes)
+        private void DisposeTimer()
         {
-            using var fileStream = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None);
-            await fileStream.WriteAsync(chunk, 0, chunk.Length);
-            _receivedBytes += chunk.Length;
-
-            if (_receivedBytes >= totalBytes)
+            if (_timer == null) return;
+            try
             {
-                fileStream.Close();
-
-                var path = tempPath.Replace(".temp", "");
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-
-                File.Move(tempPath, path);
+                _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                using var waitHandle = new ManualResetEvent(false);
+                _timer.Dispose(waitHandle);
+                waitHandle.WaitOne();
             }
-        }
-
-        private void InitStatisticsEvent()
-        {
-            if (_speedTimer != null) 
-                return;
-
-            _speedTimer = new Timer(_ =>
+            catch (ObjectDisposedException exception)
             {
-                try
-                {
-                    var interval = DateTime.Now - _startTime;
-                    var downloadSpeed = interval.Seconds < 1
-                        ? ToUnit(_receivedBytes - _beforBytes)
-                        : ToUnit((_receivedBytes - _beforBytes) / interval.Seconds);
-                    var size = (_totalBytes - _receivedBytes) / DEFAULT_DELTA;
-                    var remainingTime = new DateTime().AddSeconds(Convert.ToDouble(size));
-                    _manager.OnMultiDownloadStatistics(this, new MultiDownloadStatisticsEventArgs(_version, remainingTime, downloadSpeed));
-                    _startTime = DateTime.Now;
-                    _beforBytes = _receivedBytes;
-                }
-                catch (Exception exception)
-                {
-                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
-                }
-            }, null, 0, 1000);
-        }
-
-        private void InitProgressEvent()
-        {
-            _manager.MultiDownloadProgressChanged += (sender, e) =>
-            {
-                try
-                {
-                    _receivedBytes = e.BytesReceived;
-                    _totalBytes = e.TotalBytesToReceive;
-
-                    var eventArgs = new MultiDownloadProgressChangedEventArgs(_version,
-                        e.BytesReceived / DEFAULT_DELTA,
-                        e.TotalBytesToReceive / DEFAULT_DELTA,
-                        e.ProgressPercentage,
-                        e.UserState);
-
-                    _manager.OnMultiDownloadProgressChanged(this, eventArgs);
-                }
-                catch (Exception exception)
-                {
-                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
-                }
-            };
-        }
-
-        private void InitCompletedEvent()
-        {
-            _manager.MultiDownloadCompleted += (sender, e) =>
-            {
-                try
-                {
-                    _speedTimer?.Dispose();
-                    var eventArgs = new MultiDownloadCompletedEventArgs(_version, e.Error, e.Cancelled, e.UserState);
-                    _manager.OnMultiAsyncCompleted(this, eventArgs);
-                }
-                catch (Exception exception)
-                {
-                    _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
-                }
-                finally
-                {
-                    IsCompleted = true;
-                }
-            };
-        }
-
-        private string ToUnit(long byteSize)
-        {
-            var tempSize = Convert.ToSingle(byteSize) / 1024;
-            if (tempSize > 1)
-            {
-                var tempMbyte = tempSize / 1024;
-                return tempMbyte > 1
-                    ? $"{tempMbyte:##0.00}MB/S"
-                    : $"{tempSize:##0.00}KB/S";
+                Debug.WriteLine("Timer has already been disposed: " + exception.Message);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
-            return $"{byteSize}B/S";
+            catch (Exception exception)
+            {
+                Debug.WriteLine("An error occurred while disposing the timer: " + exception.Message);
+                _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
+            }
+            finally
+            {
+                _timer = null;
+            }
         }
 
         #endregion Private Methods

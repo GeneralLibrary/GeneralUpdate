@@ -58,7 +58,6 @@ namespace GeneralUpdate.Core
             manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
             manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
             manager.MultiDownloadError += OnMultiDownloadError;
-            manager.MultiDownloadProgressChanged += OnMultiDownloadProgressChanged;
             manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
             foreach (var versionInfo in _configInfo.UpdateVersions)
             {
@@ -79,11 +78,7 @@ namespace GeneralUpdate.Core
         public GeneralUpdateBootstrap AddListenerMultiAllDownloadCompleted(
             Action<object, MultiAllDownloadCompletedEventArgs> callbackAction)
         => AddListener(callbackAction);
-
-        public GeneralUpdateBootstrap AddListenerMultiDownloadProgress(
-            Action<object, MultiDownloadProgressChangedEventArgs> callbackAction)
-        => AddListener(callbackAction);
-
+        
         public GeneralUpdateBootstrap AddListenerMultiDownloadCompleted(
             Action<object, MultiDownloadCompletedEventArgs> callbackAction)
         => AddListener(callbackAction);
@@ -144,9 +139,6 @@ namespace GeneralUpdate.Core
         }
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
-
-        private void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
         => EventManager.Instance.Dispatch(sender, e);
 
         private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)

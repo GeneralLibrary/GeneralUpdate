@@ -15,7 +15,8 @@ namespace GeneralUpdate.Client
             try
             {
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
-                await Task.Delay(3000);
+                Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
+                await Task.Delay(2000);
                 var configinfo = new Configinfo
                 {
                     //configinfo.UpdateLogUrl = "https://www.baidu.com";
@@ -23,19 +24,18 @@ namespace GeneralUpdate.Client
                     UpdateUrl = "http://127.0.0.1:5000/Upgrade/Verification",
                     AppName = "GeneralUpdate.Upgrad.exe",
                     MainAppName = "GeneralUpdate.Client.exe",
-                    InstallPath = @"D:\packet\installtest",
+                    InstallPath = Thread.GetDomain().BaseDirectory, //@"D:\packet\installtest", 
                     //configinfo.Bowl = "Generalupdate.CatBowl.exe";
                     //当前客户端的版本号
                     ClientVersion = "1.0.0.0",
                     //当前升级端的版本号
                     UpgradeClientVersion = "1.0.0.0",
                     //产品id
-                    ProductId = "a77c9df5-45f8-4ee9-b3ad-b9431ce0b51c",
+                    ProductId = "2d974e2a-31e6-4887-9bb1-b4689e98c77a",
                     //应用密钥
-                    AppSecretKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
                 };
-                _ = new GeneralClientBootstrap() //单个或多个更新包下载通知事件
-                    .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
+                _ = await new GeneralClientBootstrap() //单个或多个更新包下载通知事件
                     //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
                     .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
                     //单个或多个更新包下载完成
@@ -49,7 +49,6 @@ namespace GeneralUpdate.Client
                     .SetConfig(configinfo)
                     .Option(UpdateOption.DownloadTimeOut, 60)
                     .Option(UpdateOption.Encoding, Encoding.UTF8)
-                    .Option(UpdateOption.Format, Format.ZIP)
                     .LaunchAsync();
                 Console.WriteLine($"主程序已启动，{DateTime.Now}！");
             }
@@ -99,22 +98,19 @@ namespace GeneralUpdate.Client
 
         private static void OnMultiAllDownloadCompleted(object arg1, MultiAllDownloadCompletedEventArgs arg2)
         {
-            Console.WriteLine(arg2.IsAllDownloadCompleted);
+            Console.WriteLine(arg2.IsAllDownloadCompleted ? "所有的下载任务已完成！" : $"下载任务已失败！{arg2.FailedVersions.Count}");
         }
 
         private static void OnMultiDownloadCompleted(object arg1, MultiDownloadCompletedEventArgs arg2)
         {
-            Console.WriteLine(arg2.Error.ToString());
+            var version = arg2.Version as VersionInfo;
+            Console.WriteLine(arg2.IsComplated ? $"当前下载版本：{version.Version}, 下载完成！" : $"当前下载版本：{version.Version}, 下载失败！");
         }
 
         private static void OnMultiDownloadStatistics(object arg1, MultiDownloadStatisticsEventArgs arg2)
         {
-            Console.WriteLine($"{arg2.Speed}, {arg2.Remaining}");
-        }
-
-        private static void OnMultiDownloadProgressChanged(object arg1, MultiDownloadProgressChangedEventArgs arg2)
-        {
-            Console.WriteLine($"{arg2.TotalBytesToReceive}, {arg2.ProgressValue}");
+            var version = arg2.Version as VersionInfo;
+            Console.WriteLine($"当前下载版本：{version.Version}，下载速度：{arg2.Speed}，剩余下载时间：{arg2.Remaining}，已下载大小：{arg2.BytesReceived}，总大小：{arg2.TotalBytesToReceive}, 进度百分比：{arg2.ProgressPercentage}%");
         }
 
         private static void OnException(object arg1, ExceptionEventArgs arg2)

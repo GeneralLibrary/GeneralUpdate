@@ -16,9 +16,9 @@ namespace GeneralUpdate.Upgrad
             try
             {
                 Console.WriteLine($"升级程序初始化，{DateTime.Now}！");
-                await Task.Delay(3000);
-                await new GeneralUpdateBootstrap() //单个或多个更新包下载通知事件
-                    .AddListenerMultiDownloadProgress(OnMultiDownloadProgressChanged)
+                Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
+                await Task.Delay(2000);
+                await new GeneralUpdateBootstrap()
                     //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
                     .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
                     //单个或多个更新包下载完成
@@ -90,43 +90,33 @@ namespace GeneralUpdate.Upgrad
                 }
             }
         }
-
+        
         private static void OnMultiDownloadError(object arg1, MultiDownloadErrorEventArgs arg2)
         {
-            Console.WriteLine(arg2.Exception.Message + "\n" + arg2.Exception.StackTrace);
+            var version = arg2.Version as VersionInfo;
+            Console.WriteLine($"{version.Version} {arg2.Exception}");
         }
 
         private static void OnMultiAllDownloadCompleted(object arg1, MultiAllDownloadCompletedEventArgs arg2)
         {
-            if (arg2.IsAllDownloadCompleted)
-            {
-                Console.WriteLine($"所有补丁包下载完成，{ arg2.IsAllDownloadCompleted }！");
-            }
-            else
-            {
-                Console.WriteLine($"补丁包下载失败，{ arg2.FailedVersions.Count }！");
-            }
+            Console.WriteLine(arg2.IsAllDownloadCompleted ? "所有的下载任务已完成！" : $"下载任务已失败！{arg2.FailedVersions.Count}");
         }
 
         private static void OnMultiDownloadCompleted(object arg1, MultiDownloadCompletedEventArgs arg2)
         {
             var version = arg2.Version as VersionInfo;
-            Console.WriteLine($"补丁包下载完成，{ version.Name }！");
+            Console.WriteLine(arg2.IsComplated ? $"当前下载版本：{version.Version}, 下载完成！" : $"当前下载版本：{version.Version}, 下载失败！");
         }
 
         private static void OnMultiDownloadStatistics(object arg1, MultiDownloadStatisticsEventArgs arg2)
         {
-            Console.WriteLine($"{arg2.Speed}, {arg2.Remaining}");
-        }
-
-        private static void OnMultiDownloadProgressChanged(object arg1, MultiDownloadProgressChangedEventArgs arg2)
-        {
-            Console.WriteLine($"{arg2.ProgressPercentage}");
+            var version = arg2.Version as VersionInfo;
+            Console.WriteLine($"当前下载版本：{version.Version}，下载速度：{arg2.Speed}，剩余下载时间：{arg2.Remaining}，已下载大小：{arg2.BytesReceived}，总大小：{arg2.TotalBytesToReceive}, 进度百分比：{arg2.ProgressPercentage}%");
         }
 
         private static void OnException(object arg1, ExceptionEventArgs arg2)
         {
-            Console.WriteLine(arg2.Exception.Message + "\n" + arg2.Exception.StackTrace);
+            Console.WriteLine($"{arg2.Exception}");
         }
     }
 }

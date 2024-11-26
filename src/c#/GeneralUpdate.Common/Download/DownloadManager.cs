@@ -7,46 +7,28 @@ using System.Linq;
 
 namespace GeneralUpdate.Common.Download
 {
-    public class DownloadManager
+    public class DownloadManager(string path, string format, int timeOut)
     {
         #region Private Members
 
-        private readonly string _path;
-        private readonly string _format;
-        private readonly int _timeOut;
-        private readonly IList<(object, string)> _failedVersions;
-        private ImmutableList<DownloadTask>.Builder _downloadTasksBuilder;
+        private readonly ImmutableList<DownloadTask>.Builder _downloadTasksBuilder = ImmutableList.Create<DownloadTask>().ToBuilder();
         private ImmutableList<DownloadTask> _downloadTasks;
 
         #endregion Private Members
 
-        #region Constructors
-
-        public DownloadManager(string path, string format, int timeOut)
-        {
-            _path = path;
-            _format = format;
-            _timeOut = timeOut;
-            _failedVersions = new List<(object, string)>();
-            _downloadTasksBuilder = ImmutableList.Create<DownloadTask>().ToBuilder();
-        }
-
-        #endregion Constructors
-
         #region Public Properties
 
-        public IList<(object, string)> FailedVersions => _failedVersions;
+        public List<(object, string)> FailedVersions { get; } = new();
 
-        public string Path => _path;
+        public string Path => path;
 
-        public string Format => _format;
+        public string Format => format;
 
-        public int TimeOut => _timeOut;
+        public int TimeOut => timeOut;
 
-        private ImmutableList<DownloadTask> DownloadTasks => _downloadTasks ?? (_downloadTasksBuilder.ToImmutable());
+        private ImmutableList<DownloadTask> DownloadTasks => _downloadTasks ?? _downloadTasksBuilder.ToImmutable();
 
         public event EventHandler<MultiAllDownloadCompletedEventArgs> MultiAllDownloadCompleted;
-        public event EventHandler<MultiDownloadProgressChangedEventArgs> MultiDownloadProgressChanged;
         public event EventHandler<MultiDownloadCompletedEventArgs> MultiDownloadCompleted;
         public event EventHandler<MultiDownloadErrorEventArgs> MultiDownloadError;
         public event EventHandler<MultiDownloadStatisticsEventArgs> MultiDownloadStatistics;
@@ -61,11 +43,11 @@ namespace GeneralUpdate.Common.Download
             {
                 var downloadTasks = DownloadTasks.Select(task => task.LaunchAsync()).ToList();
                 await Task.WhenAll(downloadTasks);
-                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, _failedVersions));
+                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, FailedVersions));
             }
             catch (Exception ex)
             {
-                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, _failedVersions));
+                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, FailedVersions));
                 throw new Exception($"Download manager error: {ex.Message}", ex);
             }
         }
@@ -73,16 +55,13 @@ namespace GeneralUpdate.Common.Download
         public void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         => MultiDownloadStatistics?.Invoke(this, e);
 
-        public void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
-        => MultiDownloadProgressChanged?.Invoke(this, e);
-
         public void OnMultiAsyncCompleted(object sender, MultiDownloadCompletedEventArgs e)
         => MultiDownloadCompleted?.Invoke(this, e);
 
         public void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
             MultiDownloadError?.Invoke(this, e);
-            _failedVersions.Add((e.Version, e.Exception.Message));
+            FailedVersions.Add((e.Version, e.Exception.Message));
         }
 
         public void Add(DownloadTask task)

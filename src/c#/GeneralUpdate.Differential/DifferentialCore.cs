@@ -74,7 +74,7 @@ namespace GeneralUpdate.Differential
                 throw new Exception($"Generate error : {ex.Message} !", ex.InnerException);
             }
         }
-
+        
         public async Task Dirty(string appPath, string patchPath)
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
@@ -115,7 +115,7 @@ namespace GeneralUpdate.Differential
             Directory.CreateDirectory(tempDir);
             return tempDir;
         }
-
+        
         private void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
         {
             var json = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
@@ -131,10 +131,11 @@ namespace GeneralUpdate.Differential
             var tempDeleteFiles = oldFiles.Where(old => deleteFiles.Any(del => del.Hash.SequenceEqual(hashAlgorithm.ComputeHash(old.FullName)))).ToList();
             foreach (var file in tempDeleteFiles)
             {
-                if (File.Exists(file.FullName))
-                {
-                    File.Delete(file.FullName);
-                }
+                if (!File.Exists(file.FullName))
+                    continue;
+                
+                File.SetAttributes(file.FullName, FileAttributes.Normal);
+                File.Delete(file.FullName);
             }
         }
 
@@ -180,7 +181,7 @@ namespace GeneralUpdate.Differential
 
                     if (Directory.Exists(patchPath))
                     {
-                        Directory.Delete(patchPath, true);
+                        GeneralFileManager.DeleteDirectory(patchPath);
                     }
                 }
                 catch (Exception ex)

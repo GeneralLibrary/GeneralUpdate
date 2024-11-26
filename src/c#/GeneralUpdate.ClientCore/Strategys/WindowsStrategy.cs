@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Pipeline;
 using GeneralUpdate.Common.FileBasic;
@@ -86,6 +85,7 @@ public class WindowsStrategy : AbstractStrategy
     {
         try
         {
+            Environment.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo, EnvironmentVariableTarget.User);
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
             {

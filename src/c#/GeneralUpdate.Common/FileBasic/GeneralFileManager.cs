@@ -88,6 +88,21 @@ namespace GeneralUpdate.Common.FileBasic
 
             return tempDir;
         }
+        
+        public static void DeleteDirectory(string targetDir)
+        {
+            foreach (var file in Directory.GetFiles(targetDir))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+
+            foreach (var dir in Directory.GetDirectories(targetDir))
+            {
+                DeleteDirectory(dir);
+            }
+            Directory.Delete(targetDir, false);
+        }
 
         public static List<FileInfo> GetAllFiles(string path, List<string> skipDirectorys)
         {
@@ -159,7 +174,7 @@ namespace GeneralUpdate.Common.FileBasic
         {
             if (Directory.Exists(backupPath))
             {
-                Directory.Delete(backupPath, true);
+                DeleteDirectory(backupPath);
             }
             Directory.CreateDirectory(backupPath);
             CopyDirectory(sourcePath, backupPath, directoryNames);

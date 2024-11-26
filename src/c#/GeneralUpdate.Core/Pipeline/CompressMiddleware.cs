@@ -22,8 +22,7 @@ public class CompressMiddleware : IMiddleware
                 var sourcePath = context.Get<string>("ZipFilePath");
                 var patchPath = context.Get<string>("PatchPath");
                 var encoding = context.Get<Encoding>("Encoding");
-                var destinationPath = Path.Combine(patchPath, name);
-                CompressProvider.Decompress(format, sourcePath, destinationPath, encoding);
+                CompressProvider.Decompress(format, sourcePath, patchPath, encoding);
             }
             catch (Exception e)
             {

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Common.Compress;
 
@@ -101,6 +103,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         }
         catch(Exception exception)
         {
+            Debug.WriteLine(exception);
             throw new Exception($"Failed to compress archive: {exception.Message}");
         }
     }
@@ -115,36 +118,53 @@ public class ZipCompressionStrategy : ICompressionStrategy
     {
         try
         {
+            if (Directory.Exists(unZipDir))
+            {
+                GeneralFileManager.DeleteDirectory(unZipDir);
+            }
+            Directory.CreateDirectory(unZipDir);
+
             var dirSeparatorChar = Path.DirectorySeparatorChar.ToString();
             unZipDir = unZipDir.EndsWith(dirSeparatorChar) ? unZipDir : unZipDir + dirSeparatorChar;
+            
             var directoryInfo = new DirectoryInfo(unZipDir);
-            if (!directoryInfo.Exists) directoryInfo.Create();
+            if (!directoryInfo.Exists)
+            {
+                directoryInfo.Create();
+            }
+
             var fileInfo = new FileInfo(zipFilePath);
-            if (!fileInfo.Exists) return;
+            if (!fileInfo.Exists)
+            {
+                return;
+            }
+
             using var zipToOpen = new FileStream(zipFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             using var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read, false, encoding);
-            var count = archive.Entries.Count;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < archive.Entries.Count; i++)
             {
                 var entries = archive.Entries[i];
-                if (entries.FullName.EndsWith(dirSeparatorChar)) continue;
+                if (entries.FullName.EndsWith(dirSeparatorChar))
+                {
+                    continue;
+                }
+
                 var pattern = $"^{dirSeparatorChar}*";
                 var entryFilePath = Regex.Replace(entries.FullName.Replace("/", dirSeparatorChar), pattern,
                     "");
                 var filePath = directoryInfo + entryFilePath;
                 var greatFolder = Directory.GetParent(filePath);
-                if (greatFolder is not null && !greatFolder.Exists) greatFolder.Create();
-                //ADAPTS to .NET 6 and above decompression updates.
+                if (greatFolder is not null && !greatFolder.Exists)
+                {
+                    greatFolder.Create();
+                }
                 entries.ExtractToFile(filePath);
-
-                //var content = new byte[entries.Length];
-                //entries.Open().Read(content, 0, content.Length);
-                //File.WriteAllBytes(filePath, content);
             }
         }
         catch (Exception exception)
         {
-            throw new Exception(exception.Message);
+            Debug.WriteLine(exception);
+            throw new Exception($"Failed to decompress archive: {exception.Message}");
         }
     }
 

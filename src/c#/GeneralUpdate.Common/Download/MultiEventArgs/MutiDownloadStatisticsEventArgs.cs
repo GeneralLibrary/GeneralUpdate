@@ -1,20 +1,23 @@
 ﻿using System;
 
-namespace GeneralUpdate.Common.Download
+namespace GeneralUpdate.Common.Download;
+
+public class MultiDownloadStatisticsEventArgs(object version
+    , TimeSpan remaining
+    , string speed
+    , long totalBytes
+    , long bytesReceived
+    , double progressPercentage) : EventArgs
 {
-    public class MultiDownloadStatisticsEventArgs : EventArgs
-    {
-        public object Version { get; set; }
+    public object Version { get; private set; } = version;
 
-        public DateTime Remaining { get; set; }
+    public TimeSpan Remaining { get; private set; } = remaining;
 
-        public string Speed { get; set; }
+    public string Speed { get; private set; } = speed;
 
-        public MultiDownloadStatisticsEventArgs(object version, DateTime remaining, string speed)
-        {
-            Version = version ?? throw new ArgumentNullException(nameof(version));
-            Remaining = remaining;
-            Speed = speed ?? throw new ArgumentNullException(nameof(speed));
-        }
-    }
+    public long TotalBytesToReceive { get; private set; } = totalBytes;
+
+    public long BytesReceived { get; private set; } = bytesReceived;
+
+    public double ProgressPercentage { get; private set; } = progressPercentage;
 }
