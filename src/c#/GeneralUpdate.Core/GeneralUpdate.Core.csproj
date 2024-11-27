@@ -10,7 +10,7 @@
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Copyright>Copyright ©  2023</Copyright>
+    <Copyright>Copyright ©  2024</Copyright>
     <Description>This section describes how to upgrade client applications.</Description>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
@@ -21,33 +21,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Config\**" />
-    <EmbeddedResource Remove="Config\**" />
-    <None Remove="Config\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="Bootstrap\UpdateEventArgs.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.442301" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="GeneralUpdate.Core.2.0.0.nupkg" />
-    <None Remove="GeneralUpdate.Core.3.2.1.nupkg" />
-    <None Remove="GeneralUpdate.Core.3.6.9.nupkg" />
-    <None Remove="GeneralUpdate.Core.csproj.old" />
-    <None Remove="GeneralUpdate.Core.nuspec" />
-    <None Remove="GeneralUpdate.ico" />
-    <None Remove="nuget.exe" />
-    <None Remove="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
-    <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
   </ItemGroup>
-  <Import Project="..\packages\7z.Libs.19.00.1\build\net\7z.Libs.targets" Condition="Exists('..\packages\7z.Libs.19.00.1\build\net\7z.Libs.targets')" />
+  <ItemGroup>
+    <None Remove="GeneralUpdate.ico" />
+  </ItemGroup>
 </Project>

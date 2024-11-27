@@ -3,19 +3,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using GeneralUpdate.Bowl.Internal;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
-public class LinuxStrategy : AbstractStrategy
+internal class LinuxStrategy : AbstractStrategy
 {
-    /*procdump-3.3.0-0.cm2.x86_64.rpm：
-    适合系统：此RPM包可能适用于基于CentOS或RHEL的某些派生版本，具体来说是CM2版本。CM2通常指的是ClearOS 7.x或类似的社区维护版本。
-    procdump-3.3.0-0.el8.x86_64.rpm：
-    适合系统：此RPM包适用于Red Hat Enterprise Linux 8 (RHEL 8)、CentOS 8及其他基于RHEL 8的发行版。
-    procdump_3.3.0_amd64.deb：
-    适合系统：此DEB包适用于Debian及其衍生发行版，如Ubuntu，适用于64位系统（amd64架构）。*/
+    /*procdump-3.3.0-0.cm2.x86_64.rpm:
+      Compatible Systems: This RPM package may be suitable for certain CentOS or RHEL-based derivatives, specifically the CM2 version. CM2 typically refers to ClearOS 7.x or similar community-maintained versions.
+      
+      procdump-3.3.0-0.el8.x86_64.rpm:
+      Compatible Systems: This RPM package is suitable for Red Hat Enterprise Linux 8 (RHEL 8), CentOS 8, and other RHEL 8-based distributions.
+
+      procdump_3.3.0_amd64.deb:
+      Compatible Systems: This DEB package is suitable for Debian and its derivatives, such as Ubuntu, for 64-bit systems (amd64 architecture).*/
     
-    private IReadOnlyList<string> procdump_amd64 = new List<string> { "Ubuntu", "Debian" };
+    private IReadOnlyList<string> _rocdumpAmd64 = new List<string> { "Ubuntu", "Debian" };
     private IReadOnlyList<string> procdump_el8_x86_64 = new List<string> { "Red Hat", "CentOS", "Fedora" };
     private IReadOnlyList<string> procdump_cm2_x86_64 = new List<string> { "ClearOS" };
     
@@ -64,9 +67,9 @@ public class LinuxStrategy : AbstractStrategy
 
     private string GetPacketName()
     {
-        string packageFileName = string.Empty;
-        LinuxSystem system = GetSystem();
-        if (procdump_amd64.Contains(system.Name))
+        var packageFileName = string.Empty;
+        var system = GetSystem();
+        if (_rocdumpAmd64.Contains(system.Name))
         {
             packageFileName = $"procdump_3.3.0_amd64.deb";
         }
@@ -105,9 +108,7 @@ public class LinuxStrategy : AbstractStrategy
             
             return new LinuxSystem(distro, version);
         }
-        else
-        {
-            throw new FileNotFoundException("Cannot determine the Linux distribution. The /etc/os-release file does not exist.");
-        }
+        
+        throw new FileNotFoundException("Cannot determine the Linux distribution. The /etc/os-release file does not exist.");
     }
 }

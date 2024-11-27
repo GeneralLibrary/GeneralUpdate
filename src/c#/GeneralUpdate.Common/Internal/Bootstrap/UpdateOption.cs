@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Text;
 using System.Threading;
 
 namespace GeneralUpdate.Common.Internal.Bootstrap
@@ -12,10 +13,30 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
             protected override IConstant NewConstant<T>(int id, string name) => new UpdateOption<T>(id, name);
         }
 
-        private static readonly UpdateOptionPool Pool = new UpdateOptionPool();
+        private static readonly UpdateOptionPool Pool = new();
 
         public static UpdateOption<T> ValueOf<T>(string name) => (UpdateOption<T>)Pool.ValueOf<T>(name);
 
+        /// <summary>
+        /// Update the file format of the package.
+        /// </summary>
+        public static readonly UpdateOption<string> Format = ValueOf<string>("COMPRESSFORMAT");
+
+        /// <summary>
+        /// Compress encoding.
+        /// </summary>
+        public static readonly UpdateOption<Encoding> Encoding = ValueOf<Encoding>("COMPRESSENCODING");
+
+        /// <summary>
+        /// Timeout period (unit: second). If this parameter is not specified, the default timeout period is 30 seconds.
+        /// </summary>
+        public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
+
+        /// <summary>
+        /// Whether to enable the driver upgrade function.
+        /// </summary>
+        public static readonly UpdateOption<bool?> Drive = ValueOf<bool?>("DRIVE");
+        
         internal UpdateOption(int id, string name)
           : base(id, name) { }
 

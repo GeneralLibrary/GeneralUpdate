@@ -1,50 +1,43 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 
-namespace GeneralUpdate.Common.Shared.Object
+namespace GeneralUpdate.Common.Shared.Object;
+
+public class VersionInfo
 {
-    public class VersionInfo : Entity
-    {
-        public VersionInfo()
-        { }
+    [JsonPropertyName("recordId")]
+    public int RecordId { get; set; }
 
-        public VersionInfo(long pubTime, string name, string hash, string version, string url)
-        {
-            PubTime = pubTime;
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            Hash = hash ?? throw new ArgumentNullException(nameof(hash));
-            Version = version ?? throw new ArgumentNullException(nameof(version));
-            Url = url ?? throw new ArgumentNullException(nameof(Url));
-            if (!IsURL(Url)) throw new Exception($"Illegal url {nameof(Url)}");
-        }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 
-        /// <summary>
-        /// Update package release time.
-        /// </summary>
-        public long PubTime { get; set; }
+    [JsonPropertyName("hash")]
+    public string? Hash { get; set; }
 
-        /// <summary>
-        /// Update package name.
-        /// </summary>
-        public string Name { get; set; }
+    [JsonPropertyName("releaseDate")]
+    public DateTime? ReleaseDate { get; set; }
 
-        /// <summary>
-        /// Compare and verify with the downloaded update package.
-        /// </summary>
-        public string Hash { get; set; }
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
 
-        /// <summary>
-        /// The version number.
-        /// </summary>
-        public string Version { get; set; }
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
 
-        /// <summary>
-        /// Remote service url address.
-        /// </summary>
-        public string Url { get; set; }
+    [JsonPropertyName("appType")]
+    public int? AppType { get; set; }
 
-        public override string ToString()
-        {
-            return Version;
-        }
-    }
+    [JsonPropertyName("platform")]
+    public int? Platform { get; set; }
+
+    [JsonPropertyName("productId")]
+    public string? ProductId { get; set; }
+
+    [JsonPropertyName("isForcibly")]
+    public bool? IsForcibly { get; set; }
+
+    [JsonPropertyName("format")]
+    public string? Format { get; set; }
+
+    [JsonPropertyName("size")]
+    public long? Size { get; set; }
 }

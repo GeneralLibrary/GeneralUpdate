@@ -1,73 +1,63 @@
-﻿using GeneralUpdate.Core.ContentProvider;
-using GeneralUpdate.Core.Domain.Entity;
-using GeneralUpdate.Core.Domain.Enum;
-using GeneralUpdate.Core.Domain.PO;
-using GeneralUpdate.Core.Domain.PO.Assembler;
-using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.Events;
-using GeneralUpdate.Core.Events.CommonArgs;
-using GeneralUpdate.Core.Events.MultiEventArgs;
-using GeneralUpdate.Zip;
-using GeneralUpdate.Zip.Factory;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Compress;
+using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Core.Strategys
 {
-    public sealed class OSSStrategy : AbstractStrategy
+    public class OSSStrategy
     {
         #region Private Members
 
         private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
-        private const string _format = ".zip";
-        private const int _timeOut = 60;
-        private ParamsOSS _parameter;
-        private Encoding _encoding;
+        private const int TimeOut = 60;
+        private GlobalConfigInfoOSS? _parameter;
 
         #endregion Private Members
 
         #region Public Methods
 
-        public override void Create<T>(T parameter, Encoding encoding)
-        {
-            _parameter = parameter as ParamsOSS;
-            _encoding = encoding;
-        }
+        public void Create(GlobalConfigInfoOSS parameter)
+            => _parameter = parameter;
 
-        public override async Task ExecuteTaskAsync()
+        public async Task ExecuteAsync()
         {
-            await Task.Run(() =>
+            try
             {
-                try
-                {
-                    //1.Download the JSON version configuration file.
-                    var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
-                    if (!File.Exists(jsonPath)) throw new FileNotFoundException(jsonPath);
+                //1.Download the JSON version configuration file.
+                var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
+                if (!File.Exists(jsonPath)) 
+                    throw new FileNotFoundException(jsonPath);
 
-                    //2.Parse the JSON version configuration file content.
-                    var versions = FileProvider.GetJson<List<VersionPO>>(jsonPath);
-                    if (versions == null) throw new NullReferenceException(nameof(versions));
+                //2.Parse the JSON version configuration file content.
+                var versions = StorageManager.GetJson<List<VersionOSS>>(jsonPath, VersionOSSJsonContext.Default.ListVersionOSS);
+                if (versions == null) 
+                    throw new NullReferenceException(nameof(versions));
 
-                    //3.Download version by version according to the version of the configuration file.
-                    var versionInfo = VersionAssembler.ToDataObjects(versions);
-                    DownloadVersions(versionInfo);
-                    UnZip(versionInfo);
-                    //4.Launch the main application.
-                    LaunchApp();
-                }
-                catch (Exception ex)
-                {
-                    EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(ex));
-                }
-                finally
-                {
-                    Process.GetCurrentProcess().Kill();
-                }
-            });
+                versions = versions.OrderBy(v => v.PubTime).ToList();
+                //3.Download version by version according to the version of the configuration file.
+                await DownloadVersions(versions);
+                Decompress(versions);
+                    
+                //4.Launch the main application.
+                LaunchApp();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message + "\n" + ex.StackTrace);
+            }
+            finally
+            {
+                Process.GetCurrentProcess().Kill();
+            }
         }
 
         #endregion Public Methods
@@ -78,16 +68,30 @@ namespace GeneralUpdate.Core.Strategys
         /// Download all updated versions version by version.
         /// </summary>
         /// <param name="versions">The collection of version information to be updated as described in the configuration file.</param>
-        private void DownloadVersions(List<VersionInfo> versions)
+        private async Task DownloadVersions(List<VersionOSS> versions)
         {
-            var manager = new DownloadManager<VersionInfo>(_appPath, _format, _timeOut);
-            manager.MultiAllDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiAllDownloadCompletedEventArgs>>(this, e);
-            manager.MultiDownloadCompleted += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadCompletedEventArgs>>(this, e);
-            manager.MultiDownloadError += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadErrorEventArgs>>(this, e);
-            manager.MultiDownloadProgressChanged += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, e);
-            manager.MultiDownloadStatistics += (s, e) => EventManager.Instance.Dispatch<Action<object, MultiDownloadStatisticsEventArgs>>(this, e);
-            versions.ForEach((v) => manager.Add(new DownloadTask<VersionInfo>(manager, v)));
-            manager.LaunchTaskAsync();
+            try
+            {
+                var manager = new DownloadManager(_appPath, Format.ZIP, TimeOut);
+                foreach (var versionInfo in versions)
+                {
+                    var version = new VersionInfo
+                    {
+                        Name = versionInfo.PacketName,
+                        Version = versionInfo.Version,
+                        Url = versionInfo.Url,
+                        Format = Format.ZIP,
+                        Hash = versionInfo.Hash
+                    };
+                    manager.Add(new DownloadTask(manager, version));
+                }
+
+                await manager.LaunchTasksAsync();
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message + "\n" + e.StackTrace);
+            }
         }
 
         /// <summary>
@@ -96,36 +100,18 @@ namespace GeneralUpdate.Core.Strategys
         /// <exception cref="FileNotFoundException"></exception>
         private void LaunchApp()
         {
-            string appPath = Path.Combine(_appPath, _parameter.AppName + ".exe");
+            var appPath = Path.Combine(_appPath, _parameter.AppName);
             if (!File.Exists(appPath)) throw new FileNotFoundException($"{nameof(appPath)} , The application is not accessible !");
             Process.Start(appPath);
         }
 
-        private bool UnZip(List<VersionInfo> versions)
+        private void Decompress(List<VersionOSS> versions)
         {
-            try
+            var encoding = Encoding.GetEncoding(_parameter.Encoding);
+            foreach (var version in versions)
             {
-                bool isCompleted = true;
-                foreach (VersionInfo version in versions)
-                {
-                    var zipFilePath = Path.Combine(_appPath, $"{version.Name}.zip");
-                    var zipFactory = new GeneralZipFactory();
-                    zipFactory.UnZipProgress += (sender, e) =>
-                    EventManager.Instance.Dispatch<Action<object, MultiDownloadProgressChangedEventArgs>>(this, new MultiDownloadProgressChangedEventArgs(version, ProgressType.Updatefile, "Updating file..."));
-                    zipFactory.Completed += (sender, e) =>
-                    {
-                        isCompleted = e.IsCompleted;
-                        if (File.Exists(zipFilePath)) File.Delete(zipFilePath);
-                    };
-                    zipFactory.CreateOperate(OperationType.GZip, version.Name, zipFilePath, _appPath, false, _encoding);
-                    zipFactory.UnZip();
-                }
-                return isCompleted;
-            }
-            catch (Exception exception)
-            {
-                EventManager.Instance.Dispatch<Action<object, ExceptionEventArgs>>(this, new ExceptionEventArgs(exception));
-                return false;
+                var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
+                CompressProvider.Decompress(Format.ZIP,zipFilePath,_appPath, encoding);
             }
         }
 

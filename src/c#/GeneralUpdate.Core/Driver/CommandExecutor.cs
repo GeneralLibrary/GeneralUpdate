@@ -1,5 +1,4 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace GeneralUpdate.Core.Driver
@@ -9,6 +8,9 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class CommandExecutor
     {
+        private CommandExecutor()
+        { }
+
         public static void ExecuteCommand(string command)
         {
             /*
@@ -29,17 +31,34 @@ If possible, use pre-tested drivers that are proven to work.
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = "cmd.exe",
                 Arguments = command,
-                UseShellExecute = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 Verb = "runas"
             };
 
-            using (var process = new Process { StartInfo = processStartInfo })
+            var process = new Process();
+            try
             {
+                process.StartInfo = processStartInfo;
                 process.Start();
                 process.WaitForExit();
 
+                var output = process.StandardOutput.ReadToEnd();
+                Debug.WriteLine(output);
+
+                var error = process.StandardError.ReadToEnd();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Debug.WriteLine("Error: " + error);
+                }
+                
                 if (process.ExitCode != 0)
-                    ThrowExceptionUtility.Throw<Exception>($"Operation failed code: {process.ExitCode}");
+                    throw new ApplicationException($"Operation failed code: {process.ExitCode}");
+            }
+            finally
+            {
+                process.Dispose();
             }
         }
     }

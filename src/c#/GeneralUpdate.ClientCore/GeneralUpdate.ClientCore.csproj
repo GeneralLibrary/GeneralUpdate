@@ -1,258 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.12.10</Version>
-    <Authors>juster.zhu</Authors>
-    <Description>Provides functions related to upgrade and update programs.</Description>
-    <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>GeneralUpdate128.png</PackageIcon>
-    <SignAssembly>False</SignAssembly>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
-    <Copyright>Copyright ©  2023</Copyright>
-    <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
-    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
-    <LangVersion>12</LangVersion>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <Version>2.12.10</Version>
+        <Authors>juster.zhu</Authors>
+        <Description>Provides functions related to upgrade and update programs.</Description>
+        <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
+        <PackageIcon>GeneralUpdate128.png</PackageIcon>
+        <SignAssembly>False</SignAssembly>
+        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+        <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
+        <Copyright>Copyright © 2024</Copyright>
+        <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="DTOs\**" />
-    <Compile Remove="Models\**" />
-    <Compile Remove="Update\**" />
-    <EmbeddedResource Remove="DTOs\**" />
-    <EmbeddedResource Remove="Models\**" />
-    <EmbeddedResource Remove="Update\**" />
-    <None Remove="DTOs\**" />
-    <None Remove="Models\**" />
-    <None Remove="Update\**" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+        <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
+        <PackageReference Include="System.Net.Http" Version="4.3.4" />
+        <PackageReference Include="System.Net.Requests" Version="4.3.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Bootstrap\.gitkeep" />
-    <None Remove="CustomAwaiter\.gitkeep" />
-    <None Remove="Differential\.gitkeep" />
-    <None Remove="Differential\Binary\.gitkeep" />
-    <None Remove="Differential\ContentProvider\.gitkeep" />
-    <None Remove="Differential\GStream\.gitkeep" />
-    <None Remove="Domain\.gitkeep" />
-    <None Remove="Domain\DTO\Assembler\.gitkeep" />
-    <None Remove="Domain\Entity\Assembler\.gitkeep" />
-    <None Remove="Domain\Enum\.gitkeep" />
-    <None Remove="Domain\PO\.gitkeep" />
-    <None Remove="Domain\PO\Assembler\.gitkeep" />
-    <None Remove="Domain\Service\.gitkeep" />
-    <None Remove="Domain\VO\.gitkeep" />
-    <None Remove="Download\.gitkeep" />
-    <None Remove="Driver\.gitkeep" />
-    <None Remove="Events\CommonArgs\.gitkeep" />
-    <None Remove="Events\MultiEventArgs\.gitkeep" />
-    <None Remove="Exceptions\.gitkeep" />
-    <None Remove="GeneralUpdate.ClientCore.1.1.1.nupkg" />
-    <None Remove="GeneralUpdate.ClientCore.nuspec" />
-    <None Remove="GeneralUpdate.ico" />
-    <None Remove="HashAlgorithms\.gitkeep" />
-    <None Remove="nuget.exe" />
-    <None Remove="Pipelines\Attributes\.gitkeep" />
-    <None Remove="Pipelines\Context\.gitkeep" />
-    <None Remove="Pipelines\MiddlewareResolver\.gitkeep" />
-    <None Remove="Pipelines\Middleware\.gitkeep" />
-    <None Remove="Pipelines\Pipeline\.gitkeep" />
-    <None Remove="Strategys\PlatformLinux\.gitkeep" />
-    <None Remove="Strategys\PlatformWindows\.gitkeep" />
-    <None Remove="WillMessage\.gitkeep" />
-    <None Remove="ZipFactory\Events\.gitkeep" />
-    <None Remove="ZipFactory\Factory\.gitkeep" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Core\Bootstrap\AbstractBootstrap.cs" Link="Bootstrap\AbstractBootstrap.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOption.cs" Link="Bootstrap\UpdateOption.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Bootstrap\UpdateOptionValue.cs" Link="Bootstrap\UpdateOptionValue.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="Differential\ContentProvider\FileNode.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="Differential\ContentProvider\FileProvider-Comparer.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="Differential\ContentProvider\FileProvider-Filter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="Differential\ContentProvider\FileProvider-Manage.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="Differential\ContentProvider\FileProvider-Serialization.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="Differential\ContentProvider\FileProvider.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="Differential\ContentProvider\FileTree.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\Assembler\VersionAssembler.cs" Link="Domain\DTO\Assembler\VersionAssembler.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\BaseResponseDTO.cs" Link="Domain\DTO\BaseResponseDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionDTO.cs" Link="Domain\DTO\VersionDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\DTO\VersionRespDTO.cs" Link="Domain\DTO\VersionRespDTO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Assembler\ProcessAssembler.cs" Link="Domain\Entity\Assembler\ProcessAssembler.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Configinfo.cs" Link="Domain\Entity\Configinfo.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Packet.cs" Link="Domain\Entity\Packet.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ParamsOSS.cs" Link="Domain\Entity\ParamsOSS.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\ProcessInfo.cs" Link="Domain\Entity\ProcessInfo.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\AppType.cs" Link="Domain\Enum\AppType.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\Format.cs" Link="Domain\Enum\Format.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\HttpStatus.cs" Link="Domain\Enum\HttpStatus.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\PlatformType.cs" Link="Domain\Enum\PlatformType.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Enum\ProgressType.cs" Link="Domain\Enum\ProgressType.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\PO\Assembler\VersionAssembler.cs" Link="Domain\PO\Assembler\VersionAssembler.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\PO\VersionPO.cs" Link="Domain\PO\VersionPO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\PO\WillMessagePO.cs" Link="Domain\PO\WillMessagePO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Service\VersionService.cs" Link="Domain\Service\VersionService.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\VO\FileVO.cs" Link="Domain\VO\FileVO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\AbstractTask.cs" Link="Download\AbstractTask.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\AbstractTaskManager.cs" Link="Download\AbstractTaskManager.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\DownloadManager.cs" Link="Download\DownloadManager.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\DownloadTask.cs" Link="Download\DownloadTask.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\ITask.cs" Link="Download\ITask.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Download\ITaskManger.cs" Link="Download\ITaskManger.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\BackupDriverCommand.cs" Link="Driver\BackupDriverCommand.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\CommandExecutor.cs" Link="Driver\CommandExecutor.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\DeleteDriverCommand.cs" Link="Driver\DeleteDriverCommand.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\DriverInformation.cs" Link="Driver\DriverInformation.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\DriverProcessor.cs" Link="Driver\DriverProcessor.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\IDriverCommand.cs" Link="Driver\IDriverCommand.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\InstallDriverCommand.cs" Link="Driver\InstallDriverCommand.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Driver\RestoreDriverCommand.cs" Link="Driver\RestoreDriverCommand.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\CommonArgs\ExceptionEventArgs.cs" Link="Events\CommonArgs\ExceptionEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\EventManager.cs" Link="Events\EventManager.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\IEventManager.cs" Link="Events\IEventManager.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MultiEventArgs\MutiAllDownloadCompletedEventArgs.cs" Link="Events\MultiEventArgs\MutiAllDownloadCompletedEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MultiEventArgs\MutiDownloadCompletedEventArgs.cs" Link="Events\MultiEventArgs\MutiDownloadCompletedEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MultiEventArgs\MutiDownloadErrorEventArgs.cs" Link="Events\MultiEventArgs\MutiDownloadErrorEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MultiEventArgs\MutiDownloadProgressChangedEventArgs.cs" Link="Events\MultiEventArgs\MutiDownloadProgressChangedEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Events\MultiEventArgs\MutiDownloadStatisticsEventArgs.cs" Link="Events\MultiEventArgs\MutiDownloadStatisticsEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\ThrowExceptionUtility.cs" Link="Exceptions\ThrowExceptionUtility.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha256HashAlgorithm.cs" Link="HashAlgorithms\Sha256HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" Link="Pipelines\Attributes\DynamicallyAccessedMembersAttribute.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" Link="Pipelines\Attributes\DynamicallyAccessedMemberTypes.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Context\BaseContext.cs" Link="Pipelines\Context\BaseContext.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" Link="Pipelines\MiddlewareResolver\ActivatorMiddlewareResolver.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\DriveMiddleware.cs" Link="Pipelines\Middleware\DriveMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\HashMiddleware.cs" Link="Pipelines\Middleware\HashMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\IMiddleware.cs" Link="Pipelines\Middleware\IMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareExtensions.cs" Link="Pipelines\Middleware\MiddlewareExtensions.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\MiddlewareStack.cs" Link="Pipelines\Middleware\MiddlewareStack.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\PatchMiddleware.cs" Link="Pipelines\Middleware\PatchMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Middleware\ZipMiddleware.cs" Link="Pipelines\Middleware\ZipMiddleware.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\PipelineBuilder.cs" Link="Pipelines\PipelineBuilder.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Pipelines\Pipeline\IPipelineBuilder.cs" Link="Pipelines\Pipeline\IPipelineBuilder.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\AbstractStrategy.cs" Link="Strategys\AbstractStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\IStrategy.cs" Link="Strategys\IStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformLinux\LinuxStrategy.cs" Link="Strategys\PlatformLinux\LinuxStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Strategys\PlatformWindows\WindowsStrategy.cs" Link="Strategys\PlatformWindows\WindowsStrategy.cs" />
-    <Compile Include="..\GeneralUpdate.Core\WillMessage\WillMessageManager.cs" Link="WillMessage\WillMessageManager.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandle.cs" Link="Differential\Binary\BinaryHandle.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\Binary\IBinary.cs" Link="Differential\Binary\IBinary.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2Constants.cs" Link="Differential\GStream\BZip2Constants.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2InputStream.cs" Link="Differential\GStream\BZip2InputStream.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\BZip2OutputStream.cs" Link="Differential\GStream\BZip2OutputStream.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\IChecksum.cs" Link="Differential\GStream\IChecksum.cs" />
-    <Compile Include="..\GeneralUpdate.Differential\GStream\StrangeCRC.cs" Link="Differential\GStream\StrangeCRC.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\CompressProvider\Compress7z.cs" Link="ZipFactory\CompressProvider\Compress7z.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\CompressProvider\CompressZip.cs" Link="ZipFactory\CompressProvider\CompressZip.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseCompleteEventArgs.cs" Link="ZipFactory\Events\BaseCompleteEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseCompressProgressEventArgs.cs" Link="ZipFactory\Events\BaseCompressProgressEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Events\BaseUnZipProgressEventArgs.cs" Link="ZipFactory\Events\BaseUnZipProgressEventArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\BaseCompress.cs" Link="ZipFactory\Factory\BaseCompress.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\IFactory.cs" Link="ZipFactory\Factory\IFactory.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\IOperation.cs" Link="ZipFactory\Factory\IOperation.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\Factory\OperationType.cs" Link="ZipFactory\Factory\OperationType.cs" />
-    <Compile Include="..\GeneralUpdate.Zip\GeneralZipFactory.cs" Link="ZipFactory\GeneralZipFactory.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.2" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SharpCompress" Version="0.32.1" />
-    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
-    <PackageReference Include="System.Net.Requests" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\GStream\" />
-    <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\GStream\" />
-    <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\GStream\" />
-    <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\GStream\" />
-    <Folder Include="Differential\Binary\" />
-    <Folder Include="Differential\GStream\" />
-    <Folder Include="Differential\ContentProvider\" />
-    <Folder Include="Domain\DTO\Assembler\" />
-    <Folder Include="Domain\Entity\Assembler\" />
-    <Folder Include="Domain\PO\Assembler\" />
-    <Folder Include="Domain\Service\" />
-    <Folder Include="Domain\VO\" />
-    <Folder Include="Download\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="Download\" />
-    <Folder Include="Events\CommonArgs\" />
-    <Folder Include="Events\MultiEventArgs\" />
-    <Folder Include="Events\CommonArgs\" />
-    <Folder Include="Events\MultiEventArgs\" />
-    <Folder Include="Exceptions\CustomArgs\" />
-    <Folder Include="Exceptions\CustomException\" />
-    <Folder Include="HashAlgorithms\" />
-    <Folder Include="Pipelines\MiddlewareResolver\" />
-    <Folder Include="Pipelines\Middleware\" />
-    <Folder Include="Pipelines\Context\" />
-    <Folder Include="Pipelines\Attributes\" />
-    <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="Pipelines\Attributes\" />
-    <Folder Include="Pipelines\Context\" />
-    <Folder Include="Pipelines\Middleware\" />
-    <Folder Include="Pipelines\MiddlewareResolver\" />
-    <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="Strategys\PlatformWindows\" />
-    <Folder Include="Strategys\PlatformLinux\" />
-    <Folder Include="Strategys\PlatformLinux\" />
-    <Folder Include="Strategys\PlatformWindows\" />
-    <Folder Include="Pipelines\Attributes\" />
-    <Folder Include="Pipelines\Context\" />
-    <Folder Include="Pipelines\Middleware\" />
-    <Folder Include="Pipelines\MiddlewareResolver\" />
-    <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="Pipelines\Attributes\" />
-    <Folder Include="Pipelines\Context\" />
-    <Folder Include="Pipelines\Middleware\" />
-    <Folder Include="Pipelines\MiddlewareResolver\" />
-    <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="Pipelines\Attributes\" />
-    <Folder Include="Pipelines\Context\" />
-    <Folder Include="Pipelines\Middleware\" />
-    <Folder Include="Pipelines\MiddlewareResolver\" />
-    <Folder Include="Pipelines\Pipeline\" />
-    <Folder Include="ZipFactory\Events\" />
-    <Folder Include="ZipFactory\Factory\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="Download\" />
-    <Folder Include="ZipFactory\Events\" />
-    <Folder Include="ZipFactory\Factory\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="Download\" />
-    <Folder Include="ZipFactory\Events\" />
-    <Folder Include="ZipFactory\Factory\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="Download\" />
-    <Folder Include="ZipFactory\Events\" />
-    <Folder Include="ZipFactory\Factory\" />
-    <Folder Include="WillMessage\" />
-    <Folder Include="ZipFactory\CompressProvider\" />
-  </ItemGroup>
+    <ItemGroup>
+      <None Remove="GeneralUpdate.ico" />
+    </ItemGroup>
 
 </Project>

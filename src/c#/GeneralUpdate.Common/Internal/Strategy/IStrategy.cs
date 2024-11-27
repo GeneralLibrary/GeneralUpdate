@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Internal.Strategy
 {
@@ -15,26 +16,16 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// After the update is complete.
         /// </summary>
-        /// <param name="appName"></param>
-        /// <param name="appType"></param>
-        /// <returns></returns>
-        bool StartApp(string appName, int appType);
-
-        /// <summary>
-        /// Get the platform for the current strategy.
-        /// </summary>
-        /// <returns></returns>
-        string GetPlatform();
-
+        void StartApp();
+        
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        Task ExecuteTaskAsync();
+        Task ExecuteAsync();
 
         /// <summary>
         /// Create a strategy.
         /// </summary>
-        /// <param name="file">Abstraction for updating package information.</param>
-        void Create<T>(T parameter) where T : class;
+        void Create(GlobalConfigInfo parameter);
     }
 }

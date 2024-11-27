@@ -2,50 +2,33 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Immutable;
-using GeneralUpdate.Common.Download;
+using System.Diagnostics;
+using System.Linq;
 
-namespace GeneralUpdate.Core.Download
+namespace GeneralUpdate.Common.Download
 {
-    public class DownloadManager<TVersion>
+    public class DownloadManager(string path, string format, int timeOut)
     {
         #region Private Members
 
-        private readonly string _path;
-        private readonly string _format;
-        private readonly int _timeOut;
-        private readonly IList<(object, string)> _failedVersions;
-        private ImmutableList<DownloadTask<TVersion>>.Builder _downloadTasksBuilder;
-        private ImmutableList<DownloadTask<TVersion>> _downloadTasks;
+        private readonly ImmutableList<DownloadTask>.Builder _downloadTasksBuilder = ImmutableList.Create<DownloadTask>().ToBuilder();
+        private ImmutableList<DownloadTask> _downloadTasks;
 
         #endregion Private Members
 
-        #region Constructors
-
-        public DownloadManager(string path, string format, int timeOut)
-        {
-            _path = path;
-            _format = format;
-            _timeOut = timeOut;
-            _failedVersions = new List<(object, string)>();
-            _downloadTasksBuilder = ImmutableList.Create<DownloadTask<TVersion>>().ToBuilder();
-        }
-
-        #endregion Constructors
-
         #region Public Properties
 
-        public IList<(object, string)> FailedVersions => _failedVersions;
+        public List<(object, string)> FailedVersions { get; } = new();
 
-        public string Path => _path;
+        public string Path => path;
 
-        public string Format => _format;
+        public string Format => format;
 
-        public int TimeOut => _timeOut;
+        public int TimeOut => timeOut;
 
-        public ImmutableList<DownloadTask<TVersion>> DownloadTasks => _downloadTasks ?? (_downloadTasksBuilder.ToImmutable());
+        private ImmutableList<DownloadTask> DownloadTasks => _downloadTasks ?? _downloadTasksBuilder.ToImmutable();
 
         public event EventHandler<MultiAllDownloadCompletedEventArgs> MultiAllDownloadCompleted;
-        public event EventHandler<MultiDownloadProgressChangedEventArgs> MultiDownloadProgressChanged;
         public event EventHandler<MultiDownloadCompletedEventArgs> MultiDownloadCompleted;
         public event EventHandler<MultiDownloadErrorEventArgs> MultiDownloadError;
         public event EventHandler<MultiDownloadStatisticsEventArgs> MultiDownloadStatistics;
@@ -58,52 +41,37 @@ namespace GeneralUpdate.Core.Download
         {
             try
             {
-                var downloadTasks = new List<Task>();
-                foreach (var task in DownloadTasks)
-                {
-                    downloadTasks.Add(task.LaunchAsync());
-                }
+                var downloadTasks = DownloadTasks.Select(task => task.LaunchAsync()).ToList();
                 await Task.WhenAll(downloadTasks);
-                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, _failedVersions));
+                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, FailedVersions));
             }
             catch (Exception ex)
             {
-                _failedVersions.Add((null, ex.Message));
-                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, _failedVersions));
+                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, FailedVersions));
                 throw new Exception($"Download manager error: {ex.Message}", ex);
             }
         }
 
         public void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        {
-            MultiDownloadStatistics?.Invoke(this, e);
-        }
-
-        public void OnMultiDownloadProgressChanged(object sender, MultiDownloadProgressChangedEventArgs e)
-        {
-            MultiDownloadProgressChanged?.Invoke(this, e);
-        }
+        => MultiDownloadStatistics?.Invoke(this, e);
 
         public void OnMultiAsyncCompleted(object sender, MultiDownloadCompletedEventArgs e)
-        {
-            MultiDownloadCompleted?.Invoke(this, e);
-        }
+        => MultiDownloadCompleted?.Invoke(this, e);
 
         public void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
             MultiDownloadError?.Invoke(this, e);
-            _failedVersions.Add((e.Version, e.Exception.Message));
+            FailedVersions.Add((e.Version, e.Exception.Message));
         }
 
-        public void Add(DownloadTask<TVersion> task)
+        public void Add(DownloadTask task)
         {
-            if (task != null && !_downloadTasksBuilder.Contains(task))
+            Debug.Assert(task != null);
+            if (!_downloadTasksBuilder.Contains(task))
             {
                 _downloadTasksBuilder.Add(task);
             }
         }
-
-        public void Remove(DownloadTask<TVersion> task) => _downloadTasksBuilder.Remove(task);
 
         #endregion Public Methods
     }

@@ -1,33 +1,40 @@
-﻿using GeneralUpdate.Core.Exceptions;
-using System;
-using System.IO;
+﻿using System;
+using System.Linq;
 using System.Text;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Core.Driver
 {
-    public class RestoreDriverCommand : IDriverCommand
+    public class RestoreDriverCommand(DriverInformation information)
     {
-        private DriverInformation _information;
-
-        public RestoreDriverCommand(DriverInformation information) => _information = information;
-
         public void Execute()
         {
             try
             {
-                foreach (var driver in _information.Drivers)
+                var backupFiles = StorageManager.GetAllFiles(information.OutPutDirectory, StorageManager.SkipDirectorys);
+                var fileExtension = information.DriverFileExtension;
+                var drivers = backupFiles.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
+                
+                foreach (var driver in drivers)
                 {
-                    //Install all drivers in the specified directory, and if the installation fails, restore all the drivers in the backup directory.
-                    var command = new StringBuilder("/c pnputil /add-driver ")
-                        .Append(Path.Combine(_information.OutPutDirectory, Path.GetFileNameWithoutExtension(driver), driver))
-                        .Append(" /install")
-                        .ToString();
-                    CommandExecutor.ExecuteCommand(command);
+                    try
+                    {
+                        //Install all drivers in the specified directory, and if the installation fails, restore all the drivers in the backup directory.
+                        var command = new StringBuilder("/c pnputil /add-driver ")
+                            .Append(driver.FullName)
+                            .Append(" /install")
+                            .ToString();
+                        CommandExecutor.ExecuteCommand(command);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ApplicationException($"Failed to execute install command for {driver.FullName}, error: {e.Message} !");
+                    }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                ThrowExceptionUtility.Throw<Exception>($"Failed to execute restore command for {_information.OutPutDirectory}", ex);
+                throw new ApplicationException($"Failed to execute restore command for {information.OutPutDirectory}");
             }
         }
     }

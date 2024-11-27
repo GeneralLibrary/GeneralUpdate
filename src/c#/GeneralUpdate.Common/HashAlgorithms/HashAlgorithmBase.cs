@@ -11,19 +11,15 @@ namespace GeneralUpdate.Common.HashAlgorithms
             if (!System.IO.File.Exists(fileName))
                 throw new FileNotFoundException(nameof(fileName));
 
-            using (var hashAlgorithm = GetHashAlgorithm())
+            using var hashAlgorithm = GetHashAlgorithm();
+            using var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var dataArray = hashAlgorithm.ComputeHash(file);
+            var stringBuilder = new StringBuilder();
+            for (int i = 0; i < dataArray.Length; i++)
             {
-                using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    var dataArray = GetHashAlgorithm().ComputeHash(file);
-                    var stringBuilder = new StringBuilder();
-                    for (int i = 0; i < dataArray.Length; i++)
-                    {
-                        stringBuilder.Append(dataArray[i].ToString("x2"));
-                    }
-                    return stringBuilder.ToString();
-                }
+                stringBuilder.Append(dataArray[i].ToString("x2"));
             }
+            return stringBuilder.ToString();
         }
         
         public byte[] ComputeHashBytes(string fileName)
@@ -31,13 +27,9 @@ namespace GeneralUpdate.Common.HashAlgorithms
             if (!File.Exists(fileName))
                 throw new FileNotFoundException(nameof(fileName));
 
-            using (var hashAlgorithm = GetHashAlgorithm())
-            {
-                using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    return hashAlgorithm.ComputeHash(file);
-                }
-            }
+            using var hashAlgorithm = GetHashAlgorithm();
+            using var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return hashAlgorithm.ComputeHash(file);
         }
         
         protected abstract HashAlgorithm GetHashAlgorithm();

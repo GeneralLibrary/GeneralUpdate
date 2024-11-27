@@ -1,71 +1,96 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
-using Newtonsoft.Json;
 
 namespace GeneralUpdate.Common.Shared.Service
 {
     public class VersionService
     {
-        private static readonly HttpClient _httpClient;
-
-        static VersionService()
+        private VersionService() { }
+        
+        /// <summary>
+        /// Report the result of this update: whether it was successful.
+        /// </summary>
+        /// <param name="httpUrl"></param>
+        /// <param name="recordId"></param>
+        /// <param name="status"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static async Task Report(string httpUrl
+            , int recordId
+            , int status
+            , int? type)
         {
-            _httpClient = new HttpClient(new HttpClientHandler
+            var parameters = new Dictionary<string, object>
             {
-                ServerCertificateCustomValidationCallback = CheckValidationResult
-            });
-            _httpClient.Timeout = TimeSpan.FromSeconds(15);
-            _httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
+                { "RecordId", recordId },
+                { "Status", status },
+                { "Type", type }
+            };
+            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters, ReportRespJsonContext.Default.BaseResponseDTOBoolean);
         }
 
-        public async Task<VersionRespDTO> ValidationVersion(string url)
+        /// <summary>
+        /// Verify whether the current version needs an update.
+        /// </summary>
+        /// <param name="httpUrl"></param>
+        /// <param name="version"></param>
+        /// <param name="appType"></param>
+        /// <param name="appKey"></param>
+        /// <param name="platform"></param>
+        /// <param name="productId"></param>
+        /// <returns></returns>
+        public static async Task<VersionRespDTO> Validate(string httpUrl
+            , string version
+            , int appType
+            , string appKey
+            , int platform
+            , string productId)
         {
-            var updateResp = await GetTaskAsync<VersionRespDTO>(url);
-            if (updateResp == null || updateResp.Body == null)
+            var parameters = new Dictionary<string, object>
             {
-                throw new ArgumentNullException(
-                    nameof(updateResp),
-                    "The verification request is abnormal, please check the network or parameter configuration!"
-                );
-            }
-
-            if (updateResp.Code == 200)
-            {
-                return updateResp;
-            }
-            else
-            {
-                throw new HttpRequestException(
-                    $"Request failed, Code: {updateResp.Code}, Message: {updateResp.Message}!"
-                );
-            }
+                { "Version", version },
+                { "AppType", appType },
+                { "AppKey", appKey },
+                { "Platform", platform },
+                { "ProductId", productId }
+            };
+            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO);
         }
 
-        private async Task<T> GetTaskAsync<T>(string url, string headerKey = null, string headerValue = null)
+        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null)
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-                if (!string.IsNullOrEmpty(headerKey) && !string.IsNullOrEmpty(headerValue))
+                var uri = new Uri(httpUrl);
+                using var httpClient = new HttpClient(new HttpClientHandler
                 {
-                    request.Headers.Add(headerKey, headerValue);
-                }
-
-                var response = await _httpClient.SendAsync(request);
-                response.EnsureSuccessStatusCode(); // Throw if not a success code.
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var result = JsonConvert.DeserializeObject<T>(responseContent);
-
-                return result;
+                    ServerCertificateCustomValidationCallback = CheckValidationResult
+                });
+                httpClient.Timeout = TimeSpan.FromSeconds(15);
+                httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
+                var parametersJson =
+                    JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
+                var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
+                var result = await httpClient.PostAsync(uri, stringContent);
+                var reseponseJson = await result.Content.ReadAsStringAsync();
+                return typeInfo == null
+                    ? JsonSerializer.Deserialize<T>(reseponseJson)
+                    : JsonSerializer.Deserialize(reseponseJson, typeInfo);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                // Log the exception here as needed
-                return default;
+                Debug.WriteLine(e.Message);
+                throw;
             }
         }
 

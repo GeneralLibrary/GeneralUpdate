@@ -5,8 +5,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationManifest></ApplicationManifest>
+    <PublishAot>true</PublishAot>
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />

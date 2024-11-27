@@ -1,39 +1,21 @@
-﻿using GeneralUpdate.Core.ContentProvider;
-using GeneralUpdate.Core.HashAlgorithms;
-using GeneralUpdate.Differential.Binary;
+﻿using GeneralUpdate.Differential.Binary;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.HashAlgorithms;
+using GeneralUpdate.Common.Internal.JsonContext;
 
 namespace GeneralUpdate.Differential
 {
     public sealed class DifferentialCore
     {
-        #region Private Members
-
-        private static readonly object _lockObj = new object();
-        private static DifferentialCore _instance;
-
-        /// <summary>
-        /// Differential file format .
-        /// </summary>
+        private static readonly object _lockObj = new ();
+        private static DifferentialCore? _instance;
         private const string PATCH_FORMAT = ".patch";
-
-        /// <summary>
-        /// Patch catalog.
-        /// </summary>
-        private const string PATCHS = "patchs";
-
-        /// <summary>
-        /// List of files that need to be deleted.
-        /// </summary>
         private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
-
-        #endregion Private Members
-
-        #region Public Properties
 
         public static DifferentialCore Instance
         {
@@ -43,87 +25,48 @@ namespace GeneralUpdate.Differential
                 {
                     lock (_lockObj)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new DifferentialCore();
-                        }
+                        _instance ??= new DifferentialCore();
                     }
                 }
                 return _instance;
             }
         }
 
-        #endregion Public Properties
-
-        #region Public Methods
-
-        /// <summary>
-        /// Generate patch file [Cannot contain files with the same name but different extensions] .
-        /// </summary>
-        /// <param name="sourcePath">Previous version folder path .</param>
-        /// <param name="targetPath">Recent version folder path.</param>
-        /// <param name="patchPath">Store discovered incremental update files in a temporary directory .</param>
-        /// <returns></returns>
-        public async Task Clean(string sourcePath, string targetPath, string patchPath = null)
+        public async Task Clean(string sourcePath, string targetPath, string patchPath)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(patchPath)) 
-                    patchPath = Path.Combine(Environment.CurrentDirectory, PATCHS);
-                if (!Directory.Exists(patchPath))
-                    Directory.CreateDirectory(patchPath);
-
-                //Take the left tree as the center to match the files that are not in the right tree .
-                var fileProvider = new FileProvider();
-                var nodes = await fileProvider.Compare(sourcePath, targetPath);
-                var hashAlgorithm = new Sha256HashAlgorithm();
-
-                //Binary differencing of like terms .
-                foreach (var file in nodes.Item3)
+                var fileManager = new StorageManager();
+                var comparisonResult = fileManager.Compare(sourcePath, targetPath);
+                foreach (var file in comparisonResult.DifferentNodes)
                 {
-                    var dirSeparatorChar = Path.DirectorySeparatorChar.ToString().ToCharArray();
-                    var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").TrimStart(dirSeparatorChar).TrimEnd(dirSeparatorChar);
-                    var tempPath0 = string.Empty;
-                    var tempDir = string.Empty;
-                    if (string.IsNullOrEmpty(tempPath))
-                    {
-                        tempDir = patchPath;
-                        tempPath0 = Path.Combine(patchPath, $"{file.Name}{PATCH_FORMAT}");
-                    }
-                    else
-                    {
-                        tempDir = Path.Combine(patchPath, tempPath);
-                        if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
-                        tempPath0 = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
-                    }
-                    
-                    var finOldFile = nodes.Item1.FirstOrDefault(i => i.Name.Equals(file.Name));
-                    var oldFile = finOldFile == null ? "" : finOldFile.FullName;
-                    var newFile = file.FullName;
-                    var extensionName = Path.GetExtension(file.FullName);
-                    if (File.Exists(oldFile) && File.Exists(newFile) && !FileProvider.GetBlackFileFormats().Contains(extensionName))
-                    {
-                        if (hashAlgorithm.ComputeHash(oldFile)
-                            .Equals(hashAlgorithm.ComputeHash(newFile), StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
+                    var tempDir = GetTempDirectory(file, targetPath, patchPath);
+                    var oldFile = comparisonResult.LeftNodes.FirstOrDefault(i => i.Name.Equals(file.Name));
+                    var newFile = file;
 
-                        //Generate the difference file to the difference directory .
-                        await new BinaryHandle().Clean(oldFile, newFile, tempPath0);
+                    if (oldFile is not null
+                        && File.Exists(oldFile.FullName) 
+                        && File.Exists(newFile.FullName) 
+                        && string.Equals(oldFile.RelativePath, newFile.RelativePath))
+                    {
+                        if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
+                        {
+                            var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
+                            await new BinaryHandler().Clean(oldFile.FullName, newFile.FullName, tempPatchPath);
+                        }
                     }
                     else
                     {
-                        File.Copy(newFile, Path.Combine(tempDir, Path.GetFileName(newFile)), true);
+                        File.Copy(newFile.FullName, Path.Combine(tempDir, Path.GetFileName(newFile.FullName)), true);
                     }
                 }
 
-                //If a file is found that needs to be deleted, a list of files is written to the update package.
-                var exceptFiles = (await fileProvider.Except(sourcePath, targetPath)).ToList();
-                if (exceptFiles.Count != 0)
+                var exceptFiles = fileManager.Except(sourcePath, targetPath);
+                if (exceptFiles is not null
+                    && exceptFiles.Any())
                 {
                     var path = Path.Combine(patchPath, DELETE_FILES_NAME);
-                    FileProvider.CreateJson(path, exceptFiles);
+                    StorageManager.CreateJson(path, exceptFiles);
                 }
             }
             catch (Exception ex)
@@ -131,59 +74,30 @@ namespace GeneralUpdate.Differential
                 throw new Exception($"Generate error : {ex.Message} !", ex.InnerException);
             }
         }
-
-        /// <summary>
-        /// Apply patch [Cannot contain files with the same name but different extensions] .
-        /// </summary>
-        /// <param name="appPath">Client application directory .</param>
-        /// <param name="patchPath">Patch file path.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
+        
         public async Task Dirty(string appPath, string patchPath)
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
+
             try
             {
-                var patchFiles = FileProvider.GetAllfiles(patchPath);
-                var oldFiles = FileProvider.GetAllfiles(appPath);
-
-                //If a JSON file for the deletion list is found in the update package, it will be deleted based on its contents.
-                var deleteListJson = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
-                if (deleteListJson != null)
-                {
-                    var deleteFiles = FileProvider.GetJson<IEnumerable<FileNode>>(deleteListJson.FullName);
-                    var hashAlgorithm = new Sha256HashAlgorithm();
-                    foreach (var file in deleteFiles)
-                    {
-                        var resultFile = oldFiles.FirstOrDefault(i => 
-                            string.Equals(hashAlgorithm.ComputeHash(i.FullName), file.Hash, StringComparison.OrdinalIgnoreCase));
-                        if (resultFile == null)
-                        {
-                            continue;
-                        }
-                        if (File.Exists(resultFile.FullName))
-                        {
-                            File.Delete(resultFile.FullName);
-                        }
-                    }
-                }
-
+                var skipDirectory = StorageManager.SkipDirectorys;
+                var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
+                var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
+                //Refresh the collection after deleting the file.
+                HandleDeleteList(patchFiles, oldFiles);
+                oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
                 foreach (var oldFile in oldFiles)
                 {
-                    //Only the difference file (.patch) can be updated here.
                     var findFile = patchFiles.FirstOrDefault(f =>
+                        Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "").Equals(oldFile.Name));
+
+                    if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PATCH_FORMAT))
                     {
-                        var tempName = Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "");
-                        return tempName.Equals(oldFile.Name);
-                    });
-                    if (findFile != null)
-                    {
-                        var extensionName = Path.GetExtension(findFile.FullName);
-                        if (!extensionName.Equals(PATCH_FORMAT)) continue;
                         await DirtyPatch(oldFile.FullName, findFile.FullName);
                     }
                 }
-                //Update does not include files or copies configuration files.
+
                 await DirtyUnknow(appPath, patchPath);
             }
             catch (Exception ex)
@@ -192,31 +106,48 @@ namespace GeneralUpdate.Differential
             }
         }
 
-        /// <summary>
-        /// Set a blacklist.
-        /// </summary>
-        /// <param name="blackFiles">A collection of blacklist files that are skipped when updated.</param>
-        /// <param name="blackFileFormats">A collection of blacklist file name extensions that are skipped on update.</param>
-        public void SetBlocklist(List<string> blackFiles, List<string> blackFileFormats) => FileProvider.SetBlacklist(blackFiles, blackFileFormats);
-
-        #endregion Public Methods
-
         #region Private Methods
 
-        /// <summary>
-        /// Apply patch file .
-        /// </summary>
-        /// <param name="appPath">Client application directory .</param>
-        /// <param name="patchPath"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
+        private static string GetTempDirectory(FileNode file, string targetPath, string patchPath)
+        {
+            var tempPath = file.FullName.Replace(targetPath, "").Replace(Path.GetFileName(file.FullName), "").Trim(Path.DirectorySeparatorChar);
+            var tempDir = string.IsNullOrEmpty(tempPath) ? patchPath : Path.Combine(patchPath, tempPath);
+            Directory.CreateDirectory(tempDir);
+            return tempDir;
+        }
+        
+        private void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
+        {
+            var json = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
+            if (json == null)
+                return;
+            
+            var deleteFiles = StorageManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
+            if (deleteFiles == null)
+                return;
+            
+            //Match the collection of files to be deleted based on the file hash values stored in the JSON file.
+            var hashAlgorithm = new Sha256HashAlgorithm();
+            var tempDeleteFiles = oldFiles.Where(old => deleteFiles.Any(del => del.Hash.SequenceEqual(hashAlgorithm.ComputeHash(old.FullName)))).ToList();
+            foreach (var file in tempDeleteFiles)
+            {
+                if (!File.Exists(file.FullName))
+                    continue;
+                
+                File.SetAttributes(file.FullName, FileAttributes.Normal);
+                File.Delete(file.FullName);
+            }
+        }
+
         private async Task DirtyPatch(string appPath, string patchPath)
         {
             try
             {
-                if (!File.Exists(appPath) || !File.Exists(patchPath)) return;
-                var newPath = Path.Combine(Path.GetDirectoryName(appPath), $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
-                await new BinaryHandle().Dirty(appPath, newPath, patchPath);
+                if (!File.Exists(appPath) || !File.Exists(patchPath))
+                    return;
+
+                var newPath = Path.Combine(Path.GetDirectoryName(appPath)!, $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
+                await new BinaryHandler().Dirty(appPath, newPath, patchPath);
             }
             catch (Exception ex)
             {
@@ -224,36 +155,42 @@ namespace GeneralUpdate.Differential
             }
         }
 
-        /// <summary>
-        /// Add new files .
-        /// </summary>
-        /// <param name="appPath">Client application directory .</param>
-        /// <param name="patchPath">Patch file path.</param>
-        private Task DirtyUnknow(string appPath, string patchPath)
+        private async Task DirtyUnknow(string appPath, string patchPath)
         {
-            try
+            await Task.Run(() =>
             {
-                var fileProvider = new FileProvider();
-                var listExcept = fileProvider.Comparer(appPath, patchPath);
-                foreach (var file in listExcept)
+                try
                 {
-                    var extensionName = Path.GetExtension(file.FullName);
-                    if (FileProvider.GetBlackFileFormats().Contains(extensionName)) continue;
-                    var targetFileName = file.FullName.Replace(patchPath, "").TrimStart("\\".ToCharArray());
-                    var targetPath = Path.Combine(appPath, targetFileName);
-                    var parentFolder = Directory.GetParent(targetPath);
-                    if (!parentFolder.Exists) parentFolder.Create();
-                    File.Copy(file.FullName, Path.Combine(appPath, targetPath), true);
+                    var fileManager = new StorageManager();
+                    var comparisonResult = fileManager.Compare(appPath, patchPath);
+                    foreach (var file in comparisonResult.DifferentNodes)
+                    {
+                        var extensionName = Path.GetExtension(file.FullName);
+                        if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
+
+                        var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
+                        var targetPath = Path.Combine(appPath, targetFileName);
+                        var parentFolder = Directory.GetParent(targetPath);
+                        if (parentFolder?.Exists == false)
+                        {
+                            parentFolder.Create();
+                        }
+
+                        File.Copy(file.FullName, targetPath, true);
+                    }
+
+                    if (Directory.Exists(patchPath))
+                    {
+                        StorageManager.DeleteDirectory(patchPath);
+                    }
                 }
-                if (Directory.Exists(patchPath)) Directory.Delete(patchPath, true);
-                return Task.CompletedTask;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($" DirtyNew error : {ex.Message} !", ex.InnerException);
-            }
+                catch (Exception ex)
+                {
+                    throw new Exception($"DirtyNew error : {ex.Message} !", ex.InnerException);
+                }
+            });
         }
 
-        #endregion Private Methods
+        #endregion
     }
 }

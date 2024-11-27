@@ -4,7 +4,6 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate128.png</PackageIcon>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
     <Authors>juster.zhu</Authors>
@@ -16,69 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Config\**" />
-    <EmbeddedResource Remove="Config\**" />
-    <None Remove="Config\**" />
+    <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="ContentProvider\.gitkeep" />
-    <None Remove="CustomAwaiter\.gitkeep" />
-    <None Remove="Domain\Entity\.gitkeep" />
-    <None Remove="Domain\PO\.gitkeep" />
-    <None Remove="Exceptions\.gitkeep" />
-    <None Remove="Exceptions\CustomArgs\.gitkeep" />
-    <None Remove="Exceptions\CustomException\.gitkeep" />
     <None Remove="GeneralUpdate.ico" />
-    <None Remove="WillMessage\.gitkeep" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileNode.cs" Link="ContentProvider\FileNode.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Comparer.cs" Link="ContentProvider\FileProvider-Comparer.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Filter.cs" Link="ContentProvider\FileProvider-Filter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Manage.cs" Link="ContentProvider\FileProvider-Manage.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider-Serialization.cs" Link="ContentProvider\FileProvider-Serialization.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileProvider.cs" Link="ContentProvider\FileProvider.cs" />
-    <Compile Include="..\GeneralUpdate.Core\ContentProvider\FileTree.cs" Link="ContentProvider\FileTree.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaitable.cs" Link="CustomAwaiter\IAwaitable.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\IAwaiter.cs" Link="CustomAwaiter\IAwaiter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\CustomAwaiter\ICriticalAwaiter.cs" Link="CustomAwaiter\ICriticalAwaiter.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\Entity.cs" Link="Domain\Entity\Entity.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\Entity\VersionInfo.cs" Link="Domain\Entity\VersionInfo.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Domain\PO\WillMessagePO.cs" Link="Domain\PO\WillMessagePO.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\ExceptionArgs.cs" Link="Exceptions\CustomArgs\ExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\HttpExceptionArgs.cs" Link="Exceptions\CustomArgs\HttpExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" Link="Exceptions\CustomArgs\PatchDirtyExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UnZipExceptionArgs.cs" Link="Exceptions\CustomArgs\UnZipExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomArgs\UpdateExceptionArgs.cs" Link="Exceptions\CustomArgs\UpdateExceptionArgs.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\CustomException\GeneralUpdateException.cs" Link="Exceptions\CustomException\GeneralUpdateException.cs" />
-    <Compile Include="..\GeneralUpdate.Core\Exceptions\ThrowExceptionUtility.cs" Link="Exceptions\ThrowExceptionUtility.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\HashAlgorithmBase.cs" Link="HashAlgorithms\HashAlgorithmBase.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Md5HashAlgorithm.cs" Link="HashAlgorithms\Md5HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha1HashAlgorithm.cs" Link="HashAlgorithms\Sha1HashAlgorithm.cs" />
-    <Compile Include="..\GeneralUpdate.Core\HashAlgorithms\Sha256HashAlgorithm.cs" Link="HashAlgorithms\Sha256HashAlgorithm.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SharpCompress" Version="0.32.1" />
-    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
-    <PackageReference Include="System.Memory" Version="4.5.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ContentProvider\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="CustomAwaiter\" />
-    <Folder Include="HashAlgorithms\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Zip\GeneralUpdate.Zip.csproj" />
   </ItemGroup>
 
 </Project>

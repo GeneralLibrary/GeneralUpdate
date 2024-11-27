@@ -1,6 +1,8 @@
-﻿namespace GeneralUpdate.Bowl.Strategys;
+﻿using GeneralUpdate.Bowl.Internal;
 
-public interface IStrategy
+namespace GeneralUpdate.Bowl.Strategys;
+
+internal interface IStrategy
 {
     void Launch();
     

@@ -1,19 +1,11 @@
 ﻿using System;
-using System.ComponentModel;
 
 namespace GeneralUpdate.Common.Download
 {
-    public class MultiDownloadCompletedEventArgs : AsyncCompletedEventArgs
+    public class MultiDownloadCompletedEventArgs(object version, bool isComplated) : EventArgs
     {
-        public MultiDownloadCompletedEventArgs(Exception error, bool cancelled, object userState) : base(error, cancelled, userState)
-        {
-        }
+        public object Version { get; private set; } = version;
 
-        public MultiDownloadCompletedEventArgs(object version, Exception error, bool cancelled, object userState) : base(error, cancelled, userState)
-        {
-            Version = version;
-        }
-
-        public object Version { get; set; }
+        public bool IsComplated { get; private set; } = isComplated;
     }
 }

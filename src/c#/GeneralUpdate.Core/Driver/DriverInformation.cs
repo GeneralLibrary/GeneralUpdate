@@ -1,6 +1,5 @@
-﻿using GeneralUpdate.Core.Exceptions;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -9,58 +8,59 @@ namespace GeneralUpdate.Core.Driver
     /// </summary>
     public class DriverInformation
     {
-        /// <summary>
-        /// Directory for storing the driver to be installed (Update the driver file in the package).
-        /// </summary>
-        public string InstallDirectory { get; private set; }
-
+        public Dictionary<string, string> FieldMappings { get; private set; }
+        
+        public string DriverFileExtension { get; private set; }
+        
         /// <summary>
         /// All driver backup directories.
         /// </summary>
         public string OutPutDirectory { get; private set; }
+        
+        public string DriverDirectory { get; private set; }
 
         /// <summary>
         /// A collection of driver files to be backed up.
         /// </summary>
-        public List<string> Drivers { get; private set; }
+        public IEnumerable<DriverInfo> Drivers { get; set; }
 
         private DriverInformation()
         { }
-
+        
         public class Builder
         {
-            private DriverInformation _information = new DriverInformation();
+            private DriverInformation _information = new ();
 
-            public Builder SetInstallDirectory(string installDirectory)
+            public Builder SetDriverFileExtension(string fileExtension)
             {
-                _information.InstallDirectory = installDirectory;
+                _information.DriverFileExtension = fileExtension;
                 return this;
             }
-
+            
             public Builder SetOutPutDirectory(string outPutDirectory)
             {
                 _information.OutPutDirectory = outPutDirectory;
                 return this;
             }
-
-            /// <summary>
-            /// Find the collection of driver names that need to be updated from the update package.
-            /// </summary>
-            /// <param name="driverNames"></param>
-            /// <returns></returns>
-            public Builder SetDriverNames(List<string> driverNames)
+            
+            public Builder SetDriverDirectory(string driverDirectory)
             {
-                _information.Drivers = driverNames;
+                _information.DriverDirectory = driverDirectory;
+                return this;
+            }
+            
+            public Builder SetFieldMappings(Dictionary<string, string> fieldMappings)
+            {
+                _information.FieldMappings = fieldMappings;
                 return this;
             }
 
             public DriverInformation Build()
             {
-                if (string.IsNullOrWhiteSpace(_information.InstallDirectory) ||
-                    string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
-                    !_information.Drivers.Any())
+                if (string.IsNullOrWhiteSpace(_information.OutPutDirectory) ||
+                    string.IsNullOrWhiteSpace(_information.DriverFileExtension))
                 {
-                    ThrowExceptionUtility.ThrowIfNull("Cannot create DriverInformation, not all fields are set.");
+                    throw new ArgumentNullException("Cannot create DriverInformation, not all fields are set.");
                 }
 
                 return _information;

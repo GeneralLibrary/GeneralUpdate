@@ -1,32 +1,36 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
-public abstract class AbstractStrategy : IStrategy
+internal abstract class AbstractStrategy : IStrategy
 {
     protected MonitorParameter _parameter;
-    
-    private readonly IReadOnlyList<string> _sensitiveCharacter = new List<string>
-    {
-        "Exit",
-        "exit"
-    };
+    protected List<string> OutputList = new ();
+
+    public void SetParameter(MonitorParameter parameter) => _parameter = parameter;
     
     public virtual void Launch()
     {
-        Backup();
-        Startup(_parameter.ProcessNameOrId, _parameter.InnerArguments);
+        Startup(_parameter.InnerApp, _parameter.InnerArguments);
     }
     
     private void Startup(string appName, string arguments)
     {
+        if (Directory.Exists(_parameter.FailDirectory))
+        {
+            StorageManager.DeleteDirectory(_parameter.FailDirectory);
+        }
+        Directory.CreateDirectory(_parameter.FailDirectory);
+        
         var startInfo = new ProcessStartInfo
         {
             FileName = appName,
             Arguments = arguments,
             RedirectStandardOutput = true,
+            RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -35,71 +39,15 @@ public abstract class AbstractStrategy : IStrategy
         process.OutputDataReceived += OutputHandler;
         process.ErrorDataReceived += OutputHandler;
         process.Start();
-        process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        process.WaitForExit(1000 * 10);
     }
     
     private void OutputHandler(object sendingProcess, DataReceivedEventArgs outLine)
     {
         var data = outLine.Data;
         if (!string.IsNullOrEmpty(data))
-        {
-            foreach (var sensitive in _sensitiveCharacter)
-            {
-                if (data.Contains(sensitive)){
-                    Restore();
-                    Process.Start(_parameter.ProcessNameOrId, _parameter.Arguments);
-                    break;
-                }
-            }
-        }
+            OutputList.Add(data);
     }
-
-    private void Backup()
-    {
-        var backupPath = _parameter.Target;
-        var sourcePath = _parameter.Source;
-        
-        if (Directory.Exists(backupPath))
-        {
-            Directory.Delete(backupPath, true);
-        }
-
-        Directory.CreateDirectory(backupPath);
-
-        foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-        {
-            Directory.CreateDirectory(dirPath.Replace(sourcePath, backupPath));
-        }
-
-        foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-        {
-            File.Copy(newPath, newPath.Replace(sourcePath, backupPath), true);
-        }
-    }
-
-    private void Restore()
-    {
-        var restorePath = _parameter.Target;
-        var backupPath = _parameter.Source;
-        
-        if (Directory.Exists(restorePath))
-        {
-            Directory.Delete(restorePath, true);
-        }
-
-        Directory.CreateDirectory(restorePath);
-
-        foreach (string dirPath in Directory.GetDirectories(backupPath, "*", SearchOption.AllDirectories))
-        {
-            Directory.CreateDirectory(dirPath.Replace(backupPath, restorePath));
-        }
-
-        foreach (string newPath in Directory.GetFiles(backupPath, "*.*", SearchOption.AllDirectories))
-        {
-            File.Copy(newPath, newPath.Replace(backupPath, restorePath), true);
-        }
-    }
-
-    public void SetParameter(MonitorParameter parameter) => _parameter = parameter;
 }
