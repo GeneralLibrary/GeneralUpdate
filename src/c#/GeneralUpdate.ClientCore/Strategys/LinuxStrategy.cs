@@ -29,7 +29,7 @@ public class LinuxStrategy : AbstractStrategy
         try
         {
             var status = 0;
-            var patchPath = GeneralFileManager.GetTempDirectory(Patchs);
+            var patchPath = StorageManager.GetTempDirectory(Patchs);
             foreach (var version in _configinfo.UpdateVersions)
             {
                 try
@@ -78,6 +78,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
+            Debug.WriteLine(e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
     }
@@ -90,14 +91,18 @@ public class LinuxStrategy : AbstractStrategy
             if (File.Exists(appPath))
             {
                 if (File.Exists(ProcessInfoFileName))
+                {
+                    File.SetAttributes(ProcessInfoFileName,FileAttributes.Normal);
                     File.Delete(ProcessInfoFileName);
-                
+                }
+
                 File.WriteAllText(ProcessInfoFileName, _configinfo.ProcessInfo);
                 Process.Start(appPath);
             }
         }
         catch (Exception e)
         {
+            Debug.WriteLine(e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally

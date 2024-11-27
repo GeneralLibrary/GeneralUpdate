@@ -5,10 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.Compress;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Core.Strategys
@@ -38,14 +38,14 @@ namespace GeneralUpdate.Core.Strategys
                     throw new FileNotFoundException(jsonPath);
 
                 //2.Parse the JSON version configuration file content.
-                var versions = GeneralFileManager.GetJson<List<VersionOSS>>(jsonPath, VersionOSSJsonContext.Default.ListVersionOSS);
+                var versions = StorageManager.GetJson<List<VersionOSS>>(jsonPath, VersionOSSJsonContext.Default.ListVersionOSS);
                 if (versions == null) 
                     throw new NullReferenceException(nameof(versions));
 
                 versions = versions.OrderBy(v => v.PubTime).ToList();
                 //3.Download version by version according to the version of the configuration file.
                 await DownloadVersions(versions);
-                UnZip(versions);
+                Decompress(versions);
                     
                 //4.Launch the main application.
                 LaunchApp();
@@ -105,7 +105,7 @@ namespace GeneralUpdate.Core.Strategys
             Process.Start(appPath);
         }
 
-        private void UnZip(List<VersionOSS> versions)
+        private void Decompress(List<VersionOSS> versions)
         {
             var encoding = Encoding.GetEncoding(_parameter.Encoding);
             foreach (var version in versions)

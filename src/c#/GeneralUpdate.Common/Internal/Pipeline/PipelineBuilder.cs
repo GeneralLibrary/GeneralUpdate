@@ -7,7 +7,7 @@ namespace GeneralUpdate.Common.Internal.Pipeline
     /// <summary>
     /// Pipeline builder.
     /// </summary>
-    public sealed class PipelineBuilder(PipelineContext context = null)
+    public sealed class PipelineBuilder(PipelineContext context)
     {
         /// <summary>
         /// LIFO，Last In First Out.

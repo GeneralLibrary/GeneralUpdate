@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.ClientCore;
@@ -35,7 +31,7 @@ public sealed class GeneralClientOSS
                 var versionsFilePath = Path.Combine(basePath, configGlobalConfigInfo.VersionFileName);
                 DownloadFile(configGlobalConfigInfo.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
-                var versions = GeneralFileManager.GetJson<List<VersionOSS>>(versionsFilePath, VersionOSSJsonContext.Default.ListVersionOSS);
+                var versions = StorageManager.GetJson<List<VersionOSS>>(versionsFilePath, VersionOSSJsonContext.Default.ListVersionOSS);
                 if (versions == null || versions.Count == 0) return;
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();
@@ -54,6 +50,7 @@ public sealed class GeneralClientOSS
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(ex.Message);
                 throw new Exception(ex.Message + "\n" + ex.StackTrace);
             }
             finally

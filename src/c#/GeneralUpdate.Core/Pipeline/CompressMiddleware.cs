@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +19,6 @@ public class CompressMiddleware : IMiddleware
             try
             {
                 var format = context.Get<string>("Format");
-                var name = context.Get<string>("Name");
                 var sourcePath = context.Get<string>("ZipFilePath");
                 var patchPath = context.Get<string>("PatchPath");
                 var encoding = context.Get<Encoding>("Encoding");
@@ -26,6 +26,7 @@ public class CompressMiddleware : IMiddleware
             }
             catch (Exception e)
             {
+                Debug.WriteLine(e.Message);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
         });

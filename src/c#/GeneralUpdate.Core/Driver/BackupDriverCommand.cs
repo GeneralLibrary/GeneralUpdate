@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -24,7 +25,7 @@ namespace GeneralUpdate.Core.Driver
             //Export the backup according to the driver name.
             if (Directory.Exists(information.OutPutDirectory))
             {
-                Directory.Delete(information.OutPutDirectory, true);
+                StorageManager.DeleteDirectory(information.OutPutDirectory);
             }
             
             Directory.CreateDirectory(information.OutPutDirectory);

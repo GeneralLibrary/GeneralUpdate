@@ -28,7 +28,7 @@ public class WindowsStrategy : AbstractStrategy
         try
         {
             var status = ReportType.None;
-            var patchPath = GeneralFileManager.GetTempDirectory(Patchs);
+            var patchPath = StorageManager.GetTempDirectory(Patchs);
             foreach (var version in _configinfo.UpdateVersions)
             {
                 try
@@ -77,6 +77,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
+            Debug.WriteLine(e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
     }
@@ -99,6 +100,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
+            Debug.WriteLine(e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally

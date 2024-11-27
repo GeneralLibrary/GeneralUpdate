@@ -63,7 +63,7 @@ internal class WindowStrategy : AbstractStrategy
             ProcdumpOutPutLines = OutputList
         };
         var failJsonPath = Path.Combine(_parameter.FailDirectory, _parameter.FailFileName);
-        GeneralFileManager.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
+        StorageManager.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ internal class WindowStrategy : AbstractStrategy
     private void Restore()
     {
         if (string.Equals(_parameter.WorkModel, WorkModel))
-            GeneralFileManager.Restore(_parameter.BackupDirectory, _parameter.TargetPath);
+            StorageManager.Restore(_parameter.BackupDirectory, _parameter.TargetPath);
     }
 
     /// <summary>

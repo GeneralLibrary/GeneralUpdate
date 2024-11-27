@@ -24,7 +24,7 @@ namespace GeneralUpdate.Client
                     UpdateUrl = "http://127.0.0.1:5000/Upgrade/Verification",
                     AppName = "GeneralUpdate.Upgrad.exe",
                     MainAppName = "GeneralUpdate.Client.exe",
-                    InstallPath = Thread.GetDomain().BaseDirectory, //@"D:\packet\installtest", 
+                    InstallPath = Thread.GetDomain().BaseDirectory,
                     //configinfo.Bowl = "Generalupdate.CatBowl.exe";
                     //当前客户端的版本号
                     ClientVersion = "1.0.0.0",

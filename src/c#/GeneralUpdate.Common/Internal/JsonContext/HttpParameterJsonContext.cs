@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace GeneralUpdate.Common.AOT.JsonContext;
+namespace GeneralUpdate.Common.Internal.JsonContext;
 
 [JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(bool?))]

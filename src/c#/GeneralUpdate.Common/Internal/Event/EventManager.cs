@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace GeneralUpdate.Common.Internal.Event
 {
@@ -30,36 +31,57 @@ namespace GeneralUpdate.Common.Internal.Event
 
         public void AddListener<TEventArgs>(Action<object, TEventArgs> listener) where TEventArgs : EventArgs
         {
-            if (listener == null) throw new ArgumentNullException(nameof(listener));
-            var delegateType = typeof(Action<object, TEventArgs>);
-            if (_dicDelegates.ContainsKey(delegateType))
+            try
             {
-                _dicDelegates[delegateType] = Delegate.Combine(_dicDelegates[delegateType], listener);
+                if (listener == null) throw new ArgumentNullException(nameof(listener));
+                var delegateType = typeof(Action<object, TEventArgs>);
+                if (_dicDelegates.ContainsKey(delegateType))
+                {
+                    _dicDelegates[delegateType] = Delegate.Combine(_dicDelegates[delegateType], listener);
+                }
+                else
+                {
+                    _dicDelegates.Add(delegateType, listener);
+                }
             }
-            else
+            catch (Exception e)
             {
-                _dicDelegates.Add(delegateType, listener);
+                Debug.WriteLine(e);
             }
         }
 
         public void RemoveListener<TEventArgs>(Action<object, TEventArgs> listener) where TEventArgs : EventArgs
         {
-            if (listener == null) throw new ArgumentNullException(nameof(listener));
-            var delegateType = typeof(Action<object, TEventArgs>);
-            if (_dicDelegates.TryGetValue(delegateType, out var existingDelegate))
+            try
             {
-                _dicDelegates[delegateType] = Delegate.Remove(existingDelegate, listener);
+                if (listener == null) throw new ArgumentNullException(nameof(listener));
+                var delegateType = typeof(Action<object, TEventArgs>);
+                if (_dicDelegates.TryGetValue(delegateType, out var existingDelegate))
+                {
+                    _dicDelegates[delegateType] = Delegate.Remove(existingDelegate, listener);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
             }
         }
 
         public void Dispatch<TEventArgs>(object sender, TEventArgs eventArgs) where TEventArgs : EventArgs
         {
-            if (sender == null) throw new ArgumentNullException(nameof(sender));
-            if (eventArgs == null) throw new ArgumentNullException(nameof(eventArgs));
-            var delegateType = typeof(Action<object, TEventArgs>);
-            if (_dicDelegates.TryGetValue(delegateType, out var existingDelegate))
+            try
             {
-                ((Action<object, TEventArgs>)existingDelegate)?.Invoke(sender, eventArgs);
+                if (sender == null) throw new ArgumentNullException(nameof(sender));
+                if (eventArgs == null) throw new ArgumentNullException(nameof(eventArgs));
+                var delegateType = typeof(Action<object, TEventArgs>);
+                if (_dicDelegates.TryGetValue(delegateType, out var existingDelegate))
+                {
+                    ((Action<object, TEventArgs>)existingDelegate)?.Invoke(sender, eventArgs);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
             }
         }
 
@@ -67,10 +89,17 @@ namespace GeneralUpdate.Common.Internal.Event
 
         public void Dispose()
         {
-            if (!this._disposed)
+            try
             {
-                _dicDelegates.Clear();
-                _disposed = true;
+                if (!this._disposed)
+                {
+                    _dicDelegates.Clear();
+                    _disposed = true;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
             }
         }
     }

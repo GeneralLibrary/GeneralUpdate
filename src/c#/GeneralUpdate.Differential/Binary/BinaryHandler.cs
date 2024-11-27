@@ -372,6 +372,7 @@ namespace GeneralUpdate.Differential.Binary
                         }
                     }
 
+                    File.SetAttributes(_oldfilePath, FileAttributes.Normal);
                     File.Delete(_oldfilePath);
                     File.Move(_newfilePath, _oldfilePath);
                 }

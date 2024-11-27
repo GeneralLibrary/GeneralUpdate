@@ -9,12 +9,12 @@ using GeneralUpdate.Common.HashAlgorithms;
 
 namespace GeneralUpdate.Common.FileBasic
 {
-    public sealed class GeneralFileManager
+    public sealed class StorageManager
     {
         private long _fileCount = 0;
         public const string DirectoryName = "app-";
         public static readonly List<string> SkipDirectorys = ["fail", DirectoryName];
-        public ComparisonResult ComparisonResult { get; private set; }
+        private ComparisonResult ComparisonResult { get; set; }
 
         #region Public Methods
         
@@ -101,6 +101,7 @@ namespace GeneralUpdate.Common.FileBasic
             {
                 DeleteDirectory(dir);
             }
+            
             Directory.Delete(targetDir, false);
         }
 
@@ -136,7 +137,7 @@ namespace GeneralUpdate.Common.FileBasic
             }
         }
         
-        public static List<FileInfo> GetAllfiles(string path)
+        private static List<FileInfo> GetAllfiles(string path)
         {
             try
             {

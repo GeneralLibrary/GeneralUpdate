@@ -6,12 +6,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Core.Strategys;
@@ -45,7 +45,7 @@ namespace GeneralUpdate.Core
                 DownloadTimeOut = processInfo.DownloadTimeOut,
                 AppSecretKey = processInfo.AppSecretKey,
                 UpdateVersions = processInfo.UpdateVersions,
-                TempPath = GeneralFileManager.GetTempDirectory("upgrade_temp"),
+                TempPath = StorageManager.GetTempDirectory("upgrade_temp"),
                 ReportUrl = processInfo.ReportUrl,
                 BackupDirectory = processInfo.BackupDirectory
             };
@@ -53,17 +53,27 @@ namespace GeneralUpdate.Core
 
         public override async Task<GeneralUpdateBootstrap> LaunchAsync()
         {
-            StrategyFactory();
-            var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
-            manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
-            manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
-            manager.MultiDownloadError += OnMultiDownloadError;
-            manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
-            foreach (var versionInfo in _configInfo.UpdateVersions)
+            try
             {
-                manager.Add(new DownloadTask(manager, versionInfo));
+                StrategyFactory();
+                var manager =
+                    new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
+                manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
+                manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
+                manager.MultiDownloadError += OnMultiDownloadError;
+                manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
+                foreach (var versionInfo in _configInfo.UpdateVersions)
+                {
+                    manager.Add(new DownloadTask(manager, versionInfo));
+                }
+
+                await manager.LaunchTasksAsync();
             }
-            await manager.LaunchTasksAsync();
+            catch (Exception exception)
+            {
+                Debug.WriteLine(exception.Message);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+            }
             return this;
         }
 
@@ -96,7 +106,7 @@ namespace GeneralUpdate.Core
 
         #endregion
 
-        private string? GetProcessInfoJsonContext()
+        private static string? GetProcessInfoJsonContext()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
@@ -133,7 +143,7 @@ namespace GeneralUpdate.Core
         
         private GeneralUpdateBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
         {
-            Debug.Assert(callbackAction!= null);
+            Debug.Assert(callbackAction != null);
             EventManager.Instance.AddListener(callbackAction);
             return this;
         }

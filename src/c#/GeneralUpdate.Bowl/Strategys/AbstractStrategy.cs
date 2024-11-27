@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using GeneralUpdate.Common.FileBasic;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
@@ -20,7 +21,7 @@ internal abstract class AbstractStrategy : IStrategy
     {
         if (Directory.Exists(_parameter.FailDirectory))
         {
-            Directory.Delete(_parameter.FailDirectory, true);
+            StorageManager.DeleteDirectory(_parameter.FailDirectory);
         }
         Directory.CreateDirectory(_parameter.FailDirectory);
         

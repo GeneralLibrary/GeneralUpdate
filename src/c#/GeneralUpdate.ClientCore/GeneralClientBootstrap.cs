@@ -8,12 +8,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Strategys;
-using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Common.Shared.Object.Enum;
@@ -166,9 +166,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 ? 60
                 : GetOption(UpdateOption.DownloadTimeOut);
             _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
-            _configInfo.TempPath = GeneralFileManager.GetTempDirectory("main_temp");
+            _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
             _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
-                $"{GeneralFileManager.DirectoryName}{_configInfo.ClientVersion}");
+                $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
 
             if (_configInfo.IsMainUpdate)
             {
@@ -197,9 +197,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
             }
 
-            GeneralFileManager.Backup(_configInfo.InstallPath
+            StorageManager.Backup(_configInfo.InstallPath
                 , _configInfo.BackupDirectory
-                , GeneralFileManager.SkipDirectorys);
+                , StorageManager.SkipDirectorys);
 
             StrategyFactory();
             switch (_configInfo.IsUpgradeUpdate)
@@ -246,6 +246,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
+            Debug.WriteLine(exception.Message);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -400,11 +401,15 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (File.Exists("ProcessInfo.json"))
+                {
+                    File.SetAttributes("ProcessInfo.json", FileAttributes.Normal);
                     File.Delete("ProcessInfo.json");
+                }
             }
         }
         catch (Exception ex)
         {
+            Debug.WriteLine(ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Error: An unknown error occurred while deleting the environment variable."));
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ public class CompressMiddleware : IMiddleware
             }
             catch (Exception e)
             {
+                Debug.WriteLine(e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
         });

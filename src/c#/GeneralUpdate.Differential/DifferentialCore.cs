@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.HashAlgorithms;
+using GeneralUpdate.Common.Internal.JsonContext;
 
 namespace GeneralUpdate.Differential
 {
@@ -36,7 +36,7 @@ namespace GeneralUpdate.Differential
         {
             try
             {
-                var fileManager = new GeneralFileManager();
+                var fileManager = new StorageManager();
                 var comparisonResult = fileManager.Compare(sourcePath, targetPath);
                 foreach (var file in comparisonResult.DifferentNodes)
                 {
@@ -49,7 +49,7 @@ namespace GeneralUpdate.Differential
                         && File.Exists(newFile.FullName) 
                         && string.Equals(oldFile.RelativePath, newFile.RelativePath))
                     {
-                        if (!GeneralFileManager.HashEquals(oldFile.FullName, newFile.FullName))
+                        if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
                         {
                             var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
                             await new BinaryHandler().Clean(oldFile.FullName, newFile.FullName, tempPatchPath);
@@ -66,7 +66,7 @@ namespace GeneralUpdate.Differential
                     && exceptFiles.Any())
                 {
                     var path = Path.Combine(patchPath, DELETE_FILES_NAME);
-                    GeneralFileManager.CreateJson(path, exceptFiles);
+                    StorageManager.CreateJson(path, exceptFiles);
                 }
             }
             catch (Exception ex)
@@ -81,12 +81,12 @@ namespace GeneralUpdate.Differential
 
             try
             {
-                var skipDirectory = GeneralFileManager.SkipDirectorys;
-                var patchFiles = GeneralFileManager.GetAllFiles(patchPath, skipDirectory);
-                var oldFiles = GeneralFileManager.GetAllFiles(appPath, skipDirectory);
+                var skipDirectory = StorageManager.SkipDirectorys;
+                var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
+                var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
                 //Refresh the collection after deleting the file.
                 HandleDeleteList(patchFiles, oldFiles);
-                oldFiles = GeneralFileManager.GetAllFiles(appPath, skipDirectory);
+                oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
                 foreach (var oldFile in oldFiles)
                 {
                     var findFile = patchFiles.FirstOrDefault(f =>
@@ -122,7 +122,7 @@ namespace GeneralUpdate.Differential
             if (json == null)
                 return;
             
-            var deleteFiles = GeneralFileManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
+            var deleteFiles = StorageManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
             if (deleteFiles == null)
                 return;
             
@@ -161,7 +161,7 @@ namespace GeneralUpdate.Differential
             {
                 try
                 {
-                    var fileManager = new GeneralFileManager();
+                    var fileManager = new StorageManager();
                     var comparisonResult = fileManager.Compare(appPath, patchPath);
                     foreach (var file in comparisonResult.DifferentNodes)
                     {
@@ -181,7 +181,7 @@ namespace GeneralUpdate.Differential
 
                     if (Directory.Exists(patchPath))
                     {
-                        GeneralFileManager.DeleteDirectory(patchPath);
+                        StorageManager.DeleteDirectory(patchPath);
                     }
                 }
                 catch (Exception ex)

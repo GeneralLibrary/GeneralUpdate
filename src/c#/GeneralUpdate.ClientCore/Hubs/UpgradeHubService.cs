@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -38,13 +39,40 @@ public class UpgradeHubService(string url, string? token = null, string? appkey 
 
     public void AddListenerClosed(Func<Exception?, Task> closeCallback)
         => _connection!.Closed += closeCallback;
-    
+
     public async Task StartAsync()
-        => await _connection!.StartAsync();
-    
+    {
+        try
+        {
+            await _connection!.StartAsync();
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+    }
+
     public async Task StopAsync()
-        => await _connection!.StopAsync();
+    {
+        try
+        {
+            await _connection!.StopAsync();
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+    }
 
     public async Task DisposeAsync()
-        => await _connection!.DisposeAsync();
+    {
+        try
+        {
+            await _connection!.DisposeAsync();
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+    }
 }

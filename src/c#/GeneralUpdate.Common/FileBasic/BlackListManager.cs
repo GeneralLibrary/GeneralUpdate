@@ -6,9 +6,8 @@ namespace GeneralUpdate.Common.FileBasic;
 
 public class BlackListManager
 {
-    private readonly static object _lockObject = new object();
-    
-    private static BlackListManager _instance;
+    private static readonly object LockObject = new object();
+    private static BlackListManager? _instance;
     
     private static readonly List<string> _blackFileFormats =
     [
@@ -22,17 +21,15 @@ public class BlackListManager
 
     private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
 
-    private BlackListManager()
-    {
-    }
+    private BlackListManager() { }
 
-    public static BlackListManager Instance
+    public static BlackListManager? Instance
     {
         get
         {
             if (_instance == null)
             {
-                lock (_lockObject)
+                lock (LockObject)
                 {
                     if (_instance == null)
                     {

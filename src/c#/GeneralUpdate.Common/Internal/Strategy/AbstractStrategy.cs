@@ -40,7 +40,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         protected static void Clear(string path)
         {
             if (Directory.Exists(path))
-                GeneralFileManager.DeleteDirectory(path);
+                StorageManager.DeleteDirectory(path);
         }
     }
 }

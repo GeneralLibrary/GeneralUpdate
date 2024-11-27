@@ -11,7 +11,7 @@ namespace GeneralUpdate.Core.Driver
         {
             try
             {
-                var backupFiles = GeneralFileManager.GetAllFiles(information.OutPutDirectory, GeneralFileManager.SkipDirectorys);
+                var backupFiles = StorageManager.GetAllFiles(information.OutPutDirectory, StorageManager.SkipDirectorys);
                 var fileExtension = information.DriverFileExtension;
                 var drivers = backupFiles.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
                 

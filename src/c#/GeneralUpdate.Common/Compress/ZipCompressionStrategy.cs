@@ -120,7 +120,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         {
             if (Directory.Exists(unZipDir))
             {
-                GeneralFileManager.DeleteDirectory(unZipDir);
+                StorageManager.DeleteDirectory(unZipDir);
             }
             Directory.CreateDirectory(unZipDir);
 

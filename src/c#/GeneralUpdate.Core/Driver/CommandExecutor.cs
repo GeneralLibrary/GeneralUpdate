@@ -44,11 +44,9 @@ If possible, use pre-tested drivers that are proven to work.
                 process.Start();
                 process.WaitForExit();
 
-                // 读取标准输出
                 var output = process.StandardOutput.ReadToEnd();
                 Debug.WriteLine(output);
 
-                // 读取错误输出
                 var error = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(error))
                 {

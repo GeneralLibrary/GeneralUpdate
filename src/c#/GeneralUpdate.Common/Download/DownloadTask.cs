@@ -135,9 +135,9 @@ namespace GeneralUpdate.Common.Download
             {
                 var interval = DateTime.Now - _startTime;
                 var tempTotalBytes = Interlocked.Read(ref _totalBytes);
-                //累计已下载大小
+                //Accumulate the downloaded size.
                 var tempReceivedBytes = Interlocked.Read(ref _receivedBytes);
-                //当前下载大小
+                //Current downloaded size.
                 var tempCurrentBytes = tempReceivedBytes - Interlocked.Read(ref _currentBytes);
                 var speed = CalculateDownloadSpeed(tempCurrentBytes, interval);
                 var formatSpeed = FormatDownloadSpeed(speed);
@@ -176,7 +176,7 @@ namespace GeneralUpdate.Common.Download
         }
 
         /// <summary>
-        /// 计算剩余下载时间（单位：秒）
+        /// Calculate the remaining download time (in seconds).
         /// </summary>
         /// <param name="totalBytes"></param>
         /// <param name="bytesReceived"></param>
@@ -195,7 +195,7 @@ namespace GeneralUpdate.Common.Download
         }
         
         /// <summary>
-        /// 计算下载速度（单位：字节/秒）
+        /// Calculate the download speed (in bytes per second).
         /// </summary>
         /// <param name="bytesReceived"></param>
         /// <param name="elapsedTime"></param>
@@ -209,7 +209,7 @@ namespace GeneralUpdate.Common.Download
         }
         
         /// <summary>
-        /// 计算下载进度（百分比 %）
+        /// Calculate the download progress (percentage %).
         /// </summary>
         /// <param name="totalBytes"></param>
         /// <param name="bytesReceived"></param>
@@ -223,7 +223,7 @@ namespace GeneralUpdate.Common.Download
         }
         
         /// <summary>
-        /// 将下载速度转换为合适的单位（B、KB、MB、GB）
+        /// Convert the download speed to an appropriate unit (B, KB, MB, GB).
         /// </summary>
         /// <param name="speedInBytesPerSecond"></param>
         /// <returns></returns>
@@ -244,7 +244,7 @@ namespace GeneralUpdate.Common.Download
         }
         
         /// <summary>
-        /// 获取已下载文件的大小，用于断点续传
+        /// Get the size of the downloaded file for resuming interrupted downloads.
         /// </summary>
         /// <param name="tempPath"></param>
         /// <returns></returns>

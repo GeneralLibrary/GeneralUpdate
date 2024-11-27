@@ -16,7 +16,7 @@ namespace GeneralUpdate.Core.Driver
         /// <returns></returns>
         protected static IEnumerable<FileInfo> SearchDrivers(string patchPath, string fileExtension)
         {
-            var files = GeneralFileManager.GetAllFiles(patchPath, GeneralFileManager.SkipDirectorys);
+            var files = StorageManager.GetAllFiles(patchPath, StorageManager.SkipDirectorys);
             return files.Where(x => x.FullName.EndsWith(fileExtension)).ToList();
         }
     }

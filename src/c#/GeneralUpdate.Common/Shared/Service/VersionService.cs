@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Shared.Service
@@ -70,18 +69,29 @@ namespace GeneralUpdate.Common.Shared.Service
 
         private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null)
         {
-            var uri = new Uri(httpUrl);
-            using var httpClient = new HttpClient(new HttpClientHandler
+            try
             {
-                ServerCertificateCustomValidationCallback = CheckValidationResult
-            });
-            httpClient.Timeout = TimeSpan.FromSeconds(15);
-            httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
-            var parametersJson = JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
-            var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
-            var result = await httpClient.PostAsync(uri, stringContent);
-            var reseponseJson = await result.Content.ReadAsStringAsync();
-            return typeInfo == null ? JsonSerializer.Deserialize<T>(reseponseJson) : JsonSerializer.Deserialize(reseponseJson, typeInfo);
+                var uri = new Uri(httpUrl);
+                using var httpClient = new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = CheckValidationResult
+                });
+                httpClient.Timeout = TimeSpan.FromSeconds(15);
+                httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
+                var parametersJson =
+                    JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
+                var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
+                var result = await httpClient.PostAsync(uri, stringContent);
+                var reseponseJson = await result.Content.ReadAsStringAsync();
+                return typeInfo == null
+                    ? JsonSerializer.Deserialize<T>(reseponseJson)
+                    : JsonSerializer.Deserialize(reseponseJson, typeInfo);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+                throw;
+            }
         }
 
         private static bool CheckValidationResult(

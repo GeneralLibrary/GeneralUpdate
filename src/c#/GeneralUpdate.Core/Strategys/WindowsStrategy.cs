@@ -31,7 +31,7 @@ namespace GeneralUpdate.Core.Strategys
                 try
                 {
                     var status = ReportType.None;
-                    var patchPath = GeneralFileManager.GetTempDirectory(Patchs);
+                    var patchPath = StorageManager.GetTempDirectory(Patchs);
                     foreach (var version in _configinfo.UpdateVersions)
                     {
                         try
@@ -54,7 +54,7 @@ namespace GeneralUpdate.Core.Strategys
                             //Driver middleware
                             if (_configinfo.DriveEnabled == true)
                             {
-                                context.Add("DriverOutPut", GeneralFileManager.GetTempDirectory("DriverOutPut"));
+                                context.Add("DriverOutPut", StorageManager.GetTempDirectory("DriverOutPut"));
                                 context.Add("FieldMappings", _configinfo.FieldMappings);
                             }
 
@@ -89,6 +89,7 @@ namespace GeneralUpdate.Core.Strategys
                 }
                 catch (Exception e)
                 {
+                    Debug.WriteLine(e.Message);
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
             });
@@ -107,6 +108,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception e)
             {
+                Debug.WriteLine(e.Message);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
             finally

@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.AOT.JsonContext;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Core.Strategys;
 
@@ -41,6 +42,7 @@ namespace GeneralUpdate.Core
             }
             catch (Exception exception)
             {
+                Debug.WriteLine(exception);
                 throw new Exception(exception.Message + "\n" + exception.StackTrace);
             }
         }
