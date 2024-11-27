@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal.JsonContext;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GeneralUpdate.ClientCore.Hubs;
 
@@ -11,23 +14,33 @@ namespace GeneralUpdate.ClientCore.Hubs;
 /// <param name="url">Subscription address, for example: http://127.0.0.1/UpgradeHub</param>
 /// <param name="token">ID4 authentication token string.</param>
 /// <param name="args">Parameters to be sent to the server upon connection (recommended as a JSON string).</param>
-public class UpgradeHubService(string url, string? token = null, string? appkey = null) : IUpgradeHubService
+public class UpgradeHubService : IUpgradeHubService
 {
     private const string Onlineflag = "Online";
     private const string ReceiveMessageflag = "ReceiveMessage";
-    
-    private readonly HubConnection? _connection = new HubConnectionBuilder()
-        .WithUrl(url, config =>
+    private HubConnection? _connection;
+
+    public UpgradeHubService(string url, string? token = null, string? appkey = null)
+        => _connection = BuildHubConnection(url, token, appkey);
+
+    private HubConnection BuildHubConnection(string url, string? token = null, string? appkey = null)
+    {
+        var builder = new HubConnectionBuilder()
+            .WithUrl(url, config =>
+            {
+                if (!string.IsNullOrWhiteSpace(token))
+                    config.AccessTokenProvider = () => Task.FromResult(token);
+
+                if (!string.IsNullOrWhiteSpace(appkey))
+                    config.Headers.Add("appkey", appkey);
+            }).WithAutomaticReconnect(new RandomRetryPolicy());
+        builder.Services.Configure<JsonHubProtocolOptions>(o =>
         {
-            if (!string.IsNullOrWhiteSpace(token))
-                config.AccessTokenProvider = () => Task.FromResult(token);
-            
-            if (!string.IsNullOrWhiteSpace(appkey))
-                config.Headers.Add("appkey", appkey);
-        })
-        .WithAutomaticReconnect(new RandomRetryPolicy())
-        .Build();
-    
+            o.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, PacketJsonContext.Default);
+        });
+        return builder.Build();
+    }
+
     public void AddListenerReceive(Action<string> receiveMessageCallback)
         => _connection?.On(ReceiveMessageflag, receiveMessageCallback);
 

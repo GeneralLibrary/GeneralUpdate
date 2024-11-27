@@ -1,5 +1,7 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using GeneralUpdate.ClientCore;
+using GeneralUpdate.ClientCore.Hubs;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
@@ -12,7 +14,7 @@ namespace GeneralUpdate.Client
     {
         static async Task Main(string[] args)
         {
-            try
+            /*try
             {
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
@@ -55,7 +57,7 @@ namespace GeneralUpdate.Client
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }
+            }*/
 
             /*var paramsOSS = new GlobalConfigInfoOSS();
             paramsOSS.Url = "http://192.168.50.203/versions.json";
@@ -65,13 +67,13 @@ namespace GeneralUpdate.Client
             paramsOSS.Encoding = Encoding.UTF8.WebName;
             GeneralClientOSS.Start(paramsOSS);*/
 
-            /*var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
-                , null,"a84d21d4-3448-48d4-b418-12c5a7a039cd");
+            var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
+                , null,"dfeb5833-975e-4afb-88f1-6278ee9aeff6");
             hub.AddListenerReceive((message) =>
             {
                 Debug.WriteLine(message);
             });
-            await hub.StartAsync();*/
+            await hub.StartAsync();
 
             /*Task.Run(async () =>
            {
