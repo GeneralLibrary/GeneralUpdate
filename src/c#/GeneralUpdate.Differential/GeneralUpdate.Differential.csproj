@@ -3,15 +3,21 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>GeneralUpdate128.png</PackageIcon>
+    <PackageIcon>GeneralUpdate.ico</PackageIcon>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
-    <Authors>juster.zhu</Authors>
+    <Authors>JusterZhu</Authors>
     <Version>1.4.3</Version>
-    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
-    <Copyright>Copyright ©  2023</Copyright>
-    <LangVersion>12</LangVersion>
+    <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
+    <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
+    <LangVersion>default</LangVersion>
     <Nullable>enable</Nullable>
+    <Title>GeneralUpdate.Differential</Title>
+    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+    <RepositoryType>public</RepositoryType>
+    <PackageTags>upgrade</PackageTags>
+    <PackageReleaseNotes>The binary differential update function is provided, but the configuration file update function is reserved.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="GeneralUpdate.ico" />
+    <None Update="GeneralUpdate.ico">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

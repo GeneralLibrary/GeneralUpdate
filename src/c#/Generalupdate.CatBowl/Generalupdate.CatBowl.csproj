@@ -9,7 +9,14 @@
 
     <ItemGroup>
       <ProjectReference Include="..\GeneralUpdate.Bowl\GeneralUpdate.Bowl.csproj" />
-      <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
     </ItemGroup>
+
+    <Target Name="AppFiles" AfterTargets="Build">
+        <ItemGroup>
+            <ExeFiles Include="$(MSBuildThisFileDirectory)Applications\Windows\*.exe" />
+            <BatFiles Include="$(MSBuildThisFileDirectory)Applications\Windows\*.bat" />
+        </ItemGroup>
+        <Copy SourceFiles="@(AppFiles)" DestinationFolder="$(OutputPath)" />
+    </Target>
 
 </Project>

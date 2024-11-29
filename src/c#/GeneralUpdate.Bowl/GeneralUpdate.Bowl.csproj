@@ -2,40 +2,70 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <LangVersion>12</LangVersion>
+        <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
+        <Description>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</Description>
+        <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
+        <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Title>GeneralUpdate.Bowl</Title>
+        <Authors>JusterZhu</Authors>
+        <RepositoryType>public</RepositoryType>
+        <PackageTags>upgrade</PackageTags>
+        <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
+        <PackageIcon>bowl.jpeg</PackageIcon>
+        <Version>1.0.4</Version>
     </PropertyGroup>
-
+    
     <ItemGroup>
-      <None Update="Applications\Windows\procdump.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Windows\procdump64.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Windows\procdump64a.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Linux\procdump-3.3.0-0.cm2.x86_64.rpm">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Linux\procdump-3.3.0-0.el8.x86_64.rpm">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Linux\procdump_3.3.0_amd64.deb">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Applications\Windows\export.bat">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="bowl.jpeg">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Update="Applications\Linux\procdump-3.3.0-0.cm2.x86_64.rpm">
+            <Pack>True</Pack>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Applications\Linux\procdump-3.3.0-0.el8.x86_64.rpm">
+            <Pack>True</Pack>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Applications\Linux\procdump_3.3.0_amd64.deb">
+            <Pack>True</Pack>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
     </ItemGroup>
-
+    
     <ItemGroup>
       <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
     </ItemGroup>
-
+    
+    <ItemGroup>
+      <None Remove="Applications\Windows\export.bat" />
+      <EmbeddedResource Include="Applications\Windows\export.bat">
+        <Pack>True</Pack>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="Applications\Windows\procdump.exe" />
+      <EmbeddedResource Include="Applications\Windows\procdump.exe">
+        <Pack>True</Pack>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="Applications\Windows\procdump64.exe" />
+      <EmbeddedResource Include="Applications\Windows\procdump64.exe">
+        <Pack>True</Pack>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="Applications\Windows\procdump64a.exe" />
+      <EmbeddedResource Include="Applications\Windows\procdump64a.exe">
+        <Pack>True</Pack>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+    </ItemGroup>
 </Project>
