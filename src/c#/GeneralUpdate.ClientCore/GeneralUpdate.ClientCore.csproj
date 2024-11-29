@@ -3,18 +3,22 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <Version>2.12.10</Version>
-        <Authors>juster.zhu</Authors>
+        <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-        <PackageIcon>GeneralUpdate128.png</PackageIcon>
+        <PackageIcon>GeneralUpdate.ico</PackageIcon>
         <SignAssembly>False</SignAssembly>
-        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-        <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
-        <Copyright>Copyright © 2024</Copyright>
+        <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
+        <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
         <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
-        <LangVersion>12</LangVersion>
+        <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
+        <Title>GeneralUpdate.ClientCore</Title>
+        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <RepositoryType>public</RepositoryType>
+        <PackageTags>upgrade</PackageTags>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
@@ -30,7 +34,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="GeneralUpdate.ico" />
+      <None Update="GeneralUpdate.ico">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
     </ItemGroup>
 
 </Project>

@@ -35,6 +35,8 @@ MAUI GeneralUpdate.Maui
 
 - https://gitee.com/GeneralTeam/GeneralUpdate-Samples
 
+
+
 功能介绍：
 
 | 功能           | 是否支持 | 备注                                                         |

@@ -4,26 +4,33 @@
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
     <Version>4.14.21</Version>
-    <Authors>juster.zhu</Authors>
+    <Authors>JusterZhu</Authors>
     <Company>juster.zhu</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>GeneralUpdate128.png</PackageIcon>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Copyright>Copyright ©  2024</Copyright>
+    <PackageIcon>GeneralUpdate.ico</PackageIcon>
+    <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
     <Description>This section describes how to upgrade client applications.</Description>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features.</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <AssemblyName>GeneralUpdate.Core</AssemblyName>
     <RootNamespace>GeneralUpdate.Core</RootNamespace>
-    <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
-    <LangVersion>12</LangVersion>
+    <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
+    <LangVersion>default</LangVersion>
     <Nullable>enable</Nullable>
+    <Title>GeneralUpdate.Core</Title>
+    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+    <RepositoryType>public</RepositoryType>
+    <PackageTags>upgrade</PackageTags>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="GeneralUpdate.ico" />
+    <None Update="GeneralUpdate.ico">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 </Project>
