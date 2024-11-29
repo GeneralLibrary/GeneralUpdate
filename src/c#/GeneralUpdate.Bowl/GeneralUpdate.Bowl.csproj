@@ -24,18 +24,6 @@
             <Pack>True</Pack>
             <PackagePath></PackagePath>
         </None>
-        <None Update="Applications\Linux\procdump-3.3.0-0.cm2.x86_64.rpm">
-            <Pack>True</Pack>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="Applications\Linux\procdump-3.3.0-0.el8.x86_64.rpm">
-            <Pack>True</Pack>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="Applications\Linux\procdump_3.3.0_amd64.deb">
-            <Pack>True</Pack>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
     </ItemGroup>
 
     <ItemGroup>
@@ -47,8 +35,9 @@
     </ItemGroup>
     
     <ItemGroup>
-        <EmbeddedResource Include="Applications\**\*">
+        <Content Include="Applications\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </EmbeddedResource>
+            <PackageCopyToOutput>true</PackageCopyToOutput>
+        </Content>
     </ItemGroup>
 </Project>
