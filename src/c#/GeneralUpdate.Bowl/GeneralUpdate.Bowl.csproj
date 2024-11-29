@@ -47,25 +47,8 @@
     </ItemGroup>
     
     <ItemGroup>
-      <None Remove="Applications\Windows\export.bat" />
-      <EmbeddedResource Include="Applications\Windows\export.bat">
-        <Pack>True</Pack>
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </EmbeddedResource>
-      <None Remove="Applications\Windows\procdump.exe" />
-      <EmbeddedResource Include="Applications\Windows\procdump.exe">
-        <Pack>True</Pack>
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </EmbeddedResource>
-      <None Remove="Applications\Windows\procdump64.exe" />
-      <EmbeddedResource Include="Applications\Windows\procdump64.exe">
-        <Pack>True</Pack>
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </EmbeddedResource>
-      <None Remove="Applications\Windows\procdump64a.exe" />
-      <EmbeddedResource Include="Applications\Windows\procdump64a.exe">
-        <Pack>True</Pack>
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </EmbeddedResource>
+        <EmbeddedResource Include="Applications\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </EmbeddedResource>
     </ItemGroup>
 </Project>
