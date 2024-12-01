@@ -99,12 +99,18 @@ namespace GeneralUpdate.Core.Strategys
         {
             try
             {
-                var appBowlPath = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? null : CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
-                var appPath = string.IsNullOrWhiteSpace(appBowlPath) ? CheckPath(_configinfo.InstallPath, _configinfo.MainAppName) : appBowlPath;
-                if(string.IsNullOrEmpty(appPath))
-                    throw new Exception($"Can't find the app {appPath}!");
+                var mainAppPath = CheckPath(_configinfo.InstallPath, _configinfo.MainAppName);
+                if (string.IsNullOrEmpty(mainAppPath))
+                    throw new Exception($"Can't find the app {mainAppPath}!");
                 
-                Process.Start(appPath);
+                Process.Start(mainAppPath);
+
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
+                    if (!string.IsNullOrEmpty(bowlAppPath))
+                        Process.Start(bowlAppPath);
+                }
             }
             catch (Exception e)
             {

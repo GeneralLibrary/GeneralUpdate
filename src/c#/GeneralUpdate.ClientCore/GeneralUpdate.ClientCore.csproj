@@ -2,11 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Version>2.12.10</Version>
+        <Version>9.0.0</Version>
         <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-        <PackageIcon>GeneralUpdate.ico</PackageIcon>
+        <PackageIcon>GeneralUpdate.png</PackageIcon>
         <SignAssembly>False</SignAssembly>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
@@ -17,7 +17,7 @@
         <Title>GeneralUpdate.ClientCore</Title>
         <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <RepositoryType>public</RepositoryType>
-        <PackageTags>upgrade</PackageTags>
+        <PackageTags>upgrade,update</PackageTags>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
@@ -35,6 +35,13 @@
 
     <ItemGroup>
       <None Update="GeneralUpdate.ico">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="GeneralUpdate.png">
         <Pack>True</Pack>
         <PackagePath></PackagePath>
       </None>

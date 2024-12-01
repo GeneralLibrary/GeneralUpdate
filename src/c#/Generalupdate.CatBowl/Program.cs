@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 using GeneralUpdate.Bowl;
 using GeneralUpdate.Bowl.Strategys;
 

@@ -3,12 +3,12 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
-    <Version>4.14.21</Version>
+    <Version>9.0.0</Version>
     <Authors>JusterZhu</Authors>
     <Company>juster.zhu</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
-    <PackageIcon>GeneralUpdate.ico</PackageIcon>
+    <PackageIcon>GeneralUpdate.png</PackageIcon>
     <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
     <Description>This section describes how to upgrade client applications.</Description>
     <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features.</PackageReleaseNotes>
@@ -21,7 +21,7 @@
     <Title>GeneralUpdate.Core</Title>
     <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
     <RepositoryType>public</RepositoryType>
-    <PackageTags>upgrade</PackageTags>
+    <PackageTags>upgrade,update</PackageTags>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
@@ -29,6 +29,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="GeneralUpdate.ico">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="GeneralUpdate.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>

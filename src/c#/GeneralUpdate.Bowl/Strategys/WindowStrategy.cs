@@ -21,6 +21,7 @@ internal class WindowStrategy : AbstractStrategy
         _parameter.InnerApp = Path.Combine(_applicationsDirectory, GetAppName());
         var dmpFullName = Path.Combine(_parameter.FailDirectory, _parameter.DumpFileName);
         _parameter.InnerArguments = $"-e -ma {_parameter.ProcessNameOrId} {dmpFullName}";
+        //This method is used to launch scripts in applications.
         base.Launch();
         ExecuteFinalTreatment();
     }
