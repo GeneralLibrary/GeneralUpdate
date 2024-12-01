@@ -14,7 +14,7 @@ namespace GeneralUpdate.Client
     {
         static async Task Main(string[] args)
         {
-            /*try
+            try
             {
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
@@ -57,7 +57,7 @@ namespace GeneralUpdate.Client
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }*/
+            }
 
             /*var paramsOSS = new GlobalConfigInfoOSS();
             paramsOSS.Url = "http://192.168.50.203/versions.json";
