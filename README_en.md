@@ -10,7 +10,7 @@ GeneralUpdate is an open-source automatic update component based on .NET Standar
 Documentation
 
 - Official website: https://www.justerzhu.cn/
-- Tutorial video: https://www.bilibili.com/video/BV1FT4y1Y7hV
+- Tutorial video: https://www.bilibili.com/video/BV1c8iyYZE7P
 
 Current Project GeneralUpdate
 
