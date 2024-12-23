@@ -13,7 +13,7 @@ GeneralUpdate是一款基于.NET Standard2.0开源自动升级组件。
 帮助文档
 
 - 官方网站： https://www.justerzhu.cn/
-- 使用教程视频：https://www.bilibili.com/video/BV1FT4y1Y7hV
+- 使用教程视频：https://www.bilibili.com/video/BV1c8iyYZE7P
 
 当前项目GeneralUpdate
 
