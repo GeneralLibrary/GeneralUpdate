@@ -20,9 +20,11 @@ public class PatchMiddleware : IMiddleware
             var targetPath = context.Get<string>("PatchPath");
             var blackFiles = context.Get<List<string>>("BlackFiles");
             var blackFileFormats = context.Get<List<string>>("BlackFileFormats");
+            var skipDirectorys = context.Get<List<string>>("SkipDirectorys");
 
             BlackListManager.Instance.AddBlackFiles(blackFiles);
             BlackListManager.Instance.AddBlackFileFormats(blackFileFormats);
+            BlackListManager.Instance.AddSkipDirectorys(skipDirectorys);
             await DifferentialCore.Instance.Dirty(sourcePath, targetPath);
         }
         catch (Exception exception)

@@ -21,7 +21,7 @@ public class WindowsStrategy : AbstractStrategy
 {
     private GlobalConfigInfo _configinfo = new();
 
-    public override void Create(GlobalConfigInfo parameter)=> _configinfo = parameter;
+    public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
     public override async Task ExecuteAsync()
     {
@@ -46,8 +46,9 @@ public class WindowsStrategy : AbstractStrategy
                     //patch middleware
                     context.Add("SourcePath", _configinfo.InstallPath);
                     context.Add("PatchPath", patchPath);
-                    context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
-                    context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
+                    context.Add("BlackFiles", _configinfo.BlackFiles);
+                    context.Add("BlackFileFormats", _configinfo.BlackFormats);
+                    context.Add("SkipDirectorys", _configinfo.SkipDirectorys);
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddleware<PatchMiddleware>()

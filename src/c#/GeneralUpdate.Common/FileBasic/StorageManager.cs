@@ -17,7 +17,7 @@ namespace GeneralUpdate.Common.FileBasic
         private ComparisonResult ComparisonResult { get; set; }
 
         #region Public Methods
-        
+
         /// <summary>
         /// Using the list on the left as a baseline, find the set of differences between the two file lists.
         /// </summary>
@@ -54,11 +54,11 @@ namespace GeneralUpdate.Common.FileBasic
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
                              throw new ArgumentException("invalid path", nameof(targetPath));
-            
+
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
-            
-            var jsonString = typeInfo!= null ? JsonSerializer.Serialize(obj, typeInfo) : JsonSerializer.Serialize(obj);
+
+            var jsonString = typeInfo != null ? JsonSerializer.Serialize(obj, typeInfo) : JsonSerializer.Serialize(obj);
             File.WriteAllText(targetPath, jsonString);
         }
 
@@ -88,7 +88,7 @@ namespace GeneralUpdate.Common.FileBasic
 
             return tempDir;
         }
-        
+
         public static void DeleteDirectory(string targetDir)
         {
             foreach (var file in Directory.GetFiles(targetDir))
@@ -101,7 +101,7 @@ namespace GeneralUpdate.Common.FileBasic
             {
                 DeleteDirectory(dir);
             }
-            
+
             Directory.Delete(targetDir, false);
         }
 
@@ -136,7 +136,7 @@ namespace GeneralUpdate.Common.FileBasic
                 return new List<FileInfo>();
             }
         }
-        
+
         private static List<FileInfo> GetAllfiles(string path)
         {
             try
@@ -164,7 +164,7 @@ namespace GeneralUpdate.Common.FileBasic
             var hashRight = hashAlgorithm.ComputeHash(rightPath);
             return hashLeft.SequenceEqual(hashRight);
         }
-        
+
         /// <summary>
         /// Backup the all program.
         /// </summary>
@@ -230,7 +230,7 @@ namespace GeneralUpdate.Common.FileBasic
                 File.Copy(filePath, newFilePath, true);
             }
         }
-        
+
         #endregion
 
         #region Private Methods
@@ -269,6 +269,7 @@ namespace GeneralUpdate.Common.FileBasic
 
             foreach (var subPath in Directory.EnumerateDirectories(path))
             {
+                if (BlackListManager.Instance.IsSkipDirectory(subPath)) continue;
                 resultFiles.AddRange(ReadFileNode(subPath, rootPath));
             }
 
