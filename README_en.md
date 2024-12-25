@@ -3,6 +3,8 @@
 
 ![](imgs/GeneralUpdate_h.png)
 
+Unlimited Updates, Boundless Upgrades.
+
 ## 1. Component Introduction ##
 
 GeneralUpdate is an open-source automatic update component based on .NET Standard 2.0.

@@ -6,6 +6,8 @@
 
 [English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
+**更新无限，升级无界。**
+
 ## 1.组件介绍 ##
 
 GeneralUpdate是一款基于.NET Standard2.0开源自动升级组件。
