@@ -80,6 +80,8 @@ Feature Introduction:
 | Linux                     | Yes       |
 | Android                   | Yes       |
 | Kylin V10 (Feiteng S2500) | Yes       |
+| Kylin V10 (Feiteng 2000)  | Yes       |
 | Kylin V10 (x64)           | Yes       |
 | Ubuntu                    | Yes       |
 | Loongson (Loongnix)       | Yes       |
+| HuaWeiEulerOS (Kunpeng)   | Yes       |
