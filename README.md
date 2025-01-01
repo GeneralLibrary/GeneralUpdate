@@ -90,6 +90,8 @@ MAUI GeneralUpdate.Maui
 | Linux        | 支持 |
 | Android      | 支持 |
 | 麒麟V10(飞腾S2500)  | 支持   |
+| 麒麟V10(飞腾FT-2000)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
 | Ubuntu | 支持 |
 | 龙芯(Loongnix) | 支持 |
+| 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
