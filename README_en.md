@@ -74,14 +74,14 @@ Feature Introduction:
 
 ## 3. Operating Systems
 
-| Operating System Name     | Supported |
-| ------------------------- | --------- |
-| Windows                   | Yes       |
-| Linux                     | Yes       |
-| Android                   | Yes       |
-| Kylin V10 (Feiteng S2500) | Yes       |
-| Kylin V10 (Feiteng 2000)  | Yes       |
-| Kylin V10 (x64)           | Yes       |
-| Ubuntu                    | Yes       |
-| Loongson (Loongnix)       | Yes       |
-| HuaWeiEulerOS (Kunpeng)   | Yes       |
+| Operating System Name         | Supported |
+| ----------------------------- | --------- |
+| Windows                       | Yes       |
+| Linux                         | Yes       |
+| Android                       | Yes       |
+| Kylin V10 (Feiteng S2500)     | Yes       |
+| Kylin V10 (Feiteng 2000)      | Yes       |
+| Kylin V10 (x64)               | Yes       |
+| Ubuntu                        | Yes       |
+| Loongson (Loongnix LoongArch) | Yes       |
+| HuaWeiEulerOS (Kunpeng)       | Yes       |
