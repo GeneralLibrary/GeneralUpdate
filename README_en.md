@@ -85,3 +85,4 @@ Feature Introduction:
 | Ubuntu                        | Yes       |
 | Loongson (Loongnix LoongArch) | Yes       |
 | HuaWeiEulerOS (Kunpeng)       | Yes       |
+| Apple Mac (M1)                | Yes       |

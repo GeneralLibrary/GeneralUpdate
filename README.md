@@ -95,3 +95,4 @@ MAUI GeneralUpdate.Maui
 | Ubuntu | 支持 |
 | 龙芯(Loongnix LoongArch) | 支持 |
 | 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
+| Apple Mac (M1) | 支持 |
