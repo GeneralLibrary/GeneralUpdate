@@ -13,7 +13,7 @@ namespace GeneralUpdate.Upgrad
     {
         static async Task Main(string[] args)
         {
-            try
+            /*try
             {
                 Console.WriteLine($"升级程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
@@ -39,7 +39,7 @@ namespace GeneralUpdate.Upgrad
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }
+            }*/
             
             //中文操作系统的驱动包字段映射表，用于解析所有驱动包的信息的字符串
             /*var fieldMappingsCN = new Dictionary<string, string>
@@ -80,7 +80,8 @@ namespace GeneralUpdate.Upgrad
             processor.AddCommand(new InstallDriverCommand(information));
             processor.ProcessCommands();*/
 
-            //GeneralUpdateOSS.Start();
+            await GeneralUpdateOSS.Start();
+            
             while (true)
             {
                 var input = Console.ReadLine();

@@ -118,12 +118,6 @@ public class ZipCompressionStrategy : ICompressionStrategy
     {
         try
         {
-            if (Directory.Exists(unZipDir))
-            {
-                StorageManager.DeleteDirectory(unZipDir);
-            }
-            Directory.CreateDirectory(unZipDir);
-
             var dirSeparatorChar = Path.DirectorySeparatorChar.ToString();
             unZipDir = unZipDir.EndsWith(dirSeparatorChar) ? unZipDir : unZipDir + dirSeparatorChar;
             
@@ -158,6 +152,13 @@ public class ZipCompressionStrategy : ICompressionStrategy
                 {
                     greatFolder.Create();
                 }
+
+                if (File.Exists(filePath))
+                {
+                    File.SetAttributes(filePath, FileAttributes.Normal);
+                    File.Delete(filePath);
+                }
+
                 entries.ExtractToFile(filePath);
             }
         }
