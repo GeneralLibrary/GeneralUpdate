@@ -49,8 +49,6 @@ namespace GeneralUpdate.Core.Strategys
                             //Patch middleware
                             context.Add("SourcePath", _configinfo.InstallPath);
                             context.Add("PatchPath", patchPath);
-                            context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
-                            context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
                             //Driver middleware
                             if (_configinfo.DriveEnabled == true)
                             {

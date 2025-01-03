@@ -81,8 +81,7 @@ namespace GeneralUpdate.Differential
 
             try
             {
-                var skipDirectory = StorageManager.SkipDirectorys;
-                skipDirectory.AddRange(BlackListManager.Instance.SkipDirectorys);
+                var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
                 var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
                 var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
                 //Refresh the collection after deleting the file.

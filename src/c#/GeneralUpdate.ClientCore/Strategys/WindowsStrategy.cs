@@ -46,9 +46,6 @@ public class WindowsStrategy : AbstractStrategy
                     //patch middleware
                     context.Add("SourcePath", _configinfo.InstallPath);
                     context.Add("PatchPath", patchPath);
-                    context.Add("BlackFiles", _configinfo.BlackFiles);
-                    context.Add("BlackFileFormats", _configinfo.BlackFormats);
-                    context.Add("SkipDirectorys", _configinfo.SkipDirectorys);
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddleware<PatchMiddleware>()

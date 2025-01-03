@@ -167,6 +167,11 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
             if (CanSkip(isForcibly)) return;
 
+            //black list initialization.
+            BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
+            BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
+            BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
+            
             _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
             _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
             _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0
@@ -200,17 +205,18 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     , _configInfo.BackupDirectory
                     , _configInfo.Bowl
                     , _configInfo.Scheme
-                    , _configInfo.Token);
+                    , _configInfo.Token
+                    , BlackListManager.Instance.BlackFileFormats.ToList()
+                    , BlackListManager.Instance.BlackFiles.ToList()
+                    , BlackListManager.Instance.SkipDirectorys.ToList());
 
                 _configInfo.ProcessInfo =
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
             }
 
-            var skipDirectorys = StorageManager.SkipDirectorys;
-            skipDirectorys.AddRange(_configInfo.SkipDirectorys);
             StorageManager.Backup(_configInfo.InstallPath
                 , _configInfo.BackupDirectory
-                , skipDirectorys);
+                , BlackListManager.Instance.SkipDirectorys);
 
             StrategyFactory();
             switch (_configInfo.IsUpgradeUpdate)

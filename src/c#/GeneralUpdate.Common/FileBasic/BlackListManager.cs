@@ -22,7 +22,7 @@ public class BlackListManager
 
     private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
 
-    private static readonly List<string> _skipDirectorys = [];
+    private static readonly List<string> _skipDirectorys = ["app-", "fail"];
 
     private BlackListManager() { }
 
@@ -98,6 +98,7 @@ public class BlackListManager
     {
         if (directorys == null)
             return;
+        
         foreach (var directory in directorys)
         {
             AddSkipDirectory(directory);
@@ -108,6 +109,7 @@ public class BlackListManager
     {
         if (string.IsNullOrWhiteSpace(directory))
             return;
+        
         if (!_skipDirectorys.Contains(directory))
         {
             _skipDirectorys.Add(directory);

@@ -13,7 +13,7 @@ namespace GeneralUpdate.Common.FileBasic
     {
         private long _fileCount = 0;
         public const string DirectoryName = "app-";
-        public static readonly List<string> SkipDirectorys = ["fail", DirectoryName];
+        
         private ComparisonResult ComparisonResult { get; set; }
 
         #region Public Methods
@@ -171,7 +171,7 @@ namespace GeneralUpdate.Common.FileBasic
         /// <param name="backupPath"></param>
         /// <param name="sourcePath"></param>
         /// <param name="directoryName"></param>
-        public static void Backup(string sourcePath, string backupPath, List<string> directoryNames)
+        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames)
         {
             if (Directory.Exists(backupPath))
             {
@@ -181,7 +181,7 @@ namespace GeneralUpdate.Common.FileBasic
             CopyDirectory(sourcePath, backupPath, directoryNames);
         }
 
-        private static void CopyDirectory(string sourceDir, string targetDir, List<string> directoryNames)
+        private static void CopyDirectory(string sourceDir, string targetDir, IReadOnlyList<string> directoryNames)
         {
             foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
             {

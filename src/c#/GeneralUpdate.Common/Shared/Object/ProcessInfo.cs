@@ -24,7 +24,10 @@ namespace GeneralUpdate.Common.Shared.Object
             , string backupDirectory
             , string bowl
             , string scheme
-            , string token)
+            , string token
+            , List<string> blackFileFormats
+            , List<string> blackFiles
+            , List<string> skipDirectories)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -44,6 +47,9 @@ namespace GeneralUpdate.Common.Shared.Object
             Bowl = bowl;
             Scheme = scheme;
             Token = token;
+            BlackFileFormats = blackFileFormats;
+            BlackFiles = blackFiles;
+            SkipDirectorys = skipDirectories;
         }
 
         /// <summary>
@@ -126,5 +132,14 @@ namespace GeneralUpdate.Common.Shared.Object
     
         [JsonPropertyName("Token")]
         public string Token { get; set; }
+        
+        [JsonPropertyName("BlackFileFormats")]
+        public List<string> BlackFileFormats { get; set; }
+        
+        [JsonPropertyName("BlackFiles")]
+        public List<string> BlackFiles { get; set; }
+
+        [JsonPropertyName("SkipDirectorys")]
+        public List<string> SkipDirectorys { get; set; }
     }
 }

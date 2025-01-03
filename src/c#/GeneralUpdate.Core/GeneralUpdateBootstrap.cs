@@ -33,6 +33,10 @@ namespace GeneralUpdate.Core
             if (processInfo == null)
                 throw new ArgumentException("ProcessInfo object cannot be null!");
                 
+            BlackListManager.Instance?.AddBlackFileFormats(processInfo.BlackFileFormats);
+            BlackListManager.Instance?.AddBlackFiles(processInfo.BlackFiles);
+            BlackListManager.Instance?.AddSkipDirectorys(processInfo.SkipDirectorys);
+            
             _configInfo = new()
             {
                 MainAppName = processInfo.AppName,
