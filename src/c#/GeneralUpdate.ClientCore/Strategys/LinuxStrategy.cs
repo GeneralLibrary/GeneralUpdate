@@ -22,7 +22,7 @@ public class LinuxStrategy : AbstractStrategy
     private GlobalConfigInfo _configinfo = new();
     private const string ProcessInfoFileName = "ProcessInfo.json";
 
-    public override void Create(GlobalConfigInfo parameter)=> _configinfo = parameter;
+    public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
     public override async Task ExecuteAsync()
     {
@@ -47,8 +47,9 @@ public class LinuxStrategy : AbstractStrategy
                     //patch middleware
                     context.Add("SourcePath", _configinfo.InstallPath);
                     context.Add("PatchPath", patchPath);
-                    context.Add("BlackFiles", BlackListManager.Instance.BlackFiles);
-                    context.Add("BlackFileFormats", BlackListManager.Instance.BlackFileFormats);
+                    context.Add("BlackFiles", _configinfo.BlackFiles);
+                    context.Add("BlackFileFormats", _configinfo.BlackFormats);
+                    context.Add("SkipDirectorys", _configinfo.SkipDirectorys);
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddleware<PatchMiddleware>()
@@ -97,7 +98,7 @@ public class LinuxStrategy : AbstractStrategy
             {
                 if (File.Exists(ProcessInfoFileName))
                 {
-                    File.SetAttributes(ProcessInfoFileName,FileAttributes.Normal);
+                    File.SetAttributes(ProcessInfoFileName, FileAttributes.Normal);
                     File.Delete(ProcessInfoFileName);
                 }
 

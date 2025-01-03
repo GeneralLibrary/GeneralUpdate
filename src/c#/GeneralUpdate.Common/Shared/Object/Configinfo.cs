@@ -62,7 +62,12 @@ namespace GeneralUpdate.Common.Shared.Object
         /// File formats in the blacklist will skip the update.
         /// </summary>
         public List<string> BlackFormats { get; set; }
-        
+
+        /// <summary>
+        /// SkipDirectorys
+        /// </summary>
+        public List<string> SkipDirectorys { get; set; }
+
         /// <summary>
         /// Product ID.
         /// </summary>

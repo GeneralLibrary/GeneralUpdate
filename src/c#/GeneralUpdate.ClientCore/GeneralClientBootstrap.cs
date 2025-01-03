@@ -79,6 +79,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             ProductId = configInfo.ProductId,
             UpgradeClientVersion = configInfo.UpgradeClientVersion,
             Bowl = configInfo.Bowl,
+            SkipDirectorys = configInfo.SkipDirectorys
             Scheme = configInfo.Scheme,
             Token = configInfo.Token
         };
@@ -178,7 +179,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             if (_configInfo.IsMainUpdate)
             {
-                _configInfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
+                _configInfo.UpdateVersions = upgradeResp.Body.OrderBy(x => x.ReleaseDate).ToList();
                 _configInfo.LastVersion = _configInfo.UpdateVersions.Last().Version;
 
                 var failed = CheckFail(_configInfo.LastVersion);
@@ -205,9 +206,11 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
             }
 
+            var skipDirectorys = StorageManager.SkipDirectorys;
+            skipDirectorys.AddRange(_configInfo.SkipDirectorys);
             StorageManager.Backup(_configInfo.InstallPath
                 , _configInfo.BackupDirectory
-                , StorageManager.SkipDirectorys);
+                , skipDirectorys);
 
             StrategyFactory();
             switch (_configInfo.IsUpgradeUpdate)
@@ -235,7 +238,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
-    
+
     private async Task Download()
     {
         try
@@ -270,7 +273,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         {
             return PlatformType.Linux;
         }
-        
+
         return -1;
     }
 
@@ -288,7 +291,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         var fail = Environment.GetEnvironmentVariable("UpgradeFail", EnvironmentVariableTarget.User);
         if (string.IsNullOrEmpty(fail) || string.IsNullOrEmpty(version))
             return false;
-        
+
         var failVersion = new Version(fail);
         var lastVersion = new Version(version);
         return failVersion >= lastVersion;
@@ -306,10 +309,10 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
         if (response.Code == 200)
             return response.Body.Count > 0;
-        
+
         return false;
     }
-    
+
     /// <summary>
     /// During the iteration process, if any version requires a mandatory update, all the update content from this request should be updated.
     /// </summary>
@@ -317,9 +320,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <returns></returns>
     private bool CheckForcibly(List<VersionInfo>? versions)
     {
-        if (versions == null) 
+        if (versions == null)
             return false;
-        
+
         foreach (var item in versions)
         {
             if (item.IsForcibly == true)
@@ -330,7 +333,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
         return false;
     }
-    
+
     /// <summary>
     /// User decides if update is required.
     /// </summary>
@@ -343,9 +346,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private void CallSmallBowlHome(string processName)
     {
-        if(string.IsNullOrWhiteSpace(processName)) 
+        if (string.IsNullOrWhiteSpace(processName))
             return;
-        
+
         try
         {
             var processes = Process.GetProcessesByName(processName);
@@ -383,14 +386,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 {
                     var exception = new Exception($"{nameof(option)}Execution failure!");
                     var args = new ExceptionEventArgs(exception, exception.Message);
-                    EventManager.Instance.Dispatch(this,args);
+                    EventManager.Instance.Dispatch(this, args);
                 }
             }
             catch (Exception exception)
             {
                 Debug.WriteLine(exception.Message);
                 var args = new ExceptionEventArgs(exception, $"{nameof(option)}Execution failure!");
-                EventManager.Instance.Dispatch(this,args);
+                EventManager.Instance.Dispatch(this, args);
             }
         }
     }
@@ -422,9 +425,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
     }
 
-    protected override void ExecuteStrategy()=> throw new NotImplementedException();
-    
-    protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();
+    protected override void ExecuteStrategy() => throw new NotImplementedException();
+
+    protected override Task ExecuteStrategyAsync() => throw new NotImplementedException();
 
     protected override GeneralClientBootstrap StrategyFactory()
     {
@@ -438,7 +441,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         _strategy?.Create(_configInfo!);
         return this;
     }
-    
+
     private GeneralClientBootstrap AddListener<TArgs>(Action<object, TArgs> callbackAction) where TArgs : EventArgs
     {
         Debug.Assert(callbackAction != null);
@@ -457,6 +460,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         => EventManager.Instance.Dispatch(sender, e);
-    
+
     #endregion Private Methods
 }

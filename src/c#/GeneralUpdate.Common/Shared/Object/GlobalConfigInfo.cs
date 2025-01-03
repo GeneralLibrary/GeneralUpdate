@@ -9,7 +9,7 @@ public class GlobalConfigInfo
     /// Update check api address.
     /// </summary>
     public string UpdateUrl { get; set; }
-    
+
     /// <summary>
     /// API address for reporting update status.
     /// </summary>
@@ -74,7 +74,7 @@ public class GlobalConfigInfo
     /// Upgrade Client current version.
     /// </summary>
     public string UpgradeClientVersion { get; set; }
-    
+
     /// <summary>
     /// The main program latest version.
     /// </summary>
@@ -106,16 +106,21 @@ public class GlobalConfigInfo
     public List<string> BlackFormats { get; set; }
 
     /// <summary>
+    /// SkipDirectorys
+    /// </summary>
+    public List<string> SkipDirectorys { get; set; }
+
+    /// <summary>
     /// Whether to enable the driver upgrade function.
     /// </summary>
     public bool? DriveEnabled { get; set; }
-    
+
     public string ProductId { get; set; }
-    
+
     public Dictionary<string, string> FieldMappings { get; set; }
-    
+
     public string BackupDirectory { get; set; }
-    
+
     public string Bowl { get; set; }
 
     public string Scheme { get; set; }
