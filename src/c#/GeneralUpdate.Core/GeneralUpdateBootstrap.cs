@@ -47,7 +47,9 @@ namespace GeneralUpdate.Core
                 UpdateVersions = processInfo.UpdateVersions,
                 TempPath = StorageManager.GetTempDirectory("upgrade_temp"),
                 ReportUrl = processInfo.ReportUrl,
-                BackupDirectory = processInfo.BackupDirectory
+                BackupDirectory = processInfo.BackupDirectory,
+                Scheme = processInfo.Scheme,
+                Token = processInfo.Token
             };
         }
 

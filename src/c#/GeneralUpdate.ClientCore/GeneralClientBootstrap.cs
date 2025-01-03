@@ -78,7 +78,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             BlackFiles = configInfo.BlackFiles,
             ProductId = configInfo.ProductId,
             UpgradeClientVersion = configInfo.UpgradeClientVersion,
-            Bowl = configInfo.Bowl
+            Bowl = configInfo.Bowl,
+            Scheme = configInfo.Scheme,
+            Token = configInfo.Token
         };
         return this;
     }
@@ -144,14 +146,18 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 , AppType.ClientApp
                 , _configInfo.AppSecretKey
                 , GetPlatform()
-                , _configInfo.ProductId);
+                , _configInfo.ProductId
+                , _configInfo.Scheme
+                , _configInfo.Token);
 
             var upgradeResp = await VersionService.Validate(_configInfo.UpdateUrl
                 , _configInfo.UpgradeClientVersion
                 , AppType.UpgradeApp
                 , _configInfo.AppSecretKey
                 , GetPlatform()
-                , _configInfo.ProductId);
+                , _configInfo.ProductId
+                , _configInfo.Scheme
+                , _configInfo.Token);
 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
@@ -191,7 +197,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     , mainResp.Body
                     , _configInfo.ReportUrl
                     , _configInfo.BackupDirectory
-                    , _configInfo.Bowl);
+                    , _configInfo.Bowl
+                    , _configInfo.Scheme
+                    , _configInfo.Token);
 
                 _configInfo.ProcessInfo =
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);

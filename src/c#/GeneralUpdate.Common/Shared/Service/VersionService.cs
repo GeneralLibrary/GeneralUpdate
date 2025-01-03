@@ -28,7 +28,9 @@ namespace GeneralUpdate.Common.Shared.Service
         public static async Task Report(string httpUrl
             , int recordId
             , int status
-            , int? type)
+            , int? type
+            , string scheme = null
+            , string token = null)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -36,7 +38,7 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Status", status },
                 { "Type", type }
             };
-            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters, ReportRespJsonContext.Default.BaseResponseDTOBoolean);
+            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters, ReportRespJsonContext.Default.BaseResponseDTOBoolean, scheme, token);
         }
 
         /// <summary>
@@ -54,7 +56,9 @@ namespace GeneralUpdate.Common.Shared.Service
             , int appType
             , string appKey
             , int platform
-            , string productId)
+            , string productId
+            , string scheme = null
+            , string token = null)
         {
             var parameters = new Dictionary<string, object>
             {
@@ -64,10 +68,10 @@ namespace GeneralUpdate.Common.Shared.Service
                 { "Platform", platform },
                 { "ProductId", productId }
             };
-            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO);
+            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO, scheme, token);
         }
 
-        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null)
+        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null, string scheme = null, string token = null)
         {
             try
             {
@@ -78,6 +82,13 @@ namespace GeneralUpdate.Common.Shared.Service
                 });
                 httpClient.Timeout = TimeSpan.FromSeconds(15);
                 httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
+                
+                if (!string.IsNullOrEmpty(scheme) && !string.IsNullOrEmpty(token))
+                {
+                    httpClient.DefaultRequestHeaders.Authorization = 
+                        new System.Net.Http.Headers.AuthenticationHeaderValue(scheme, token);
+                }
+                
                 var parametersJson =
                     JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
                 var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");

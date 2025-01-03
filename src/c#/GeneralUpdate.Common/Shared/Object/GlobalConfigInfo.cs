@@ -117,4 +117,8 @@ public class GlobalConfigInfo
     public string BackupDirectory { get; set; }
     
     public string Bowl { get; set; }
+
+    public string Scheme { get; set; }
+    
+    public string Token { get; set; }
 }
