@@ -79,7 +79,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             ProductId = configInfo.ProductId,
             UpgradeClientVersion = configInfo.UpgradeClientVersion,
             Bowl = configInfo.Bowl,
-            SkipDirectorys = configInfo.SkipDirectorys
+            SkipDirectorys = configInfo.SkipDirectorys,
             Scheme = configInfo.Scheme,
             Token = configInfo.Token
         };
