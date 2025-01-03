@@ -22,7 +22,9 @@ namespace GeneralUpdate.Common.Shared.Object
             , List<VersionInfo> updateVersions
             , string reportUrl
             , string backupDirectory
-            , string bowl)
+            , string bowl
+            , string scheme
+            , string token)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -40,6 +42,8 @@ namespace GeneralUpdate.Common.Shared.Object
             ReportUrl = reportUrl ?? throw new ArgumentNullException(nameof(reportUrl));
             BackupDirectory = backupDirectory ?? throw new ArgumentNullException(nameof(backupDirectory));
             Bowl = bowl;
+            Scheme = scheme;
+            Token = token;
         }
 
         /// <summary>
@@ -116,5 +120,11 @@ namespace GeneralUpdate.Common.Shared.Object
         
         [JsonPropertyName("Bowl")]
         public string Bowl { get; set; }
+        
+        [JsonPropertyName("Scheme")]
+        public string Scheme { get; set; }
+    
+        [JsonPropertyName("Token")]
+        public string Token { get; set; }
     }
 }

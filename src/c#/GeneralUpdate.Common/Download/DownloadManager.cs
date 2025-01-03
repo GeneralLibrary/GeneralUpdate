@@ -43,11 +43,11 @@ namespace GeneralUpdate.Common.Download
             {
                 var downloadTasks = DownloadTasks.Select(task => task.LaunchAsync()).ToList();
                 await Task.WhenAll(downloadTasks);
-                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, FailedVersions));
+                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(true, FailedVersions));
             }
             catch (Exception ex)
             {
-                MultiAllDownloadCompleted.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, FailedVersions));
+                MultiAllDownloadCompleted?.Invoke(this, new MultiAllDownloadCompletedEventArgs(false, FailedVersions));
                 throw new Exception($"Download manager error: {ex.Message}", ex);
             }
         }

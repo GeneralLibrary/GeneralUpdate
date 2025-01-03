@@ -14,7 +14,7 @@ namespace GeneralUpdate.Client
     {
         static async Task Main(string[] args)
         {
-            try
+            /*try
             {
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
@@ -57,23 +57,25 @@ namespace GeneralUpdate.Client
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }
+            }*/
 
-            /*var paramsOSS = new GlobalConfigInfoOSS();
-            paramsOSS.Url = "http://192.168.50.203/versions.json";
-            paramsOSS.CurrentVersion = "1.0.0.0";
-            paramsOSS.VersionFileName = "versions.json";
-            paramsOSS.AppName = "GeneralUpdate.Client.exe";
-            paramsOSS.Encoding = Encoding.UTF8.WebName;
-            GeneralClientOSS.Start(paramsOSS);*/
+            var paramsOSS = new GlobalConfigInfoOSS
+            {
+                Url = @"http://localhost:5000/packages/versions.json",
+                CurrentVersion = "1.0.0.0",
+                VersionFileName = "versions.json",
+                AppName = "GeneralUpdate.Client.exe",
+                Encoding = Encoding.UTF8.WebName
+            };
+            await GeneralClientOSS.Start(paramsOSS, "GeneralUpdate.Upgrad.exe");
 
-            var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
+            /*var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
                 , null,"dfeb5833-975e-4afb-88f1-6278ee9aeff6");
             hub.AddListenerReceive((message) =>
             {
                 Debug.WriteLine(message);
             });
-            await hub.StartAsync();
+            await hub.StartAsync();*/
 
             /*Task.Run(async () =>
            {

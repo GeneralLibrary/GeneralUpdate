@@ -3,6 +3,8 @@
 
 ![](imgs/GeneralUpdate_h.png)
 
+Unlimited Updates, Boundless Upgrades.
+
 ## 1. Component Introduction ##
 
 GeneralUpdate is an open-source automatic update component based on .NET Standard 2.0.
@@ -72,12 +74,15 @@ Feature Introduction:
 
 ## 3. Operating Systems
 
-| Operating System Name     | Supported      |
-| ------------------------- | -------------- |
-| Windows                   | Yes            |
-| Linux                     | Yes            |
-| Android                   | Yes            |
-| Kylin V10 (Feiteng S2500) | Yes            |
-| Kylin V10 (x64)           | Yes            |
-| Ubuntu                    | Yes            |
-| Loongson (Loongnix)       | To be verified |
+| Operating System Name         | Supported |
+| ----------------------------- | --------- |
+| Windows                       | Yes       |
+| Linux                         | Yes       |
+| Android                       | Yes       |
+| Kylin V10 (Feiteng S2500)     | Yes       |
+| Kylin V10 (Feiteng 2000)      | Yes       |
+| Kylin V10 (x64)               | Yes       |
+| Ubuntu                        | Yes       |
+| Loongson (Loongnix LoongArch) | Yes       |
+| HuaWeiEulerOS (Kunpeng)       | Yes       |
+| Apple Mac (M1)                | Yes       |

@@ -111,7 +111,7 @@ namespace GeneralUpdate.Core.Strategys
             foreach (var version in versions)
             {
                 var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
-                CompressProvider.Decompress(Format.ZIP,zipFilePath,_appPath, encoding);
+                CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
             }
         }
 

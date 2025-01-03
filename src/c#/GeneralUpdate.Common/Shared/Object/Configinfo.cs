@@ -74,6 +74,10 @@ namespace GeneralUpdate.Common.Shared.Object
         public string ProductId { get; set; }
 
         public string Bowl { get; set; }
+        
+        public string Scheme { get; set; }
+    
+        public string Token { get; set; }
 
         public void Validate()
         {

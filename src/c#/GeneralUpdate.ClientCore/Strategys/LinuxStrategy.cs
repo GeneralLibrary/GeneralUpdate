@@ -65,7 +65,12 @@ public class LinuxStrategy : AbstractStrategy
                 }
                 finally
                 {
-                    await VersionService.Report(_configinfo.ReportUrl, version.RecordId, status, version.AppType);
+                    await VersionService.Report(_configinfo.ReportUrl
+                        , version.RecordId
+                        , status
+                        , version.AppType
+                        , _configinfo.Scheme
+                        , _configinfo.Token);
                 }
             }
 

@@ -6,6 +6,8 @@
 
 [English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
+**更新无限，升级无界。**
+
 ## 1.组件介绍 ##
 
 GeneralUpdate是一款基于.NET Standard2.0开源自动升级组件。
@@ -88,6 +90,9 @@ MAUI GeneralUpdate.Maui
 | Linux        | 支持 |
 | Android      | 支持 |
 | 麒麟V10(飞腾S2500)  | 支持   |
+| 麒麟V10(飞腾FT-2000)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
 | Ubuntu | 支持 |
-| 龙芯(Loongnix) | 待验证 |
+| 龙芯(Loongnix LoongArch) | 支持 |
+| 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
+| Apple Mac (M1) | 支持 |
