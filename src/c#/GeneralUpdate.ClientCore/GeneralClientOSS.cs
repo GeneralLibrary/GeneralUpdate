@@ -80,7 +80,20 @@ public sealed class GeneralClientOSS
 
     private static void DownloadFile(string url, string path)
     {
-        using var webClient = new WebClient();
-        webClient.DownloadFile(new Uri(url), path);
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+            }
+
+            using var webClient = new WebClient();
+            webClient.DownloadFile(new Uri(url), path);
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
     }
 }

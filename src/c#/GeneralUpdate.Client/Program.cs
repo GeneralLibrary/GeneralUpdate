@@ -14,7 +14,7 @@ namespace GeneralUpdate.Client
     {
         static async Task Main(string[] args)
         {
-            /*try
+            try
             {
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
@@ -57,9 +57,9 @@ namespace GeneralUpdate.Client
             catch (Exception e)
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
-            }*/
+            }
 
-            var paramsOSS = new GlobalConfigInfoOSS
+            /*var paramsOSS = new GlobalConfigInfoOSS
             {
                 Url = @"http://localhost:5000/packages/versions.json",
                 CurrentVersion = "1.0.0.0",
@@ -67,7 +67,7 @@ namespace GeneralUpdate.Client
                 AppName = "GeneralUpdate.Client.exe",
                 Encoding = Encoding.UTF8.WebName
             };
-            await GeneralClientOSS.Start(paramsOSS, "GeneralUpdate.Upgrad.exe");
+            await GeneralClientOSS.Start(paramsOSS, "GeneralUpdate.Upgrad.exe");*/
 
             /*var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
                 , null,"dfeb5833-975e-4afb-88f1-6278ee9aeff6");

@@ -52,6 +52,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(ex.Message);
                 throw new Exception(ex.Message + "\n" + ex.StackTrace);
             }
             finally
@@ -90,6 +91,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception e)
             {
+                Debug.WriteLine(e.Message);
                 throw new Exception(e.Message + "\n" + e.StackTrace);
             }
         }
@@ -110,8 +112,19 @@ namespace GeneralUpdate.Core.Strategys
             var encoding = Encoding.GetEncoding(_parameter.Encoding);
             foreach (var version in versions)
             {
-                var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
-                CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
+                try
+                {
+                    var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
+                    CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
+
+                    if (!File.Exists(zipFilePath)) continue;
+                    File.SetAttributes(zipFilePath, FileAttributes.Normal);
+                    File.Delete(zipFilePath);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.Message);
+                }
             }
         }
 
