@@ -13,18 +13,10 @@ public class HashMiddleware : IMiddleware
 {
     public async Task InvokeAsync(PipelineContext context)
     {
-        try
-        {
-            var path = context.Get<string>("ZipFilePath");
-            var hash = context.Get<string>("Hash");
-            var isVerify = await VerifyFileHash(path, hash);
-            if (!isVerify) throw new CryptographicException("Hash verification failed .");
-        }
-        catch (Exception exception)
-        {
-            Debug.WriteLine(exception.Message);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-        }
+        var path = context.Get<string>("ZipFilePath");
+        var hash = context.Get<string>("Hash");
+        var isVerify = await VerifyFileHash(path, hash);
+        if (!isVerify) throw new CryptographicException("Hash verification failed .");
     }
 
     private Task<bool> VerifyFileHash(string path, string hash)

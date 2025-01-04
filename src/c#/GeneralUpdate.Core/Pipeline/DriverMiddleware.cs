@@ -25,38 +25,30 @@ public class DriverMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            try
-            {
-                var outPutPath = context.Get<string>("DriverOutPut");
-                if (string.IsNullOrWhiteSpace(outPutPath))
-                    return;
+            var outPutPath = context.Get<string>("DriverOutPut");
+            if (string.IsNullOrWhiteSpace(outPutPath))
+                return;
 
-                var patchPath = context.Get<string>("PatchPath");
-                if (string.IsNullOrWhiteSpace(patchPath))
-                    return;
+            var patchPath = context.Get<string>("PatchPath");
+            if (string.IsNullOrWhiteSpace(patchPath))
+                return;
 
-                var fieldMappings = context.Get<Dictionary<string, string>>("FieldMappings");
-                if (fieldMappings == null || fieldMappings.Count == 0)
-                    return;
+            var fieldMappings = context.Get<Dictionary<string, string>>("FieldMappings");
+            if (fieldMappings == null || fieldMappings.Count == 0)
+                return;
 
-                var information = new DriverInformation.Builder()
-                    .SetDriverFileExtension(FileExtension)
-                    .SetOutPutDirectory(outPutPath)
-                    .SetDriverDirectory(patchPath)
-                    .SetFieldMappings(fieldMappings)
-                    .Build();
+            var information = new DriverInformation.Builder()
+                .SetDriverFileExtension(FileExtension)
+                .SetOutPutDirectory(outPutPath)
+                .SetDriverDirectory(patchPath)
+                .SetFieldMappings(fieldMappings)
+                .Build();
 
-                var processor = new DriverProcessor();
-                processor.AddCommand(new BackupDriverCommand(information));
-                processor.AddCommand(new DeleteDriverCommand(information));
-                processor.AddCommand(new InstallDriverCommand(information));
-                processor.ProcessCommands();
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine(exception.Message);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            }
+            var processor = new DriverProcessor();
+            processor.AddCommand(new BackupDriverCommand(information));
+            processor.AddCommand(new DeleteDriverCommand(information));
+            processor.AddCommand(new InstallDriverCommand(information));
+            processor.ProcessCommands();
         });
     }
 }

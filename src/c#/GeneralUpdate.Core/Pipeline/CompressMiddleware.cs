@@ -16,19 +16,11 @@ public class CompressMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            try
-            {
-                var format = context.Get<string>("Format");
-                var sourcePath = context.Get<string>("ZipFilePath");
-                var patchPath = context.Get<string>("PatchPath");
-                var encoding = context.Get<Encoding>("Encoding");
-                CompressProvider.Decompress(format, sourcePath, patchPath, encoding);
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
-            }
+            var format = context.Get<string>("Format");
+            var sourcePath = context.Get<string>("ZipFilePath");
+            var patchPath = context.Get<string>("PatchPath");
+            var encoding = context.Get<Encoding>("Encoding");
+            CompressProvider.Decompress(format, sourcePath, patchPath, encoding);
         });
     }
 }
