@@ -16,7 +16,7 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
         <PackageIcon>bowl.jpeg</PackageIcon>
-        <Version>9.0.0</Version>
+        <Version>9.1.0</Version>
     </PropertyGroup>
     
     <ItemGroup>
