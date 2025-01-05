@@ -15,12 +15,8 @@ public class HashMiddleware : IMiddleware
     {
         var path = context.Get<string>("ZipFilePath");
         var hash = context.Get<string>("Hash");
-
-        if (!string.IsNullOrWhiteSpace(hash))
-        {
-            var isVerify = await VerifyFileHash(path, hash);
-            if (!isVerify) throw new CryptographicException("Hash verification failed !");
-        }
+        var isVerify = await VerifyFileHash(path, hash);
+        if (!isVerify) throw new CryptographicException("Hash verification failed !");
     }
 
     private Task<bool> VerifyFileHash(string path, string hash)
