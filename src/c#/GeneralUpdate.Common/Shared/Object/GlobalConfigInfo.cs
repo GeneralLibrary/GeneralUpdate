@@ -126,4 +126,5 @@ public class GlobalConfigInfo
     public string Scheme { get; set; }
     
     public string Token { get; set; }
+    public string PatchPath { get; set; }
 }

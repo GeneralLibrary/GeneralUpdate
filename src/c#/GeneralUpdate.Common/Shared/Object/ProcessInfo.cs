@@ -27,7 +27,9 @@ namespace GeneralUpdate.Common.Shared.Object
             , string token
             , List<string> blackFileFormats
             , List<string> blackFiles
-            , List<string> skipDirectories)
+            , List<string> skipDirectories
+            , string patchPath
+            , string tempPath)
         {
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
             if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
@@ -50,6 +52,8 @@ namespace GeneralUpdate.Common.Shared.Object
             BlackFileFormats = blackFileFormats;
             BlackFiles = blackFiles;
             SkipDirectorys = skipDirectories;
+            TempPath = tempPath;
+            PatchPath = patchPath;
         }
 
         /// <summary>
@@ -141,5 +145,9 @@ namespace GeneralUpdate.Common.Shared.Object
 
         [JsonPropertyName("SkipDirectorys")]
         public List<string> SkipDirectorys { get; set; }
+        [JsonPropertyName("PatchPath")]
+        public string PatchPath { get; set; }
+        [JsonPropertyName("TempPath")]
+        public string TempPath { get; set; }
     }
 }

@@ -76,7 +76,10 @@ namespace GeneralUpdate.Common.FileBasic
 
             return default;
         }
-
+        public static string GetTempDirectory()
+        {
+            return GetTempDirectory("patchs");
+        }
         public static string GetTempDirectory(string name)
         {
             var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd}_{name}";

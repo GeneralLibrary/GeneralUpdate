@@ -181,6 +181,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
             _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
                 $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
+            _configInfo.PatchPath = StorageManager.GetTempDirectory();
 
             if (_configInfo.IsMainUpdate)
             {
@@ -208,7 +209,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     , _configInfo.Token
                     , BlackListManager.Instance.BlackFileFormats.ToList()
                     , BlackListManager.Instance.BlackFiles.ToList()
-                    , BlackListManager.Instance.SkipDirectorys.ToList());
+                    , BlackListManager.Instance.SkipDirectorys.ToList()
+                    , _configInfo.PatchPath
+                    , _configInfo.TempPath);
 
                 _configInfo.ProcessInfo =
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
