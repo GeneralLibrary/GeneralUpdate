@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
-    <Version>9.1.0</Version>
+    <Version>9.1.2</Version>
     <Authors>JusterZhu</Authors>
     <Company>juster.zhu</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

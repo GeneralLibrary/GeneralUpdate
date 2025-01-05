@@ -7,7 +7,7 @@
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
     <Authors>JusterZhu</Authors>
-    <Version>9.1.0</Version>
+    <Version>9.1.2</Version>
     <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
     <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
     <LangVersion>default</LangVersion>
