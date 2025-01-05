@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Version>9.1.0</Version>
+        <Version>9.1.2</Version>
         <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
@@ -22,15 +22,71 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Compress\ICompressionStrategy.cs" Link="Common\ICompressionStrategy.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Compress\ZipCompressionStrategy.cs" Link="Common\ZipCompressionStrategy.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\DownloadManager.cs" Link="Common\DownloadManager.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\DownloadTask.cs" Link="Common\DownloadTask.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiAllDownloadCompletedEventArgs.cs" Link="Common\MutiAllDownloadCompletedEventArgs.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadCompletedEventArgs.cs" Link="Common\MutiDownloadCompletedEventArgs.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadErrorEventArgs.cs" Link="Common\MutiDownloadErrorEventArgs.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadStatisticsEventArgs.cs" Link="Common\MutiDownloadStatisticsEventArgs.cs" />
+        <Compile Include="..\GeneralUpdate.Common\FileBasic\BlackListManager.cs" Link="Common\BlackListManager.cs" />
+        <Compile Include="..\GeneralUpdate.Common\FileBasic\ComparisonResult.cs" Link="Common\ComparisonResult.cs" />
+        <Compile Include="..\GeneralUpdate.Common\FileBasic\FileNode.cs" Link="Common\FileNode.cs" />
+        <Compile Include="..\GeneralUpdate.Common\FileBasic\FileTree.cs" Link="Common\FileTree.cs" />
+        <Compile Include="..\GeneralUpdate.Common\FileBasic\StorageManager.cs" Link="Common\StorageManager.cs" />
+        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\HashAlgorithmBase.cs" Link="Common\HashAlgorithmBase.cs" />
+        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Md5HashAlgorithm.cs" Link="Common\Md5HashAlgorithm.cs" />
+        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Sha1HashAlgorithm.cs" Link="Common\Sha1HashAlgorithm.cs" />
+        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Sha256HashAlgorithm.cs" Link="Common\Sha256HashAlgorithm.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\AbstractBootstrap.cs" Link="Common\AbstractBootstrap.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\UpdateOption.cs" Link="Common\UpdateOption.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\UpdateOptionValue.cs" Link="Common\UpdateOptionValue.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Event\EventManager.cs" Link="Common\EventManager.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Event\IEventManager.cs" Link="Common\IEventManager.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Exception\ExceptionEventArgs.cs" Link="Common\ExceptionEventArgs.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\FileNodesJsonContext.cs" Link="Common\FileNodesJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\GlobalConfigInfoOSSJsonContext.cs" Link="Common\GlobalConfigInfoOSSJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\HttpParameterJsonContext.cs" Link="Common\HttpParameterJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\PacketJsonContext.cs" Link="Common\PacketJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\ProcessInfoJsonContext.cs" Link="Common\ProcessInfoJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\ReportRespJsonContext.cs" Link="Common\ReportRespJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionOSSJsonContext.cs" Link="Common\VersionOSSJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionRespJsonContext.cs" Link="Common\VersionRespJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\IMiddleware.cs" Link="Common\IMiddleware.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\PipelineBuilder.cs" Link="Common\PipelineBuilder.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\PipelineContext.cs" Link="Common\PipelineContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Strategy\AbstractStrategy.cs" Link="Common\AbstractStrategy.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Strategy\IStrategy.cs" Link="Common\IStrategy.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Configinfo.cs" Link="Common\Configinfo.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\BaseResponseDTO.cs" Link="Common\BaseResponseDTO.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\VersionRespDTO.cs" Link="Common\VersionRespDTO.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\AppType.cs" Link="Common\AppType.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\Format.cs" Link="Common\Format.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\PlatformType.cs" Link="Common\PlatformType.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\ReportType.cs" Link="Common\ReportType.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfo.cs" Link="Common\GlobalConfigInfo.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfoOSS.cs" Link="Common\GlobalConfigInfoOSS.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Packet.cs" Link="Common\Packet.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\ProcessInfo.cs" Link="Common\ProcessInfo.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\VersionInfo.cs" Link="Common\VersionInfo.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\VersionOSS.cs" Link="Common\VersionOSS.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Service\VersionService.cs" Link="Common\VersionService.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandler.cs" Link="Common\BinaryHandler.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2Constants.cs" Link="Common\BZip2Constants.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2InputStream.cs" Link="Common\BZip2InputStream.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2OutputStream.cs" Link="Common\BZip2OutputStream.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\IChecksum.cs" Link="Common\IChecksum.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
+        <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
         <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
         <PackageReference Include="System.Net.Http" Version="4.3.4" />
         <PackageReference Include="System.Net.Requests" Version="4.3.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
-        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -45,6 +101,10 @@
         <Pack>True</Pack>
         <PackagePath></PackagePath>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Common\" />
     </ItemGroup>
 
 </Project>
