@@ -12,7 +12,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
     {
         protected const string Patchs = "patchs";
         
-        public virtual void Execute() => throw new NotImplementedException();
+        public virtual Task Execute() => throw new NotImplementedException();
         
         public virtual void StartApp() => throw new NotImplementedException();
         

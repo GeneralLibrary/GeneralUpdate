@@ -24,10 +24,10 @@ namespace GeneralUpdate.Core.Strategys
 
         public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
-        public override void Execute()
+        public override async Task Execute()
         {
-            Task.Run(async () =>
-            {
+            //Task.Run(async () =>
+            //{
                 try
                 {
                     var status = ReportType.None;
@@ -94,7 +94,7 @@ namespace GeneralUpdate.Core.Strategys
                     Debug.WriteLine(e.Message);
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
-            });
+            //});
         }
 
         public override void StartApp()

@@ -11,7 +11,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        void Execute();
+        Task Execute();
 
         /// <summary>
         /// After the update is complete.
