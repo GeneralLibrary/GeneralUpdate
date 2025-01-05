@@ -1,0 +1,92 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<!--<PublishAot>true</PublishAot>-->
+		<!--<PublishSingleFile>true</PublishSingleFile>-->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="..\..\GeneralUpdate.Common\FileBasic\BlackListManager.cs" Link="Common\FileBasic\BlackListManager.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\FileBasic\ComparisonResult.cs" Link="Common\FileBasic\ComparisonResult.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\FileBasic\FileNode.cs" Link="Common\FileBasic\FileNode.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\FileBasic\FileTree.cs" Link="Common\FileBasic\FileTree.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\FileBasic\StorageManager.cs" Link="Common\FileBasic\StorageManager.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\HashAlgorithms\HashAlgorithmBase.cs" Link="Common\HashAlgorithms\HashAlgorithmBase.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\HashAlgorithms\Md5HashAlgorithm.cs" Link="Common\HashAlgorithms\Md5HashAlgorithm.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\HashAlgorithms\Sha1HashAlgorithm.cs" Link="Common\HashAlgorithms\Sha1HashAlgorithm.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\HashAlgorithms\Sha256HashAlgorithm.cs" Link="Common\HashAlgorithms\Sha256HashAlgorithm.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Event\EventManager.cs" Link="Common\Internal\Event\EventManager.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Event\IEventManager.cs" Link="Common\Internal\Event\IEventManager.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Exception\ExceptionEventArgs.cs" Link="Common\Internal\Exception\ExceptionEventArgs.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\FileNodesJsonContext.cs" Link="Common\Internal\JsonContext\FileNodesJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\GlobalConfigInfoOSSJsonContext.cs" Link="Common\Internal\JsonContext\GlobalConfigInfoOSSJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\HttpParameterJsonContext.cs" Link="Common\Internal\JsonContext\HttpParameterJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\PacketJsonContext.cs" Link="Common\Internal\JsonContext\PacketJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\ProcessInfoJsonContext.cs" Link="Common\Internal\JsonContext\ProcessInfoJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\ReportRespJsonContext.cs" Link="Common\Internal\JsonContext\ReportRespJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\VersionOSSJsonContext.cs" Link="Common\Internal\JsonContext\VersionOSSJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\JsonContext\VersionRespJsonContext.cs" Link="Common\Internal\JsonContext\VersionRespJsonContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Pipeline\IMiddleware.cs" Link="Common\Internal\Pipeline\IMiddleware.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Pipeline\PipelineBuilder.cs" Link="Common\Internal\Pipeline\PipelineBuilder.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Pipeline\PipelineContext.cs" Link="Common\Internal\Pipeline\PipelineContext.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Strategy\AbstractStrategy.cs" Link="Common\Internal\Strategy\AbstractStrategy.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Internal\Strategy\IStrategy.cs" Link="Common\Internal\Strategy\IStrategy.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\DTO\BaseResponseDTO.cs" Link="Common\Object\DTO\BaseResponseDTO.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\DTO\VersionRespDTO.cs" Link="Common\Object\DTO\VersionRespDTO.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\Enum\Format.cs" Link="Common\Object\Enum\Format.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\Enum\ReportType.cs" Link="Common\Object\Enum\ReportType.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfo.cs" Link="Common\Object\GlobalConfigInfo.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfoOSS.cs" Link="Common\Object\GlobalConfigInfoOSS.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\Packet.cs" Link="Common\Object\Packet.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\ProcessInfo.cs" Link="Common\Object\ProcessInfo.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\VersionInfo.cs" Link="Common\Object\VersionInfo.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Object\VersionOSS.cs" Link="Common\Object\VersionOSS.cs" />
+		<Compile Include="..\..\GeneralUpdate.Common\Shared\Service\VersionService.cs" Link="Common\Service\VersionService.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\BackupDriverCommand.cs" Link="ClientCore\Driver\BackupDriverCommand.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\CommandExecutor.cs" Link="ClientCore\Driver\CommandExecutor.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\DeleteDriverCommand.cs" Link="ClientCore\Driver\DeleteDriverCommand.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\DriverCommand.cs" Link="ClientCore\Driver\DriverCommand.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\DriverInfo.cs" Link="ClientCore\Driver\DriverInfo.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\DriverInformation.cs" Link="ClientCore\Driver\DriverInformation.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\DriverProcessor.cs" Link="ClientCore\Driver\DriverProcessor.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\InstallDriverCommand.cs" Link="ClientCore\Driver\InstallDriverCommand.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Driver\RestoreDriverCommand.cs" Link="ClientCore\Driver\RestoreDriverCommand.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Pipeline\DriverMiddleware.cs" Link="ClientCore\Pipeline\DriverMiddleware.cs" />
+		<Compile Include="..\..\GeneralUpdate.Core\Pipeline\PatchMiddleware.cs" Link="ClientCore\Pipeline\PatchMiddleware.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\BinaryHandler.cs" Link="Differential\Binary\BinaryHandler.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\BZip2Constants.cs" Link="Differential\Binary\BZip2Constants.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\BZip2InputStream.cs" Link="Differential\Binary\BZip2InputStream.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\BZip2OutputStream.cs" Link="Differential\Binary\BZip2OutputStream.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\IChecksum.cs" Link="Differential\Binary\IChecksum.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Differential\Binary\StrangeCRC.cs" />
+		<Compile Include="..\..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Differential\DifferentialCore.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="9.0.0">
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="ClientCore\Driver\" />
+		<Folder Include="ClientCore\Pipeline\" />
+		<Folder Include="Common\FileBasic\" />
+		<Folder Include="Common\HashAlgorithms\" />
+		<Folder Include="Common\Internal\Exception\" />
+		<Folder Include="Common\Internal\JsonContext\" />
+		<Folder Include="Common\Internal\Pipeline\" />
+		<Folder Include="Common\Internal\Event\" />
+		<Folder Include="Common\Internal\Strategy\" />
+		<Folder Include="Common\Object\DTO\" />
+		<Folder Include="Common\Object\Enum\" />
+		<Folder Include="Common\Service\" />
+		<Folder Include="Differential\Binary\" />
+		<Folder Include="Strategys\" />
+	</ItemGroup>
+</Project>
