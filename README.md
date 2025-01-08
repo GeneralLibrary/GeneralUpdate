@@ -10,32 +10,21 @@
 
 ## 1.组件介绍 ##
 
-GeneralUpdate是一款基于.NET Standard2.0开源自动升级组件。
+**更新无限，升级无界。**
+
+GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。
+
+| 仓库                  | 说明                 | 地址                                                         |
+| --------------------- | -------------------- | ------------------------------------------------------------ |
+| GeneralUpdate         | 自动更新             | https://github.com/GeneralLibrary/GeneralUpdate<br />https://gitee.com/GeneralLibrary/GeneralUpdate<br />https://gitcode.com/GeneralLibrary/GeneralUpdate |
+| GeneralUpdate.Maui    | Maui自动更新（安卓） | https://github.com/GeneralLibrary/GeneralUpdate.Maui<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui |
+| GeneralUpdate.Tools   | 更新补丁包制作工具   | https://github.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitee.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools |
+| GeneralUpdate-Samples | 使用示例             | https://github.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitee.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples |
 
 帮助文档
 
 - 官方网站： https://www.justerzhu.cn/
 - 使用教程视频：https://www.bilibili.com/video/BV1c8iyYZE7P
-
-当前项目GeneralUpdate
-
-- https://github.com/JusterZhu/GeneralUpdate
-- https://gitee.com/Juster-zhu/GeneralUpdate
-
-MAUI GeneralUpdate.Maui
-
-- https://github.com/GeneralLibrary/GeneralUpdate.Maui
-
-打包工具项目地址GeneralUpdate.Tools
-
-- https://github.com/GeneralLibrary/GeneralUpdate.Tools
-- https://gitee.com/GeneralTeam/GeneralUpdate.Tools
-
-示例项目地址GeneralUpdate-Samples
-
-- https://github.com/GeneralLibrary/GeneralUpdate-Samples
-
-- https://gitee.com/GeneralTeam/GeneralUpdate-Samples
 
 
 

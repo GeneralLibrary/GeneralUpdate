@@ -7,31 +7,23 @@ Unlimited Updates, Boundless Upgrades.
 
 ## 1. Component Introduction ##
 
-GeneralUpdate is an open-source automatic update component based on .NET Standard 2.0.
+**Updates Unlimited, Upgrades Unbounded.**
 
-Documentation
+GeneralUpdate is an open-source cross-platform application auto-update component based on .NET Standard 2.0 and licensed under the MIT license.
 
-- Official website: https://www.justerzhu.cn/
-- Tutorial video: https://www.bilibili.com/video/BV1c8iyYZE7P
+| Repository            | Description                | URL                                                          |
+| --------------------- | -------------------------- | ------------------------------------------------------------ |
+| GeneralUpdate         | Auto Update                | https://github.com/GeneralLibrary/GeneralUpdate<br />https://gitee.com/GeneralLibrary/GeneralUpdate<br />https://gitcode.com/GeneralLibrary/GeneralUpdate |
+| GeneralUpdate.Maui    | Maui Auto Update (Android) | https://github.com/GeneralLibrary/GeneralUpdate.Maui<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui |
+| GeneralUpdate.Tools   | Update Patch Creation Tool | https://github.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitee.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools |
+| GeneralUpdate-Samples | Usage Examples             | https://github.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitee.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples |
 
-Current Project GeneralUpdate
+Help Documentation
 
-- https://github.com/JusterZhu/GeneralUpdate
-- https://gitee.com/Juster-zhu/GeneralUpdate
+- Official Website: https://www.justerzhu.cn/
+- Tutorial Videos: https://www.bilibili.com/video/BV1c8iyYZE7P
 
-MAUI GeneralUpdate.Maui
 
-- https://github.com/GeneralLibrary/GeneralUpdate.Maui
-
-Packaging Tool Project Address GeneralUpdate.Tools
-
-- https://github.com/GeneralLibrary/GeneralUpdate.Tools
-- https://gitee.com/GeneralTeam/GeneralUpdate.Tools
-
-Sample Project Address GeneralUpdate-Samples
-
-- https://github.com/GeneralLibrary/GeneralUpdate-Samples
-- https://gitee.com/GeneralTeam/GeneralUpdate-Samples
 
 Feature Introduction:
 
