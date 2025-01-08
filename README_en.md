@@ -11,10 +11,6 @@ Unlimited Updates, Boundless Upgrades.
 
 GeneralUpdate is an open-source cross-platform application auto-update component based on .NET Standard 2.0 and licensed under the MIT license.
 
-| Github               | Gitee               | GitCode               |
-| -------------------- | ------------------- | --------------------- |
-| ![](imgs\github.png) | ![](imgs\gitee.png) | ![](imgs\gitcode.jpg) |
-
 | Repository            | Description                | URL                                                          |
 | --------------------- | -------------------------- | ------------------------------------------------------------ |
 | GeneralUpdate         | Auto Update                | https://github.com/GeneralLibrary/GeneralUpdate<br />https://gitee.com/GeneralLibrary/GeneralUpdate<br />https://gitcode.com/GeneralLibrary/GeneralUpdate |
