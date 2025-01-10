@@ -78,3 +78,4 @@ Feature Introduction:
 | Loongson (Loongnix LoongArch) | Yes       |
 | HuaWeiEulerOS (Kunpeng)       | Yes       |
 | Apple Mac (M1)                | Yes       |
+| UOS                           | Yes       |
