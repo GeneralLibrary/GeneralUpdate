@@ -1,6 +1,6 @@
 ![](imgs/GeneralUpdate_h2.png)
 
-
+<div align="center">
 
 # GeneralUpdate #
 
@@ -45,6 +45,8 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 [![Share on LinkedIn](https://img.shields.io/badge/share%20on-linkedin-0077B5.svg?style=social)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/GeneralLibrary/GeneralUpdate&title=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.)
 
 <sup>Unlimited Updates, Boundless Upgrades.</sup>
+
+</div>
 
 ![](imgs\ui.png)
 
