@@ -81,8 +81,8 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 | 麒麟V10(飞腾S2500)  | 支持   |
 | 麒麟V10(飞腾FT-2000)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
-| Ubuntu | 支持 |
-| 龙芯(Loongnix LoongArch) | 支持 |
+| Ubuntu 24.04.1 LTS | 支持 |
+| 龙芯(Loongnix LoongArch 3A6000) | 支持 |
 | 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
 | Apple Mac (M1) | 支持 |
 | 统信UOS | 支持 |
