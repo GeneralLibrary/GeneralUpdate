@@ -4,6 +4,8 @@
 
 # GeneralUpdate #
 
+**更新无限，升级无界。**</br>
+
 GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。</br>
 
 不依赖任何UI框架，减少更新产生的资源消耗，一键启动示例启动帮助您快捷为您的应用程序实现自动升级。
@@ -14,11 +16,11 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 ![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
 
-![](https://img.shields.io/github/contributors/GeneralLibrary/GeneralUpdate)
-
 ![](https://img.shields.io/github/languages/top/GeneralLibrary/GeneralUpdate)
 
-![](https://img.shields.io/badge/build-passing-brightgreen)
+![](https://img.shields.io/github/contributors/GeneralLibrary/GeneralUpdate)
+
+![](https://img.shields.io/badge/build-passing-brightgreen) <br/>
 
 ![](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-success.svg)
 
@@ -26,7 +28,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 ![](https://img.shields.io/badge/sustainability-yes-brightgreen.svg)
 
-![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
+![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg) <br/>
 
 ![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)
 
@@ -46,11 +48,9 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 ![](imgs\ui.png)
 
-## 1.组件介绍 ##
+## 1.仓库 ##
 
-**更新无限，升级无界。**
-
-| 仓库                  | 说明                 | 地址                                                         |
+| 名称                  | 说明                 | 地址                                                         |
 | --------------------- | -------------------- | ------------------------------------------------------------ |
 | GeneralUpdate         | 自动更新             | https://github.com/GeneralLibrary/GeneralUpdate<br />https://gitee.com/GeneralLibrary/GeneralUpdate<br />https://gitcode.com/GeneralLibrary/GeneralUpdate |
 | GeneralUpdate.Maui    | Maui自动更新（安卓） | https://github.com/GeneralLibrary/GeneralUpdate.Maui<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui |
