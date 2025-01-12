@@ -1,6 +1,6 @@
-![](imgs/GeneralUpdate_h2.png)
-
 <div align="center">
+
+![](imgs/GeneralUpdate_h2.png)
 
 # GeneralUpdate #
 
@@ -14,25 +14,20 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 <!-- SHIELD GROUP -->
 
-![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
+[![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)](https://github.com/JusterZhu/GeneralUpdate/blob/main/LICENSE)
+[![](https://img.shields.io/github/languages/top/GeneralLibrary/GeneralUpdate)](https://github.com/GeneralLibrary/GeneralUpdate)
+[![](https://img.shields.io/github/contributors/GeneralLibrary/GeneralUpdate)](https://github.com/GeneralLibrary/GeneralUpdate/graphs/contributors)
+[![](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/GeneralLibrary/GeneralUpdate/actions) </br>
 
-![](https://img.shields.io/github/languages/top/GeneralLibrary/GeneralUpdate)
+[![](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-success.svg)](https://github.com/GeneralLibrary/GeneralUpdate)
+[![](https://img.shields.io/badge/documentation-ready-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate/wiki)
+[![](https://img.shields.io/badge/sustainability-yes-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate)
+[![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate#contributing) </br>
 
-![](https://img.shields.io/github/contributors/GeneralLibrary/GeneralUpdate)
+[![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)](https://github.com/GeneralLibrary/GeneralUpdate/stargazers)
+[![](https://img.shields.io/github/forks/GeneralLibrary/GeneralUpdate)](https://github.com/GeneralLibrary/GeneralUpdate/network/members)
 
-![](https://img.shields.io/badge/build-passing-brightgreen) <br/>
 
-![](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-success.svg)
-
-![](https://img.shields.io/badge/documentation-ready-brightgreen.svg)
-
-![](https://img.shields.io/badge/sustainability-yes-brightgreen.svg)
-
-![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg) <br/>
-
-![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)
-
-![](https://img.shields.io/github/forks/GeneralLibrary/GeneralUpdate)
 
 **Share GeneralUpdate Repository**
 
@@ -46,9 +41,9 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 <sup>Unlimited Updates, Boundless Upgrades.</sup>
 
-</div>
-
 ![](imgs\ui.png)
+
+</div>
 
 ## 1.仓库 ##
 
