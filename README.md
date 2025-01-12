@@ -1,18 +1,54 @@
-# GeneralUpdate #
-![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
-
-
 ![](imgs/GeneralUpdate_h2.png)
+
+
+
+# GeneralUpdate #
+
+GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。</br>
+
+不依赖任何UI框架，减少更新产生的资源消耗，一键启动示例启动帮助您快捷为您的应用程序实现自动升级。
 
 [English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
-**更新无限，升级无界。**
+<!-- SHIELD GROUP -->
+
+![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)
+
+![](https://img.shields.io/github/contributors/GeneralLibrary/GeneralUpdate)
+
+![](https://img.shields.io/github/languages/top/GeneralLibrary/GeneralUpdate)
+
+![](https://img.shields.io/badge/build-passing-brightgreen)
+
+![](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-success.svg)
+
+![](https://img.shields.io/badge/documentation-ready-brightgreen.svg)
+
+![](https://img.shields.io/badge/sustainability-yes-brightgreen.svg)
+
+![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
+
+![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)
+
+![](https://img.shields.io/github/forks/GeneralLibrary/GeneralUpdate)
+
+**Share GeneralUpdate Repository**
+
+[![Share on X](https://img.shields.io/badge/share%20on-X-1DA1F2.svg?style=social)](https://x.com/intent/post?hashtags=GeneralUpdate&text=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.&url=https://github.com/GeneralLibrary/GeneralUpdate)
+[![Share on Telegram](https://img.shields.io/badge/share%20on-telegram-0088cc.svg?style=social)](https://telegram.me/share/url?url=https://github.com/GeneralLibrary/GeneralUpdate&text=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.)
+[![Share on WhatsApp](https://img.shields.io/badge/share%20on-whatsapp-25D366.svg?style=social)](https://api.whatsapp.com/send?text=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.%20https://github.com/GeneralLibrary/GeneralUpdate)
+[![Share on Reddit](https://img.shields.io/badge/share%20on-reddit-FF4500.svg?style=social)](https://www.reddit.com/submit?url=https://github.com/GeneralLibrary/GeneralUpdate&title=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.)
+[![Share on Weibo](https://img.shields.io/badge/share%20on-weibo-EF4E39.svg?style=social)](https://service.weibo.com/share/share.php?url=https://github.com/GeneralLibrary/GeneralUpdate&title=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.)
+[![Share on Mastodon](https://img.shields.io/badge/share%20on-mastodon-7857A4.svg?style=social)](https://mastodon.social/share/?text=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.&url=https://github.com/GeneralLibrary/GeneralUpdate)
+[![Share on LinkedIn](https://img.shields.io/badge/share%20on-linkedin-0077B5.svg?style=social)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/GeneralLibrary/GeneralUpdate&title=Share%20an%20open-source%20project%20that%20supports%20cross-platform%20and%20automatic%20client%20upgrades%20for%20any%20.NET%20UI%20technology.)
+
+<sup>Unlimited Updates, Boundless Upgrades.</sup>
+
+![](imgs\ui.png)
 
 ## 1.组件介绍 ##
 
 **更新无限，升级无界。**
-
-GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。
 
 | 仓库                  | 说明                 | 地址                                                         |
 | --------------------- | -------------------- | ------------------------------------------------------------ |
@@ -76,8 +112,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 | 操作系统名称 | 是否支持 |
 | ------------ | -------- |
 | Windows      | 支持     |
-| Linux        | 支持 |
-| Android      | 支持 |
+| Android (.NET MAUI) | 支持 |
 | 麒麟V10(飞腾S2500)  | 支持   |
 | 麒麟V10(飞腾FT-2000)  | 支持   |
 | 麒麟V10(x64)  | 支持   |
@@ -85,4 +120,4 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 | 龙芯(Loongnix LoongArch 3A6000) | 支持 |
 | 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
 | Apple Mac (M1) | 支持 |
-| 统信UOS | 支持 |
+| 统信UOS (x64) | 支持 |

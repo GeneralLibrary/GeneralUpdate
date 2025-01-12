@@ -69,8 +69,7 @@ Feature Introduction:
 | Operating System Name       | Supported |
 | --------------------------- | --------- |
 | Windows                     | Yes       |
-| Linux                       | Yes       |
-| Android                     | Yes       |
+| Android (.NET MAUI)         | Yes       |
 | Kylin V10 (Feiteng S2500)   | Yes       |
 | Kylin V10 (Feiteng 2000)    | Yes       |
 | Kylin V10 (x64)             | Yes       |
@@ -78,4 +77,4 @@ Feature Introduction:
 | Loongnix (LoongArch 3A6000) | Yes       |
 | HuaWeiEulerOS (Kunpeng)     | Yes       |
 | Apple Mac (M1)              | Yes       |
-| UOS                         | Yes       |
+| UOS (x64)                   | Yes       |
