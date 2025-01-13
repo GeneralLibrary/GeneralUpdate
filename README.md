@@ -147,9 +147,9 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 ## 🎏代码平台
 
-| Github               | Gitee               | GitCode               |
-| -------------------- | ------------------- | --------------------- |
-| ![](imgs\github.png) | ![](imgs\gitee.png) | ![](imgs\gitcode.jpg) |
+| Github                 | Gitee                 | GitCode                 |
+| ---------------------- | --------------------- | ----------------------- |
+| ![](./imgs/github.png) | ![](./imgs/gitee.png) | ![](./imgs/gitcode.jpg) |
 
 
 
