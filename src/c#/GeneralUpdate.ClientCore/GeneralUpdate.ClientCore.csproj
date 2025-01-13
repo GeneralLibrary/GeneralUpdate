@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Version>9.1.2</Version>
+        <Version>9.1.4</Version>
         <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
