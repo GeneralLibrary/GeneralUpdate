@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Internal.Bootstrap;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
@@ -101,6 +102,6 @@ internal class WindowStrategy : AbstractStrategy
          * If the latest version number obtained via an HTTP request is less than or equal to the exception version number, the update is skipped.
          * Once this version number is set, it will not be removed, and updates will not proceed until a version greater than the exception version number is obtained through the HTTP request.
          */
-        Environment.SetEnvironmentVariable("UpgradeFail", _parameter.ExtendedField, EnvironmentVariableTarget.User);
+        Environments.SetEnvironmentVariable("UpgradeFail", _parameter.ExtendedField);
     }
 }

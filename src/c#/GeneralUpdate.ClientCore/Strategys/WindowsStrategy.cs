@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Pipeline;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
@@ -89,11 +90,11 @@ public class WindowsStrategy : AbstractStrategy
     {
         try
         {
-            Environment.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo, EnvironmentVariableTarget.User);
+            Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
             {
-                Environment.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo, EnvironmentVariableTarget.User);
+                Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
                 Process.Start(new ProcessStartInfo
                 {
                     UseShellExecute = true,

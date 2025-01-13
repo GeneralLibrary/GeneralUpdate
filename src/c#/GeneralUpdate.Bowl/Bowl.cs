@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using GeneralUpdate.Bowl.Strategys;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
@@ -36,7 +37,7 @@ public sealed class Bowl
 
     private static MonitorParameter CreateParameter()
     {
-        var json = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
+        var json = Environments.GetEnvironmentVariable("ProcessInfo");
         if(string.IsNullOrWhiteSpace(json))
             throw new ArgumentNullException("ProcessInfo environment variable not set !"); 
         

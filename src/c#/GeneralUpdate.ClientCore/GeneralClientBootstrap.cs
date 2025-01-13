@@ -46,7 +46,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         {
             CallSmallBowlHome(_configInfo.Bowl);
             ExecuteCustomOptions();
-            ClearEnvironmentVariable();
             await ExecuteWorkflowAsync();
         }
         catch (Exception exception)
@@ -294,7 +293,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
           Read the version number of the last failed upgrade from the system environment variables, then compare it with the version number of the current request.
           If it is less than or equal to the failed version number, do not perform the update.
           */
-        var fail = Environment.GetEnvironmentVariable("UpgradeFail", EnvironmentVariableTarget.User);
+        var fail = Environments.GetEnvironmentVariable("UpgradeFail");
         if (string.IsNullOrEmpty(fail) || string.IsNullOrEmpty(version))
             return false;
 
@@ -401,33 +400,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 var args = new ExceptionEventArgs(exception, $"{nameof(option)}Execution failure!");
                 EventManager.Instance.Dispatch(this, args);
             }
-        }
-    }
-
-    /// <summary>
-    /// Clear the environment variable information needed to start the upgrade assistant process.
-    /// </summary>
-    private void ClearEnvironmentVariable()
-    {
-        try
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.User);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (File.Exists("ProcessInfo.json"))
-                {
-                    File.SetAttributes("ProcessInfo.json", FileAttributes.Normal);
-                    File.Delete("ProcessInfo.json");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine(ex);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Error: An unknown error occurred while deleting the environment variable."));
         }
     }
 

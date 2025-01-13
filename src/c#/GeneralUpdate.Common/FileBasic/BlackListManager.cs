@@ -20,7 +20,14 @@ public class BlackListManager
         ".pdb"
     ];
 
-    private static readonly List<string> _blackFiles = ["Newtonsoft.Json.dll"];
+    private static readonly List<string> _blackFiles = 
+    [
+        "Microsoft.Bcl.AsyncInterfaces.dll",
+        "System.Collections.Immutable.dll", 
+        "System.IO.Pipelines.dll", 
+        "System.Text.Encodings.Web.dll",
+        "System.Text.Json.dll"
+    ];
 
     private static readonly List<string> _skipDirectorys = ["app-", "fail"];
 

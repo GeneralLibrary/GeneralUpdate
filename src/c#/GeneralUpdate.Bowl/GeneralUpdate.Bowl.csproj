@@ -53,6 +53,7 @@
         <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\AbstractBootstrap.cs" Link="Common\AbstractBootstrap.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\UpdateOption.cs" Link="Common\UpdateOption.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\UpdateOptionValue.cs" Link="Common\UpdateOptionValue.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\Environments.cs" Link="Common\Environments.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Event\EventManager.cs" Link="Common\EventManager.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Event\IEventManager.cs" Link="Common\IEventManager.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Exception\ExceptionEventArgs.cs" Link="Common\ExceptionEventArgs.cs" />

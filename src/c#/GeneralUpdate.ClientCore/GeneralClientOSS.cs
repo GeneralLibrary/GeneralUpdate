@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
@@ -45,7 +46,7 @@ public sealed class GeneralClientOSS
                     throw new Exception($"The application does not exist {upgradeAppName} !");
                 
                 var json = JsonSerializer.Serialize(configGlobalConfigInfo, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
-                Environment.SetEnvironmentVariable("GlobalConfigInfoOSS", json, EnvironmentVariableTarget.User);
+                Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", json);
                 Process.Start(appPath);
             }
             catch (Exception ex)

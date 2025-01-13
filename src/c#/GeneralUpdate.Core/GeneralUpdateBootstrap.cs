@@ -25,7 +25,7 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap()
         {
-            var json = GetProcessInfoJsonContext();
+            var json = Environments.GetEnvironmentVariable("ProcessInfo");
             if (string.IsNullOrWhiteSpace(json))
                 throw new ArgumentException("json environment variable is not defined");
                 
@@ -111,21 +111,6 @@ namespace GeneralUpdate.Core
         => AddListener(callbackAction);
 
         #endregion
-
-        private static string? GetProcessInfoJsonContext()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.User);
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                var jsonFileName = "ProcessInfo.json";
-                if (File.Exists(jsonFileName))
-                    return File.ReadAllText(jsonFileName);
-            }
-            
-            return null;
-        }
 
         protected override Task ExecuteStrategyAsync()=> throw new NotImplementedException();
         

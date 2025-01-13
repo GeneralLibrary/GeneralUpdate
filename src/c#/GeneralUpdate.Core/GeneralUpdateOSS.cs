@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Core.Strategys;
@@ -31,7 +32,7 @@ namespace GeneralUpdate.Core
         {
             try
             {
-                var json = Environment.GetEnvironmentVariable("GlobalConfigInfoOSS", EnvironmentVariableTarget.User);
+                var json = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
                 if (string.IsNullOrWhiteSpace(json))
                     return;
 
