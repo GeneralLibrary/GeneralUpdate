@@ -44,7 +44,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
                     foreach (var toZipFileKey in toZipFileDictionaryList.Keys)
                     {
                         if (toZipFileKey == destinationArchiveFileName) continue;
-                        
+
                         var toZipedFileName = Path.GetFileName(toZipFileKey);
                         var toDelArchives = new List<ZipArchiveEntry>();
                         foreach (var zipArchiveEntry in archive.Entries)
@@ -84,8 +84,8 @@ public class ZipCompressionStrategy : ICompressionStrategy
                         var toDelArchives = new List<ZipArchiveEntry>();
                         foreach (var zipArchiveEntry in archive.Entries)
                         {
-                            if (toZipedFileName != null 
-                                && (zipArchiveEntry.FullName.StartsWith(toZipedFileName)|| toZipedFileName.StartsWith(zipArchiveEntry.FullName)))
+                            if (toZipedFileName != null
+                                && (zipArchiveEntry.FullName.StartsWith(toZipedFileName) || toZipedFileName.StartsWith(zipArchiveEntry.FullName)))
                             {
                                 toDelArchives.Add(zipArchiveEntry);
                             }
@@ -101,13 +101,13 @@ public class ZipCompressionStrategy : ICompressionStrategy
                 }
             }
         }
-        catch(Exception exception)
+        catch (Exception exception)
         {
             Debug.WriteLine(exception);
             throw new Exception($"Failed to compress archive: {exception.Message}");
         }
     }
-    
+
     /// <summary>
     /// Unzip the Zip file and save it to the specified target path folder .
     /// </summary>
@@ -120,7 +120,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         {
             var dirSeparatorChar = Path.DirectorySeparatorChar.ToString();
             unZipDir = unZipDir.EndsWith(dirSeparatorChar) ? unZipDir : unZipDir + dirSeparatorChar;
-            
+
             var directoryInfo = new DirectoryInfo(unZipDir);
             if (!directoryInfo.Exists)
             {
@@ -138,14 +138,14 @@ public class ZipCompressionStrategy : ICompressionStrategy
             for (int i = 0; i < archive.Entries.Count; i++)
             {
                 var entries = archive.Entries[i];
-                if (entries.FullName.EndsWith(dirSeparatorChar))
+                var pattern = $"^{dirSeparatorChar}*";
+                var entryFilePath = Regex.Replace(entries.FullName.Replace("/", dirSeparatorChar), pattern,
+                    "");
+                if (entryFilePath.EndsWith(dirSeparatorChar))
                 {
                     continue;
                 }
 
-                var pattern = $"^{dirSeparatorChar}*";
-                var entryFilePath = Regex.Replace(entries.FullName.Replace("/", dirSeparatorChar), pattern,
-                    "");
                 var filePath = directoryInfo + entryFilePath;
                 var greatFolder = Directory.GetParent(filePath);
                 if (greatFolder is not null && !greatFolder.Exists)
