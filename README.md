@@ -1,18 +1,19 @@
 <div align="center">
 
+
 ![](./imgs/GeneralUpdate_h2.png)
 
 # GeneralUpdate #
 
-**更新无限，升级无界。**</br>
+**Unlimited Updates, Boundless Upgrades.**</br>
 
-GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。</br>
+GeneralUpdate is a cross-platform application auto-upgrade component based on .NET Standard 2.0 and released under the MIT License.</br>
 
-不依赖任何UI框架，减少更新产生的资源消耗。</br> 
+It does not rely on any UI framework, minimizing resource consumption during updates.</br> 
 
-一键启动示例帮助您快速理解如何为您的应用程序集成自动升级能力。
+A one-click startup example helps you quickly understand how to integrate automatic upgrade capabilities into your application.
 
-[English](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
+[中文](https://github.com/JusterZhu/GeneralUpdate/blob/master/README.md)
 
 <!-- SHIELD GROUP -->
 
@@ -45,107 +46,107 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 
 
-## ❤️开源生态
+## ❤️ Open Source Ecosystem
 
 ![](./imgs/ui.png)
 
-非常感谢以下开源项目的作者参与了开源生态 [查看示例代码](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/UI)。
+Special thanks to the authors of the following open source projects for contributing to the open source ecosystem [View example code](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/UI).
 
-| 名称          | 支持UI框架 | 类型   | 仓库地址                                                  |
-| ------------- | ---------- | ------ | --------------------------------------------------------- |
-| Semi.Avalonia | Avalonia   | 控件库 | [进入](https://github.com/irihitech/Semi.Avalonia)        |
-| Ursa.Avalonia | Avalonia   | 控件库 | [进入](https://github.com/irihitech/Ursa.Avalonia)        |
-| WPFDevelopers | WPF        | 控件库 | [进入](https://github.com/WPFDevelopersOrg/WPFDevelopers) |
-| LayUI         | WPF        | 控件库 | [进入](https://github.com/Layui-WPF-Team/Layui-WPF)       |
-| AntdUI        | Winforms   | 控件库 | [进入](https://github.com/AntdUI/AntdUI)                  |
-
-
-
-## 🎪基础设施 ##
-
-| 名称                  | 说明                 | 地址                                                         |
-| --------------------- | -------------------- | ------------------------------------------------------------ |
-| GeneralUpdate         | 自动更新升级         | [Github](https://github.com/GeneralLibrary/GeneralUpdate)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate) |
-| GeneralUpdate.Maui    | Maui自动更新（安卓） | [Github](https://github.com/GeneralLibrary/GeneralUpdate.Maui)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Maui)<br />[GitCdoe](https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui) |
-| GeneralUpdate.Tools   | 更新补丁包制作工具   | [Github](https://github.com/GeneralLibrary/GeneralUpdate.Tools)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Tools)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools) |
-| GeneralUpdate-Samples | 使用示例             | [Github](https://github.com/GeneralLibrary/GeneralUpdate-Samples)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate-Samples)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples) |
+| Name          | Supported UI Framework | Type            | Repository URL                                            |
+| ------------- | ---------------------- | --------------- | --------------------------------------------------------- |
+| Semi.Avalonia | Avalonia               | Control Library | [View](https://github.com/irihitech/Semi.Avalonia)        |
+| Ursa.Avalonia | Avalonia               | Control Library | [View](https://github.com/irihitech/Ursa.Avalonia)        |
+| WPFDevelopers | WPF                    | Control Library | [View](https://github.com/WPFDevelopersOrg/WPFDevelopers) |
+| LayUI         | WPF                    | Control Library | [View](https://github.com/Layui-WPF-Team/Layui-WPF)       |
+| AntdUI        | Winforms               | Control Library | [View](https://github.com/AntdUI/AntdUI)                  |
 
 
 
-## 🛸快速启动
+## 🎪 Infrastructure ##
 
-| 名称     | 说明                                                         | 地址                                                         |
-| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 快速启动 | 快速启动引导说明。                                           | [进入](https://www.justerzhu.cn/docs/quickstart/quikstart)   |
-| 示例代码 | 自动升级相关的示例代码和一键启动脚本都在这里。               | [进入](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/src) |
-| 在线文档 | 关于组件所有的相关说明文档地址。                             | [进入](https://www.justerzhu.cn/)                            |
-| 教程视频 | 通过视频操作演示帮助大家理解使用。                           | [进入](https://www.bilibili.com/video/BV1c8iyYZE7P)          |
-| 发布日志 | 每次版本迭代的说明。                                         | [进入](https://www.justerzhu.cn/docs/releaselog/releaselog)  |
-| 技术咨询 | 联系作者加入讨论组，请在讨论组或issue提问大家都能看到避免重复回答问题。 | [进入](https://www.justerzhu.cn/Profile)                     |
+| Name                  | Description                | Address                                                      |
+| --------------------- | -------------------------- | ------------------------------------------------------------ |
+| GeneralUpdate         | Automatic Updates          | [GitHub](https://github.com/GeneralLibrary/GeneralUpdate)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate) |
+| GeneralUpdate.Maui    | Maui Updates (Android)     | [GitHub](https://github.com/GeneralLibrary/GeneralUpdate.Maui)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Maui)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui) |
+| GeneralUpdate.Tools   | Update Patch Creation Tool | [GitHub](https://github.com/GeneralLibrary/GeneralUpdate.Tools)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Tools)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools) |
+| GeneralUpdate-Samples | Usage Examples             | [GitHub](https://github.com/GeneralLibrary/GeneralUpdate-Samples)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate-Samples)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples) |
 
 
 
-## 🚲支持功能
+## 🛸 Quick Start
 
-| 功能           | 是否支持 | 备注                                                         |
-| -------------- | -------- | ------------------------------------------------------------ |
-| 断点续传       | 支持     | 单次更新失败时，下次一次启动时继续上一次更新下载更新包内容。（引用组件默认生效） |
-| 逐版本更新     | 支持     | 客户端当前版本如果与服务器相差多个版本，则根据多个版本的发布日期逐个更新。（引用组件默认生效） |
-| 二进制差分更新 | 支持     | 对比新老版本通过差分算法生成补丁文件。（引用组件默认生效）   |
-| 增量更新功能   | 支持     | 相比上一个版本只更新当前修改过的文件，并且删除当前版本不存在的文件。（引用组件默认生效） |
-| 强制更新       | 支持     | 打开客户端之后直接强制更新。                                 |
-| 多分支更新     | 支持     | 当一个产品有多个分支时，需要根据不同的分支更新对应的内容。   |
-| 最新版本推送   | 支持     | 基于Signal R实现，推送当前最新版本。                         |
-| 多语言         | 待验证   | 也可将本组件编写为控制台程序，作为更新“脚本”。更新其他语言的应用程序。 |
-| 跳过更新       | 支持     | 支持注入弹窗让用户决定是否更新本次发布，服务端决定强制时更新不生效。 |
-| 相互升级       | 支持     | 主程序可更新升级程序，升级程序可更新主程序。                 |
-| 黑名单         | 支持     | 在更新过程中会跳过黑名单中的文件列表和文件扩展名列表。       |
-| OSS            | 支持     | 极简化更新，是一套独立的更新机制。只需要在文件服务器中放置version.json的版本配置文件。组件会根据配置文件中的版本信息进行更新下载。 |
-| 回滚、备份     | 支持     | 更新之前会将客户端本地文件备份，如果客户端启动失败或崩溃则回滚覆盖。 |
-| 驱动更新       | 待验证   | 更新之前会将驱动备份到本地，如果客户端启动失败或崩溃则回滚覆盖。 |
-| 自定义方法列表 | 支持     | 注入一个自定义方法集合，该集合会在更新启动前执行。执行自定义方法列表如果出现任何异常，将通过异常订阅通知。（推荐在更新之前检查当前软件环境） |
-| AOT            | 支持     | 支持AOT编译发布。                                            |
+| Name                   | Description                                                  | Address                                                      |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Quick Start            | Quick startup guide.                                         | [View](https://www.justerzhu.cn/docs/quickstart/quikstart)   |
+| Example Code           | Example codes related to automatic upgrades and one-click startup scripts are here. | [View](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/src) |
+| Online Documentation   | Address of all related documentation for the component.      | [View](https://www.justerzhu.cn/)                            |
+| Tutorial Videos        | Demonstration videos to help understand usage.               | [View](https://www.bilibili.com/video/BV1c8iyYZE7P)          |
+| Release Notes          | Description of each version iteration.                       | [View](https://www.justerzhu.cn/docs/releaselog/releaselog)  |
+| Technical Consultation | Contact the author to join the discussion group; please ask questions in the discussion group or issue so that everyone can see and avoid duplicate answers. | [View](https://www.justerzhu.cn/Profile)                     |
 
 
 
-## ✨支持框架
+## 🚲 Supported Features
 
-| .NET框架名称               | 是否支持 |
-| -------------------------- | -------- |
-| .NET Core 2.0              | 支持     |
-| .NET 5 ... to last version | 支持     |
-| .NET Framework 4.6.1       | 支持     |
-
-| UI框架名称 | 是否支持              |
-| ---------- | --------------------- |
-| WPF        | 支持                  |
-| UWP        | 商店模式下不可更新    |
-| MAUI       | 目前仅支持Android平台 |
-| Avalonia   | 支持                  |
-| WinUI      | 支持                  |
-| Console    | 支持                  |
-| WinForms   | 支持                  |
-
-
-
-## 🐳操作系统
-
-| 操作系统名称 | 是否支持 |
-| ------------ | -------- |
-| Windows      | 支持     |
-| Android (.NET MAUI) | 支持 |
-| 麒麟V10(飞腾S2500)  | 支持   |
-| 麒麟V10(飞腾FT-2000)  | 支持   |
-| 麒麟V10(x64)  | 支持   |
-| Ubuntu 24.04.1 LTS | 支持 |
-| 龙芯(Loongnix LoongArch 3A6000) | 支持 |
-| 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
-| Apple Mac (M1) | 支持 |
-| 统信UOS (x64) | 支持 |
+| Feature                     | Supported      | Notes                                                        |
+| --------------------------- | -------------- | ------------------------------------------------------------ |
+| Resume Downloads            | Yes            | If a single update fails, continue downloading on the next startup. (Default for referenced components) |
+| Version-by-Version Updates  | Yes            | If the current client version is multiple versions behind the server, updates will be performed sequentially based on release dates. (Default for referenced components) |
+| Binary Differential Updates | Yes            | Generates patch files using differential algorithms by comparing old and new versions. (Default for referenced components) |
+| Incremental Update Function | Yes            | Only updates files that have been modified compared to the previous version and deletes files that do not exist in the current version. (Default for referenced components) |
+| Forced Updates              | Yes            | Directly enforce an update after opening the client.         |
+| Multiple Branch Updates     | Yes            | When a product has multiple branches, update corresponding content based on different branches. |
+| Latest Version Push         | Yes            | Implemented based on SignalR to push the current latest version. |
+| Multi-language              | To be verified | The component can also be written as a console application to update applications in other languages. |
+| Skip Updates                | Yes            | Supports injecting pop-ups to let users decide whether to update the current release; server-side forced updates will not take effect. |
+| Mutual Upgrades             | Yes            | The main program can update the upgrade program, and the upgrade program can update the main program. |
+| Blacklist                   | Yes            | Skips files and file extensions listed in the blacklist during the update process. |
+| OSS                         | Yes            | Simplified updates; it is a standalone update mechanism. Just place the version.json configuration file in the file server. The component will update and download based on the version information in the configuration file. |
+| Rollback and Backup         | Yes            | Backups local client files before the update. If the client fails to start or crashes, it will roll back and overwrite. |
+| Driver Updates              | To be verified | Backups drivers locally before updating. If the client fails to start or crashes, it will roll back and overwrite. |
+| Custom Method List          | Yes            | Injects a collection of custom methods that will be executed before starting the update. If any exceptions occur during the execution of the custom method list, they will be notified via exception subscriptions. (Recommended to check the current software environment before the update) |
+| AOT                         | Yes            | Supports AOT compilation release.                            |
 
 
 
-## 🎏代码平台
+## ✨ Supported Frameworks
+
+| .NET Framework Name          | Supported |
+| ---------------------------- | --------- |
+| .NET Core 2.0                | Yes       |
+| .NET 5 ... to latest version | Yes       |
+| .NET Framework 4.6.1         | Yes       |
+
+| UI Framework Name | Supported                                |
+| ----------------- | ---------------------------------------- |
+| WPF               | Yes                                      |
+| UWP               | Not updatable in store mode              |
+| MAUI              | Currently supports only Android platform |
+| Avalonia          | Yes                                      |
+| WinUI             | Yes                                      |
+| Console           | Yes                                      |
+| WinForms          | Yes                                      |
+
+
+
+## 🐳 Operating Systems
+
+| Operating System Name                | Supported |
+| ------------------------------------ | --------- |
+| Windows                              | Yes       |
+| Android (.NET MAUI)                  | Yes       |
+| Kirin V10 (Feiteng S2500)            | Yes       |
+| Kirin V10 (Feiteng FT-2000)          | Yes       |
+| Kirin V10 (x64)                      | Yes       |
+| Ubuntu 24.04.1 LTS                   | Yes       |
+| Loongson (Loongnix LoongArch 3A6000) | Yes       |
+| Huawei Euler (EulerOS - Kunpeng)     | Yes       |
+| Apple Mac (M1)                       | Yes       |
+| Tongxin UOS (x64)                    | Yes       |
+
+
+
+## 🎏 Code Platforms
 
 | Github                 | Gitee                 | GitCode                 |
 | ---------------------- | --------------------- | ----------------------- |
@@ -153,21 +154,21 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 
 
-## 🧙贡献者
+## 🧙 Contributors
 
-感谢所有为该项目做出贡献的人！您可以在这里查看 [贡献者列表](https://github.com/GeneralLibrary/GeneralUpdate/graphs/contributors)。
-
-
-
-## 🤝 参与贡献
-
-我们非常欢迎各种形式的贡献。如果你对贡献代码感兴趣，可以通过提出issue的方式与我取得联系，大展身手，向我们展示你的奇思妙想。</br>我们希望创建一个技术分享型社区，一个可以促进知识共享、想法交流，激发彼此鼓励和协作的环境。</br>同时欢迎联系我们提供产品功能和使用体验反馈，帮助我们将 GeneralUpdate 建设得更好。
-
-**组织维护者:** [@JusterZhu](https://github.com/JusterZhu)
+Thank you to all who have contributed to this project! You can view the [list of contributors](https://github.com/GeneralLibrary/GeneralUpdate/graphs/contributors) here.
 
 
 
-## 📒License
+## 🤝 Contributing
 
-Copyright © 2023 [GeneralUpdate](https://github.com/GeneralLibrary/GeneralUpdate).
-This project is [MIT](https://github.com/GeneralLibrary/GeneralUpdate#MIT-1-ov-file) licensed.
+We warmly welcome all forms of contributions. If you're interested in contributing code, please contact me by submitting an issue and showcase your ideas. </br> We hope to create a tech-sharing community, an environment that promotes knowledge sharing, idea exchange, and mutual encouragement and collaboration. </br> We also welcome feedback on product features and user experience to help us improve GeneralUpdate.
+
+**Organization Maintainer:** [@JusterZhu](https://github.com/JusterZhu)
+
+
+
+## 📒 License
+
+Copyright © 2023 [GeneralUpdate](https://github.com/GeneralLibrary/GeneralUpdate).  
+This project is licensed under the [MIT](https://github.com/GeneralLibrary/GeneralUpdate#MIT-1-ov-file) license.
