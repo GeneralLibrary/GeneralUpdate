@@ -13,7 +13,7 @@ It does not rely on any UI framework, minimizing resource consumption during upd
 
 A one-click startup example helps you quickly understand how to integrate automatic upgrade capabilities into your application.
 
-[中文](https://github.com/JusterZhu/GeneralUpdate/blob/master/README.md)
+[中文](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_ZHCN.md)
 
 <!-- SHIELD GROUP -->
 

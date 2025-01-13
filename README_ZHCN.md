@@ -12,7 +12,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 一键启动示例帮助您快速理解如何为您的应用程序集成自动升级能力。
 
-[English](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
+[English](https://github.com/JusterZhu/GeneralUpdate/blob/master/README.md)
 
 <!-- SHIELD GROUP -->
 
