@@ -1,6 +1,6 @@
 <div align="center">
 
-![](imgs/GeneralUpdate_h2.png)
+![](./imgs/GeneralUpdate_h2.png)
 
 # GeneralUpdate #
 
@@ -8,9 +8,11 @@
 
 GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。</br>
 
-不依赖任何UI框架，减少更新产生的资源消耗，一键启动示例启动帮助您快捷为您的应用程序实现自动升级。
+不依赖任何UI框架，减少更新产生的资源消耗。</br> 
 
-[English introduction](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
+一键启动示例帮助您快速理解如何为您的应用程序集成自动升级能力。
+
+[English](https://github.com/JusterZhu/GeneralUpdate/blob/master/README_en.md)
 
 <!-- SHIELD GROUP -->
 
@@ -39,27 +41,51 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 <sup>Unlimited Updates, Boundless Upgrades.</sup>
 
-![](imgs/ui.png)
-
 </div>
 
-## 1.仓库 ##
+
+
+## ❤️开源生态
+
+![](./imgs/ui.png)
+
+非常感谢以下开源项目的作者参与了开源生态 [查看示例代码](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/UI)。
+
+| 名称          | 支持UI框架 | 类型   | 仓库地址                                                  |
+| ------------- | ---------- | ------ | --------------------------------------------------------- |
+| Semi.Avalonia | Avalonia   | 控件库 | [进入](https://github.com/irihitech/Semi.Avalonia)        |
+| Ursa.Avalonia | Avalonia   | 控件库 | [进入](https://github.com/irihitech/Ursa.Avalonia)        |
+| WPFDevelopers | WPF        | 控件库 | [进入](https://github.com/WPFDevelopersOrg/WPFDevelopers) |
+| LayUI         | WPF        | 控件库 | [进入](https://github.com/Layui-WPF-Team/Layui-WPF)       |
+| AntdUI        | Winforms   | 控件库 | [进入](https://github.com/AntdUI/AntdUI)                  |
+
+
+
+## 🎪基础设施 ##
 
 | 名称                  | 说明                 | 地址                                                         |
 | --------------------- | -------------------- | ------------------------------------------------------------ |
-| GeneralUpdate         | 自动更新             | https://github.com/GeneralLibrary/GeneralUpdate<br />https://gitee.com/GeneralLibrary/GeneralUpdate<br />https://gitcode.com/GeneralLibrary/GeneralUpdate |
-| GeneralUpdate.Maui    | Maui自动更新（安卓） | https://github.com/GeneralLibrary/GeneralUpdate.Maui<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui |
-| GeneralUpdate.Tools   | 更新补丁包制作工具   | https://github.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitee.com/GeneralLibrary/GeneralUpdate.Tools<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools |
-| GeneralUpdate-Samples | 使用示例             | https://github.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitee.com/GeneralLibrary/GeneralUpdate-Samples<br />https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples |
-
-帮助文档
-
-- 官方网站： https://www.justerzhu.cn/
-- 使用教程视频：https://www.bilibili.com/video/BV1c8iyYZE7P
+| GeneralUpdate         | 自动更新升级         | [Github](https://github.com/GeneralLibrary/GeneralUpdate)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate) |
+| GeneralUpdate.Maui    | Maui自动更新（安卓） | [Github](https://github.com/GeneralLibrary/GeneralUpdate.Maui)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Maui)<br />[GitCdoe](https://gitcode.com/GeneralLibrary/GeneralUpdate-Maui) |
+| GeneralUpdate.Tools   | 更新补丁包制作工具   | [Github](https://github.com/GeneralLibrary/GeneralUpdate.Tools)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate.Tools)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Tools) |
+| GeneralUpdate-Samples | 使用示例             | [Github](https://github.com/GeneralLibrary/GeneralUpdate-Samples)<br />[Gitee](https://gitee.com/GeneralLibrary/GeneralUpdate-Samples)<br />[GitCode](https://gitcode.com/GeneralLibrary/GeneralUpdate-Samples) |
 
 
 
-功能介绍：
+## 🛸快速启动
+
+| 名称     | 说明                                                         | 地址                                                         |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 快速启动 | 快速启动引导说明。                                           | [进入](https://www.justerzhu.cn/docs/quickstart/quikstart)   |
+| 示例代码 | 自动升级相关的示例代码和一键启动脚本都在这里。               | [进入](https://github.com/GeneralLibrary/GeneralUpdate-Samples/tree/main/src) |
+| 在线文档 | 关于组件所有的相关说明文档地址。                             | [进入](https://www.justerzhu.cn/)                            |
+| 教程视频 | 通过视频操作演示帮助大家理解使用。                           | [进入](https://www.bilibili.com/video/BV1c8iyYZE7P)          |
+| 发布日志 | 每次版本迭代的说明。                                         | [进入](https://www.justerzhu.cn/docs/releaselog/releaselog)  |
+| 技术咨询 | 联系作者加入讨论组，请在讨论组或issue提问大家都能看到避免重复回答问题。 | [进入](https://www.justerzhu.cn/Profile)                     |
+
+
+
+## 🚲支持功能
 
 | 功能           | 是否支持 | 备注                                                         |
 | -------------- | -------- | ------------------------------------------------------------ |
@@ -82,7 +108,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 
 
-## 2.支持框架
+## ✨支持框架
 
 | .NET框架名称               | 是否支持 |
 | -------------------------- | -------- |
@@ -102,7 +128,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 
 
-## 3.操作系统
+## 🐳操作系统
 
 | 操作系统名称 | 是否支持 |
 | ------------ | -------- |
@@ -116,3 +142,32 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 | 华为欧拉(EulerOS-鲲鹏Kunpeng) | 支持 |
 | Apple Mac (M1) | 支持 |
 | 统信UOS (x64) | 支持 |
+
+
+
+## 🎏代码平台
+
+| Github               | Gitee               | GitCode               |
+| -------------------- | ------------------- | --------------------- |
+| ![](imgs\github.png) | ![](imgs\gitee.png) | ![](imgs\gitcode.jpg) |
+
+
+
+## 🧙贡献者
+
+感谢所有为该项目做出贡献的人！您可以在这里查看 [贡献者列表](https://github.com/GeneralLibrary/GeneralUpdate/graphs/contributors)。
+
+
+
+## 🤝 参与贡献
+
+我们非常欢迎各种形式的贡献。如果你对贡献代码感兴趣，可以通过提出issue的方式与我取得联系，大展身手，向我们展示你的奇思妙想。</br>我们希望创建一个技术分享型社区，一个可以促进知识共享、想法交流，激发彼此鼓励和协作的环境。</br>同时欢迎联系我们提供产品功能和使用体验反馈，帮助我们将 GeneralUpdate 建设得更好。
+
+**组织维护者:** [@JusterZhu](https://github.com/JusterZhu)
+
+
+
+## 📒License
+
+Copyright © 2023 [GeneralUpdate](https://github.com/GeneralLibrary/GeneralUpdate).
+This project is [MIT](https://github.com/GeneralLibrary/GeneralUpdate#MIT-1-ov-file) licensed.
