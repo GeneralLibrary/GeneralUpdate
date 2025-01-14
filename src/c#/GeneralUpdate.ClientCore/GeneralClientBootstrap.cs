@@ -170,7 +170,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
             BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
             BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
-            
+
             _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
             _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
             _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) == 0
@@ -184,7 +184,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             if (_configInfo.IsMainUpdate)
             {
                 _configInfo.UpdateVersions = upgradeResp.Body.OrderBy(x => x.ReleaseDate).ToList();
-                _configInfo.LastVersion = _configInfo.UpdateVersions.Last().Version;
+                _configInfo.LastVersion = mainResp.Body.OrderBy(x => x.ReleaseDate).Last().Version;
 
                 var failed = CheckFail(_configInfo.LastVersion);
                 if (failed) return;
