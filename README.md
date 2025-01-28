@@ -148,6 +148,15 @@ Special thanks to the authors of the following open source projects for contribu
 
 
 
+## 📞Contact us
+
+- E-Mail : zhuzhen723723@outlook.com
+- Wechat /  Tencent QQ
+
+![](imgs\contact.png)
+
+
+
 ## 🎏 Code Platforms
 
 | Github                 | Gitee                 | GitCode                 |
