@@ -14,6 +14,8 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 
 [English](./README.md)
 
+【如果您所在的企业正在或准备使用遇到任何问题、选型非常欢迎进入讨论组进行沟通，联系方式在本页面底部。开发人员如果遇到紧急任务，请提前说明情况，您的询问将优先得到解决。】
+
 <!-- SHIELD GROUP -->
 
 [![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)](https://github.com/JusterZhu/GeneralUpdate/blob/main/LICENSE)

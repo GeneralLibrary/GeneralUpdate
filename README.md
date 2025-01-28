@@ -15,6 +15,8 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 [中文](./README_ZHCN.md)
 
+[If your company is currently using or planning to use [the product/service] and encountering any issues, or if you need assistance with selection, you are very welcome to join our discussion group for communication. The contact information can be found at the bottom of this page. Developers, if you encounter urgent tasks, please explain the situation in advance, and your inquiries will be prioritized for resolution.]
+
 <!-- SHIELD GROUP -->
 
 [![](https://img.shields.io/github/license/JusterZhu/GeneralUpdate?color=blue)](https://github.com/JusterZhu/GeneralUpdate/blob/main/LICENSE)
