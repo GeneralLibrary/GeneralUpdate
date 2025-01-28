@@ -152,7 +152,7 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 - E-Mail : zhuzhen723723@outlook.com
 - Wechat /  Tencent QQ
 
-![](imgs\contact.png)
+![](./imgs/contact.png)
 
 
 

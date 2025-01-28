@@ -153,7 +153,7 @@ Special thanks to the authors of the following open source projects for contribu
 - E-Mail : zhuzhen723723@outlook.com
 - Wechat /  Tencent QQ
 
-![](imgs\contact.png)
+![](./imgs/contact.png)
 
 
 
