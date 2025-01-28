@@ -10,6 +10,7 @@ using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;
 
 namespace GeneralUpdate.ClientCore.Strategys;
@@ -28,7 +29,7 @@ public class LinuxStrategy : AbstractStrategy
     {
         try
         {
-            var status = 0;
+            var status = ReportType.None;
             var patchPath = StorageManager.GetTempDirectory(Patchs);
             foreach (var version in _configinfo.UpdateVersions)
             {
@@ -56,11 +57,11 @@ public class LinuxStrategy : AbstractStrategy
                         .UseMiddleware<CompressMiddleware>()
                         .UseMiddleware<HashMiddleware>();
                     await pipelineBuilder.Build();
-                    status = 2;
+                    status = ReportType.Success;
                 }
                 catch (Exception e)
                 {
-                    status = 3;
+                    status = ReportType.Failure;
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
                 finally
