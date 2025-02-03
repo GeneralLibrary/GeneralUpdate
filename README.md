@@ -108,6 +108,7 @@ Special thanks to the authors of the following open source projects for contribu
 | Driver Updates              | To be verified | Backups drivers locally before updating. If the client fails to start or crashes, it will roll back and overwrite. |
 | Custom Method List          | Yes            | Injects a collection of custom methods that will be executed before starting the update. If any exceptions occur during the execution of the custom method list, they will be notified via exception subscriptions. (Recommended to check the current software environment before the update) |
 | AOT                         | Yes            | Supports AOT compilation release.                            |
+| Identity authentication     | Yes            | Identity authentication supports HTTP requests to server resources and can pass (token) identity authentication information. |
 
 
 
