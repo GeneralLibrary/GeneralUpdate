@@ -48,15 +48,12 @@ public sealed class GeneralClientOSS
                 var json = JsonSerializer.Serialize(configGlobalConfigInfo, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
                 Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", json);
                 Process.Start(appPath);
+                Process.GetCurrentProcess().Kill();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
                 throw new Exception(ex.Message + "\n" + ex.StackTrace);
-            }
-            finally
-            {
-                Process.GetCurrentProcess().Kill();
             }
         });
     }
