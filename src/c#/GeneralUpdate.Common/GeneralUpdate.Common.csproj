@@ -16,7 +16,8 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>The infrastructure required to support all components is necessary, and this nuget package is essential.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>9.1.5</Version>
+        <Version>9.1.6</Version>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
