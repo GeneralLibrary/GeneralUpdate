@@ -52,8 +52,9 @@ public sealed class GeneralClientOSS
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
-                throw new Exception(ex.Message + "\n" + ex.StackTrace);
+                var error = ex.Message + "\n" + ex.StackTrace;
+                Trace.WriteLine(error);
+                throw new Exception(error);
             }
         });
     }
@@ -78,20 +79,13 @@ public sealed class GeneralClientOSS
 
     private static void DownloadFile(string url, string path)
     {
-        try
+        if (File.Exists(path))
         {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-                File.Delete(path);
-            }
+            File.SetAttributes(path, FileAttributes.Normal);
+            File.Delete(path);
+        }
 
-            using var webClient = new WebClient();
-            webClient.DownloadFile(new Uri(url), path);
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e);
-        }
+        using var webClient = new WebClient();
+        webClient.DownloadFile(new Uri(url), path);
     }
 }
