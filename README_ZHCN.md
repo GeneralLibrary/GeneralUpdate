@@ -6,7 +6,7 @@
 
 **更新无限，升级无界。**</br>
 
-GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用程序自动升级组件。</br>
+GeneralUpdate是一款基于.NET Standard2.0 Apache 2.0协议开源的跨平台应用程序自动升级组件。</br>
 
 不依赖任何UI框架，减少更新产生的资源消耗。</br> 
 
@@ -182,4 +182,4 @@ GeneralUpdate是一款基于.NET Standard2.0 MIT协议开源的跨平台应用�
 ## 📒License
 
 Copyright © 2023 [GeneralUpdate](https://github.com/GeneralLibrary/GeneralUpdate).
-This project is [MIT](https://github.com/GeneralLibrary/GeneralUpdate#MIT-1-ov-file) licensed.
+This project is [Apache 2.0](http://www.apache.org/licenses/) licensed.

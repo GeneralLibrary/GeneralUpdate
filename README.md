@@ -7,7 +7,7 @@
 
 **Unlimited Updates, Boundless Upgrades.**</br>
 
-GeneralUpdate is a cross-platform application auto-upgrade component based on .NET Standard 2.0 and released under the MIT License.</br>
+GeneralUpdate is a cross-platform application auto-upgrade component based on .NET Standard 2.0 and released under the Apache 2.0 License.</br>
 
 It does not rely on any UI framework, minimizing resource consumption during updates.</br> 
 
@@ -183,4 +183,4 @@ We warmly welcome all forms of contributions. If you're interested in contributi
 ## 📒 License
 
 Copyright © 2023 [GeneralUpdate](https://github.com/GeneralLibrary/GeneralUpdate).  
-This project is licensed under the [MIT](https://github.com/GeneralLibrary/GeneralUpdate#MIT-1-ov-file) license.
+This project is licensed under the [Apache 2.0](http://www.apache.org/licenses/) license.
