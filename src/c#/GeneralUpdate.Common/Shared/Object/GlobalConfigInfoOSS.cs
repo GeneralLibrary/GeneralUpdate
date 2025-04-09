@@ -20,6 +20,12 @@ namespace GeneralUpdate.Common.Shared.Object
         [JsonPropertyName("Encoding")]
         public string Encoding { get; set; }
 
+        [JsonPropertyName("Extend")]
+        public string Extend { get; set; }
+        
+        [JsonPropertyName("Extend2")]
+        public string Extend2 { get; set; }
+        
         public GlobalConfigInfoOSS()
         {
         }

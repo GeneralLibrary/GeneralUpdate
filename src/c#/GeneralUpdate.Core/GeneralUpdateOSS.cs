@@ -11,6 +11,9 @@ namespace GeneralUpdate.Core
 {
     public sealed class GeneralUpdateOSS
     {
+        private static Func<string, bool>? _beforeFunc;
+        private static Action<string>? _afterFunc;
+        
         private GeneralUpdateOSS() { }
 
         #region Public Methods
@@ -18,8 +21,20 @@ namespace GeneralUpdate.Core
         /// <summary>
         /// Starting an OSS update for windows,Linux,mac platform.
         /// </summary>
+        /// <param name="beforeFunc">Inject a custom pre-processing method, which will be executed before updating. whose parameters use the Extend.</param>
+        /// <param name="afterFunc">Injects a post-processing method whose parameters use the Extend2</param>
+        public static async Task Start(Func<string, bool> beforeFunc, Action<string> afterFunc)
+        {
+            _beforeFunc = beforeFunc;
+            _afterFunc = afterFunc;
+            await BaseStart();
+        }
+        
+        /// <summary>
+        /// Starting an OSS update for windows,Linux,mac platform.
+        /// </summary>
         /// <returns></returns>
-        public static async Task Start()=> await BaseStart();
+        public static async Task Start() => await BaseStart();
 
         #endregion Public Methods
 
@@ -37,9 +52,17 @@ namespace GeneralUpdate.Core
                     return;
 
                 var parameter = JsonSerializer.Deserialize<GlobalConfigInfoOSS>(json, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
+                var result = _beforeFunc?.Invoke(parameter?.Extend);
+                if (_beforeFunc is not null)
+                {
+                    if (result == false)
+                        return;
+                }
+                
                 var strategy = new OSSStrategy();
                 strategy.Create(parameter);
                 await strategy.ExecuteAsync();
+                _afterFunc?.Invoke(parameter?.Extend2);
             }
             catch (Exception exception)
             {
