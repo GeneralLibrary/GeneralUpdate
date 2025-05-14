@@ -47,6 +47,12 @@ GeneralUpdate是一款基于.NET Standard2.0 Apache 2.0协议开源的跨平台�
 
 
 
+## 🐵AI Wiki
+
+Wiki内容基于Opendeep AI自动生成。 [View](!https://opendeep.wiki/GeneralLibrary/GeneralUpdate)
+
+
+
 ## ❤️开源生态
 
 ![](./imgs/ui.png)
