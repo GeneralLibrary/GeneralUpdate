@@ -114,6 +114,8 @@ public class GlobalConfigInfo
     /// Whether to enable the driver upgrade function.
     /// </summary>
     public bool? DriveEnabled { get; set; }
+    
+    public bool? PatchEnabled { get; set; }
 
     public string ProductId { get; set; }
 

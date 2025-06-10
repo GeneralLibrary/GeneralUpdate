@@ -49,7 +49,7 @@ public class WindowsStrategy : AbstractStrategy
                     context.Add("PatchPath", patchPath);
 
                     var pipelineBuilder = new PipelineBuilder(context)
-                        .UseMiddleware<PatchMiddleware>()
+                        .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                         .UseMiddleware<CompressMiddleware>()
                         .UseMiddleware<HashMiddleware>();
                     await pipelineBuilder.Build();

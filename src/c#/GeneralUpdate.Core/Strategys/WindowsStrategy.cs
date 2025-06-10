@@ -57,7 +57,7 @@ namespace GeneralUpdate.Core.Strategys
                             }
 
                             var pipelineBuilder = new PipelineBuilder(context)
-                                .UseMiddleware<PatchMiddleware>()
+                                .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                                 .UseMiddleware<CompressMiddleware>()
                                 .UseMiddleware<HashMiddleware>()
                                 .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);

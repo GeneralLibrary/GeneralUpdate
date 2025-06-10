@@ -177,6 +177,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 ? 60
                 : GetOption(UpdateOption.DownloadTimeOut);
             _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
+            _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
             _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
             _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
                 $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
