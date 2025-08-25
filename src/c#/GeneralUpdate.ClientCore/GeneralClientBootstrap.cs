@@ -214,10 +214,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
             }
 
-            StorageManager.Backup(_configInfo.InstallPath
-                , _configInfo.BackupDirectory
-                , BlackListManager.Instance.SkipDirectorys);
-
+            if (GetOption(UpdateOption.BackUp) ?? false)
+            {
+                StorageManager.Backup(_configInfo.InstallPath
+                    , _configInfo.BackupDirectory
+                    , BlackListManager.Instance.SkipDirectorys);
+            }
+            
             StrategyFactory();
             switch (_configInfo.IsUpgradeUpdate)
             {
@@ -386,19 +389,10 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
         foreach (var option in _customOptions)
         {
-            try
+            if (!option.Invoke())
             {
-                if (!option.Invoke())
-                {
-                    var exception = new Exception($"{nameof(option)}Execution failure!");
-                    var args = new ExceptionEventArgs(exception, exception.Message);
-                    EventManager.Instance.Dispatch(this, args);
-                }
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine(exception.Message);
-                var args = new ExceptionEventArgs(exception, $"{nameof(option)}Execution failure!");
+                var exception = new Exception($"{nameof(option)}Execution failure!");
+                var args = new ExceptionEventArgs(exception, exception.Message);
                 EventManager.Instance.Dispatch(this, args);
             }
         }

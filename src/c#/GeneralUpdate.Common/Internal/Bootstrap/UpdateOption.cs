@@ -38,9 +38,14 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         public static readonly UpdateOption<bool?> Drive = ValueOf<bool?>("DRIVE");
         
         /// <summary>
-        /// Whether to enable the patch upgrade function.
+        /// Whether to enable the patch function.
         /// </summary>
         public static readonly UpdateOption<bool?> Patch = ValueOf<bool?>("PATCH");
+        
+        /// <summary>
+        /// Whether to enable the backup function.
+        /// </summary>
+        public static readonly UpdateOption<bool?> BackUp = ValueOf<bool?>("BACKUP");
         
         internal UpdateOption(int id, string name)
           : base(id, name) { }

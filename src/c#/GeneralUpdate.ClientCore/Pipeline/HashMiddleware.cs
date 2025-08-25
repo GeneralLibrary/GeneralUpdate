@@ -23,18 +23,9 @@ public class HashMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            try
-            {
-                var hashAlgorithm = new Sha256HashAlgorithm();
-                var hashSha256 = hashAlgorithm.ComputeHash(path);
-                return string.Equals(hash, hashSha256, StringComparison.OrdinalIgnoreCase);
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine(exception.Message);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            }
-            return false;
+            var hashAlgorithm = new Sha256HashAlgorithm();
+            var hashSha256 = hashAlgorithm.ComputeHash(path);
+            return string.Equals(hash, hashSha256, StringComparison.OrdinalIgnoreCase);
         });
     }
 }
