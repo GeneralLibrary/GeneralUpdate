@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using GeneralUpdate.Common.Internal;
 
 namespace GeneralUpdate.Core.Driver
 {
@@ -45,12 +46,12 @@ If possible, use pre-tested drivers that are proven to work.
                 process.WaitForExit();
 
                 var output = process.StandardOutput.ReadToEnd();
-                Debug.WriteLine(output);
+                GeneralTracer.Info(output);
 
                 var error = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(error))
                 {
-                    Debug.WriteLine("Error: " + error);
+                    GeneralTracer.Error(error);
                 }
                 
                 if (process.ExitCode != 0)

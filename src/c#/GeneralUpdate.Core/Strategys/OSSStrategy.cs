@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.Compress;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
@@ -52,8 +53,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
-                throw new Exception(ex.Message + "\n" + ex.StackTrace);
+                GeneralTracer.Error("The ExecuteAsync method in the OSSStrategy class throws an exception.", ex);
             }
             finally
             {
@@ -71,29 +71,21 @@ namespace GeneralUpdate.Core.Strategys
         /// <param name="versions">The collection of version information to be updated as described in the configuration file.</param>
         private async Task DownloadVersions(List<VersionOSS> versions)
         {
-            try
+            var manager = new DownloadManager(_appPath, Format.ZIP, TimeOut);
+            foreach (var versionInfo in versions)
             {
-                var manager = new DownloadManager(_appPath, Format.ZIP, TimeOut);
-                foreach (var versionInfo in versions)
+                var version = new VersionInfo
                 {
-                    var version = new VersionInfo
-                    {
-                        Name = versionInfo.PacketName,
-                        Version = versionInfo.Version,
-                        Url = versionInfo.Url,
-                        Format = Format.ZIP,
-                        Hash = versionInfo.Hash
-                    };
-                    manager.Add(new DownloadTask(manager, version));
-                }
+                    Name = versionInfo.PacketName,
+                    Version = versionInfo.Version,
+                    Url = versionInfo.Url,
+                    Format = Format.ZIP,
+                    Hash = versionInfo.Hash
+                };
+                manager.Add(new DownloadTask(manager, version));
+            }
 
-                await manager.LaunchTasksAsync();
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-                throw new Exception(e.Message + "\n" + e.StackTrace);
-            }
+            await manager.LaunchTasksAsync();
         }
 
         /// <summary>
@@ -112,19 +104,12 @@ namespace GeneralUpdate.Core.Strategys
             var encoding = Encoding.GetEncoding(_parameter.Encoding);
             foreach (var version in versions)
             {
-                try
-                {
-                    var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
-                    CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
+                var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
+                CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
 
-                    if (!File.Exists(zipFilePath)) continue;
-                    File.SetAttributes(zipFilePath, FileAttributes.Normal);
-                    File.Delete(zipFilePath);
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine(e.Message);
-                }
+                if (!File.Exists(zipFilePath)) continue;
+                File.SetAttributes(zipFilePath, FileAttributes.Normal);
+                File.Delete(zipFilePath);
             }
         }
 

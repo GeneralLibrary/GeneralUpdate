@@ -81,7 +81,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The ExecuteAsync method in the WindowsStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
     }
@@ -104,7 +104,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The StartApp method in the WindowsStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally

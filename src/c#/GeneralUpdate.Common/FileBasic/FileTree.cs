@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
+using GeneralUpdate.Common.Internal;
 
 namespace GeneralUpdate.Common.FileBasic;
 
@@ -48,7 +48,7 @@ namespace GeneralUpdate.Common.FileBasic;
             }
             else
             {
-                Debug.WriteLine("The binary sort tree is empty and cannot be traversed！");
+                GeneralTracer.Info("The binary sort tree is empty and cannot be traversed！");
             }
         }
 

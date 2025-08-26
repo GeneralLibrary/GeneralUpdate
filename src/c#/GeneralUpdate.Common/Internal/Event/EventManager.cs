@@ -46,7 +46,7 @@ namespace GeneralUpdate.Common.Internal.Event
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e);
+                GeneralTracer.Error("The AddListener method in the EventManager class throws an exception.", e);
             }
         }
 
@@ -63,7 +63,7 @@ namespace GeneralUpdate.Common.Internal.Event
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e);
+                GeneralTracer.Error("The RemoveListener method in the EventManager class throws an exception.", e);
             }
         }
 
@@ -81,7 +81,7 @@ namespace GeneralUpdate.Common.Internal.Event
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e);
+                GeneralTracer.Error("The Dispatch method in the EventManager class throws an exception.", e);
             }
         }
 
@@ -99,7 +99,7 @@ namespace GeneralUpdate.Common.Internal.Event
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e);
+                GeneralTracer.Error("The Dispose method in the EventManager class throws an exception.", e);
             }
         }
     }

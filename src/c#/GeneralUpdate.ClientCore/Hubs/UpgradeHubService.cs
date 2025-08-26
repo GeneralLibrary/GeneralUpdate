@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.JsonContext;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -61,7 +61,7 @@ public class UpgradeHubService : IUpgradeHubService
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The StartAsync method in the UpgradeHubService class throws an exception." , e);
         }
     }
 
@@ -73,7 +73,7 @@ public class UpgradeHubService : IUpgradeHubService
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The StopAsync method in the UpgradeHubService class throws an exception." , e);
         }
     }
 
@@ -85,7 +85,7 @@ public class UpgradeHubService : IUpgradeHubService
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The DisposeAsync method in the UpgradeHubService class throws an exception." , e);
         }
     }
 }

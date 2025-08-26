@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Download
@@ -41,7 +42,7 @@ namespace GeneralUpdate.Common.Download
             }
             catch (Exception exception)
             {
-                Debug.WriteLine(exception.Message);
+                GeneralTracer.Error("The LaunchAsync method in the DownloadTask class throws an exception." , exception);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
@@ -82,7 +83,7 @@ namespace GeneralUpdate.Common.Download
             catch (Exception exception)
             {
                 OnDownloadCompleted(false);
-                Debug.WriteLine(exception.Message);
+                GeneralTracer.Error("The DownloadFileRangeAsync method in the DownloadTask class throws an exception." , exception);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
@@ -124,7 +125,7 @@ namespace GeneralUpdate.Common.Download
             catch (Exception exception)
             {
                 OnDownloadCompleted(false);
-                Debug.WriteLine(exception);
+                GeneralTracer.Error("The WriteFileAsync method in the DownloadTask class throws an exception." , exception);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
@@ -170,7 +171,7 @@ namespace GeneralUpdate.Common.Download
             }
             catch (Exception exception)
             {
-                Debug.WriteLine(exception.Message);
+                GeneralTracer.Error(exception.Message, exception);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
         }
@@ -270,12 +271,12 @@ namespace GeneralUpdate.Common.Download
             }
             catch (ObjectDisposedException exception)
             {
-                Debug.WriteLine("Timer has already been disposed: " + exception.Message);
+                GeneralTracer.Error("Timer has already been disposed: " + exception.Message);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
             catch (Exception exception)
             {
-                Debug.WriteLine("An error occurred while disposing the timer: " + exception.Message);
+                GeneralTracer.Error("An error occurred while disposing the timer.", exception);
                 _manager.OnMultiDownloadError(this, new MultiDownloadErrorEventArgs(exception, _version));
             }
             finally

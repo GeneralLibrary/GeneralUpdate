@@ -43,7 +43,6 @@ namespace GeneralUpdate.Core
             }
             catch (Exception exception)
             {
-                Debug.WriteLine(exception);
                 throw new Exception(exception.Message + "\n" + exception.StackTrace);
             }
         }

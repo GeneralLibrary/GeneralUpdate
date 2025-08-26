@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Internal;
 
 namespace GeneralUpdate.Common.Compress;
 
@@ -103,7 +104,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         }
         catch (Exception exception)
         {
-            Debug.WriteLine(exception);
+            GeneralTracer.Error("The Compress method in the ZipCompressionStrategy class throws an exception." , exception);
             throw new Exception($"Failed to compress archive: {exception.Message}");
         }
     }
@@ -164,7 +165,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         }
         catch (Exception exception)
         {
-            Debug.WriteLine(exception);
+            GeneralTracer.Error("The Decompress method in the ZipCompressionStrategy class throws an exception." , exception);
             throw new Exception($"Failed to decompress archive: {exception.Message}");
         }
     }

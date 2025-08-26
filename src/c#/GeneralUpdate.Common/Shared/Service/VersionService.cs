@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
 
@@ -100,8 +101,8 @@ namespace GeneralUpdate.Common.Shared.Service
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.Message);
-                throw;
+                GeneralTracer.Error("The PostTaskAsync method in the VersionService class throws an exception.", e);
+                throw e;
             }
         }
 

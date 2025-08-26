@@ -77,7 +77,7 @@ namespace GeneralUpdate.Core
             }
             catch (Exception exception)
             {
-                Debug.WriteLine(exception.Message);
+                GeneralTracer.Error("The LaunchAsync method in the GeneralUpdateBootstrap class throws an exception.", exception);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
             }
             return this;

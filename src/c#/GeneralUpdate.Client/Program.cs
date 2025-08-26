@@ -16,6 +16,12 @@ namespace GeneralUpdate.Client
         {
             try
             {
+                /*GeneralTracer.Info("Starting client");
+                GeneralTracer.Error("test error");
+                GeneralTracer.Debug("test debug");
+                GeneralTracer.SetTracingEnabled(false);
+                GeneralTracer.Dispose();*/
+                
                 Console.WriteLine($"主程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
                 await Task.Delay(2000);

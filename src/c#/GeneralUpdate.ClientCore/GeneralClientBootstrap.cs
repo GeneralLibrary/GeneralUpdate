@@ -50,7 +50,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            Debug.WriteLine(exception.Message);
+            GeneralTracer.Error("The LaunchAsync method in the GeneralClientBootstrap class throws an exception." , exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
         return this;
@@ -243,7 +243,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            Debug.WriteLine(exception.Message);
+            GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -266,7 +266,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            Debug.WriteLine(exception.Message);
+            GeneralTracer.Error("The Download method in the GeneralClientBootstrap class throws an exception." , exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -363,13 +363,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             var processes = Process.GetProcessesByName(processName);
             if (processes.Length == 0)
             {
-                Debug.WriteLine($"No process named {processName} found.");
+                GeneralTracer.Info($"No process named {processName} found.");
                 return;
             }
 
             foreach (var process in processes)
             {
-                Debug.WriteLine($"Killing process {process.ProcessName} (ID: {process.Id})");
+                GeneralTracer.Info($"Killing process {process.ProcessName} (ID: {process.Id})");
                 process.Kill();
             }
         }

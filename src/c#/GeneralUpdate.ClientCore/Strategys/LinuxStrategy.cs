@@ -85,7 +85,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The ExecuteAsync method in the LinuxStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
     }
@@ -109,7 +109,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e);
+            GeneralTracer.Error("The StartApp method in the LinuxStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally

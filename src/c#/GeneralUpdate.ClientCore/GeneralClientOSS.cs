@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Shared.Object;
@@ -53,7 +54,7 @@ public sealed class GeneralClientOSS
             catch (Exception ex)
             {
                 var error = ex.Message + "\n" + ex.StackTrace;
-                Trace.WriteLine(error);
+                GeneralTracer.Error(error);
                 throw new Exception(error);
             }
         });

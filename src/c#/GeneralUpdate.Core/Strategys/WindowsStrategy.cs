@@ -91,7 +91,7 @@ namespace GeneralUpdate.Core.Strategys
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine(e.Message);
+                    GeneralTracer.Error("The Execute method in the WindowsStrategy class throws an exception.", e);
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
             });
@@ -116,7 +116,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.Message);
+                GeneralTracer.Error("The StartApp method in the WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
             finally
