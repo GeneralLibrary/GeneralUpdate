@@ -214,7 +214,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
             }
 
-            if (GetOption(UpdateOption.BackUp) ?? false)
+            if (GetOption(UpdateOption.BackUp) ?? true)
             {
                 StorageManager.Backup(_configInfo.InstallPath
                     , _configInfo.BackupDirectory
