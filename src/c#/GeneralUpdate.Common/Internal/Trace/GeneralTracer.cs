@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace GeneralUpdate.Common.Internal;
 
@@ -13,7 +14,14 @@ public static class GeneralTracer
     static GeneralTracer()
     {
         Trace.Listeners.Clear();
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Trace.Listeners.Add(new WindowsOutputDebugListener());
+        }
+
         Trace.Listeners.Add(new TextWriterTraceListener(Console.Out) { Name = "ConsoleListener" });
+        
         InitializeFileListener();
 
         if (Debugger.IsAttached)
@@ -91,7 +99,6 @@ public static class GeneralTracer
         var levelName = GetLevelName(level);
         var fullMessage = string.Empty;
 
-#if !AOT
         try
         {
             var stackFrame = new StackFrame(2, true);
@@ -99,18 +106,13 @@ public static class GeneralTracer
             var className = method.DeclaringType?.Name ?? "UnknownType";
             var methodName = method.Name;
             var lineNumber = stackFrame.GetFileLineNumber();
-            
             var lineInfo = lineNumber > 0 ? $"Line {lineNumber}" : "Line N/A (Line numbers may not be displayed in Release mode)";
             fullMessage = $"[{timestamp}] [{levelName}] {className}.{methodName} ({lineInfo}): {message}";
         }
-        catch (Exception ex)
+        catch
         {
-            fullMessage = $"[{timestamp}] [{levelName}] [Failed to obtain stack information: {ex.Message}] : {message}";
-        }
-#endif
-
-        if (string.IsNullOrEmpty(fullMessage))
             fullMessage = $"[{timestamp}] [{levelName}] : {message}";
+        }
 
         lock (_lockObj)
         {
