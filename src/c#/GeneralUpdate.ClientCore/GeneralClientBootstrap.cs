@@ -375,6 +375,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception ex)
         {
+            GeneralTracer.Error("The CallSmallBowlHome method in the GeneralClientBootstrap class throws an exception.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
     }
@@ -393,6 +394,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             {
                 var exception = new Exception($"{nameof(option)}Execution failure!");
                 var args = new ExceptionEventArgs(exception, exception.Message);
+                GeneralTracer.Error("The ExecuteCustomOptions method in the GeneralClientBootstrap class throws an exception.", exception);
                 EventManager.Instance.Dispatch(this, args);
             }
         }
@@ -423,16 +425,34 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
 
     private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+    {
+        var message = GetPacketHash(e.Version);
+        GeneralTracer.Info($"Multi download statistics, {message}[BytesReceived]:{e.BytesReceived} [ProgressPercentage]:{e.ProgressPercentage} [Remaining]:{e.Remaining} [TotalBytesToReceive]:{e.TotalBytesToReceive} [Speed]:{e.Speed}");
+        EventManager.Instance.Dispatch(sender, e);
+    }
 
     private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+    {
+        var message = GetPacketHash(e.Version);
+        GeneralTracer.Info($"Multi download completed, {message}[IsComplated]:{e.IsComplated}.");
+        EventManager.Instance.Dispatch(sender, e);
+    }
 
     private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+    {
+        var message = GetPacketHash(e.Version);
+        GeneralTracer.Error($"Multi download error {message}.", e.Exception);
+        EventManager.Instance.Dispatch(sender, e);
+    }
 
     private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+    {
+        GeneralTracer.Info($"Multi all download completed {e.IsAllDownloadCompleted}.");
+        EventManager.Instance.Dispatch(sender, e);
+    }
+
+    private string GetPacketHash(object version) => 
+        !GeneralTracer.IsTracingEnabled() ? string.Empty : $"[PacketHash]:{(version as VersionInfo).Hash} ";
 
     #endregion Private Methods
 }

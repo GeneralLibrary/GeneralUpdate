@@ -67,6 +67,7 @@ namespace GeneralUpdate.Core.Strategys
                         catch (Exception e)
                         {
                             status = ReportType.Failure;
+                            GeneralTracer.Error("The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                         }
                         finally
@@ -91,7 +92,7 @@ namespace GeneralUpdate.Core.Strategys
                 }
                 catch (Exception e)
                 {
-                    GeneralTracer.Error("The Execute method in the WindowsStrategy class throws an exception.", e);
+                    GeneralTracer.Error("The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
             });
@@ -116,7 +117,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             catch (Exception e)
             {
-                GeneralTracer.Error("The StartApp method in the WindowsStrategy class throws an exception.", e);
+                GeneralTracer.Error("The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
             finally

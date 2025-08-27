@@ -62,6 +62,7 @@ public class LinuxStrategy : AbstractStrategy
                 catch (Exception e)
                 {
                     status = ReportType.Failure;
+                    GeneralTracer.Error("The ExecuteAsync method in the GeneralUpdate.ClientCore.LinuxStrategy class throws an exception.", e);
                     EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
                 finally
@@ -85,7 +86,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            GeneralTracer.Error("The ExecuteAsync method in the LinuxStrategy class throws an exception." , e);
+            GeneralTracer.Error("The ExecuteAsync method in the GeneralUpdate.ClientCore.LinuxStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
     }
@@ -109,7 +110,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         catch (Exception e)
         {
-            GeneralTracer.Error("The StartApp method in the LinuxStrategy class throws an exception." , e);
+            GeneralTracer.Error("The StartApp method in the GeneralUpdate.ClientCore.LinuxStrategy class throws an exception." , e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally

@@ -150,6 +150,7 @@ namespace GeneralUpdate.Core
 
         private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         {
+            GeneralTracer.Info($"Multi all download completed {e.IsAllDownloadCompleted}.");
             EventManager.Instance.Dispatch(sender, e);
             ExecuteStrategy();
         }
