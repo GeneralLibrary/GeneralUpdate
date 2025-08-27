@@ -306,12 +306,15 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <returns></returns>
     private bool CheckUpgrade(VersionRespDTO? response)
     {
-        if (response == null)
+        if (response is null)
             return false;
 
+        if (response.Body is null)
+            return false;
+        
         if (response.Code == 200)
             return response.Body.Count > 0;
-
+        
         return false;
     }
 

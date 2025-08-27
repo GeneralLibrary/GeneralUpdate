@@ -48,6 +48,7 @@ public class WindowsStrategy : AbstractStrategy
                     //patch middleware
                     context.Add("SourcePath", _configinfo.InstallPath);
                     context.Add("PatchPath", patchPath);
+                    context.Add("PatchEnabled", _configinfo.PatchEnabled);
 
                     var pipelineBuilder = new PipelineBuilder(context)
                         .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)

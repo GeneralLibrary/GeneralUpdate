@@ -20,7 +20,10 @@ public class CompressMiddleware : IMiddleware
             var sourcePath = context.Get<string>("ZipFilePath");
             var patchPath = context.Get<string>("PatchPath");
             var encoding = context.Get<Encoding>("Encoding");
-            CompressProvider.Decompress(format,sourcePath,patchPath, encoding);
+            var appPath = context.Get<string>("SourcePath");
+            var patchEnabled = context.Get<bool?>("PatchEnabled");
+            
+            CompressProvider.Decompress(format, sourcePath,patchEnabled == false ? appPath : patchPath, encoding);
         });
     }
 }
