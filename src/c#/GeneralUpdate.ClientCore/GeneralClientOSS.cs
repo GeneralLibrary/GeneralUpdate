@@ -51,11 +51,10 @@ public sealed class GeneralClientOSS
                 Process.Start(appPath);
                 Process.GetCurrentProcess().Kill();
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                var error = ex.Message + "\n" + ex.StackTrace;
-                GeneralTracer.Error(error);
-                throw new Exception(error);
+                GeneralTracer.Error("The BaseStart method in the GeneralClientOSS class throws an exception.", exception);
+                throw exception;
             }
         });
     }

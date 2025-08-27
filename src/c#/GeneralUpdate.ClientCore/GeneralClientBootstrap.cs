@@ -250,25 +250,17 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private async Task Download()
     {
-        try
+        var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
+        manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
+        manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
+        manager.MultiDownloadError += OnMultiDownloadError;
+        manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
+        foreach (var versionInfo in _configInfo.UpdateVersions)
         {
-            var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
-            manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
-            manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
-            manager.MultiDownloadError += OnMultiDownloadError;
-            manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
-            foreach (var versionInfo in _configInfo.UpdateVersions)
-            {
-                manager.Add(new DownloadTask(manager, versionInfo));
-            }
+            manager.Add(new DownloadTask(manager, versionInfo));
+        }
 
-            await manager.LaunchTasksAsync();
-        }
-        catch (Exception exception)
-        {
-            GeneralTracer.Error("The Download method in the GeneralClientBootstrap class throws an exception." , exception);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-        }
+        await manager.LaunchTasksAsync();
     }
 
     private int GetPlatform()
@@ -450,9 +442,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         GeneralTracer.Info($"Multi all download completed {e.IsAllDownloadCompleted}.");
         EventManager.Instance.Dispatch(sender, e);
     }
-
-    private string GetPacketHash(object version) => 
-        !GeneralTracer.IsTracingEnabled() ? string.Empty : $"[PacketHash]:{(version as VersionInfo).Hash} ";
 
     #endregion Private Methods
 }

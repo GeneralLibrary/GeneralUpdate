@@ -59,27 +59,19 @@ namespace GeneralUpdate.Core
 
         public override async Task<GeneralUpdateBootstrap> LaunchAsync()
         {
-            try
+            StrategyFactory();
+            var manager =
+                new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
+            manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
+            manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
+            manager.MultiDownloadError += OnMultiDownloadError;
+            manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
+            foreach (var versionInfo in _configInfo.UpdateVersions)
             {
-                StrategyFactory();
-                var manager =
-                    new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
-                manager.MultiAllDownloadCompleted += OnMultiAllDownloadCompleted;
-                manager.MultiDownloadCompleted += OnMultiDownloadCompleted;
-                manager.MultiDownloadError += OnMultiDownloadError;
-                manager.MultiDownloadStatistics += OnMultiDownloadStatistics;
-                foreach (var versionInfo in _configInfo.UpdateVersions)
-                {
-                    manager.Add(new DownloadTask(manager, versionInfo));
-                }
+                manager.Add(new DownloadTask(manager, versionInfo));
+            }
 
-                await manager.LaunchTasksAsync();
-            }
-            catch (Exception exception)
-            {
-                GeneralTracer.Error("The LaunchAsync method in the GeneralUpdateBootstrap class throws an exception.", exception);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            }
+            await manager.LaunchTasksAsync();
             return this;
         }
 
@@ -140,13 +132,25 @@ namespace GeneralUpdate.Core
         }
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+        {
+            var message = GetPacketHash(e.Version);
+            GeneralTracer.Info($"Multi download statistics, {message}[BytesReceived]:{e.BytesReceived} [ProgressPercentage]:{e.ProgressPercentage} [Remaining]:{e.Remaining} [TotalBytesToReceive]:{e.TotalBytesToReceive} [Speed]:{e.Speed}");
+            EventManager.Instance.Dispatch(sender, e);
+        }
 
         private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+        {
+            var message = GetPacketHash(e.Version);
+            GeneralTracer.Info($"Multi download completed, {message}[IsComplated]:{e.IsComplated}.");
+            EventManager.Instance.Dispatch(sender, e);
+        }
 
         private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
-        => EventManager.Instance.Dispatch(sender, e);
+        {
+            var message = GetPacketHash(e.Version);
+            GeneralTracer.Error($"Multi download error {message}.", e.Exception);
+            EventManager.Instance.Dispatch(sender, e);
+        }
 
         private void OnMultiAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
         {

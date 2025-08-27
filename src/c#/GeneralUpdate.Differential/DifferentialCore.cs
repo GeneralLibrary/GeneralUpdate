@@ -1,6 +1,7 @@
 ﻿using GeneralUpdate.Differential.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,44 +35,37 @@ namespace GeneralUpdate.Differential
 
         public async Task Clean(string sourcePath, string targetPath, string patchPath)
         {
-            try
+            var fileManager = new StorageManager();
+            var comparisonResult = fileManager.Compare(sourcePath, targetPath);
+            foreach (var file in comparisonResult.DifferentNodes)
             {
-                var fileManager = new StorageManager();
-                var comparisonResult = fileManager.Compare(sourcePath, targetPath);
-                foreach (var file in comparisonResult.DifferentNodes)
-                {
-                    var tempDir = GetTempDirectory(file, targetPath, patchPath);
-                    var oldFile = comparisonResult.LeftNodes.FirstOrDefault(i => i.Name.Equals(file.Name));
-                    var newFile = file;
+                var tempDir = GetTempDirectory(file, targetPath, patchPath);
+                var oldFile = comparisonResult.LeftNodes.FirstOrDefault(i => i.Name.Equals(file.Name));
+                var newFile = file;
 
-                    if (oldFile is not null
-                        && File.Exists(oldFile.FullName) 
-                        && File.Exists(newFile.FullName) 
-                        && string.Equals(oldFile.RelativePath, newFile.RelativePath))
+                if (oldFile is not null
+                    && File.Exists(oldFile.FullName) 
+                    && File.Exists(newFile.FullName) 
+                    && string.Equals(oldFile.RelativePath, newFile.RelativePath))
+                {
+                    if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
                     {
-                        if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
-                        {
-                            var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
-                            await new BinaryHandler().Clean(oldFile.FullName, newFile.FullName, tempPatchPath);
-                        }
-                    }
-                    else
-                    {
-                        File.Copy(newFile.FullName, Path.Combine(tempDir, Path.GetFileName(newFile.FullName)), true);
+                        var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PATCH_FORMAT}");
+                        await new BinaryHandler().Clean(oldFile.FullName, newFile.FullName, tempPatchPath);
                     }
                 }
-
-                var exceptFiles = fileManager.Except(sourcePath, targetPath);
-                if (exceptFiles is not null
-                    && exceptFiles.Any())
+                else
                 {
-                    var path = Path.Combine(patchPath, DELETE_FILES_NAME);
-                    StorageManager.CreateJson(path, exceptFiles);
+                    File.Copy(newFile.FullName, Path.Combine(tempDir, Path.GetFileName(newFile.FullName)), true);
                 }
             }
-            catch (Exception ex)
+
+            var exceptFiles = fileManager.Except(sourcePath, targetPath);
+            if (exceptFiles is not null
+                && exceptFiles.Any())
             {
-                throw new Exception($"Generate error : {ex.Message} !", ex.InnerException);
+                var path = Path.Combine(patchPath, DELETE_FILES_NAME);
+                StorageManager.CreateJson(path, exceptFiles);
             }
         }
         
@@ -79,31 +73,24 @@ namespace GeneralUpdate.Differential
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
-            try
+            var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
+            var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
+            var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
+            //Refresh the collection after deleting the file.
+            HandleDeleteList(patchFiles, oldFiles);
+            oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
+            foreach (var oldFile in oldFiles)
             {
-                var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
-                var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
-                var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
-                //Refresh the collection after deleting the file.
-                HandleDeleteList(patchFiles, oldFiles);
-                oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
-                foreach (var oldFile in oldFiles)
+                var findFile = patchFiles.FirstOrDefault(f =>
+                    Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "").Equals(oldFile.Name));
+
+                if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PATCH_FORMAT))
                 {
-                    var findFile = patchFiles.FirstOrDefault(f =>
-                        Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "").Equals(oldFile.Name));
-
-                    if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PATCH_FORMAT))
-                    {
-                        await DirtyPatch(oldFile.FullName, findFile.FullName);
-                    }
+                    await DirtyPatch(oldFile.FullName, findFile.FullName);
                 }
+            }
 
-                await DirtyUnknow(appPath, patchPath);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Dirty error : {ex.Message} !", ex.InnerException);
-            }
+            await DirtyUnknow(appPath, patchPath);
         }
 
         #region Private Methods
@@ -141,52 +128,38 @@ namespace GeneralUpdate.Differential
 
         private async Task DirtyPatch(string appPath, string patchPath)
         {
-            try
-            {
-                if (!File.Exists(appPath) || !File.Exists(patchPath))
-                    return;
+            if (!File.Exists(appPath) || !File.Exists(patchPath))
+                return;
 
-                var newPath = Path.Combine(Path.GetDirectoryName(appPath)!, $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
-                await new BinaryHandler().Dirty(appPath, newPath, patchPath);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"RevertFile error : {ex.Message} !", ex.InnerException);
-            }
+            var newPath = Path.Combine(Path.GetDirectoryName(appPath)!, $"{Path.GetRandomFileName()}_{Path.GetFileName(appPath)}");
+            await new BinaryHandler().Dirty(appPath, newPath, patchPath);
         }
 
         private async Task DirtyUnknow(string appPath, string patchPath)
         {
             await Task.Run(() =>
             {
-                try
+                var fileManager = new StorageManager();
+                var comparisonResult = fileManager.Compare(appPath, patchPath);
+                foreach (var file in comparisonResult.DifferentNodes)
                 {
-                    var fileManager = new StorageManager();
-                    var comparisonResult = fileManager.Compare(appPath, patchPath);
-                    foreach (var file in comparisonResult.DifferentNodes)
+                    var extensionName = Path.GetExtension(file.FullName);
+                    if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
+
+                    var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
+                    var targetPath = Path.Combine(appPath, targetFileName);
+                    var parentFolder = Directory.GetParent(targetPath);
+                    if (parentFolder?.Exists == false)
                     {
-                        var extensionName = Path.GetExtension(file.FullName);
-                        if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
-
-                        var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
-                        var targetPath = Path.Combine(appPath, targetFileName);
-                        var parentFolder = Directory.GetParent(targetPath);
-                        if (parentFolder?.Exists == false)
-                        {
-                            parentFolder.Create();
-                        }
-
-                        File.Copy(file.FullName, targetPath, true);
+                        parentFolder.Create();
                     }
 
-                    if (Directory.Exists(patchPath))
-                    {
-                        StorageManager.DeleteDirectory(patchPath);
-                    }
+                    File.Copy(file.FullName, targetPath, true);
                 }
-                catch (Exception ex)
+
+                if (Directory.Exists(patchPath))
                 {
-                    throw new Exception($"DirtyNew error : {ex.Message} !", ex.InnerException);
+                    StorageManager.DeleteDirectory(patchPath);
                 }
             });
         }

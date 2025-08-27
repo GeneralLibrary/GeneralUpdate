@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Internal.Bootstrap
 {
@@ -60,5 +61,8 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
                 return default;
             }
         }
+        
+        protected string GetPacketHash(object version) => 
+            !GeneralTracer.IsTracingEnabled() ? string.Empty : $"[PacketHash]:{(version as VersionInfo).Hash} ";
     }
 }
