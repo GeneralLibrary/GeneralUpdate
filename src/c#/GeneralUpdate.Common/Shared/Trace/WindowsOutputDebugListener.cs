@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace GeneralUpdate.Common.Internal;
+namespace GeneralUpdate.Common.Shared;
 
 public class WindowsOutputDebugListener : TraceListener
 {

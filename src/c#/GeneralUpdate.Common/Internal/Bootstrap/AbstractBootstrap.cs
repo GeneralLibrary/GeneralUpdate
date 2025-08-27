@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Common.Internal.Bootstrap

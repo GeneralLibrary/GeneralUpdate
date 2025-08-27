@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.Compress;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace GeneralUpdate.Core.Strategys

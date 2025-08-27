@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -13,6 +12,7 @@ using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Core.Strategys;
 

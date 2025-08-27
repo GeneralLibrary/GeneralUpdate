@@ -8,6 +8,7 @@ using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;

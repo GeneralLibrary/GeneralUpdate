@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Core.Driver
 {

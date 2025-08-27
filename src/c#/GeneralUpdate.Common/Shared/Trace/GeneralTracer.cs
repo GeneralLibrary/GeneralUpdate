@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace GeneralUpdate.Common.Internal;
+namespace GeneralUpdate.Common.Shared;
 
 public static class GeneralTracer
 {

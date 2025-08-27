@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Common.Internal.Event
 {

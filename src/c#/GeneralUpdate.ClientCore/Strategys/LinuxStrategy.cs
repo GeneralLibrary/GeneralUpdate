@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Pipeline;
 using GeneralUpdate.Common.FileBasic;
@@ -9,6 +8,7 @@ using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Common.Shared.Object;
 using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Common.Shared.Service;

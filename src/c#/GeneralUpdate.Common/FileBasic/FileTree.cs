@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Common.FileBasic;
 
