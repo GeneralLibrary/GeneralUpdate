@@ -62,8 +62,5 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
                 return default;
             }
         }
-        
-        protected string GetPacketHash(object version) => 
-            !GeneralTracer.IsTracingEnabled() ? string.Empty : $"[PacketHash]:{(version as VersionInfo).Hash} ";
     }
 }

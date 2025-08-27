@@ -133,21 +133,21 @@ namespace GeneralUpdate.Core
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         {
-            var message = GetPacketHash(e.Version);
+            var message = ObjectTranslator.GetPacketHash(e.Version);
             GeneralTracer.Info($"Multi download statistics, {message}[BytesReceived]:{e.BytesReceived} [ProgressPercentage]:{e.ProgressPercentage} [Remaining]:{e.Remaining} [TotalBytesToReceive]:{e.TotalBytesToReceive} [Speed]:{e.Speed}");
             EventManager.Instance.Dispatch(sender, e);
         }
 
         private void OnMultiDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
         {
-            var message = GetPacketHash(e.Version);
+            var message = ObjectTranslator.GetPacketHash(e.Version);
             GeneralTracer.Info($"Multi download completed, {message}[IsComplated]:{e.IsComplated}.");
             EventManager.Instance.Dispatch(sender, e);
         }
 
         private void OnMultiDownloadError(object sender, MultiDownloadErrorEventArgs e)
         {
-            var message = GetPacketHash(e.Version);
+            var message = ObjectTranslator.GetPacketHash(e.Version);
             GeneralTracer.Error($"Multi download error {message}.", e.Exception);
             EventManager.Instance.Dispatch(sender, e);
         }
