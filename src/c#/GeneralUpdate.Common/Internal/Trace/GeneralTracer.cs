@@ -7,7 +7,8 @@ namespace GeneralUpdate.Common.Internal;
 
 public static class GeneralTracer
 {
-    private static readonly object _lockObj = new object();
+    private static readonly object _lockObj = new();
+    private static bool _isTracingEnabled;
     private static string _currentLogDate;
     private static TextWriterTraceListener _fileListener;
   
@@ -28,34 +29,32 @@ public static class GeneralTracer
             Trace.Listeners.Add(new DefaultTraceListener());
 
         Trace.AutoFlush = true;
+        _isTracingEnabled = true;
     }
     
     private static void InitializeFileListener()
     {
         //Ensure that log files are rotated on a daily basis
-        lock (_lockObj)
+        var today = DateTime.Now.ToString("yyyy-MM-dd");
+        if (today == _currentLogDate && _fileListener != null)
+            return;
+
+        if (_fileListener != null)
         {
-            var today = DateTime.Now.ToString("yyyy-MM-dd");
-            if (today == _currentLogDate && _fileListener != null)
-                return;
-
-            if (_fileListener != null)
-            {
-                Trace.Listeners.Remove(_fileListener);
-                _fileListener.Flush();
-                _fileListener.Close();
-                _fileListener.Dispose();
-            }
-
-            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-            Directory.CreateDirectory(logDir);
-
-            var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
-            _fileListener = new TextWriterTraceListener(logFileName) { Name = "FileListener" };
-            
-            Trace.Listeners.Add(_fileListener);
-            _currentLogDate = today;
+            Trace.Listeners.Remove(_fileListener);
+            _fileListener.Flush();
+            _fileListener.Close();
+            _fileListener.Dispose();
         }
+
+        var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+        Directory.CreateDirectory(logDir);
+
+        var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
+        _fileListener = new TextWriterTraceListener(logFileName) { Name = "FileListener" };
+            
+        Trace.Listeners.Add(_fileListener);
+        _currentLogDate = today;
     }
 
     public static void Debug(string message) => WriteTraceMessage(TraceLevel.Verbose, message);
@@ -85,6 +84,7 @@ public static class GeneralTracer
         lock (_lockObj)
         {
             Trace.AutoFlush = enabled;
+            _isTracingEnabled = enabled;
             foreach (TraceListener listener in Trace.Listeners)
             {
                 listener.Filter = enabled ? null : new EventTypeFilter(SourceLevels.Off);
@@ -92,8 +92,19 @@ public static class GeneralTracer
         }
     }
 
+    public static bool IsTracingEnabled()
+    {
+        lock (_lockObj)
+        {
+            return _isTracingEnabled;
+        }
+    }
+
     private static void WriteTraceMessage(TraceLevel level, string message)
     {
+        if(!IsTracingEnabled())
+            return;
+        
         InitializeFileListener();
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
         var levelName = GetLevelName(level);
@@ -114,10 +125,7 @@ public static class GeneralTracer
             fullMessage = $"[{timestamp}] [{levelName}] : {message}";
         }
 
-        lock (_lockObj)
-        {
-            Trace.WriteLine(fullMessage);
-        }
+        Trace.WriteLine(fullMessage);
     }
 
     private static string GetLevelName(TraceLevel level) => level switch
