@@ -48,8 +48,6 @@
         <Compile Include="..\GeneralUpdate.Common\FileBasic\FileTree.cs" Link="Common\FileTree.cs" />
         <Compile Include="..\GeneralUpdate.Common\FileBasic\StorageManager.cs" Link="Common\StorageManager.cs" />
         <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\HashAlgorithmBase.cs" Link="Common\HashAlgorithmBase.cs" />
-        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Md5HashAlgorithm.cs" Link="Common\Md5HashAlgorithm.cs" />
-        <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Sha1HashAlgorithm.cs" Link="Common\Sha1HashAlgorithm.cs" />
         <Compile Include="..\GeneralUpdate.Common\HashAlgorithms\Sha256HashAlgorithm.cs" Link="Common\Sha256HashAlgorithm.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\AbstractBootstrap.cs" Link="Common\AbstractBootstrap.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Bootstrap\UpdateOption.cs" Link="Common\UpdateOption.cs" />
