@@ -28,8 +28,10 @@ public sealed class GeneralClientOSS
         {
             try
             {
+                GeneralTracer.Debug("1.Starting OSS upgrade mode.");
                 var basePath = Thread.GetDomain().BaseDirectory;
                 //Download the version information file from OSS to be updated.(JSON)
+                GeneralTracer.Debug("2.Download the version information file from OSS to be updated.(JSON)");
                 var versionsFilePath = Path.Combine(basePath, configGlobalConfigInfo.VersionFileName);
                 DownloadFile(configGlobalConfigInfo.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
@@ -38,6 +40,7 @@ public sealed class GeneralClientOSS
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();
                 //Determine whether the current client version needs to be upgraded.
+                GeneralTracer.Debug("3.Determine whether the current client version needs to be upgraded.");
                 if (!IsUpgrade(configGlobalConfigInfo.CurrentVersion, newVersion.Version)) 
                     return;
                 
@@ -46,6 +49,7 @@ public sealed class GeneralClientOSS
                 if (!File.Exists(appPath)) 
                     throw new Exception($"The application does not exist {upgradeAppName} !");
                 
+                GeneralTracer.Debug("4.Start upgrade app.");
                 var json = JsonSerializer.Serialize(configGlobalConfigInfo, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
                 Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", json);
                 Process.Start(appPath);
