@@ -32,6 +32,7 @@ namespace GeneralUpdate.Core
         {
             try
             {
+                GeneralTracer.Debug("Starting OSS upgrade mode.");
                 var json = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
                 if (string.IsNullOrWhiteSpace(json))
                     return;

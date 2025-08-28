@@ -34,21 +34,25 @@ namespace GeneralUpdate.Core.Strategys
             try
             {
                 //1.Download the JSON version configuration file.
+                GeneralTracer.Debug("1.Download the JSON version configuration file.");
                 var jsonPath = Path.Combine(_appPath, _parameter.VersionFileName);
                 if (!File.Exists(jsonPath)) 
                     throw new FileNotFoundException(jsonPath);
 
                 //2.Parse the JSON version configuration file content.
+                GeneralTracer.Debug("2.Parse the JSON version configuration file content.");
                 var versions = StorageManager.GetJson<List<VersionOSS>>(jsonPath, VersionOSSJsonContext.Default.ListVersionOSS);
                 if (versions == null) 
                     throw new NullReferenceException(nameof(versions));
 
                 versions = versions.OrderBy(v => v.PubTime).ToList();
                 //3.Download version by version according to the version of the configuration file.
+                GeneralTracer.Debug("3.Download version by version according to the version of the configuration file.");
                 await DownloadVersions(versions);
                 Decompress(versions);
                     
                 //4.Launch the main application.
+                GeneralTracer.Debug("4.Launch the main application.");
                 LaunchApp();
             }
             catch (Exception ex)
@@ -97,6 +101,8 @@ namespace GeneralUpdate.Core.Strategys
             var appPath = Path.Combine(_appPath, _parameter.AppName);
             if (!File.Exists(appPath)) throw new FileNotFoundException($"{nameof(appPath)} , The application is not accessible !");
             Process.Start(appPath);
+            
+            GeneralTracer.Debug("5.Upgrade complete.");
         }
 
         private void Decompress(List<VersionOSS> versions)
