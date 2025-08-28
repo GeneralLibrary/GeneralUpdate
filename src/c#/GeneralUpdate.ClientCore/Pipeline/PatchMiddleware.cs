@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Event;
+﻿using System.Threading.Tasks;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Differential;
 
