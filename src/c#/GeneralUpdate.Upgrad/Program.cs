@@ -33,6 +33,7 @@ namespace GeneralUpdate.Upgrad
                     //.SetFieldMappings(fieldMappingsCN)
                     //是否开启驱动更新
                     //.Option(UpdateOption.Drive, true)
+                    .Option(UpdateOption.Patch, false)
                     .LaunchAsync();
                 Console.WriteLine($"升级程序已启动，{DateTime.Now}！");
             }
