@@ -2,14 +2,14 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Version>9.1.6</Version>
+        <Version>9.4.7</Version>
         <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
         <PackageIcon>GeneralUpdate.png</PackageIcon>
         <SignAssembly>False</SignAssembly>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
-        <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
         <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
         <LangVersion>default</LangVersion>

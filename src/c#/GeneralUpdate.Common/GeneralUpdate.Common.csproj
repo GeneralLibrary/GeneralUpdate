@@ -7,7 +7,7 @@
         <Title>GeneralUpdate.Common</Title>
         <Authors>JusterZhu</Authors>
         <Description>The infrastructure required to support all components is necessary, and this nuget package is essential.</Description>
-        <Copyright>Copyright © 2024 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <PackageIcon>GeneralUpdate128.png</PackageIcon>
@@ -16,7 +16,7 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>The infrastructure required to support all components is necessary, and this nuget package is essential.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>9.1.6</Version>
+        <Version>9.4.7</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
