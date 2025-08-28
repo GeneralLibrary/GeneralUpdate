@@ -59,6 +59,7 @@ namespace GeneralUpdate.Core
 
         public override async Task<GeneralUpdateBootstrap> LaunchAsync()
         {
+            GeneralTracer.Debug("GeneralUpdateBootstrap Launch.");
             StrategyFactory();
             var manager =
                 new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);

@@ -45,6 +45,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     {
         try
         {
+            GeneralTracer.Debug("GeneralClientBootstrap Launch.");
             CallSmallBowlHome(_configInfo.Bowl);
             ExecuteCustomOptions();
             await ExecuteWorkflowAsync();
