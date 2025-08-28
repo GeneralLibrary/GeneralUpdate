@@ -50,6 +50,7 @@ namespace GeneralUpdate.Core.Strategys
                             //Patch middleware
                             context.Add("SourcePath", _configinfo.InstallPath);
                             context.Add("PatchPath", patchPath);
+                            context.Add("PatchEnabled", _configinfo.PatchEnabled);
                             //Driver middleware
                             if (_configinfo.DriveEnabled == true)
                             {

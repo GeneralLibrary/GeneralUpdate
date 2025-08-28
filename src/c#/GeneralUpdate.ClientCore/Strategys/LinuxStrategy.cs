@@ -48,12 +48,14 @@ public class LinuxStrategy : AbstractStrategy
                     //patch middleware
                     context.Add("SourcePath", _configinfo.InstallPath);
                     context.Add("PatchPath", patchPath);
+                    context.Add("PatchEnabled", _configinfo.PatchEnabled);
+                    //blacklist
                     context.Add("BlackFiles", _configinfo.BlackFiles);
                     context.Add("BlackFileFormats", _configinfo.BlackFormats);
                     context.Add("SkipDirectorys", _configinfo.SkipDirectorys);
-
+                    
                     var pipelineBuilder = new PipelineBuilder(context)
-                        .UseMiddleware<PatchMiddleware>()
+                        .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                         .UseMiddleware<CompressMiddleware>()
                         .UseMiddleware<HashMiddleware>();
                     await pipelineBuilder.Build();
