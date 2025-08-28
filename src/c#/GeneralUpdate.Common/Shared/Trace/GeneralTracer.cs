@@ -10,7 +10,7 @@ public static class GeneralTracer
     private static readonly object _lockObj = new();
     private static bool _isTracingEnabled;
     private static string _currentLogDate;
-    private static TextWriterTraceListener _fileListener;
+    private static TextTraceListener _fileListener;
   
     static GeneralTracer()
     {
@@ -51,7 +51,8 @@ public static class GeneralTracer
         Directory.CreateDirectory(logDir);
 
         var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
-        _fileListener = new TextWriterTraceListener(logFileName) { Name = "FileListener" };
+        //_fileListener = new TextWriterTraceListener(logFileName) { Name = "FileListener" };
+        _fileListener = new TextTraceListener(logFileName);
             
         Trace.Listeners.Add(_fileListener);
         _currentLogDate = today;
@@ -140,17 +141,24 @@ public static class GeneralTracer
 
     public static void Dispose()
     {
-        lock (_lockObj)
+        try
         {
-            if (_fileListener is not null)
+            lock (_lockObj)
             {
-                _fileListener.Flush();
-                _fileListener.Close();
-                _fileListener.Dispose();
-                _fileListener = null;
-            }
+                if (_fileListener is not null)
+                {
+                    _fileListener.Flush();
+                    _fileListener.Close();
+                    _fileListener.Dispose();
+                    _fileListener = null;
+                }
 
-            Trace.Listeners.Clear();
+                Trace.Listeners.Clear();
+            }
+        }
+        catch
+        {
+            // ignored
         }
     }
 }

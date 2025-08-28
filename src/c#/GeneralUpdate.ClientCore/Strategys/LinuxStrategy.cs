@@ -117,6 +117,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         finally
         {
+            GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }
     }

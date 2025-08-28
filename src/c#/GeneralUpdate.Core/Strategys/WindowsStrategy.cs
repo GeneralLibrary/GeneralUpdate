@@ -124,6 +124,7 @@ namespace GeneralUpdate.Core.Strategys
             }
             finally
             {
+                GeneralTracer.Dispose();
                 Process.GetCurrentProcess().Kill();
             }
         }

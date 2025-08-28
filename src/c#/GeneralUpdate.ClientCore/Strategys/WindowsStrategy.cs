@@ -112,6 +112,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         finally
         {
+            GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }
     }

@@ -78,6 +78,7 @@
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\VersionOSS.cs" Link="Common\VersionOSS.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Service\VersionService.cs" Link="Common\VersionService.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Common\GeneralTracer.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Common\TextTraceListener.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Common\WindowsOutputDebugListener.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandler.cs" Link="Common\BinaryHandler.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2Constants.cs" Link="Common\BZip2Constants.cs" />

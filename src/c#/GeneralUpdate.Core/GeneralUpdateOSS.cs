@@ -37,15 +37,21 @@ namespace GeneralUpdate.Core
                 if (string.IsNullOrWhiteSpace(json))
                     return;
 
-                var parameter = JsonSerializer.Deserialize<GlobalConfigInfoOSS>(json, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
+                var parameter = JsonSerializer.Deserialize<GlobalConfigInfoOSS>(json,
+                    GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
                 var strategy = new OSSStrategy();
                 strategy.Create(parameter);
                 await strategy.ExecuteAsync();
             }
             catch (Exception exception)
             {
-                GeneralTracer.Error("The BaseStart method in the GeneralUpdateOSS class throws an exception.",exception);
+                GeneralTracer.Error("The BaseStart method in the GeneralUpdateOSS class throws an exception.",
+                    exception);
                 throw exception;
+            }
+            finally
+            {
+                GeneralTracer.Dispose();
             }
         }
         

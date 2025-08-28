@@ -103,6 +103,7 @@ namespace GeneralUpdate.Core.Strategys
             Process.Start(appPath);
             
             GeneralTracer.Debug("5.Upgrade complete.");
+            GeneralTracer.Dispose();
         }
 
         private void Decompress(List<VersionOSS> versions)

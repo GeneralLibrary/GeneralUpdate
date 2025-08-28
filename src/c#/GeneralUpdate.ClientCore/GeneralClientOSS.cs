@@ -35,30 +35,37 @@ public sealed class GeneralClientOSS
                 var versionsFilePath = Path.Combine(basePath, configGlobalConfigInfo.VersionFileName);
                 DownloadFile(configGlobalConfigInfo.Url, versionsFilePath);
                 if (!File.Exists(versionsFilePath)) return;
-                var versions = StorageManager.GetJson<List<VersionOSS>>(versionsFilePath, VersionOSSJsonContext.Default.ListVersionOSS);
+                var versions = StorageManager.GetJson<List<VersionOSS>>(versionsFilePath,
+                    VersionOSSJsonContext.Default.ListVersionOSS);
                 if (versions == null || versions.Count == 0) return;
                 versions = versions.OrderByDescending(x => x.PubTime).ToList();
                 var newVersion = versions.First();
                 //Determine whether the current client version needs to be upgraded.
                 GeneralTracer.Debug("3.Determine whether the current client version needs to be upgraded.");
-                if (!IsUpgrade(configGlobalConfigInfo.CurrentVersion, newVersion.Version)) 
+                if (!IsUpgrade(configGlobalConfigInfo.CurrentVersion, newVersion.Version))
                     return;
-                
+
                 //If you confirm that an update is required, start the upgrade application.
                 var appPath = Path.Combine(basePath, $"{upgradeAppName}");
-                if (!File.Exists(appPath)) 
+                if (!File.Exists(appPath))
                     throw new Exception($"The application does not exist {upgradeAppName} !");
-                
+
                 GeneralTracer.Debug("4.Start upgrade app.");
-                var json = JsonSerializer.Serialize(configGlobalConfigInfo, GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
+                var json = JsonSerializer.Serialize(configGlobalConfigInfo,
+                    GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
                 Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", json);
                 Process.Start(appPath);
                 Process.GetCurrentProcess().Kill();
             }
             catch (Exception exception)
             {
-                GeneralTracer.Error("The BaseStart method in the GeneralClientOSS class throws an exception.", exception);
+                GeneralTracer.Error("The BaseStart method in the GeneralClientOSS class throws an exception.",
+                    exception);
                 throw exception;
+            }
+            finally
+            {
+                GeneralTracer.Dispose();
             }
         });
     }

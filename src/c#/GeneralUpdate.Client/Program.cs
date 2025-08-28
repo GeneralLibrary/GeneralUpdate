@@ -51,8 +51,8 @@ namespace GeneralUpdate.Client
                     .SetConfig(configinfo)
                     .Option(UpdateOption.DownloadTimeOut, 60)
                     .Option(UpdateOption.Encoding, Encoding.UTF8)
-                    .Option(UpdateOption.Patch, false)
-                    .Option(UpdateOption.BackUp, false)
+                    //.Option(UpdateOption.Patch, false)
+                    //.Option(UpdateOption.BackUp, false)
                     .LaunchAsync();
                 Console.WriteLine($"主程序已启动，{DateTime.Now}！");
             }
