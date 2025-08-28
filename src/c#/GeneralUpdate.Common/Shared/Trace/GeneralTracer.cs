@@ -51,7 +51,6 @@ public static class GeneralTracer
         Directory.CreateDirectory(logDir);
 
         var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
-        //_fileListener = new TextWriterTraceListener(logFileName) { Name = "FileListener" };
         _fileListener = new TextTraceListener(logFileName);
             
         Trace.Listeners.Add(_fileListener);
