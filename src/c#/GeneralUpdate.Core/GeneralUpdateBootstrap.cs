@@ -53,7 +53,9 @@ namespace GeneralUpdate.Core
                 ReportUrl = processInfo.ReportUrl,
                 BackupDirectory = processInfo.BackupDirectory,
                 Scheme = processInfo.Scheme,
-                Token = processInfo.Token
+                Token = processInfo.Token,
+                DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
+                PatchEnabled = GetOption(UpdateOption.Patch) ?? true
             };
         }
 
