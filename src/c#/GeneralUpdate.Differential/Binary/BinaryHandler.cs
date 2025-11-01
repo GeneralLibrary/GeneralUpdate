@@ -372,7 +372,7 @@ namespace GeneralUpdate.Differential.Binary
                 if (File.Exists(_newfilePath))
                 {
                     File.SetAttributes(_newfilePath, FileAttributes.Normal);
-                    File.Move(_newfilePath, _oldfilePath);
+                    File.Copy(_newfilePath, _oldfilePath, true);
                 }
             });
         }
