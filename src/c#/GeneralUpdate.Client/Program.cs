@@ -35,7 +35,8 @@ namespace GeneralUpdate.Client
                     //产品id
                     ProductId = "2d974e2a-31e6-4887-9bb1-b4689e98c77a",
                     //应用密钥
-                    AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
+                    AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6",
+                    Script = "linux/script.shell"
                 };
                 _ = await new GeneralClientBootstrap() //单个或多个更新包下载通知事件
                     //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件

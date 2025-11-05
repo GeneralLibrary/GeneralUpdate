@@ -128,4 +128,9 @@ public class GlobalConfigInfo
     public string Scheme { get; set; }
     
     public string Token { get; set; }
+    
+    /// <summary>
+    /// Script to grant permissions to a specified file on Linux
+    /// </summary>
+    public string Script { get; set; }
 }

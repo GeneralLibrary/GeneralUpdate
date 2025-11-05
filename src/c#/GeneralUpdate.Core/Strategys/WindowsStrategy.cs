@@ -110,11 +110,10 @@ namespace GeneralUpdate.Core.Strategys
                 
                 Process.Start(mainAppPath);
 
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
+                if (!string.IsNullOrEmpty(bowlAppPath))
                 {
-                    var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
-                    if (!string.IsNullOrEmpty(bowlAppPath))
-                        Process.Start(bowlAppPath);
+                    Process.Start(bowlAppPath);
                 }
             }
             catch (Exception e)

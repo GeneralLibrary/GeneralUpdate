@@ -55,7 +55,8 @@ namespace GeneralUpdate.Core
                 Scheme = processInfo.Scheme,
                 Token = processInfo.Token,
                 DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
-                PatchEnabled = GetOption(UpdateOption.Patch) ?? true
+                PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
+                Script = processInfo.Script
             };
         }
 

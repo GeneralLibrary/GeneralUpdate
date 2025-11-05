@@ -25,6 +25,7 @@ namespace GeneralUpdate.Common.Shared.Object
             , string bowl
             , string scheme
             , string token
+            , string script
             , List<string> blackFileFormats
             , List<string> blackFiles
             , List<string> skipDirectories)
@@ -47,6 +48,7 @@ namespace GeneralUpdate.Common.Shared.Object
             Bowl = bowl;
             Scheme = scheme;
             Token = token;
+            Script = script;
             BlackFileFormats = blackFileFormats;
             BlackFiles = blackFiles;
             SkipDirectorys = skipDirectories;
@@ -141,5 +143,11 @@ namespace GeneralUpdate.Common.Shared.Object
 
         [JsonPropertyName("SkipDirectorys")]
         public List<string> SkipDirectorys { get; set; }
+        
+        /// <summary>
+        /// Script to grant permissions to a specified file on Linux
+        /// </summary>
+        [JsonPropertyName("Script")]
+        public string Script { get; set; }
     }
 }
