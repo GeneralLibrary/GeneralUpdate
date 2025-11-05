@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Pipeline;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Internal.Event;
 using GeneralUpdate.Common.Internal.Pipeline;
 using GeneralUpdate.Common.Internal.Strategy;
@@ -21,7 +22,6 @@ namespace GeneralUpdate.ClientCore.Strategys;
 public class LinuxStrategy : AbstractStrategy
 {
     private GlobalConfigInfo _configinfo = new();
-    private const string ProcessInfoFileName = "ProcessInfo.json";
 
     public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
@@ -97,17 +97,15 @@ public class LinuxStrategy : AbstractStrategy
     {
         try
         {
+            Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
             {
-                if (File.Exists(ProcessInfoFileName))
+                Process.Start(new ProcessStartInfo
                 {
-                    File.SetAttributes(ProcessInfoFileName, FileAttributes.Normal);
-                    File.Delete(ProcessInfoFileName);
-                }
-
-                File.WriteAllText(ProcessInfoFileName, _configinfo.ProcessInfo);
-                Process.Start(appPath);
+                    UseShellExecute = true,
+                    FileName = appPath
+                });
             }
         }
         catch (Exception e)

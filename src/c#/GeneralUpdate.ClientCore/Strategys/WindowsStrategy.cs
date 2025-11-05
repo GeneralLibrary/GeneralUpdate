@@ -97,7 +97,6 @@ public class WindowsStrategy : AbstractStrategy
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
             {
-                Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
                 Process.Start(new ProcessStartInfo
                 {
                     UseShellExecute = true,
