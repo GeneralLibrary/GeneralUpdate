@@ -61,6 +61,14 @@ namespace GeneralUpdate.Client
             {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
             }
+            
+            /*var hub = new UpgradeHubService("http://127.0.0.1:6666/UpgradeHub"
+                , null,"123456789");
+            hub.AddListenerReceive((message) =>
+            {
+                Debug.WriteLine(message);
+            });
+            await hub.StartAsync();*/
 
             /*var paramsOSS = new GlobalConfigInfoOSS
             {
@@ -71,15 +79,7 @@ namespace GeneralUpdate.Client
                 Encoding = Encoding.UTF8.WebName
             };
             await GeneralClientOSS.Start(paramsOSS, "GeneralUpdate.Upgrad.exe");*/
-
-            /*var hub = new UpgradeHubService("http://localhost:5000/UpgradeHub"
-                , null,"dfeb5833-975e-4afb-88f1-6278ee9aeff6");
-            hub.AddListenerReceive((message) =>
-            {
-                Debug.WriteLine(message);
-            });
-            await hub.StartAsync();*/
-
+            
             /*Task.Run(async () =>
            {
                var source = @"D:\packet\app";
