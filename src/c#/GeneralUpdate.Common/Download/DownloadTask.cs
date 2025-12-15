@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Shared;
@@ -54,7 +55,14 @@ namespace GeneralUpdate.Common.Download
             {
                 var tempPath = path + ".temp";
                 var startPos = CheckFile(tempPath);
-                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                
+                var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                if (startPos > 0)
+                {
+                    requestMessage.Headers.Range = new RangeHeaderValue(startPos, null);
+                }
+                
+                using var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode)
                     throw new HttpRequestException($"Failed to download file: {response.ReasonPhrase}");
 
