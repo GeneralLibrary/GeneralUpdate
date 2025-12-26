@@ -1,6 +1,5 @@
 name: Publish NuGet to Releases
 
-# 手动触发工作流，支持输入版本号
 on:
   workflow_dispatch:
     inputs:
@@ -19,14 +18,16 @@ jobs:
       - name: 安装.NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '9.0.x'  # 与现有CI配置保持一致
 
       - name: 恢复依赖
-        run: dotnet restore ./src/c#/GeneralUpdate.sln
+        run: dotnet restore ./src/c#/GeneralUpdate.sln  # 使用解决方案统一恢复
 
-      - name: 构建并打包NuGet
+      - name: 构建项目（确保生成DLL）
+        run: dotnet build ./src/c#/GeneralUpdate.sln -c Release --no-restore  # 显式构建，避免重复恢复
+
+      - name: 打包NuGet包
         run: |
-          # 定义需要发布的组件列表
           $projects = @(
             "GeneralUpdate.Bowl",
             "GeneralUpdate.ClientCore",
@@ -34,13 +35,13 @@ jobs:
             "GeneralUpdate.Differential"
           )
           
-          # 循环打包每个组件，使用统一版本号
           foreach ($project in $projects) {
             dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
               -o ./nupkgs `
               -p:Version=${{ github.event.inputs.version }} `
-              -p:PackageVersion=${{ github.event.inputs.version }}
+              -p:PackageVersion=${{ github.event.inputs.version }} `
+              --no-build  # 避免重复构建，使用已生成的文件
           }
         shell: pwsh
 
