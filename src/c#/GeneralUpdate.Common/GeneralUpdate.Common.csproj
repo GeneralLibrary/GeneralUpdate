@@ -17,7 +17,7 @@
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Version>9.5.10</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <TargetFrameworks>net461;netcoreapp2.0;net8.0;net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks>net481;net8.0;net9.0;net10.0</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
