@@ -15,9 +15,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ./src/c#/GeneralUpdate.sln  # 确保所有项目依赖还原
 
-    - name: Build
-      run: dotnet build ./src/c#/GeneralUpdate.sln -c Release --no-restore
-
     - name: Check AOT support (Client app)
       run: |
         dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj `
