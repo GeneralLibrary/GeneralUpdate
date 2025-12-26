@@ -21,7 +21,6 @@ jobs:
           -c Release `
           -r win-x64 `
           /p:PublishAot=true `  # 使用/p:替代-p:，兼容PowerShell参数解析
-          --self-contained true
       continue-on-error: true  # 允许失败，后续判断结果
 
     - name: Analyze AOT result
