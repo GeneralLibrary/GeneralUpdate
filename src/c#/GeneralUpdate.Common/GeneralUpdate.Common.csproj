@@ -8,7 +8,7 @@
         <Description>The infrastructure required to support all components is necessary, and this nuget package is essential.</Description>
         <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
         <PackageIcon>GeneralUpdate128.png</PackageIcon>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <RepositoryType>public</RepositoryType>
@@ -24,14 +24,10 @@
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
     </ItemGroup>
     <ItemGroup>
-      <None Include="..\..\..\imgs\GeneralUpdate.ico">
-        <Pack>True</Pack>
-        <Link>GeneralUpdate.ico</Link>
-        <PackagePath></PackagePath>
-      </None>
-      <None Update="GeneralUpdate128.png">
-        <Pack>True</Pack>
-        <PackagePath></PackagePath>  
-      </None>
+        <None Include="../../../imgs/*.*">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
     </ItemGroup>
 </Project>

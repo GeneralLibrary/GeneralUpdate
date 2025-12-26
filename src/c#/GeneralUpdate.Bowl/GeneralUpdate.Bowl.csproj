@@ -6,7 +6,7 @@
         <Description>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</Description>
         <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Title>GeneralUpdate.Bowl</Title>
@@ -14,16 +14,10 @@
         <RepositoryType>public</RepositoryType>
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
-        <PackageIcon>bowl.jpeg</PackageIcon>
         <Version>9.5.10</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageIcon>bowl.jpeg</PackageIcon>
     </PropertyGroup>
-    <ItemGroup>
-        <None Update="bowl.jpeg">
-            <Pack>True</Pack>
-            <PackagePath></PackagePath>
-        </None>
-    </ItemGroup>
     <ItemGroup>
       <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
@@ -92,5 +86,12 @@
     </ItemGroup>
     <ItemGroup>
       <Folder Include="Common\" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="../../../imgs/*.*">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
     </ItemGroup>
 </Project>

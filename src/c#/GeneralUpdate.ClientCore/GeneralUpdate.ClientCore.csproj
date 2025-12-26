@@ -14,7 +14,7 @@
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
         <Title>GeneralUpdate.ClientCore</Title>
-        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
         <RepositoryType>public</RepositoryType>
         <PackageTags>upgrade,update</PackageTags>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
@@ -91,15 +91,11 @@
         <PackageReference Include="System.Net.Requests" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
-      <None Update="GeneralUpdate.ico">
-        <Pack>True</Pack>
-        <PackagePath></PackagePath>
-      </None>
-    </ItemGroup>
-    <ItemGroup>
-      <None Update="GeneralUpdate.png">
-        <Pack>True</Pack>
-      </None>
+        <None Include="../../../imgs/*.*">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
     </ItemGroup>
     <ItemGroup>
       <Folder Include="Common\" />
