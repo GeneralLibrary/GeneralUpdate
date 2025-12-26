@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
     <Version>9.5.10</Version>
@@ -23,8 +22,7 @@
     <RepositoryType>public</RepositoryType>
     <PackageTags>upgrade,update</PackageTags>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />

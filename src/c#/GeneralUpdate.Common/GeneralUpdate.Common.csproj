@@ -2,7 +2,6 @@
     <PropertyGroup>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
-        <TargetFramework>netstandard2.0</TargetFramework>
         <Title>GeneralUpdate.Common</Title>
         <Authors>JusterZhu</Authors>
         <Description>The infrastructure required to support all components is necessary, and this nuget package is essential.</Description>
@@ -16,8 +15,7 @@
         <PackageReleaseNotes>The infrastructure required to support all components is necessary, and this nuget package is essential.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Version>9.5.10</Version>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
@@ -36,4 +34,12 @@
             <PackagePath>./</PackagePath>
         </None>
     </ItemGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+        <IsAotCompatible>true</IsAotCompatible>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+        <IsAotCompatible>false</IsAotCompatible>
+        <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    </PropertyGroup>
 </Project>

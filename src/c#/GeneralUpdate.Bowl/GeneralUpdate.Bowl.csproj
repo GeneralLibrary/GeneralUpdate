@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
         <Description>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</Description>
@@ -15,9 +14,8 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
         <Version>9.5.10</Version>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageIcon>bowl.jpeg</PackageIcon>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
       <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
