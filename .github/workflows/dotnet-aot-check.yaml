@@ -20,13 +20,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version:
-            - '8.0.x'  # 这一行是第27行（对应你的报错行），重点检查缩进！
+            - '8.0.x'
 
       - name: Restore dependencies
         run: dotnet restore ./src/c#/GeneralUpdate.sln
 
       - name: Check AOT compilation
-        shell: ${{ matrix.os == 'windows-latest' ? 'pwsh' : 'bash' }}
+        # 修正：用引号包裹表达式，避免YAML解析器误判特殊字符（第29行）
+        shell: "${{ matrix.os == 'windows-latest' ? 'pwsh' : 'bash' }}"
         run: |
           dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
             -c Release \
