@@ -24,7 +24,6 @@ jobs:
         # 正确的数组格式：多个版本放在同一个 dotnet-version 下，用 - 前缀
         dotnet-version:
           - '8.0.x'   # 按需添加需要的 SDK 版本
-          - '9.0.x'   # 你的核心 SDK 版本
 
     - name: Restore dependencies
       run: dotnet restore ./src/c#/GeneralUpdate.sln
