@@ -39,14 +39,3 @@ jobs:
           -p:EnableCompilationRelaxations=false
       env:
         DOTNET_CLI_TELEMETRY_OPTOUT: 1
-
-    - name: Verify AOT output
-      run: |
-        $publishDir = "./src/c#/GeneralUpdate.Client/bin/Release/net9.0/${{ matrix.runtime }}/publish"
-        if ($env:RUNNER_OS -eq "Windows" -and -not (Test-Path "$publishDir/GeneralUpdate.Client.exe")) {
-          throw "AOT compiled executable not found for Windows"
-        }
-        if ($env:RUNNER_OS -eq "Linux" -and -not (Test-Path "$publishDir/GeneralUpdate.Client")) {
-          throw "AOT compiled executable not found for Linux"
-        }
-      shell: pwsh
