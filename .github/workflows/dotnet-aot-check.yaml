@@ -9,25 +9,34 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        runtime: [win-x64, linux-x64]
+        # 预定义每个OS对应的runtime和shell，避开三元表达式
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            shell: pwsh
+          - os: ubuntu-latest
+            runtime: linux-x64
+            shell: bash
 
     steps:
+      # 步骤1：拉取代码（缩进6个空格，以下步骤统一）
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 步骤2：安装.NET SDK（第23行对应这里的dotnet-version）
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version:
-            - '8.0.x'
+          dotnet-version:  # 父级缩进10个空格
+            - '8.0.x'      # 数组项缩进12个空格（比父级多2个空格）
 
+      # 步骤3：恢复依赖
       - name: Restore dependencies
         run: dotnet restore ./src/c#/GeneralUpdate.sln
 
+      # 步骤4：AOT编译检测（用预定义的shell，无三元表达式）
       - name: Check AOT compilation
-        # 修正：用引号包裹表达式，避免YAML解析器误判特殊字符（第29行）
-        shell: "${{ matrix.os == 'windows-latest' ? 'pwsh' : 'bash' }}"
+        shell: ${{ matrix.shell }}
         run: |
           dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
             -c Release \
@@ -39,6 +48,7 @@ jobs:
         env:
           DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
+      # 步骤5：验证AOT输出
       - name: Verify AOT output
         shell: pwsh
         run: |
