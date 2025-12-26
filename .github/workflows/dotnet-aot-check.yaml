@@ -1,0 +1,49 @@
+name: dotnet-aot-check
+
+on: [pull_request, push]
+
+jobs:
+  aot-compile-check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        runtime: [win-x64, linux-x64]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ./src/c#/GeneralUpdate.sln
+
+    - name: Check AOT compilation
+      run: |
+        dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
+          -c Release \
+          -r ${{ matrix.runtime }} \
+          --self-contained true \
+          -p:PublishAot=true \
+          -p:EnableCompilationRelaxations=false
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+    - name: Verify AOT output
+      run: |
+        $publishDir = "./src/c#/GeneralUpdate.Client/bin/Release/net9.0/${{ matrix.runtime }}/publish"
+        if (-not (Test-Path "$publishDir/GeneralUpdate.Client.exe" -PathType Leaf) -and '${{ matrix.runtime }}' -eq 'win-x64') {
+          throw "AOT compiled executable not found for Windows"
+        }
+        if (-not (Test-Path "$publishDir/GeneralUpdate.Client" -PathType Leaf) -and '${{ matrix.runtime }}' -eq 'linux-x64') {
+          throw "AOT compiled executable not found for Linux"
+        }
+      shell: pwsh
