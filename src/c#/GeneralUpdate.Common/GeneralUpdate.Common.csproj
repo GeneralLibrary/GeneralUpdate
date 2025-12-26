@@ -27,9 +27,11 @@
       <None Include="..\..\..\imgs\GeneralUpdate.ico">
         <Pack>True</Pack>
         <Link>GeneralUpdate.ico</Link>
+        <PackagePath></PackagePath>
       </None>
       <None Update="GeneralUpdate128.png">
         <Pack>True</Pack>
+        <PackagePath></PackagePath>  
       </None>
     </ItemGroup>
 </Project>

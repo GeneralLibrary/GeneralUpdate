@@ -21,6 +21,7 @@
     <ItemGroup>
         <None Update="bowl.jpeg">
             <Pack>True</Pack>
+            <PackagePath></PackagePath>
         </None>
     </ItemGroup>
     <ItemGroup>
