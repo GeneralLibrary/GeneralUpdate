@@ -97,14 +97,12 @@
     <ItemGroup>
       <None Update="GeneralUpdate.ico">
         <Pack>True</Pack>
-        <PackagePath></PackagePath>
       </None>
     </ItemGroup>
 
     <ItemGroup>
       <None Update="GeneralUpdate.png">
         <Pack>True</Pack>
-        <PackagePath></PackagePath>
       </None>
     </ItemGroup>
 
