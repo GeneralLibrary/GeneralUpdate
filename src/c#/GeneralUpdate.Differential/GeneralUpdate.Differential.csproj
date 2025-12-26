@@ -18,6 +18,7 @@
     <PackageReleaseNotes>The binary differential update function is provided, but the configuration file update function is reserved.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <TargetFrameworks>net461;netcoreapp2.0;net8.0;net9.0;net10.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
