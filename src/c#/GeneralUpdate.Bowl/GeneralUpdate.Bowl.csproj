@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
         <Description>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</Description>
-        <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
@@ -16,21 +15,18 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
         <PackageIcon>bowl.jpeg</PackageIcon>
-        <Version>9.4.7</Version>
+        <Version>9.5.10</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
-    
     <ItemGroup>
         <None Update="bowl.jpeg">
             <Pack>True</Pack>
         </None>
     </ItemGroup>
-
     <ItemGroup>
       <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
     </ItemGroup>
-
     <ItemGroup>
         <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
         <Compile Include="..\GeneralUpdate.Common\Compress\ICompressionStrategy.cs" Link="Common\ICompressionStrategy.cs" />
@@ -87,14 +83,12 @@
         <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Common\TextTraceListener.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Common\WindowsOutputDebugListener.cs" />
     </ItemGroup>
-
     <ItemGroup>
         <Content Include="Applications\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>
-    
     <ItemGroup>
       <Folder Include="Common\" />
     </ItemGroup>

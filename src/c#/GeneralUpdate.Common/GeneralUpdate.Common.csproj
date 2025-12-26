@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
@@ -7,7 +6,7 @@
         <Title>GeneralUpdate.Common</Title>
         <Authors>JusterZhu</Authors>
         <Description>The infrastructure required to support all components is necessary, and this nuget package is essential.</Description>
-        <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <PackageIcon>GeneralUpdate128.png</PackageIcon>
@@ -16,16 +15,14 @@
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>The infrastructure required to support all components is necessary, and this nuget package is essential.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>9.4.7</Version>
+        <Version>9.5.10</Version>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
-
     <ItemGroup>
       <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
       <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
     </ItemGroup>
-
     <ItemGroup>
       <None Include="..\..\..\imgs\GeneralUpdate.ico">
         <Pack>True</Pack>

@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
@@ -7,9 +6,9 @@
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
     <Authors>JusterZhu</Authors>
-    <Version>9.4.7</Version>
+    <Version>9.5.10</Version>
     <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
-    <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
+    <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
     <LangVersion>default</LangVersion>
     <Nullable>enable</Nullable>
     <Title>GeneralUpdate.Differential</Title>
@@ -20,21 +19,17 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="GeneralUpdate.ico">
       <Pack>True</Pack>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <None Update="GeneralUpdate.png">
       <Pack>True</Pack>
     </None>
   </ItemGroup>
-
 </Project>

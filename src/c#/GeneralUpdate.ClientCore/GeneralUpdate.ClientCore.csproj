@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Version>9.4.7</Version>
+        <Version>9.5.10</Version>
         <Authors>JusterZhu</Authors>
         <Description>Provides functions related to upgrade and update programs.</Description>
         <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
         <PackageIcon>GeneralUpdate.png</PackageIcon>
         <SignAssembly>False</SignAssembly>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
-        <Copyright>Copyright © 2025 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
         <LangVersion>default</LangVersion>
@@ -21,7 +20,6 @@
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
-
     <ItemGroup>
         <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
         <Compile Include="..\GeneralUpdate.Common\Compress\ICompressionStrategy.cs" Link="Common\ICompressionStrategy.cs" />
@@ -85,7 +83,6 @@
         <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
         <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
     </ItemGroup>
-
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
@@ -93,21 +90,17 @@
         <PackageReference Include="System.Net.Http" Version="4.3.4" />
         <PackageReference Include="System.Net.Requests" Version="4.3.0" />
     </ItemGroup>
-
     <ItemGroup>
       <None Update="GeneralUpdate.ico">
         <Pack>True</Pack>
       </None>
     </ItemGroup>
-
     <ItemGroup>
       <None Update="GeneralUpdate.png">
         <Pack>True</Pack>
       </None>
     </ItemGroup>
-
     <ItemGroup>
       <Folder Include="Common\" />
     </ItemGroup>
-
 </Project>
