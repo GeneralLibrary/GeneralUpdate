@@ -21,7 +21,6 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v2
       with:
-        dotnet-version: net481
         dotnet-version: '8.0.x'
         dotnet-version: '9.0.x'
         dotnet-version: '10.0.x'
