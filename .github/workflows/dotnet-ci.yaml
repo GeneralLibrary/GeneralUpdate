@@ -1,18 +1,54 @@
-name: dotnet-ci
+name: Publish NuGet to Releases
 
-on: [push, pull_request]
+# 手动触发工作流，支持输入版本号
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: 3.7.0)'
+        required: true
+        type: string
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: windows-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: '9.0.x'
-    - name: Restore dependencies
-      run: dotnet restore ./src/c#/GeneralUpdate.sln
-    - name: build
-      run: dotnet build ./src/c#/GeneralUpdate.sln -c Release
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装.NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: 恢复依赖
+        run: dotnet restore ./src/c#/GeneralUpdate.sln
+
+      - name: 构建并打包NuGet
+        run: |
+          # 定义需要发布的组件列表
+          $projects = @(
+            "GeneralUpdate.Bowl",
+            "GeneralUpdate.ClientCore",
+            "GeneralUpdate.Core",
+            "GeneralUpdate.Differential"
+          )
+          
+          # 循环打包每个组件，使用统一版本号
+          foreach ($project in $projects) {
+            dotnet pack ./src/c#/$project/$project.csproj `
+              -c Release `
+              -o ./nupkgs `
+              -p:Version=${{ github.event.inputs.version }} `
+              -p:PackageVersion=${{ github.event.inputs.version }}
+          }
+        shell: pwsh
+
+      - name: 创建GitHub Release并上传NuGet包
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          files: ./nupkgs/*.nupkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
