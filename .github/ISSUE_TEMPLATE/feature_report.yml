@@ -1,0 +1,46 @@
+# Template name (displayed in Issue template selection list)
+name: ✨ Feature Request
+# Template description
+description: Propose a new feature or enhancement for the project
+# Default Issue title (users can modify)
+title: "[FEATURE] Briefly describe the proposed feature"
+# Auto-applied labels for the Issue
+labels: ["feature request", "needs triage"]
+# Template form body
+body:
+  # 1. Feature Description (Required)
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: |
+        Please provide a detailed description of the new feature you want to add:
+        - What problem does this feature solve?
+        - What is the expected behavior of this feature?
+        - Any additional context or examples (e.g., mockups, references)?
+      placeholder: |
+        1. Problem to Solve: Currently, the project lacks XX functionality, which makes XX operation inefficient
+        2. Expected Behavior: When users do XX, the system should XX
+        3. Additional Context: Reference implementation - https://example.com/related-feature
+    validations:
+      required: true
+
+  # 2. Operating System Version (Optional string)
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating System Version (Optional)
+      description: If this feature is OS-specific, enter the target OS version; enter "N/A" if not applicable
+      placeholder: e.g., Windows 11 23H2, Ubuntu 22.04 LTS, macOS 14.1, N/A
+    validations:
+      required: false
+
+  # 3. CPU Instruction Set Architecture (Optional string)
+  - type: input
+    id: cpu-arch
+    attributes:
+      label: CPU Instruction Set Architecture (Optional)
+      description: If this feature is CPU architecture-specific, enter the target architecture; enter "N/A" if not applicable
+      placeholder: e.g., x86_64 (AMD64), arm64 (AArch64), riscv64, N/A
+    validations:
+      required: false
