@@ -9,7 +9,7 @@
         <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
-        <PackageIcon>GeneralUpdate128.png</PackageIcon>
+        <PackageIcon>GeneralUpdate.png</PackageIcon>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <RepositoryType>public</RepositoryType>
         <PackageTags>upgrade,update</PackageTags>
@@ -24,7 +24,12 @@
       <PackageReference Include="System.Text.Json" Version="9.0.0" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="../../../imgs/*.*">
+        <None Include="../../../imgs/GeneralUpdate.ico">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
+        <None Include="../../../imgs/GeneralUpdate.png">
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>
             <PackagePath>./</PackagePath>

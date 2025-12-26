@@ -89,18 +89,23 @@
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="../../../imgs/*.*">
-      <Pack>True</Pack>
-      <Link>%(Filename)%(Extension)</Link>
-      <PackagePath>./</PackagePath>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Common\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0" />
     <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../../imgs/GeneralUpdate.ico">
+      <Pack>True</Pack>
+      <Link>%(Filename)%(Extension)</Link>
+      <PackagePath>./</PackagePath>
+    </None>
+    <None Include="../../../imgs/GeneralUpdate.png">
+      <Pack>True</Pack>
+      <Link>%(Filename)%(Extension)</Link>
+      <PackagePath>./</PackagePath>
+    </None>
   </ItemGroup>
 </Project>

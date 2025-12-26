@@ -91,13 +91,18 @@
         <PackageReference Include="System.Net.Requests" Version="4.3.0" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="../../../imgs/*.*">
+      <Folder Include="Common\" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="../../../imgs/GeneralUpdate.ico">
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>
             <PackagePath>./</PackagePath>
         </None>
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Common\" />
+        <None Include="../../../imgs/GeneralUpdate.png">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
     </ItemGroup>
 </Project>
