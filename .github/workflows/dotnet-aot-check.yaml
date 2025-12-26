@@ -1,38 +1,37 @@
-name: Check AOT Support
+name: dotnet-ci
 
 on: [push, pull_request]
 
 jobs:
-  check-aot:
-    runs-on: windows-latest  # 也可使用 ubuntu-latest 或 macos-latest
+  build:
+    runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
-
+    - uses: actions/checkout@v3
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v4  # 升级到最新版setup-dotnet，确保兼容性
       with:
-        dotnet-version: '9.0.x'  # 需使用支持AOT的.NET版本（.NET 7+）
-
+        dotnet-version: '9.0.x'
     - name: Restore dependencies
-      run: dotnet restore ./src/c#/GeneralUpdate.sln
+      run: dotnet restore ./src/c#/GeneralUpdate.sln  # 确保所有项目依赖还原
 
-    - name: Check AOT compatibility
+    - name: Build
+      run: dotnet build ./src/c#/GeneralUpdate.sln -c Release --no-restore
+
+    - name: Check AOT support (Client app)
       run: |
-        # 尝试以AOT模式发布项目（以控制台应用为例）
         dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj `
           -c Release `
-          -r win-x64 `  # 根据运行系统选择运行时标识符（如 linux-x64、osx-x64）
-          -p:PublishAot=true `
+          -r win-x64 `
+          /p:PublishAot=true `  # 使用/p:替代-p:，兼容PowerShell参数解析
           --self-contained true
-      continue-on-error: true  # 允许命令失败，后续通过日志判断结果
+      continue-on-error: true  # 允许失败，后续判断结果
 
-    - name: Analyze result
+    - name: Analyze AOT result
       run: |
-        # 检查上一步骤的退出码，0表示AOT编译成功，非0表示不支持
         if ($LASTEXITCODE -eq 0) {
-          Write-Host "✅ 项目支持AOT编译"
+          Write-Host "✅ GeneralUpdate.Client 支持AOT编译"
         } else {
-          Write-Host "❌ 项目不支持AOT编译，请检查错误日志"
-          exit 1  # 若需要严格检测，可在此处让Workflow失败
+          Write-Host "❌ GeneralUpdate.Client 不支持AOT编译，请检查错误日志"
+          exit 1  # 可选：让Workflow失败以提示问题
         }
