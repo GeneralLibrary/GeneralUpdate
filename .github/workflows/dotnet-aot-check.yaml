@@ -20,10 +20,10 @@ jobs:
     - name: Check AOT compatibility
       run: |
         # 尝试以AOT模式发布项目（以控制台应用为例）
-        dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
-          -c Release \
-          -r win-x64 \  # 根据运行系统选择运行时标识符（如 linux-x64、osx-x64）
-          -p:PublishAot=true \
+        dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj `
+          -c Release `
+          -r win-x64 `  # 根据运行系统选择运行时标识符（如 linux-x64、osx-x64）
+          -p:PublishAot=true `
           --self-contained true
       continue-on-error: true  # 允许命令失败，后续通过日志判断结果
 
