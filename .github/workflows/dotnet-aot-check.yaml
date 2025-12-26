@@ -1,6 +1,8 @@
 name: dotnet-aot-check
 
-on: [pull_request, push]
+on:
+  pull_request:
+  push:
 
 jobs:
   aot-compile-check:
@@ -11,19 +13,19 @@ jobs:
         runtime: [win-x64, linux-x64]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup .NET SDK（多版本）
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          # 关键：数组项必须比 dotnet-version: 多缩进 2 个空格（仅用空格，禁止Tab）
           dotnet-version:
-            - '8.0.x'
+            - '8.0.x'  # 这一行是第27行（对应你的报错行），重点检查缩进！
 
       - name: Restore dependencies
         run: dotnet restore ./src/c#/GeneralUpdate.sln
 
-      - name: Check AOT compilation（指定 net8.0 框架）
+      - name: Check AOT compilation
         shell: ${{ matrix.os == 'windows-latest' ? 'pwsh' : 'bash' }}
         run: |
           dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
@@ -41,8 +43,8 @@ jobs:
         run: |
           $publishDir = "./src/c#/GeneralUpdate.Client/bin/Release/net8.0/${{ matrix.runtime }}/publish"
           if ($env:RUNNER_OS -eq "Windows" -and -not (Test-Path "$publishDir/GeneralUpdate.Client.exe")) {
-            throw "AOT compiled executable not found for Windows: $publishDir/GeneralUpdate.Client.exe"
+            throw "AOT executable not found for Windows: $publishDir/GeneralUpdate.Client.exe"
           }
           if ($env:RUNNER_OS -eq "Linux" -and -not (Test-Path "$publishDir/GeneralUpdate.Client")) {
-            throw "AOT compiled executable not found for Linux: $publishDir/GeneralUpdate.Client"
+            throw "AOT executable not found for Linux: $publishDir/GeneralUpdate.Client"
           }
