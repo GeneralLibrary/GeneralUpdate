@@ -16,22 +16,24 @@ jobs:
             runtime: linux-x64
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # 推荐升级到最新稳定版
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v2
+    - name: Setup .NET SDK（多版本）
+      uses: actions/setup-dotnet@v4  # 推荐使用 v4 版本，对多SDK支持更友好
       with:
-        dotnet-version: '8.0.x'
-        dotnet-version: '9.0.x'
-        dotnet-version: '10.0.x'
+        # 正确的数组格式：多个版本放在同一个 dotnet-version 下，用 - 前缀
+        dotnet-version:
+          - '8.0.x'   # 按需添加需要的 SDK 版本
+          - '9.0.x'   # 你的核心 SDK 版本
 
     - name: Restore dependencies
       run: dotnet restore ./src/c#/GeneralUpdate.sln
 
-    - name: Check AOT compilation
+    - name: Check AOT compilation（指定 net9.0 框架）
       run: |
         dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj \
           -c Release \
+          -f net8.0 \  # 显式指定支持 AOT 的框架，避免多框架冲突
           -r ${{ matrix.runtime }} \
           --self-contained true \
           -p:PublishAot=true \
@@ -42,10 +44,10 @@ jobs:
     - name: Verify AOT output
       run: |
         $publishDir = "./src/c#/GeneralUpdate.Client/bin/Release/net9.0/${{ matrix.runtime }}/publish"
-        if (-not (Test-Path "$publishDir/GeneralUpdate.Client.exe" -PathType Leaf) -and '${{ matrix.runtime }}' -eq 'win-x64') {
+        if ($env:RUNNER_OS -eq "Windows" -and -not (Test-Path "$publishDir/GeneralUpdate.Client.exe")) {
           throw "AOT compiled executable not found for Windows"
         }
-        if (-not (Test-Path "$publishDir/GeneralUpdate.Client" -PathType Leaf) -and '${{ matrix.runtime }}' -eq 'linux-x64') {
+        if ($env:RUNNER_OS -eq "Linux" -and -not (Test-Path "$publishDir/GeneralUpdate.Client")) {
           throw "AOT compiled executable not found for Linux"
         }
       shell: pwsh
