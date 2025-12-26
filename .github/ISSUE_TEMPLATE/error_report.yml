@@ -1,0 +1,75 @@
+# Template name (displayed in the Issue template selection list)
+name: 🚨 Error / Exception Report
+# Template description
+description: Submit errors/exceptions encountered during software operation to facilitate troubleshooting and fixing
+# Default Issue title (users can modify)
+title: "[ERROR] Briefly describe the error encountered"
+# Auto-applied labels for the Issue
+labels: ["error", "needs triage"]
+# Template form body (all specified fields are string type)
+body:
+  # 1. Component Version (Required string)
+  - type: input
+    id: component-version
+    attributes:
+      label: Component Version
+      description: Please enter the full version number of the component where the error occurred (e.g., v1.2.3, 1.5.0-beta)
+      placeholder: e.g., v2.4.0 or 1.8.2
+    validations:
+      required: true
+
+  # 2. Operating System Version (Required string)
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating System Version
+      description: Please enter the full OS version information (including bit version/distribution)
+      placeholder: e.g., Windows 11 23H2, Ubuntu 22.04 LTS, macOS 14.1 (Sonoma)
+    validations:
+      required: true
+
+  # 3. CPU Instruction Set Architecture (Required string)
+  - type: input
+    id: cpu-arch
+    attributes:
+      label: CPU Instruction Set Architecture
+      description: Please enter the CPU's instruction set architecture (e.g., x86_64, arm64)
+      placeholder: e.g., x86_64 (AMD64), arm64 (AArch64), riscv64
+    validations:
+      required: true
+
+  # 4. Error Description (Required)
+  - type: textarea
+    id: error-description
+    attributes:
+      label: Error Description
+      description: Please detail the error phenomenon, trigger conditions, and differences between expected and actual behavior
+      placeholder: |
+        1. Error Phenomenon: The program crashed after running the "XX" command, prompting "XXX" error
+        2. Trigger Steps:
+           - Execute the "XX" operation
+           - Click the "XX" button
+        3. Expected Result: The program runs normally and outputs "XX"
+        4. Actual Result: The program throws an "XX" exception and exits
+    validations:
+      required: true
+
+  # 5. Hardware Driver Update (Optional string)
+  - type: input
+    id: driver-update
+    attributes:
+      label: Hardware Driver Update
+      description: Whether you updated hardware drivers (GPU/network card/sound card, etc.) before the error occurred; enter "N/A" if none
+      placeholder: e.g., Yes (NVIDIA GPU driver upgraded from 550.xx to 555.xx), No, N/A
+    validations:
+      required: false
+
+  # 6. Error Sample Code Repository URL (Optional string)
+  - type: input
+    id: code-repo-url
+    attributes:
+      label: Error Sample Code Repository URL
+      description: If there is a code repository that can reproduce the error, enter the full URL; enter "N/A" if none
+      placeholder: e.g., https://github.com/your-username/error-sample-repo.git
+    validations:
+      required: false
