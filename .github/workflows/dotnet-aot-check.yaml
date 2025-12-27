@@ -9,23 +9,24 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4  # 升级到最新版setup-dotnet，确保兼容性
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
     - name: Restore dependencies
-      run: dotnet restore ./src/c#/GeneralUpdate.sln  # 确保所有项目依赖还原
+      run: dotnet restore ./src/c#/GeneralUpdate.sln
 
-    - name: Check AOT support (Client app)
+    # 合并检查AOT和分析结果的步骤，确保共享同一个执行环境
+    - name: Check AOT support (Client app) and analyze result
       run: |
+        # 执行AOT发布并捕获退出码
         dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj `
           -c Release `
           -r win-x64
-
-    - name: Analyze AOT result
-      run: |
+        
+        # 立即检查当前环境的退出码（同一个step内有效）
         if ($LASTEXITCODE -eq 0) {
           Write-Host "✅ GeneralUpdate.Client 支持AOT编译"
         } else {
           Write-Host "❌ GeneralUpdate.Client 不支持AOT编译，请检查错误日志"
-          exit 1  # 可选：让Workflow失败以提示问题
+          exit 1  # 让step失败，触发Workflow失败
         }
