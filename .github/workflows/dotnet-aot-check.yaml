@@ -19,9 +19,7 @@ jobs:
       run: |
         dotnet publish ./src/c#/GeneralUpdate.Client/GeneralUpdate.Client.csproj `
           -c Release `
-          -r win-x64 `
-          /p:PublishAot=true `  # 使用/p:替代-p:，兼容PowerShell参数解析
-      continue-on-error: true  # 允许失败，后续判断结果
+          -r win-x64
 
     - name: Analyze AOT result
       run: |
