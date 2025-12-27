@@ -6,10 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />
   </ItemGroup>
-
 </Project>
