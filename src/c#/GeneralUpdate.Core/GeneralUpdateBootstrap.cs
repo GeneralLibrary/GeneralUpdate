@@ -78,6 +78,7 @@ namespace GeneralUpdate.Core
                 UpdateUrl = configInfo.UpdateUrl,
                 Scheme = configInfo.Scheme,
                 Token = configInfo.Token,
+                ProductId = configInfo.ProductId,
                 DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
                 PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
                 Script = configInfo.Script
