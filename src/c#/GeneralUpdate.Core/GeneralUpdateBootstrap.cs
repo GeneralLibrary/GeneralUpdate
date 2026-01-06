@@ -260,7 +260,7 @@ namespace GeneralUpdate.Core
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
-            return -1;
+            throw new PlatformNotSupportedException("The current operating system is not supported!");
         }
 
         #endregion
