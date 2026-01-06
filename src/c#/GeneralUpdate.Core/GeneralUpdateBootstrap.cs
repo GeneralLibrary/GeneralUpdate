@@ -232,10 +232,8 @@ namespace GeneralUpdate.Core
         {
             _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
             _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
-            _configInfo.DownloadTimeOut =
-                GetOption(UpdateOption.DownloadTimeOut) == 0
-                    ? 60
-                    : GetOption(UpdateOption.DownloadTimeOut);
+            var downloadTimeoutOption = GetOption(UpdateOption.DownloadTimeOut);
+            _configInfo.DownloadTimeOut = downloadTimeoutOption ?? 60;
             _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
             _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
         }
