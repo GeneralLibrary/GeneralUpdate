@@ -83,6 +83,21 @@ namespace GeneralUpdate.Core
                 Script = configInfo.Script
             };
 
+            // Copy blacklist-related configuration if explicitly provided.
+            if (configInfo.BlackFiles != null)
+            {
+                _configInfo.BlackFiles = configInfo.BlackFiles;
+            }
+
+            if (configInfo.BlackFormats != null)
+            {
+                _configInfo.BlackFormats = configInfo.BlackFormats;
+            }
+
+            if (configInfo.SkipDirectorys != null)
+            {
+                _configInfo.SkipDirectorys = configInfo.SkipDirectorys;
+            }
             InitBlackList();
             return this;
         }
