@@ -68,6 +68,7 @@
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\Format.cs" Link="Common\Format.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\PlatformType.cs" Link="Common\PlatformType.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\ReportType.cs" Link="Common\ReportType.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\UpdateMode.cs" Link="Common\UpdateMode.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfo.cs" Link="Common\GlobalConfigInfo.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfoOSS.cs" Link="Common\GlobalConfigInfoOSS.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\ObjectTranslator.cs" Link="Common\ObjectTranslator.cs" />

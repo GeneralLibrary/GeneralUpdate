@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Text;
 using System.Threading;
+using GeneralUpdate.Common.Shared.Object.Enum;
 
 namespace GeneralUpdate.Common.Internal.Bootstrap
 {
@@ -46,6 +47,11 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// Whether to enable the backup function.
         /// </summary>
         public static readonly UpdateOption<bool?> BackUp = ValueOf<bool?>("BACKUP");
+        
+        /// <summary>
+        /// Whether to enable the backup function.
+        /// </summary>
+        public static readonly UpdateOption<UpdateMode?> Mode = ValueOf<UpdateMode?>("MODE");
         
         internal UpdateOption(int id, string name)
           : base(id, name) { }
