@@ -18,8 +18,8 @@
         <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
-      <PackageReference Include="System.Text.Json" Version="9.0.0" />
+      <PackageReference Include="System.Collections.Immutable" Version="10.0.1" />
+      <PackageReference Include="System.Text.Json" Version="10.0.1" />
     </ItemGroup>
     <ItemGroup>
         <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
@@ -65,6 +65,7 @@
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\Format.cs" Link="Common\Format.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\PlatformType.cs" Link="Common\PlatformType.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\ReportType.cs" Link="Common\ReportType.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\UpdateMode.cs" Link="Common\UpdateMode.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfo.cs" Link="Common\GlobalConfigInfo.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfoOSS.cs" Link="Common\GlobalConfigInfoOSS.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\ObjectTranslator.cs" Link="Common\ObjectTranslator.cs" />

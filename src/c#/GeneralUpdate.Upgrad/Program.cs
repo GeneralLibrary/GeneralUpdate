@@ -4,6 +4,7 @@ using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal;
 using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Common.Shared.Object.Enum;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Driver;
 
@@ -18,6 +19,25 @@ namespace GeneralUpdate.Upgrad
                 Console.WriteLine($"升级程序初始化，{DateTime.Now}！");
                 Console.WriteLine("当前运行目录：" + Thread.GetDomain().BaseDirectory);
                 await Task.Delay(2000);
+                var configinfo = new Configinfo
+                {
+                    //configinfo.UpdateLogUrl = "https://www.baidu.com";
+                    ReportUrl = "http://127.0.0.1:5000/Upgrade/Report",
+                    UpdateUrl = "http://127.0.0.1:5000/Upgrade/Verification",
+                    AppName = "GeneralUpdate.Upgrad.exe",
+                    MainAppName = "GeneralUpdate.Client.exe",
+                    InstallPath = Thread.GetDomain().BaseDirectory,
+                    //configinfo.Bowl = "Generalupdate.CatBowl.exe";
+                    //当前客户端的版本号
+                    ClientVersion = "1.0.0.0",
+                    //当前升级端的版本号
+                    UpgradeClientVersion = "1.0.0.0",
+                    //产品id
+                    ProductId = "2d974e2a-31e6-4887-9bb1-b4689e98c77a",
+                    //应用密钥
+                    AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6",
+                    Script = "linux/script.shell"
+                };
                 _ = await new GeneralUpdateBootstrap()
                     //单个或多个更新包下载速度、剩余下载事件、当前下载版本信息通知事件
                     .AddListenerMultiDownloadStatistics(OnMultiDownloadStatistics)
@@ -29,11 +49,15 @@ namespace GeneralUpdate.Upgrad
                     .AddListenerMultiDownloadError(OnMultiDownloadError)
                     //整个更新过程出现的任何问题都会通过这个事件通知
                     .AddListenerException(OnException)
+                    .SetConfig(configinfo)
                     //设置字段映射表，用于解析所有驱动包的信息的字符串
                     //.SetFieldMappings(fieldMappingsCN)
                     //是否开启驱动更新
                     //.Option(UpdateOption.Drive, true)
                     //.Option(UpdateOption.Patch, false)
+                    .Option(UpdateOption.DownloadTimeOut, 60)
+                    .Option(UpdateOption.Encoding, Encoding.UTF8)
+                    .Option(UpdateOption.Mode, UpdateMode.Scripts)
                     .LaunchAsync();
                 Console.WriteLine($"升级程序已启动，{DateTime.Now}！");
             }
