@@ -78,11 +78,27 @@ namespace GeneralUpdate.Core
                 UpdateUrl = configInfo.UpdateUrl,
                 Scheme = configInfo.Scheme,
                 Token = configInfo.Token,
+                ProductId = configInfo.ProductId,
                 DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
                 PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
                 Script = configInfo.Script
             };
 
+            // Copy blacklist-related configuration if explicitly provided.
+            if (configInfo.BlackFiles != null)
+            {
+                _configInfo.BlackFiles = configInfo.BlackFiles;
+            }
+
+            if (configInfo.BlackFormats != null)
+            {
+                _configInfo.BlackFormats = configInfo.BlackFormats;
+            }
+
+            if (configInfo.SkipDirectorys != null)
+            {
+                _configInfo.SkipDirectorys = configInfo.SkipDirectorys;
+            }
             InitBlackList();
             return this;
         }
@@ -93,9 +109,8 @@ namespace GeneralUpdate.Core
             return this;
         }
 
-        public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool> func)
+        public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool>? func)
         {
-            Debug.Assert(func != null);
             _customSkipOption = func;
             return this;
         }
@@ -246,8 +261,20 @@ namespace GeneralUpdate.Core
         }
 
         private bool CanSkip(bool isForcibly)
-            => !isForcibly && _customSkipOption?.Invoke() == true;
+        {
+            if (isForcibly)
+            {
+                return false;
+            }
 
+            // Treat a null custom skip option as "do not skip".
+            if (_customSkipOption is null)
+            {
+                return false;
+            }
+
+            return _customSkipOption();
+        }
         private static bool CheckUpgrade(VersionRespDTO? response)
             => response?.Code == 200 && response.Body?.Count > 0;
 
