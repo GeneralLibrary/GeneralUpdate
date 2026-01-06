@@ -110,7 +110,7 @@ public class LinuxStrategy : AbstractStrategy
         catch (Exception e)
         {
             GeneralTracer.Error(
-                "The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
+                "The StartApp method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally
