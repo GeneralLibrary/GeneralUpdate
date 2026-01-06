@@ -108,9 +108,8 @@ namespace GeneralUpdate.Core
             return this;
         }
 
-        public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool> func)
+        public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool>? func)
         {
-            Debug.Assert(func != null);
             _customSkipOption = func;
             return this;
         }
