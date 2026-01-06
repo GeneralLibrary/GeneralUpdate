@@ -12,4 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.1" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="10.0.1" />
+  </ItemGroup>
 </Project>

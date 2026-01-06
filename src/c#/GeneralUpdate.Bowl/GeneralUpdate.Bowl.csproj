@@ -18,8 +18,8 @@
         <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
-      <PackageReference Include="System.Text.Json" Version="9.0.0" />
+      <PackageReference Include="System.Collections.Immutable" Version="10.0.1" />
+      <PackageReference Include="System.Text.Json" Version="10.0.1" />
     </ItemGroup>
     <ItemGroup>
         <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
