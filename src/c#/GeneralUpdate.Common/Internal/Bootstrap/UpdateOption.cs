@@ -49,7 +49,7 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         public static readonly UpdateOption<bool?> BackUp = ValueOf<bool?>("BACKUP");
         
         /// <summary>
-        /// Whether to enable the backup function.
+        /// Specifies the update execution mode.
         /// </summary>
         public static readonly UpdateOption<UpdateMode?> Mode = ValueOf<UpdateMode?>("MODE");
         
