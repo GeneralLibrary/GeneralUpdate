@@ -246,8 +246,20 @@ namespace GeneralUpdate.Core
         }
 
         private bool CanSkip(bool isForcibly)
-            => !isForcibly && _customSkipOption?.Invoke() == true;
+        {
+            if (isForcibly)
+            {
+                return false;
+            }
 
+            // Treat a null custom skip option as "do not skip".
+            if (_customSkipOption is null)
+            {
+                return false;
+            }
+
+            return _customSkipOption();
+        }
         private static bool CheckUpgrade(VersionRespDTO? response)
             => response?.Code == 200 && response.Body?.Count > 0;
 
