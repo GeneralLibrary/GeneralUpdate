@@ -282,6 +282,7 @@ namespace GeneralUpdate.Core
         private GeneralUpdateBootstrap AddListener<TArgs>(Action<object, TArgs> action)
             where TArgs : EventArgs
         {
+            if (action is null) throw new ArgumentNullException(nameof(action));
             EventManager.Instance.AddListener(action);
             return this;
         }
