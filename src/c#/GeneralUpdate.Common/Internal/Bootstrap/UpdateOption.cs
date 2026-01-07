@@ -31,7 +31,7 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// <summary>
         /// Timeout period (unit: second). If this parameter is not specified, the default timeout period is 30 seconds.
         /// </summary>
-        public static readonly UpdateOption<int> DownloadTimeOut = ValueOf<int>("DOWNLOADTIMEOUT");
+        public static readonly UpdateOption<int?> DownloadTimeOut = ValueOf<int?>("DOWNLOADTIMEOUT");
 
         /// <summary>
         /// Whether to enable the driver upgrade function.
