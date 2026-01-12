@@ -229,13 +229,31 @@ namespace GeneralUpdate.Differential.Binary
                 _newfilePath = newfilePath;
                 _patchPath = patchPath;
                 ValidationParameters();
-                using (FileStream input =
-                       new FileStream(_oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                
+                // Apply the patch to create the new file
+                ApplyPatch();
+                
+                // Force finalization to ensure file handles are released
+                // This addresses the root cause: file handles may not be immediately released
+                // after disposal, especially in multi-threaded environments or during abnormal shutdowns
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                
+                // Replace the old file with the patched new file
+                ReplaceOldFileWithNew();
+            });
+        }
+
+        private void ApplyPatch()
+        {
+            using (FileStream input =
+                   new FileStream(_oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                using (FileStream output = new FileStream(_newfilePath, FileMode.Create))
                 {
-                    using (FileStream output = new FileStream(_newfilePath, FileMode.Create))
-                    {
-                        Func<Stream> openPatchStream = () =>
-                            new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    Func<Stream> openPatchStream = () =>
+                        new FileStream(_patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                         //File format:
                         //	0   8   "BSDIFF40"
                         //	8   8   X
@@ -360,36 +378,55 @@ namespace GeneralUpdate.Differential.Binary
                                 }
                             }
                         }
-                    }
+                    // Explicitly flush and close the output stream
+                    output.Flush();
                 }
+                // Both streams are now disposed and closed
+            }
+        }
 
-                // Remove old file if it exists
-                if (File.Exists(_oldfilePath))
+        private void ReplaceOldFileWithNew()
+        {
+            // At this point, all file handles should be released due to explicit disposal
+            // and forced garbage collection. However, the OS may still hold handles briefly,
+            // especially in multi-threaded scenarios or abnormal shutdowns.
+            
+            // Use retry logic with exponential backoff to handle transient file locks
+            int maxRetries = 3;
+            int retryDelayMs = 50;
+            
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            {
+                try
                 {
-                    File.SetAttributes(_oldfilePath, FileAttributes.Normal);
-                    File.Delete(_oldfilePath);
-                }
-                
-                // Try to move the new file to the old file location
-                // If move fails due to file occupation (race condition), fall back to copy
-                if (File.Exists(_newfilePath))
-                {
-                    File.SetAttributes(_newfilePath, FileAttributes.Normal);
-                    try
+                    if (File.Exists(_oldfilePath))
                     {
-                        // Try File.Move first as it's more efficient
-                        File.Move(_newfilePath, _oldfilePath);
+                        File.SetAttributes(_oldfilePath, FileAttributes.Normal);
+                        File.Delete(_oldfilePath);
                     }
-                    catch (IOException)
+                    
+                    if (File.Exists(_newfilePath))
                     {
-                        // If move fails due to file occupation or other IO issues,
-                        // fall back to copy which is more resilient
+                        File.SetAttributes(_newfilePath, FileAttributes.Normal);
                         File.Copy(_newfilePath, _oldfilePath, true);
-                        // Delete the source file to maintain consistency with File.Move behavior
-                        File.Delete(_newfilePath);
                     }
+                    
+                    // Success - exit the retry loop
+                    return;
                 }
-            });
+                catch (IOException ex) when (attempt < maxRetries)
+                {
+                    // File is still locked - wait and retry
+                    // Use exponential backoff: 50ms, 100ms, 200ms
+                    System.Threading.Thread.Sleep(retryDelayMs);
+                    retryDelayMs *= 2;
+                    
+                    // Force another garbage collection to release any remaining handles
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                }
+                // On the last attempt, let the exception bubble up
+            }
         }
 
         #endregion Public Methods
