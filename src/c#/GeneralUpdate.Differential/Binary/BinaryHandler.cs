@@ -223,26 +223,25 @@ namespace GeneralUpdate.Differential.Binary
         /// <exception cref="InvalidOperationException"></exception>
         public async Task Dirty(string oldfilePath, string newfilePath, string patchPath)
         {
-            await Task.Run(async () =>
-            {
-                _oldfilePath = oldfilePath;
-                _newfilePath = newfilePath;
-                _patchPath = patchPath;
-                ValidationParameters();
-                
-                // Apply the patch to create the new file
-                ApplyPatch();
-                
-                // Force finalization to ensure file handles are released
-                // This addresses the root cause: file handles may not be immediately released
-                // after disposal, especially in multi-threaded environments or during abnormal shutdowns
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                GC.Collect();
-                
-                // Replace the old file with the patched new file
-                await ReplaceOldFileWithNewAsync();
-            });
+            _oldfilePath = oldfilePath;
+            _newfilePath = newfilePath;
+            _patchPath = patchPath;
+            ValidationParameters();
+            
+            // Apply the patch to create the new file (CPU-intensive work on thread pool)
+            await Task.Run(() => ApplyPatch());
+            
+            // Force finalization to ensure file handles are released
+            // This addresses the root cause: file handles may not be immediately released
+            // after disposal, especially in multi-threaded environments or during abnormal shutdowns
+            // Note: While explicit GC calls should generally be avoided, this is necessary here
+            // to ensure OS-level file handles are released before attempting file operations
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            
+            // Replace the old file with the patched new file
+            await ReplaceOldFileWithNewAsync();
         }
 
         private void ApplyPatch()
@@ -422,12 +421,9 @@ namespace GeneralUpdate.Differential.Binary
                     // Use exponential backoff: 50ms, 100ms, 200ms
                     await Task.Delay(retryDelayMs);
                     retryDelayMs *= 2;
-                    
-                    // Force another garbage collection to release any remaining handles
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
                 }
-                // On the last attempt, let the exception bubble up
+                // On the final attempt (when attempt == maxRetries), IOException will not be caught
+                // and will bubble up to the caller
             }
         }
 
