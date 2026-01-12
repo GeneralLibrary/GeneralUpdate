@@ -29,17 +29,37 @@ public class DriverMiddleware : IMiddleware
             if (fieldMappings == null || fieldMappings.Count == 0)
                 return;
 
-            var information = new DriverInformation.Builder()
+            var disableUACScriptPath = context.Get<string>("DisableUACScriptPath");
+            var restoreUACScriptPath = context.Get<string>("RestoreUACScriptPath");
+
+            var builder = new DriverInformation.Builder()
                 .SetDriverFileExtension(FileExtension)
                 .SetOutPutDirectory(outPutPath)
                 .SetDriverDirectory(patchPath)
-                .SetFieldMappings(fieldMappings)
-                .Build();
+                .SetFieldMappings(fieldMappings);
+            
+            if (!string.IsNullOrWhiteSpace(disableUACScriptPath))
+                builder.SetDisableUACScriptPath(disableUACScriptPath);
+            
+            if (!string.IsNullOrWhiteSpace(restoreUACScriptPath))
+                builder.SetRestoreUACScriptPath(restoreUACScriptPath);
+            
+            var information = builder.Build();
 
             var processor = new DriverProcessor();
+            
+            // Disable UAC before driver operations if script path is provided
+            if (!string.IsNullOrWhiteSpace(information.DisableUACScriptPath))
+                processor.AddCommand(new DisableUACCommand(information.DisableUACScriptPath));
+            
             processor.AddCommand(new BackupDriverCommand(information));
             processor.AddCommand(new DeleteDriverCommand(information));
             processor.AddCommand(new InstallDriverCommand(information));
+            
+            // Restore UAC after driver operations if script path is provided
+            if (!string.IsNullOrWhiteSpace(information.RestoreUACScriptPath))
+                processor.AddCommand(new RestoreUACCommand(information.RestoreUACScriptPath));
+            
             processor.ProcessCommands();
         });
     }

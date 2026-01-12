@@ -18,6 +18,16 @@ namespace GeneralUpdate.Core.Driver
         public string OutPutDirectory { get; private set; }
         
         public string DriverDirectory { get; private set; }
+        
+        /// <summary>
+        /// Path to the script that disables UAC.
+        /// </summary>
+        public string DisableUACScriptPath { get; private set; }
+        
+        /// <summary>
+        /// Path to the script that restores UAC.
+        /// </summary>
+        public string RestoreUACScriptPath { get; private set; }
 
         /// <summary>
         /// A collection of driver files to be backed up.
@@ -52,6 +62,18 @@ namespace GeneralUpdate.Core.Driver
             public Builder SetFieldMappings(Dictionary<string, string> fieldMappings)
             {
                 _information.FieldMappings = fieldMappings;
+                return this;
+            }
+            
+            public Builder SetDisableUACScriptPath(string scriptPath)
+            {
+                _information.DisableUACScriptPath = scriptPath;
+                return this;
+            }
+            
+            public Builder SetRestoreUACScriptPath(string scriptPath)
+            {
+                _information.RestoreUACScriptPath = scriptPath;
                 return this;
             }
 
