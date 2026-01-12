@@ -149,5 +149,47 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         [JsonPropertyName("Script")]
         public string Script { get; set; }
+
+        /// <summary>
+        /// Creates a ProcessInfo instance from GlobalConfigInfo and version information.
+        /// This factory method centralizes parameter extraction to avoid manual parameter passing errors.
+        /// </summary>
+        /// <param name="configInfo">Global configuration information</param>
+        /// <param name="updateVersions">List of version information for updates</param>
+        /// <param name="blackFileFormats">List of blacklisted file formats</param>
+        /// <param name="blackFiles">List of blacklisted files</param>
+        /// <param name="skipDirectories">List of directories to skip</param>
+        /// <returns>A new ProcessInfo instance</returns>
+        public static ProcessInfo CreateFromConfig(
+            GlobalConfigInfo configInfo,
+            List<VersionInfo> updateVersions,
+            List<string> blackFileFormats,
+            List<string> blackFiles,
+            List<string> skipDirectories)
+        {
+            if (configInfo == null)
+                throw new ArgumentNullException(nameof(configInfo));
+
+            return new ProcessInfo(
+                configInfo.MainAppName,
+                configInfo.InstallPath,
+                configInfo.ClientVersion,
+                configInfo.LastVersion,
+                configInfo.UpdateLogUrl,
+                configInfo.Encoding,
+                configInfo.Format,
+                configInfo.DownloadTimeOut,
+                configInfo.AppSecretKey,
+                updateVersions,
+                configInfo.ReportUrl,
+                configInfo.BackupDirectory,
+                configInfo.Bowl,
+                configInfo.Scheme,
+                configInfo.Token,
+                configInfo.Script,
+                blackFileFormats,
+                blackFiles,
+                skipDirectories);
+        }
     }
 }
