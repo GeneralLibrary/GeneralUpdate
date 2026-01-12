@@ -1,0 +1,20 @@
+# 定义Issues表单的通用字段（包含type选项）
+fields:
+  - name: 类型 (Type)
+    description: 请选择Issues的类型
+    type: dropdown
+    attributes:
+      options:
+        - Bug（程序错误）
+        - Feature（新功能）
+        - Improvement（优化）
+        - Question（疑问）
+        - Documentation（文档）
+        - Bug（程序错误）
+        - Feature（新功能）
+        - Improvement（优化）
+        - Question（疑问）
+        - Documentation（文档）
+        - Maintenance（维护）
+    validations:
+      required: true  # 强制必须选择类型
