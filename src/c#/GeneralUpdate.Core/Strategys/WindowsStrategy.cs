@@ -68,7 +68,7 @@ namespace GeneralUpdate.Core.Strategys
                     {
                         status = ReportType.Failure;
                         GeneralTracer.Error(
-                            "The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.",
+                            "The ExecuteAsync method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.",
                             e);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                     }
@@ -95,7 +95,7 @@ namespace GeneralUpdate.Core.Strategys
             catch (Exception e)
             {
                 GeneralTracer.Error(
-                    "The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
+                    "The ExecuteAsync method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
             }
         }
@@ -128,11 +128,6 @@ namespace GeneralUpdate.Core.Strategys
             }
         }
 
-        private string CheckPath(string path,string name)
-        {
-            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name)) return string.Empty;
-            var tempPath = Path.Combine(path, name);
-            return File.Exists(tempPath) ? tempPath : string.Empty;
-        }
+
     }
 }

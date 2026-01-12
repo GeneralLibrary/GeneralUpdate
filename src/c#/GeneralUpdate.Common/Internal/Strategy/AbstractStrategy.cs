@@ -42,5 +42,12 @@ namespace GeneralUpdate.Common.Internal.Strategy
             if (Directory.Exists(path))
                 StorageManager.DeleteDirectory(path);
         }
+
+        protected static string CheckPath(string path, string name)
+        {
+            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name)) return string.Empty;
+            var tempPath = Path.Combine(path, name);
+            return File.Exists(tempPath) ? tempPath : string.Empty;
+        }
     }
 }

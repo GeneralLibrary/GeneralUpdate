@@ -21,82 +21,79 @@ public class LinuxStrategy : AbstractStrategy
 
     public override void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
 
-    public override void Execute()
+    public override async Task ExecuteAsync()
     {
-        Task.Run(async () =>
+        try
         {
-            try
+            var status = ReportType.None;
+            var patchPath = StorageManager.GetTempDirectory(Patchs);
+            foreach (var version in _configinfo.UpdateVersions)
             {
-                var status = ReportType.None;
-                var patchPath = StorageManager.GetTempDirectory(Patchs);
-                foreach (var version in _configinfo.UpdateVersions)
+                try
                 {
-                    try
+                    var context = new PipelineContext();
+                    //Common
+                    context.Add("ZipFilePath",
+                        Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format}"));
+                    //Hash middleware
+                    context.Add("Hash", version.Hash);
+                    //Zip middleware
+                    context.Add("Format", _configinfo.Format);
+                    context.Add("Name", version.Name);
+                    context.Add("Encoding", _configinfo.Encoding);
+                    //Patch middleware
+                    context.Add("SourcePath", _configinfo.InstallPath);
+                    context.Add("PatchPath", patchPath);
+                    context.Add("PatchEnabled", _configinfo.PatchEnabled);
+                    //Driver middleware
+                    if (_configinfo.DriveEnabled == true)
                     {
-                        var context = new PipelineContext();
-                        //Common
-                        context.Add("ZipFilePath",
-                            Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format}"));
-                        //Hash middleware
-                        context.Add("Hash", version.Hash);
-                        //Zip middleware
-                        context.Add("Format", _configinfo.Format);
-                        context.Add("Name", version.Name);
-                        context.Add("Encoding", _configinfo.Encoding);
-                        //Patch middleware
-                        context.Add("SourcePath", _configinfo.InstallPath);
-                        context.Add("PatchPath", patchPath);
-                        context.Add("PatchEnabled", _configinfo.PatchEnabled);
-                        //Driver middleware
-                        if (_configinfo.DriveEnabled == true)
-                        {
-                            context.Add("DriverOutPut", StorageManager.GetTempDirectory("DriverOutPut"));
-                            context.Add("FieldMappings", _configinfo.FieldMappings);
-                        }
+                        context.Add("DriverOutPut", StorageManager.GetTempDirectory("DriverOutPut"));
+                        context.Add("FieldMappings", _configinfo.FieldMappings);
+                    }
 
-                        var pipelineBuilder = new PipelineBuilder(context)
-                            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
-                            .UseMiddleware<CompressMiddleware>()
-                            .UseMiddleware<HashMiddleware>()
-                            .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
-                        await pipelineBuilder.Build();
-                        status = ReportType.Success;
-                    }
-                    catch (Exception e)
-                    {
-                        status = ReportType.Failure;
-                        GeneralTracer.Error(
-                            "The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.",
-                            e);
-                        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
-                    }
-                    finally
-                    {
-                        await VersionService.Report(_configinfo.ReportUrl
-                            , version.RecordId
-                            , status
-                            , version.AppType
-                            , _configinfo.Scheme
-                            , _configinfo.Token);
-                    }
+                    var pipelineBuilder = new PipelineBuilder(context)
+                        .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
+                        .UseMiddleware<CompressMiddleware>()
+                        .UseMiddleware<HashMiddleware>()
+                        .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
+                    await pipelineBuilder.Build();
+                    status = ReportType.Success;
                 }
-
-                if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
+                catch (Exception e)
                 {
-                    OpenBrowser(_configinfo.UpdateLogUrl);
+                    status = ReportType.Failure;
+                    GeneralTracer.Error(
+                        "The ExecuteAsync method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.",
+                        e);
+                    EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
                 }
-
-                Clear(patchPath);
-                Clear(_configinfo.TempPath);
-                StartApp();
+                finally
+                {
+                    await VersionService.Report(_configinfo.ReportUrl
+                        , version.RecordId
+                        , status
+                        , version.AppType
+                        , _configinfo.Scheme
+                        , _configinfo.Token);
+                }
             }
-            catch (Exception e)
+
+            if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
             {
-                GeneralTracer.Error(
-                    "The Execute method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                OpenBrowser(_configinfo.UpdateLogUrl);
             }
-        });
+
+            Clear(patchPath);
+            Clear(_configinfo.TempPath);
+            StartApp();
+        }
+        catch (Exception e)
+        {
+            GeneralTracer.Error(
+                "The ExecuteAsync method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+        }
     }
 
     public override void StartApp()
@@ -113,7 +110,7 @@ public class LinuxStrategy : AbstractStrategy
         catch (Exception e)
         {
             GeneralTracer.Error(
-                "The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
+                "The StartApp method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
         finally
@@ -121,13 +118,6 @@ public class LinuxStrategy : AbstractStrategy
             GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }
-    }
-
-    private string CheckPath(string path, string name)
-    {
-        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name)) return string.Empty;
-        var tempPath = Path.Combine(path, name);
-        return File.Exists(tempPath) ? tempPath : string.Empty;
     }
 
     /// <summary>
