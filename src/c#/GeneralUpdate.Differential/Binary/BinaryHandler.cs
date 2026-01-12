@@ -385,6 +385,8 @@ namespace GeneralUpdate.Differential.Binary
                         // If move fails due to file occupation or other IO issues,
                         // fall back to copy which is more resilient
                         File.Copy(_newfilePath, _oldfilePath, true);
+                        // Delete the source file to maintain consistency with File.Move behavior
+                        File.Delete(_newfilePath);
                     }
                 }
             });
