@@ -223,7 +223,7 @@ namespace GeneralUpdate.Differential.Binary
         /// <exception cref="InvalidOperationException"></exception>
         public async Task Dirty(string oldfilePath, string newfilePath, string patchPath)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 _oldfilePath = oldfilePath;
                 _newfilePath = newfilePath;
@@ -241,7 +241,7 @@ namespace GeneralUpdate.Differential.Binary
                 GC.Collect();
                 
                 // Replace the old file with the patched new file
-                ReplaceOldFileWithNew();
+                await ReplaceOldFileWithNewAsync();
             });
         }
 
@@ -385,7 +385,7 @@ namespace GeneralUpdate.Differential.Binary
             }
         }
 
-        private void ReplaceOldFileWithNew()
+        private async Task ReplaceOldFileWithNewAsync()
         {
             // At this point, all file handles should be released due to explicit disposal
             // and forced garbage collection. However, the OS may still hold handles briefly,
@@ -409,16 +409,18 @@ namespace GeneralUpdate.Differential.Binary
                     {
                         File.SetAttributes(_newfilePath, FileAttributes.Normal);
                         File.Copy(_newfilePath, _oldfilePath, true);
+                        // Delete the temporary file after successful copy
+                        File.Delete(_newfilePath);
                     }
                     
                     // Success - exit the retry loop
                     return;
                 }
-                catch (IOException ex) when (attempt < maxRetries)
+                catch (IOException) when (attempt < maxRetries)
                 {
                     // File is still locked - wait and retry
                     // Use exponential backoff: 50ms, 100ms, 200ms
-                    System.Threading.Thread.Sleep(retryDelayMs);
+                    await Task.Delay(retryDelayMs);
                     retryDelayMs *= 2;
                     
                     // Force another garbage collection to release any remaining handles
