@@ -30,13 +30,14 @@ namespace GeneralUpdate.Core.Driver
         /// <param name="scriptPath">Path to the script file to execute.</param>
         protected virtual void ExecuteScript(string scriptPath)
         {
+            if (!System.IO.File.Exists(scriptPath))
+                throw new ApplicationException($"Script file not found: {scriptPath}");
+            
             var processStartInfo = new ProcessStartInfo
             {
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = scriptPath,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                UseShellExecute = true,
                 Verb = "runas"
             };
 
@@ -47,17 +48,10 @@ namespace GeneralUpdate.Core.Driver
                 process.Start();
                 process.WaitForExit();
 
-                var output = process.StandardOutput.ReadToEnd();
-                GeneralTracer.Info($"Script execution output: {output}");
-
-                var error = process.StandardError.ReadToEnd();
-                if (!string.IsNullOrEmpty(error))
-                {
-                    GeneralTracer.Error($"Script execution error: {error}");
-                }
-
                 if (process.ExitCode != 0)
-                    throw new ApplicationException($"Script execution failed with exit code: {process.ExitCode}");
+                    throw new ApplicationException($"Script execution failed for '{scriptPath}' with exit code: {process.ExitCode}");
+                
+                GeneralTracer.Info($"Script executed successfully: {scriptPath}");
             }
             finally
             {
