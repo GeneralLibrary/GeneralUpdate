@@ -1,0 +1,91 @@
+# Template name (displayed in the Issue template selection list)
+name: 🔄 Code Refactoring Request
+# Template description
+description: Submit a code refactoring request to improve code quality, maintainability, and performance
+# Default Issue title (users can modify)
+title: "[REFACTOR] Briefly describe the refactoring content"
+# Auto-applied labels for the Issue
+labels: ["refactor", "needs review"]
+# Template form body (all specified fields are string type)
+body:
+  # 1. Target Module/File (Required string)
+  - type: input
+    id: target-module
+    attributes:
+      label: Target Module/File
+      description: Please enter the specific module, directory or file path to be refactored (multiple items can be separated by commas)
+      placeholder: e.g., src/utils/request.js, src/components/Table, src/services/userService.ts
+    validations:
+      required: true
+
+  # 2. Current Code Problems (Required)
+  - type: textarea
+    id: code-problems
+    attributes:
+      label: Current Code Problems
+      description: Detail the existing problems with the code (e.g., readability, performance, maintainability, redundancy, technical debt, etc.)
+      placeholder: |
+        1. Readability: The function is too long (over 200 lines) with unclear variable naming
+        2. Performance: Nested loops lead to O(n²) time complexity, resulting in slow data processing
+        3. Maintainability: Lack of comments and type definitions, difficult to debug and modify
+        4. Redundancy: Duplicate code blocks exist in 3 different files, increasing maintenance costs
+    validations:
+      required: true
+
+  # 3. Refactoring Objectives (Required)
+  - type: textarea
+    id: refactor-objectives
+    attributes:
+      label: Refactoring Objectives
+      description: Clearly state the expected outcomes and goals of the refactoring
+      placeholder: |
+        1. Split long functions into small, single-responsibility functions
+        2. Optimize algorithm to reduce time complexity to O(n log n)
+        3. Add complete type definitions and functional comments
+        4. Extract duplicate code into public utility functions
+        5. Improve test coverage from 60% to 90%
+    validations:
+      required: true
+
+  # 4. Refactoring Scope and Boundaries (Required)
+  - type: input
+    id: refactor-scope
+    attributes:
+      label: Refactoring Scope and Boundaries
+      description: Specify the scope of refactoring and clear boundaries (what to change/what not to change)
+      placeholder: e.g., Only refactor the data processing logic, do not modify the external API interface; Only adjust the code structure, do not change business logic
+    validations:
+      required: true
+
+  # 5. Risk Assessment (Optional)
+  - type: textarea
+    id: risk-assessment
+    attributes:
+      label: Risk Assessment
+      description: List potential risks of refactoring and corresponding mitigation measures (enter "N/A" if none)
+      placeholder: |
+        1. Risk: May affect the existing business logic → Mitigation: Add comprehensive unit tests before refactoring
+        2. Risk: Team members are unfamiliar with the new code structure → Mitigation: Conduct code walkthrough after refactoring
+        3. N/A
+    validations:
+      required: false
+
+  # 6. Reference Materials (Optional string)
+  - type: input
+    id: reference-materials
+    attributes:
+      label: Reference Materials
+      description: Enter URLs of relevant design documents, best practices or examples (enter "N/A" if none)
+      placeholder: e.g., https://github.com/company/style-guide/blob/main/js.md, https://refactoring.guru/extract-function
+    validations:
+      required: false
+
+  # 7. Expected Completion Time (Optional string)
+  - type: input
+    id: expected-time
+    attributes:
+      label: Expected Completion Time
+      description: Enter the expected time to complete the refactoring (enter "N/A" if not specified)
+      placeholder: e.g., Within 1 week, Before v2.5.0 release, N/A
+    validations:
+      required: false
