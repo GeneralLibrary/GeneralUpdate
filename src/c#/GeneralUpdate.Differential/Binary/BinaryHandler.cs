@@ -363,16 +363,29 @@ namespace GeneralUpdate.Differential.Binary
                     }
                 }
 
+                // Remove old file if it exists
                 if (File.Exists(_oldfilePath))
                 {
                     File.SetAttributes(_oldfilePath, FileAttributes.Normal);
                     File.Delete(_oldfilePath);
                 }
                 
+                // Try to move the new file to the old file location
+                // If move fails due to file occupation (race condition), fall back to copy
                 if (File.Exists(_newfilePath))
                 {
                     File.SetAttributes(_newfilePath, FileAttributes.Normal);
-                    File.Copy(_newfilePath, _oldfilePath, true);
+                    try
+                    {
+                        // Try File.Move first as it's more efficient
+                        File.Move(_newfilePath, _oldfilePath);
+                    }
+                    catch (IOException)
+                    {
+                        // If move fails due to file occupation or other IO issues,
+                        // fall back to copy which is more resilient
+                        File.Copy(_newfilePath, _oldfilePath, true);
+                    }
                 }
             });
         }
