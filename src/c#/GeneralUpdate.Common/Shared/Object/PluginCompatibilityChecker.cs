@@ -7,7 +7,7 @@ namespace GeneralUpdate.Common.Shared.Object
     /// <summary>
     /// Provides plugin compatibility validation between client and plugin versions.
     /// </summary>
-    public class PluginCompatibilityChecker
+    public static class PluginCompatibilityChecker
     {
         /// <summary>
         /// Checks if a plugin is compatible with the current client version.
@@ -75,10 +75,18 @@ namespace GeneralUpdate.Common.Shared.Object
             if (!compatiblePlugins.Any())
                 return null;
 
-            return compatiblePlugins
-                .Where(p => !string.IsNullOrEmpty(p.Version))
-                .OrderBy(p => new Version(p.Version))
-                .FirstOrDefault();
+            try
+            {
+                return compatiblePlugins
+                    .Where(p => !string.IsNullOrEmpty(p.Version))
+                    .OrderBy(p => new Version(p.Version))
+                    .FirstOrDefault();
+            }
+            catch (Exception)
+            {
+                // If any version is invalid, return null
+                return null;
+            }
         }
 
         /// <summary>
@@ -93,10 +101,18 @@ namespace GeneralUpdate.Common.Shared.Object
             if (!compatiblePlugins.Any())
                 return null;
 
-            return compatiblePlugins
-                .Where(p => !string.IsNullOrEmpty(p.Version))
-                .OrderByDescending(p => new Version(p.Version))
-                .FirstOrDefault();
+            try
+            {
+                return compatiblePlugins
+                    .Where(p => !string.IsNullOrEmpty(p.Version))
+                    .OrderByDescending(p => new Version(p.Version))
+                    .FirstOrDefault();
+            }
+            catch (Exception)
+            {
+                // If any version is invalid, return null
+                return null;
+            }
         }
     }
 }

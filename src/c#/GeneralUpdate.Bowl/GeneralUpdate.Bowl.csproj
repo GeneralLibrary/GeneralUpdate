@@ -52,7 +52,7 @@
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\ProcessInfoJsonContext.cs" Link="Common\ProcessInfoJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\ReportRespJsonContext.cs" Link="Common\ReportRespJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionOSSJsonContext.cs" Link="Common\VersionOSSJsonContext.cs" />
-                <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionRespJsonContext.cs" Link="Common\VersionRespJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionRespJsonContext.cs" Link="Common\VersionRespJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\PluginRespJsonContext.cs" Link="Common\PluginRespJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\IMiddleware.cs" Link="Common\IMiddleware.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\PipelineBuilder.cs" Link="Common\PipelineBuilder.cs" />

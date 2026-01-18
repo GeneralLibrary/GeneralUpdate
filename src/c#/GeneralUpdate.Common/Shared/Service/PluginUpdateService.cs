@@ -10,10 +10,8 @@ namespace GeneralUpdate.Common.Shared.Service
     /// <summary>
     /// Service for managing plugin updates and compatibility.
     /// </summary>
-    public class PluginUpdateService
+    public static class PluginUpdateService
     {
-        private PluginUpdateService() { }
-
         /// <summary>
         /// Retrieves available plugin updates from the server.
         /// </summary>

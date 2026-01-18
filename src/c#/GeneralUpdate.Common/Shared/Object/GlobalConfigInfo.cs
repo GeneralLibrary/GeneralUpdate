@@ -142,10 +142,10 @@ public class GlobalConfigInfo
     /// <summary>
     /// List of plugins available for update.
     /// </summary>
-    public List<PluginInfo> AvailablePlugins { get; set; }
+    public List<PluginInfo> AvailablePlugins { get; set; } = new List<PluginInfo>();
 
     /// <summary>
     /// List of plugins selected by user for upgrade.
     /// </summary>
-    public List<PluginInfo> SelectedPlugins { get; set; }
+    public List<PluginInfo> SelectedPlugins { get; set; } = new List<PluginInfo>();
 }
