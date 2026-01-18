@@ -25,7 +25,6 @@ namespace GeneralUpdate.ClientCore
         {
             if (configInfo == null || string.IsNullOrEmpty(configInfo.PluginUpdateUrl))
             {
-                GeneralTracer.Info("Plugin update URL not configured. Skipping plugin validation.");
                 return new List<PluginInfo>();
             }
 
@@ -41,12 +40,10 @@ namespace GeneralUpdate.ClientCore
                     configInfo.Scheme,
                     configInfo.Token);
 
-                GeneralTracer.Info($"Found {availablePlugins.Count} compatible plugin updates.");
                 return availablePlugins;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                GeneralTracer.Error("Failed to retrieve plugin updates.", e);
                 return new List<PluginInfo>();
             }
         }
@@ -100,19 +97,17 @@ namespace GeneralUpdate.ClientCore
                                 requiredPlugins.Add(minPlugin);
                             }
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
-                            GeneralTracer.Error($"Error comparing plugin versions for {currentPlugin.Key}.", e);
+                            // Skip plugins with version comparison errors
                         }
                     }
                 }
 
-                GeneralTracer.Info($"Found {requiredPlugins.Count} plugins requiring upgrade for client version {targetClientVersion}.");
                 return requiredPlugins;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                GeneralTracer.Error("Failed to determine required plugin updates for client upgrade.", e);
                 return new List<PluginInfo>();
             }
         }
@@ -184,7 +179,6 @@ namespace GeneralUpdate.ClientCore
             {
                 if (!PluginUpdateService.IsPluginCompatible(targetClientVersion, plugin))
                 {
-                    GeneralTracer.Error($"Plugin {plugin.Name} (v{plugin.Version}) is not compatible with client version {targetClientVersion}.");
                     return false;
                 }
             }

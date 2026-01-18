@@ -51,6 +51,7 @@
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\ReportRespJsonContext.cs" Link="Common\ReportRespJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionOSSJsonContext.cs" Link="Common\VersionOSSJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\VersionRespJsonContext.cs" Link="Common\VersionRespJsonContext.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Internal\JsonContext\PluginRespJsonContext.cs" Link="Common\PluginRespJsonContext.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\IMiddleware.cs" Link="Common\IMiddleware.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\PipelineBuilder.cs" Link="Common\PipelineBuilder.cs" />
         <Compile Include="..\GeneralUpdate.Common\Internal\Pipeline\PipelineContext.cs" Link="Common\PipelineContext.cs" />
@@ -59,11 +60,13 @@
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Configinfo.cs" Link="Common\Configinfo.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\BaseResponseDTO.cs" Link="Common\BaseResponseDTO.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\VersionRespDTO.cs" Link="Common\VersionRespDTO.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\PluginRespDTO.cs" Link="Common\PluginRespDTO.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\AppType.cs" Link="Common\AppType.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\Format.cs" Link="Common\Format.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\PlatformType.cs" Link="Common\PlatformType.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\ReportType.cs" Link="Common\ReportType.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\UpdateMode.cs" Link="Common\UpdateMode.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\PluginType.cs" Link="Common\PluginType.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfo.cs" Link="Common\GlobalConfigInfo.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\GlobalConfigInfoOSS.cs" Link="Common\GlobalConfigInfoOSS.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\ObjectTranslator.cs" Link="Common\ObjectTranslator.cs" />
@@ -71,10 +74,13 @@
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\ProcessInfo.cs" Link="Common\ProcessInfo.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\VersionInfo.cs" Link="Common\VersionInfo.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Object\VersionOSS.cs" Link="Common\VersionOSS.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\PluginInfo.cs" Link="Common\PluginInfo.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Object\PluginCompatibilityChecker.cs" Link="Common\PluginCompatibilityChecker.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Service\VersionService.cs" Link="Common\VersionService.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Common\GeneralTracer.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Common\TextTraceListener.cs" />
         <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Common\WindowsOutputDebugListener.cs" />
+        <Compile Include="..\GeneralUpdate.Common\Shared\Service\PluginUpdateService.cs" Link="Common\PluginUpdateService.cs" />
         <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandler.cs" Link="Common\BinaryHandler.cs" />
         <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2Constants.cs" Link="Common\BZip2Constants.cs" />
         <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2InputStream.cs" Link="Common\BZip2InputStream.cs" />
