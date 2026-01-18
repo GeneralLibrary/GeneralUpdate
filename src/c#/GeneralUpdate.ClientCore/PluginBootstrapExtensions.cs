@@ -40,10 +40,12 @@ namespace GeneralUpdate.ClientCore
                     configInfo.Scheme,
                     configInfo.Token);
 
-                return availablePlugins;
+                                return availablePlugins;
             }
             catch (Exception)
             {
+                // Catch any exceptions from API calls or network issues
+                // Return empty list to allow application to continue
                 return new List<PluginInfo>();
             }
         }
@@ -108,6 +110,8 @@ namespace GeneralUpdate.ClientCore
             }
             catch (Exception)
             {
+                // Catch any exceptions from API calls or network issues
+                // Return empty list to allow application to continue
                 return new List<PluginInfo>();
             }
         }
