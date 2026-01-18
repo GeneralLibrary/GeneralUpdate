@@ -11,5 +11,10 @@
         /// upgrade program.
         /// </summary>
         public const int UpgradeApp = 2;
+
+        /// <summary>
+        /// plugin component.
+        /// </summary>
+        public const int Plugin = 3;
     }
 }

@@ -133,4 +133,19 @@ public class GlobalConfigInfo
     /// Script to grant permissions to a specified file on Linux
     /// </summary>
     public string Script { get; set; }
+
+    /// <summary>
+    /// Plugin validation API endpoint URL.
+    /// </summary>
+    public string PluginUpdateUrl { get; set; }
+
+    /// <summary>
+    /// List of plugins available for update.
+    /// </summary>
+    public List<PluginInfo> AvailablePlugins { get; set; }
+
+    /// <summary>
+    /// List of plugins selected by user for upgrade.
+    /// </summary>
+    public List<PluginInfo> SelectedPlugins { get; set; }
 }

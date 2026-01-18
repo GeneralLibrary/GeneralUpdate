@@ -72,6 +72,45 @@ namespace GeneralUpdate.Common.Shared.Service
             return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO, scheme, token);
         }
 
+        /// <summary>
+        /// Validate and retrieve available plugin updates for the current client version.
+        /// </summary>
+        /// <param name="httpUrl">Plugin validation API endpoint.</param>
+        /// <param name="clientVersion">Current client version.</param>
+        /// <param name="pluginId">Optional plugin ID to check specific plugin.</param>
+        /// <param name="appKey">Application secret key.</param>
+        /// <param name="platform">Platform type (Windows/Linux).</param>
+        /// <param name="productId">Product identifier.</param>
+        /// <param name="scheme">Authentication scheme.</param>
+        /// <param name="token">Authentication token.</param>
+        /// <returns>PluginRespDTO containing available plugin updates.</returns>
+        public static async Task<PluginRespDTO> ValidatePlugins(string httpUrl
+            , string clientVersion
+            , string pluginId = null
+            , string appKey = null
+            , int platform = 0
+            , string productId = null
+            , string scheme = null
+            , string token = null)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "ClientVersion", clientVersion },
+                { "Platform", platform }
+            };
+
+            if (!string.IsNullOrEmpty(pluginId))
+                parameters.Add("PluginId", pluginId);
+            
+            if (!string.IsNullOrEmpty(appKey))
+                parameters.Add("AppKey", appKey);
+            
+            if (!string.IsNullOrEmpty(productId))
+                parameters.Add("ProductId", productId);
+
+            return await PostTaskAsync<PluginRespDTO>(httpUrl, parameters, PluginRespJsonContext.Default.PluginRespDTO, scheme, token);
+        }
+
         private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null, string scheme = null, string token = null)
         {
             try

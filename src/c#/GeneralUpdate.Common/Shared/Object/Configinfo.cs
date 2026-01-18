@@ -84,6 +84,11 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         public string Script { get; set; }
 
+        /// <summary>
+        /// Plugin validation API endpoint URL (optional).
+        /// </summary>
+        public string PluginUpdateUrl { get; set; }
+
         public void Validate()
         {
             if (string.IsNullOrWhiteSpace(UpdateUrl) || !Uri.IsWellFormedUriString(UpdateUrl, UriKind.Absolute))
