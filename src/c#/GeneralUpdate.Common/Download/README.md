@@ -1,17 +1,122 @@
-# DownloadManager Usage Guide
+# Download API Usage Guide
 
 ## Overview
 
-The `DownloadManager` and `DownloadTask` classes provide robust file downloading capabilities with support for:
+GeneralUpdate provides two approaches for downloading files:
+
+1. **DownloadClient** - A simplified, easy-to-use API for common download scenarios
+2. **DownloadManager/DownloadTask** - A flexible, event-driven API for advanced scenarios
+
+Both support:
 - **Parallel downloading** of multiple files
 - Resume capability for interrupted downloads
 - Progress tracking and statistics
-- Event-driven architecture for advanced scenarios
-- Simplified API for one-time download tasks
 
-## Parallel Downloading
+## DownloadClient (Recommended for Most Use Cases)
 
-The `DownloadManager` supports parallel downloading out of the box using `Task.WhenAll` in the `LaunchTasksAsync` method. Simply add multiple tasks to the manager, and they will be downloaded concurrently.
+The `DownloadClient` class provides a clean, straightforward API for downloading files without managing events or tasks manually.
+
+# Download API Usage Guide
+
+## Overview
+
+GeneralUpdate provides two approaches for downloading files:
+
+1. **DownloadClient** - A simplified, easy-to-use API for common download scenarios
+2. **DownloadManager/DownloadTask** - A flexible, event-driven API for advanced scenarios
+
+Both support:
+- **Parallel downloading** of multiple files
+- Resume capability for interrupted downloads
+- Progress tracking and statistics
+
+## DownloadClient (Recommended for Most Use Cases)
+
+The `DownloadClient` class provides a clean, straightforward API for downloading files without managing events or tasks manually.
+
+### Basic Usage - Single File Download
+
+```csharp
+using GeneralUpdate.Common.Download;
+
+// Create a download client
+var client = new DownloadClient(
+    destinationPath: @"C:\Downloads",
+    format: ".zip",
+    timeoutSeconds: 60
+);
+
+// Download a single file
+var result = await client.DownloadAsync(
+    url: "https://example.com/file.zip",
+    fileName: "myfile"
+);
+
+if (result.Success)
+{
+    Console.WriteLine($"Downloaded: {result.FileName}");
+}
+else
+{
+    Console.WriteLine($"Failed: {result.Error}");
+}
+```
+
+### Parallel Downloads - Multiple Files
+
+```csharp
+using GeneralUpdate.Common.Download;
+
+var client = new DownloadClient(@"C:\Downloads", ".zip");
+
+// Create download requests
+var requests = new[]
+{
+    new DownloadRequest("https://example.com/file1.zip", "update-v1.0"),
+    new DownloadRequest("https://example.com/file2.zip", "update-v1.1"),
+    new DownloadRequest("https://example.com/file3.zip", "update-v1.2")
+};
+
+// Download all files in parallel
+var results = await client.DownloadAsync(requests);
+
+// Check results
+foreach (var result in results)
+{
+    Console.WriteLine($"{result.FileName}: {(result.Success ? "✓" : "✗ " + result.Error)}");
+}
+```
+
+### Download with Progress Tracking
+
+```csharp
+using GeneralUpdate.Common.Download;
+
+var client = new DownloadClient(@"C:\Downloads", ".zip");
+
+var requests = new[]
+{
+    new DownloadRequest("https://example.com/file1.zip", "file1"),
+    new DownloadRequest("https://example.com/file2.zip", "file2")
+};
+
+// Download with progress callback
+var results = await client.DownloadWithProgressAsync(requests, progress =>
+{
+    Console.WriteLine($"{progress.FileName}: {progress.ProgressPercentage:F1}% " +
+                     $"({progress.Speed}) - ETA: {progress.RemainingTime:mm\\:ss}");
+});
+
+// Results available after completion
+foreach (var result in results)
+{
+    Console.WriteLine($"{result.FileName}: {(result.Success ? "Complete" : result.Error)}");
+}
+```
+
+## DownloadManager/DownloadTask (Advanced Usage)
+
+For scenarios requiring fine-grained control over the download process, use the `DownloadManager` and `DownloadTask` classes directly.
 
 ### Example: Advanced Usage with Events
 
@@ -73,92 +178,68 @@ manager.Add(new DownloadTask(manager, new VersionInfo
 await manager.LaunchTasksAsync();
 ```
 
-## Simplified API for One-Time Downloads
+## Comparison: DownloadClient vs DownloadManager
 
-For simple download scenarios where you don't need event handling or progress tracking, use the static helper methods.
+| Feature | DownloadClient | DownloadManager |
+|---------|---------------|----------------|
+| **Ease of Use** | ✓ Simple API | Requires event setup |
+| **Single File Download** | ✓ One method call | Need to create tasks |
+| **Parallel Downloads** | ✓ Built-in | ✓ Built-in |
+| **Progress Tracking** | ✓ Optional callback | ✓ Event-based |
+| **Error Handling** | ✓ Return values | Event-based |
+| **Fine-grained Control** | Limited | ✓ Full control |
 
-### Example: Single File Download
+## Recommendation
 
-```csharp
-using GeneralUpdate.Common.Download;
-
-// Download a single file
-bool success = await DownloadManager.DownloadFileAsync(
-    url: "https://example.com/file.zip",
-    destinationPath: @"C:\Downloads",
-    fileName: "myfile",
-    format: ".zip",
-    timeOut: 60
-);
-
-if (success)
-{
-    Console.WriteLine("Download completed successfully!");
-}
-else
-{
-    Console.WriteLine("Download failed.");
-}
-```
-
-### Example: Multiple Files in Parallel
-
-```csharp
-using GeneralUpdate.Common.Download;
-
-// Download multiple files in parallel
-var files = new[]
-{
-    ("https://example.com/file1.zip", "file1"),
-    ("https://example.com/file2.zip", "file2"),
-    ("https://example.com/file3.zip", "file3")
-};
-
-var results = await DownloadManager.DownloadFilesAsync(
-    files: files,
-    destinationPath: @"C:\Downloads",
-    format: ".zip",
-    timeOut: 60
-);
-
-// Check results
-foreach (var (fileName, success) in results)
-{
-    Console.WriteLine($"{fileName}: {(success ? "Success" : "Failed")}");
-}
-```
+- **Use DownloadClient** for straightforward download scenarios
+- **Use DownloadManager** when you need:
+  - Custom event handling
+  - Integration with existing event-driven code
+  - Maximum control over the download process
 
 ## Features
 
 ### Resume Capability
-Downloads can be resumed if interrupted. The download manager automatically detects partial downloads and continues from where it left off.
+Both APIs support resuming interrupted downloads automatically. The download system detects partial downloads and continues from where it left off.
 
 ### Progress Tracking
-Subscribe to the `MultiDownloadStatistics` event to receive real-time updates on:
+- **DownloadClient**: Use `DownloadWithProgressAsync` with a callback
+- **DownloadManager**: Subscribe to `MultiDownloadStatistics` event
+
+Progress information includes:
 - Download progress (percentage)
 - Download speed (formatted: B/s, KB/s, MB/s, GB/s)
 - Estimated remaining time
 - Total and received bytes
 
 ### Error Handling
-- Individual download errors are captured and reported through the `MultiDownloadError` event
-- Failed downloads are tracked in the `FailedVersions` collection
-- The simplified API returns boolean success status or a dictionary of results
+- **DownloadClient**: Check `DownloadResult.Success` and `DownloadResult.Error`
+- **DownloadManager**: Subscribe to `MultiDownloadError` event and check `FailedVersions`
 
-## Thread Safety
-
-The download manager uses thread-safe operations:
+### Thread Safety
+Both APIs use thread-safe operations:
 - `Interlocked` operations for atomic updates
 - `ImmutableList` for task management
 - Parallel execution via `Task.WhenAll`
 
 ## Best Practices
 
-1. **Use the simplified API** for simple, one-off downloads
-2. **Use the event-driven API** when you need:
-   - Real-time progress updates
-   - Fine-grained error handling
-   - Statistics tracking
-3. **Set appropriate timeouts** based on expected file sizes and network conditions
-4. **Handle failed downloads** by checking the `FailedVersions` collection or result dictionary
-5. **Use parallel downloads** wisely - consider network bandwidth and server limitations
+1. **Choose the Right API**:
+   - Start with `DownloadClient` for simplicity
+   - Move to `DownloadManager` only if you need advanced features
+
+2. **Set Appropriate Timeouts**:
+   - Consider expected file sizes and network conditions
+   - Default is 60 seconds
+
+3. **Handle Failures Gracefully**:
+   - Always check download results
+   - Implement retry logic for critical downloads
+
+4. **Use Parallel Downloads Wisely**:
+   - Consider network bandwidth limitations
+   - Be mindful of server rate limits
+
+5. **Monitor Progress for Large Files**:
+   - Use progress tracking for downloads > 10MB
+   - Provide user feedback during long downloads
