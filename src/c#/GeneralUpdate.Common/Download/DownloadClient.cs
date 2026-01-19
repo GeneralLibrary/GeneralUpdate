@@ -53,103 +53,7 @@ namespace GeneralUpdate.Common.Download
         /// <returns>A list of DownloadResult for each file.</returns>
         public async Task<IList<DownloadResult>> DownloadAsync(IEnumerable<DownloadRequest> requests)
         {
-            if (requests == null)
-                throw new ArgumentNullException(nameof(requests));
-
-            var requestList = requests.ToList();
-            if (!requestList.Any())
-                throw new ArgumentException("At least one download request must be provided.", nameof(requests));
-
-            var manager = new DownloadManager(_destinationPath, _format, _timeoutSeconds);
-            var results = new Dictionary<string, DownloadResult>();
-            var completionSource = new TaskCompletionSource<bool>();
-
-            // Subscribe to completion events
-            manager.MultiDownloadCompleted += (sender, e) =>
-            {
-                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
-                {
-                    results[versionInfo.Name] = new DownloadResult
-                    {
-                        FileName = versionInfo.Name,
-                        Success = e.IsComplated,
-                        Url = versionInfo.Url,
-                        Error = e.IsComplated ? null : "Download failed"
-                    };
-                }
-            };
-
-            manager.MultiDownloadError += (sender, e) =>
-            {
-                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
-                {
-                    results[versionInfo.Name] = new DownloadResult
-                    {
-                        FileName = versionInfo.Name,
-                        Success = false,
-                        Url = versionInfo.Url,
-                        Error = e.Exception?.Message ?? "Unknown error"
-                    };
-                }
-            };
-
-            manager.MultiAllDownloadCompleted += (sender, e) =>
-            {
-                completionSource.TrySetResult(e.IsAllDownloadCompleted);
-            };
-
-            // Add all download tasks
-            foreach (var request in requestList)
-            {
-                var version = new VersionInfo
-                {
-                    Name = request.FileName,
-                    Url = request.Url,
-                    Format = _format
-                };
-                manager.Add(new DownloadTask(manager, version));
-            }
-
-            // Execute downloads
-            try
-            {
-                await manager.LaunchTasksAsync();
-                await completionSource.Task;
-            }
-            catch (Exception ex)
-            {
-                // Mark any remaining files as failed
-                foreach (var request in requestList)
-                {
-                    if (!results.ContainsKey(request.FileName))
-                    {
-                        results[request.FileName] = new DownloadResult
-                        {
-                            FileName = request.FileName,
-                            Success = false,
-                            Url = request.Url,
-                            Error = ex.Message
-                        };
-                    }
-                }
-            }
-
-            // Ensure all requests have results
-            foreach (var request in requestList)
-            {
-                if (!results.ContainsKey(request.FileName))
-                {
-                    results[request.FileName] = new DownloadResult
-                    {
-                        FileName = request.FileName,
-                        Success = false,
-                        Url = request.Url,
-                        Error = "Download did not complete"
-                    };
-                }
-            }
-
-            return requestList.Select(r => results[r.FileName]).ToList();
+            return await ExecuteDownloadAsync(requests, null);
         }
 
         /// <summary>
@@ -162,10 +66,18 @@ namespace GeneralUpdate.Common.Download
             IEnumerable<DownloadRequest> requests,
             Action<DownloadProgress> progressCallback)
         {
-            if (requests == null)
-                throw new ArgumentNullException(nameof(requests));
             if (progressCallback == null)
                 throw new ArgumentNullException(nameof(progressCallback));
+
+            return await ExecuteDownloadAsync(requests, progressCallback);
+        }
+
+        private async Task<IList<DownloadResult>> ExecuteDownloadAsync(
+            IEnumerable<DownloadRequest> requests,
+            Action<DownloadProgress> progressCallback)
+        {
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
 
             var requestList = requests.ToList();
             if (!requestList.Any())
@@ -175,56 +87,8 @@ namespace GeneralUpdate.Common.Download
             var results = new Dictionary<string, DownloadResult>();
             var completionSource = new TaskCompletionSource<bool>();
 
-            // Subscribe to progress events
-            manager.MultiDownloadStatistics += (sender, e) =>
-            {
-                if (e.Version is VersionInfo versionInfo)
-                {
-                    progressCallback(new DownloadProgress
-                    {
-                        FileName = versionInfo.Name,
-                        ProgressPercentage = e.ProgressPercentage,
-                        Speed = e.Speed,
-                        RemainingTime = e.Remaining,
-                        TotalBytes = e.TotalBytesToReceive,
-                        ReceivedBytes = e.BytesReceived
-                    });
-                }
-            };
-
-            // Subscribe to completion events
-            manager.MultiDownloadCompleted += (sender, e) =>
-            {
-                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
-                {
-                    results[versionInfo.Name] = new DownloadResult
-                    {
-                        FileName = versionInfo.Name,
-                        Success = e.IsComplated,
-                        Url = versionInfo.Url,
-                        Error = e.IsComplated ? null : "Download failed"
-                    };
-                }
-            };
-
-            manager.MultiDownloadError += (sender, e) =>
-            {
-                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
-                {
-                    results[versionInfo.Name] = new DownloadResult
-                    {
-                        FileName = versionInfo.Name,
-                        Success = false,
-                        Url = versionInfo.Url,
-                        Error = e.Exception?.Message ?? "Unknown error"
-                    };
-                }
-            };
-
-            manager.MultiAllDownloadCompleted += (sender, e) =>
-            {
-                completionSource.TrySetResult(e.IsAllDownloadCompleted);
-            };
+            // Subscribe to events
+            SubscribeToDownloadEvents(manager, results, completionSource, progressCallback);
 
             // Add all download tasks
             foreach (var request in requestList)
@@ -246,38 +110,106 @@ namespace GeneralUpdate.Common.Download
             }
             catch (Exception ex)
             {
-                // Mark any remaining files as failed
-                foreach (var request in requestList)
-                {
-                    if (!results.ContainsKey(request.FileName))
-                    {
-                        results[request.FileName] = new DownloadResult
-                        {
-                            FileName = request.FileName,
-                            Success = false,
-                            Url = request.Url,
-                            Error = ex.Message
-                        };
-                    }
-                }
+                HandleDownloadException(requestList, results, ex);
             }
 
             // Ensure all requests have results
+            EnsureAllResultsPresent(requestList, results);
+
+            return requestList.Select(r => results[r.FileName]).ToList();
+        }
+
+        private void SubscribeToDownloadEvents(
+            DownloadManager manager,
+            Dictionary<string, DownloadResult> results,
+            TaskCompletionSource<bool> completionSource,
+            Action<DownloadProgress> progressCallback)
+        {
+            // Subscribe to progress events if callback provided
+            if (progressCallback != null)
+            {
+                manager.MultiDownloadStatistics += (sender, e) =>
+                {
+                    if (e.Version is VersionInfo versionInfo)
+                    {
+                        progressCallback(new DownloadProgress
+                        {
+                            FileName = versionInfo.Name,
+                            ProgressPercentage = e.ProgressPercentage,
+                            Speed = e.Speed,
+                            RemainingTime = e.Remaining,
+                            TotalBytes = e.TotalBytesToReceive,
+                            ReceivedBytes = e.BytesReceived
+                        });
+                    }
+                };
+            }
+
+            // Subscribe to completion events
+            manager.MultiDownloadCompleted += (sender, e) =>
+            {
+                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
+                {
+                    results[versionInfo.Name] = new DownloadResult
+                    {
+                        FileName = versionInfo.Name,
+                        Success = e.IsComplated,
+                        Url = versionInfo.Url,
+                        Error = e.IsComplated ? null : "Download failed"
+                    };
+                }
+            };
+
+            manager.MultiDownloadError += (sender, e) =>
+            {
+                if (e.Version is VersionInfo versionInfo && !string.IsNullOrEmpty(versionInfo.Name))
+                {
+                    results[versionInfo.Name] = CreateFailedResult(versionInfo.Name, versionInfo.Url, e.Exception?.Message);
+                }
+            };
+
+            manager.MultiAllDownloadCompleted += (sender, e) =>
+            {
+                completionSource.TrySetResult(e.IsAllDownloadCompleted);
+            };
+        }
+
+        private void HandleDownloadException(
+            List<DownloadRequest> requestList,
+            Dictionary<string, DownloadResult> results,
+            Exception ex)
+        {
             foreach (var request in requestList)
             {
                 if (!results.ContainsKey(request.FileName))
                 {
-                    results[request.FileName] = new DownloadResult
-                    {
-                        FileName = request.FileName,
-                        Success = false,
-                        Url = request.Url,
-                        Error = "Download did not complete"
-                    };
+                    results[request.FileName] = CreateFailedResult(request.FileName, request.Url, ex.Message);
                 }
             }
+        }
 
-            return requestList.Select(r => results[r.FileName]).ToList();
+        private void EnsureAllResultsPresent(
+            List<DownloadRequest> requestList,
+            Dictionary<string, DownloadResult> results)
+        {
+            foreach (var request in requestList)
+            {
+                if (!results.ContainsKey(request.FileName))
+                {
+                    results[request.FileName] = CreateFailedResult(request.FileName, request.Url, "Download did not complete");
+                }
+            }
+        }
+
+        private DownloadResult CreateFailedResult(string fileName, string url, string error)
+        {
+            return new DownloadResult
+            {
+                FileName = fileName,
+                Success = false,
+                Url = url,
+                Error = error ?? "Unknown error"
+            };
         }
     }
 

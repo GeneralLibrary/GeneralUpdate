@@ -16,24 +16,6 @@ Both support:
 
 The `DownloadClient` class provides a clean, straightforward API for downloading files without managing events or tasks manually.
 
-# Download API Usage Guide
-
-## Overview
-
-GeneralUpdate provides two approaches for downloading files:
-
-1. **DownloadClient** - A simplified, easy-to-use API for common download scenarios
-2. **DownloadManager/DownloadTask** - A flexible, event-driven API for advanced scenarios
-
-Both support:
-- **Parallel downloading** of multiple files
-- Resume capability for interrupted downloads
-- Progress tracking and statistics
-
-## DownloadClient (Recommended for Most Use Cases)
-
-The `DownloadClient` class provides a clean, straightforward API for downloading files without managing events or tasks manually.
-
 ### Basic Usage - Single File Download
 
 ```csharp
