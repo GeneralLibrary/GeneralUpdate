@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -19,11 +20,13 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <returns>A GlobalConfigInfo object populated with values from the source Configinfo.</returns>
         public static GlobalConfigInfo MapToGlobalConfigInfo(Configinfo source, GlobalConfigInfo target = null)
         {
-            if (source == null)
-                return target;
-
+            // Create new instance if both source and target are not provided
             if (target == null)
                 target = new GlobalConfigInfo();
+
+            // Return empty target if source is null
+            if (source == null)
+                return target;
 
             // Map common fields from base configuration
             target.AppName = source.AppName;
@@ -59,6 +62,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <param name="blackFiles">List of blacklisted files from the BlackListManager.</param>
         /// <param name="skipDirectories">List of directories to skip from the BlackListManager.</param>
         /// <returns>A ProcessInfo object ready for serialization and inter-process communication.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when source is null</exception>
         public static ProcessInfo MapToProcessInfo(
             GlobalConfigInfo source,
             List<VersionInfo> updateVersions,
@@ -67,7 +71,7 @@ namespace GeneralUpdate.Common.Shared.Object
             List<string> skipDirectories)
         {
             if (source == null)
-                return null;
+                throw new ArgumentNullException(nameof(source), "GlobalConfigInfo source cannot be null");
 
             // Create ProcessInfo with all required parameters in a single location
             // This replaces the error-prone manual parameter passing in GeneralClientBootstrap
