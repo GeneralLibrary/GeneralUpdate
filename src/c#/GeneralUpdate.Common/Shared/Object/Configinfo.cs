@@ -4,85 +4,29 @@ using System.Collections.Generic;
 namespace GeneralUpdate.Common.Shared.Object
 {
     /// <summary>
-    /// Global update parameters.
+    /// User-facing configuration class for update parameters.
+    /// This class is designed for external API consumers to configure update behavior.
+    /// Inherits common fields from BaseConfigInfo to reduce duplication and improve maintainability.
     /// </summary>
-    public class Configinfo
+    public class Configinfo : BaseConfigInfo
     {
         /// <summary>
-        /// Update check api address.
+        /// The API endpoint URL for checking available updates.
+        /// The client queries this URL to determine if new versions are available.
         /// </summary>
         public string UpdateUrl { get; set; }
 
         /// <summary>
-        /// API address for reporting update status.
-        /// </summary>
-        public string ReportUrl { get; set; }
-
-        /// <summary>
-        /// Need to start the name of the app.
-        /// </summary>
-        public string AppName { get; set; }
-
-        /// <summary>
-        /// The name of the main application, without .exe.
-        /// </summary>
-        public string MainAppName { get; set; }
-
-        /// <summary>
-        /// Update log web address.
-        /// </summary>
-        public string UpdateLogUrl { get; set; }
-
-        /// <summary>
-        /// application key
-        /// </summary>
-        public string AppSecretKey { get; set; }
-
-        /// <summary>
-        /// Client current version.
-        /// </summary>
-        public string ClientVersion { get; set; }
-        
-        /// <summary>
-        /// Upgrade Client current version.
+        /// The current version of the upgrade application (the updater itself).
+        /// This allows the updater tool to be updated separately from the main application.
         /// </summary>
         public string UpgradeClientVersion { get; set; }
 
         /// <summary>
-        /// installation path (for update file logic).
-        /// </summary>
-        public string InstallPath { get; set; }
-
-        /// <summary>
-        /// Files in the blacklist will skip the update.
-        /// </summary>
-        public List<string> BlackFiles { get; set; }
-
-        /// <summary>
-        /// File formats in the blacklist will skip the update.
-        /// </summary>
-        public List<string> BlackFormats { get; set; }
-
-        /// <summary>
-        /// SkipDirectorys
-        /// </summary>
-        public List<string> SkipDirectorys { get; set; }
-
-        /// <summary>
-        /// Product ID.
+        /// The unique product identifier used for tracking and update management.
+        /// Multiple products can share the same update infrastructure using different IDs.
         /// </summary>
         public string ProductId { get; set; }
-
-        public string Bowl { get; set; }
-        
-        public string Scheme { get; set; }
-    
-        public string Token { get; set; }
-        
-        /// <summary>
-        /// Script to grant permissions to a specified file on Linux
-        /// </summary>
-        public string Script { get; set; }
 
         public void Validate()
         {

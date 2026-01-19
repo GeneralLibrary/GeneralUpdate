@@ -64,41 +64,23 @@ namespace GeneralUpdate.Core
 
         #region Configuration
 
+        /// <summary>
+        /// Configure the update bootstrap with user-provided configuration.
+        /// Uses ConfigurationMapper to ensure consistent field mapping and reduce maintenance burden.
+        /// </summary>
+        /// <param name="configInfo">User-provided configuration containing update parameters</param>
+        /// <returns>This bootstrap instance for method chaining</returns>
         public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
         {
-            _configInfo = new GlobalConfigInfo
-            {
-                MainAppName = configInfo.MainAppName,
-                InstallPath = configInfo.InstallPath,
-                ClientVersion = configInfo.ClientVersion,
-                UpdateLogUrl = configInfo.UpdateLogUrl,
-                AppSecretKey = configInfo.AppSecretKey,
-                TempPath = StorageManager.GetTempDirectory("upgrade_temp"),
-                ReportUrl = configInfo.ReportUrl,
-                UpdateUrl = configInfo.UpdateUrl,
-                Scheme = configInfo.Scheme,
-                Token = configInfo.Token,
-                ProductId = configInfo.ProductId,
-                DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
-                PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
-                Script = configInfo.Script
-            };
-
-            // Copy blacklist-related configuration if explicitly provided.
-            if (configInfo.BlackFiles != null)
-            {
-                _configInfo.BlackFiles = configInfo.BlackFiles;
-            }
-
-            if (configInfo.BlackFormats != null)
-            {
-                _configInfo.BlackFormats = configInfo.BlackFormats;
-            }
-
-            if (configInfo.SkipDirectorys != null)
-            {
-                _configInfo.SkipDirectorys = configInfo.SkipDirectorys;
-            }
+            // Use ConfigurationMapper instead of manual field mapping
+            // This ensures all fields are consistently mapped and reduces maintenance burden
+            _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
+            
+            // Set runtime-specific values that are not part of user configuration
+            _configInfo.TempPath = StorageManager.GetTempDirectory("upgrade_temp");
+            _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
+            _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
+            
             InitBlackList();
             return this;
         }

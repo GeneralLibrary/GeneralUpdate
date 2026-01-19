@@ -62,6 +62,8 @@
     <Compile Include="..\GeneralUpdate.Common\Internal\Strategy\AbstractStrategy.cs" Link="Common\AbstractStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Common\Internal\Strategy\IStrategy.cs" Link="Common\IStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\Configinfo.cs" Link="Common\Configinfo.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Object\BaseConfigInfo.cs" Link="Common\BaseConfigInfo.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Object\ConfigurationMapper.cs" Link="Common\ConfigurationMapper.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\BaseResponseDTO.cs" Link="Common\BaseResponseDTO.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\DTO\VersionRespDTO.cs" Link="Common\VersionRespDTO.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Object\Enum\AppType.cs" Link="Common\AppType.cs" />
