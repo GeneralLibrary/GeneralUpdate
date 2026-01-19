@@ -109,25 +109,21 @@ namespace GeneralUpdate.Common.Download
                 Format = format
             };
             
-            var taskCompleted = false;
-            var taskSucceeded = false;
             var taskCompletionSource = new TaskCompletionSource<bool>();
+            var completionLock = new object();
 
             manager.MultiDownloadCompleted += (sender, e) =>
             {
-                if (!taskCompleted)
+                lock (completionLock)
                 {
-                    taskCompleted = true;
-                    taskSucceeded = e.IsComplated;
                     taskCompletionSource.TrySetResult(e.IsComplated);
                 }
             };
 
             manager.MultiDownloadError += (sender, e) =>
             {
-                if (!taskCompleted)
+                lock (completionLock)
                 {
-                    taskCompleted = true;
                     taskCompletionSource.TrySetResult(false);
                 }
             };
@@ -137,8 +133,7 @@ namespace GeneralUpdate.Common.Download
             try
             {
                 await manager.LaunchTasksAsync();
-                await taskCompletionSource.Task;
-                return taskSucceeded;
+                return await taskCompletionSource.Task;
             }
             catch
             {
