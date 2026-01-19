@@ -15,7 +15,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
 {
     public abstract class AbstractStrategy : IStrategy
     {
-        protected const string Patchs = "patchs";
+        private const string Patchs = "patchs";
         protected GlobalConfigInfo _configinfo = new();
         
         public virtual void Execute() => throw new NotImplementedException();
@@ -114,8 +114,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
         /// </summary>
         protected virtual void HandleExecuteException(Exception e)
         {
-            var className = GetType().Name;
-            GeneralTracer.Error($"Exception in {className}.ExecuteAsync method.", e);
+            GeneralTracer.Error($"Strategy execution exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
         }
 
@@ -130,7 +129,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
             return File.Exists(tempPath) ? tempPath : string.Empty;
         }
 
-        protected static void OpenBrowser(string url)
+        private static void OpenBrowser(string url)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -147,7 +146,7 @@ namespace GeneralUpdate.Common.Internal.Strategy
             throw new PlatformNotSupportedException("Unsupported OS platform");
         }
         
-        protected static void Clear(string path)
+        private static void Clear(string path)
         {
             if (Directory.Exists(path))
                 StorageManager.DeleteDirectory(path);
