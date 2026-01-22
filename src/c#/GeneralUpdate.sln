@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Bowl", "Gener
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generalupdate.CatBowl", "Generalupdate.CatBowl\Generalupdate.CatBowl.csproj", "{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Extension", "GeneralUpdate.Extension\GeneralUpdate.Extension.csproj", "{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,10 @@ Global
 		{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +80,7 @@ Global
 		{D14E59CD-404B-467B-9C6D-91EFC5994D37} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 		{49D0687D-1321-48E9-84C3-936B10532367} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 		{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3} = {74BE0282-A10D-4A81-A0F0-FAA79A6152B7}
+		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A7B2D0AD-E000-4749-BAC0-FF21B9872805}
