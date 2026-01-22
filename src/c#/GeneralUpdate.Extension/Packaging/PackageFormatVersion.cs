@@ -1,4 +1,5 @@
 using System;
+using MyApp.Extensions;
 
 namespace MyApp.Extensions.Packaging
 {
@@ -57,7 +58,20 @@ namespace MyApp.Extensions.Packaging
         /// <returns>A PackageFormatVersion instance.</returns>
         public static PackageFormatVersion Parse(string versionString)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(versionString))
+                throw new ArgumentException("Version string cannot be null or empty.", nameof(versionString));
+
+            // Reuse SemVersion parsing logic
+            var semVer = SemVersion.Parse(versionString);
+            
+            return new PackageFormatVersion
+            {
+                Major = semVer.Major,
+                Minor = semVer.Minor,
+                Patch = semVer.Patch,
+                PreRelease = semVer.PreRelease,
+                BuildMetadata = semVer.BuildMetadata
+            };
         }
     }
 }
