@@ -5,7 +5,7 @@ namespace MyApp.Extensions.Packaging
 {
     /// <summary>
     /// Represents the manifest of a plugin package, containing metadata, runtime configuration, 
-    /// dependencies, permissions, UI extension points, and signatures.
+    /// dependencies, permissions, and signatures.
     /// </summary>
     public class PackageManifest
     {
@@ -65,9 +65,9 @@ namespace MyApp.Extensions.Packaging
         public List<string> Permissions { get; set; }
 
         /// <summary>
-        /// Gets or sets the UI extension points defined by the package.
+        /// Gets or sets the extension points defined by the package.
         /// </summary>
-        public Dictionary<string, object> UIExtensionPoints { get; set; }
+        public Dictionary<string, object> ExtensionPoints { get; set; }
 
         /// <summary>
         /// Gets or sets the signature information for package verification.

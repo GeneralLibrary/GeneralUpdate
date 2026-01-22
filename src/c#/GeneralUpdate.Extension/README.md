@@ -8,7 +8,6 @@ This framework provides a complete plugin/extension system with support for:
 - Multi-language runtime support (C#, Lua, Python, Node.js, native executables)
 - Advanced update mechanisms (full, incremental, differential, rollback)
 - Enterprise-level features (offline installation, repository mirrors, security policies)
-- Comprehensive UI extension points
 - Strong security and sandboxing
 
 ## Architecture
@@ -78,19 +77,6 @@ Multi-language runtime support for extensions.
 **Key Interfaces:**
 - `IRuntimeHost` - Start/stop runtime, invoke methods, health checks
 - `IRuntimeResolver` - Resolve runtime hosts by type
-
-### MyApp.Extensions.UI
-UI extension points for WPF/Avalonia applications.
-
-**Key Interfaces:**
-- `ICommandContribution` - Register commands
-- `IMenuContribution` - Add menu items
-- `IPanelContribution` - Contribute panels/views
-- `IShortcutContribution` - Keyboard shortcuts
-- `IThemeContribution` - Custom themes
-
-**Key Types:**
-- `UIContributionManifest` - Unified UI contribution metadata
 
 ### MyApp.Extensions.Security
 Enterprise-level security and offline support.
