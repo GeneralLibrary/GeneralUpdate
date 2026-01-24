@@ -249,34 +249,21 @@ namespace GeneralUpdate.Extension.Services
                     throw new InvalidOperationException($"Download URL is not set for plugin {plugin.Id}");
                 }
 
-                // Create download task using DownloadManager
-                var fileName = $"{plugin.Id}-{plugin.AvailableVersion ?? plugin.Version}.zip";
+                // Create VersionInfo for DownloadTask
+                var versionInfo = new GeneralUpdate.Common.Shared.Object.VersionInfo
+                {
+                    Name = $"{plugin.Id}-{plugin.AvailableVersion ?? plugin.Version}",
+                    Url = plugin.DownloadUrl,
+                    Version = plugin.AvailableVersion ?? plugin.Version
+                };
+
+                // Create download manager
                 var downloadManager = new DownloadManager(_downloadPath, ".zip", _timeoutSeconds);
-                
-                var downloadTask = new DownloadTask(plugin.DownloadUrl, fileName, _downloadPath);
-                
-                // Subscribe to download events
-                downloadTask.MultiDownloadCompleted += (sender, e) =>
-                {
-                    OnDownloadCompleted(plugin, e.BytesReceived, e.TotalBytesToReceive);
-                };
-
-                downloadTask.MultiDownloadError += (sender, e) =>
-                {
-                    OnDownloadError(plugin, e.Exception);
-                };
-
-                downloadTask.MultiDownloadStatistics += (sender, e) =>
-                {
-                    OnDownloadProgress(plugin, e.BytesReceived, e.TotalBytesToReceive);
-                };
-
-                downloadManager.Add(downloadTask);
                 
                 // Wire up DownloadManager events
                 downloadManager.MultiDownloadCompleted += (sender, e) =>
                 {
-                    OnDownloadCompleted(plugin, e.BytesReceived, e.TotalBytesToReceive);
+                    // Download of a single task completed
                 };
 
                 downloadManager.MultiDownloadError += (sender, e) =>
@@ -289,6 +276,20 @@ namespace GeneralUpdate.Extension.Services
                     OnDownloadProgress(plugin, e.BytesReceived, e.TotalBytesToReceive);
                 };
 
+                downloadManager.MultiAllDownloadCompleted += (sender, e) =>
+                {
+                    if (e.IsAllDownloadCompleted)
+                    {
+                        var fileName = $"{versionInfo.Name}.zip";
+                        var downloadPath = Path.Combine(_downloadPath, fileName);
+                        OnPluginUpdateSucceeded(plugin, downloadPath);
+                    }
+                };
+
+                // Create and add download task
+                var downloadTask = new DownloadTask(downloadManager, versionInfo);
+                downloadManager.Add(downloadTask);
+
                 // Launch download
                 await downloadManager.LaunchTasksAsync();
 
@@ -297,8 +298,6 @@ namespace GeneralUpdate.Extension.Services
                 {
                     _statusMap[plugin.Id] = UpdateStatus.UpdateSucceeded;
                 }
-
-                OnPluginUpdateSucceeded(plugin, Path.Combine(_downloadPath, fileName));
             }
             catch (Exception ex)
             {

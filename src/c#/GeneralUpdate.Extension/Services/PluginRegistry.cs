@@ -248,7 +248,7 @@ namespace GeneralUpdate.Extension.Services
 
             try
             {
-                var json = await File.ReadAllTextAsync(_registryFilePath);
+                var json = File.ReadAllText(_registryFilePath);
                 var plugins = JsonSerializer.Deserialize<List<PluginInfo>>(json);
 
                 if (plugins != null)
@@ -262,6 +262,7 @@ namespace GeneralUpdate.Extension.Services
                         }
                     }
                 }
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -286,7 +287,8 @@ namespace GeneralUpdate.Extension.Services
                 };
 
                 var json = JsonSerializer.Serialize(plugins, options);
-                await File.WriteAllTextAsync(_registryFilePath, json);
+                File.WriteAllText(_registryFilePath, json);
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
