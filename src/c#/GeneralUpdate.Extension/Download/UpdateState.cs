@@ -1,17 +1,17 @@
-namespace GeneralUpdate.Extension.Models
+namespace GeneralUpdate.Extension.Download
 {
     /// <summary>
-    /// Represents the status of an extension update.
+    /// Defines the lifecycle states of an extension update operation.
     /// </summary>
-    public enum ExtensionUpdateStatus
+    public enum UpdateState
     {
         /// <summary>
-        /// Update has been queued but not started.
+        /// Update has been queued but not yet started.
         /// </summary>
         Queued = 0,
 
         /// <summary>
-        /// Update is currently in progress (downloading or installing).
+        /// Update is currently downloading or installing.
         /// </summary>
         Updating = 1,
 
@@ -21,12 +21,12 @@ namespace GeneralUpdate.Extension.Models
         UpdateSuccessful = 2,
 
         /// <summary>
-        /// Update failed.
+        /// Update failed due to an error.
         /// </summary>
         UpdateFailed = 3,
 
         /// <summary>
-        /// Update was cancelled.
+        /// Update was cancelled by the user or system.
         /// </summary>
         Cancelled = 4
     }

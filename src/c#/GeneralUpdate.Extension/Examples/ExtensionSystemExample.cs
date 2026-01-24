@@ -1,35 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using GeneralUpdate.Extension;
-using GeneralUpdate.Extension.Models;
 
 namespace GeneralUpdate.Extension.Examples
 {
     /// <summary>
     /// Example usage of the GeneralUpdate.Extension system.
-    /// This demonstrates all key features of the extension update system.
+    /// Demonstrates all key features of the extension update system with the refactored architecture.
     /// </summary>
     public class ExtensionSystemExample
     {
-        private ExtensionManager? _manager;
+        private IExtensionHost? _host;
 
         /// <summary>
-        /// Initialize the extension manager with typical settings.
+        /// Initialize the extension host with typical settings.
         /// </summary>
         public void Initialize()
         {
             // Set up paths for your application
-            var clientVersion = new Version(1, 5, 0);
+            var hostVersion = new Version(1, 5, 0);
             var installPath = @"C:\MyApp\Extensions";
             var downloadPath = @"C:\MyApp\Temp\Downloads";
-            
+
             // Detect current platform
             var currentPlatform = DetectCurrentPlatform();
 
-            // Create the extension manager
-            _manager = new ExtensionManager(
-                clientVersion,
+            // Create the extension host
+            _host = new ExtensionHost(
+                hostVersion,
                 installPath,
                 downloadPath,
                 currentPlatform,
@@ -39,10 +37,10 @@ namespace GeneralUpdate.Extension.Examples
             // Subscribe to events for monitoring
             SubscribeToEvents();
 
-            // Load existing local extensions
-            _manager.LoadLocalExtensions();
+            // Load existing installed extensions
+            _host.LoadInstalledExtensions();
 
-            Console.WriteLine($"Extension Manager initialized for client version {clientVersion}");
+            Console.WriteLine($"Extension Host initialized for version {hostVersion}");
             Console.WriteLine($"Platform: {currentPlatform}");
         }
 
@@ -51,36 +49,36 @@ namespace GeneralUpdate.Extension.Examples
         /// </summary>
         private void SubscribeToEvents()
         {
-            if (_manager == null) return;
+            if (_host == null) return;
 
-            _manager.UpdateStatusChanged += (sender, args) =>
+            _host.UpdateStateChanged += (sender, args) =>
             {
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Extension '{args.ExtensionName}' status changed: {args.OldStatus} -> {args.NewStatus}");
-                
-                if (args.NewStatus == ExtensionUpdateStatus.UpdateFailed)
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Extension '{args.ExtensionName}' state changed: {args.PreviousState} -> {args.CurrentState}");
+
+                if (args.CurrentState == Download.UpdateState.UpdateFailed)
                 {
-                    Console.WriteLine($"  Error: {args.QueueItem.ErrorMessage}");
+                    Console.WriteLine($"  Error: {args.Operation.ErrorMessage}");
                 }
             };
 
-            _manager.DownloadProgress += (sender, args) =>
+            _host.DownloadProgress += (sender, args) =>
             {
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Downloading '{args.ExtensionName}': {args.Progress:F1}% ({args.Speed})");
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Downloading '{args.ExtensionName}': {args.ProgressPercentage:F1}% ({args.Speed})");
             };
 
-            _manager.DownloadCompleted += (sender, args) =>
+            _host.DownloadCompleted += (sender, args) =>
             {
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Download completed for '{args.ExtensionName}'");
             };
 
-            _manager.DownloadFailed += (sender, args) =>
+            _host.DownloadFailed += (sender, args) =>
             {
                 Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Download failed for '{args.ExtensionName}'");
             };
 
-            _manager.InstallCompleted += (sender, args) =>
+            _host.InstallationCompleted += (sender, args) =>
             {
-                if (args.IsSuccessful)
+                if (args.Success)
                 {
                     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Installation successful: '{args.ExtensionName}' at {args.InstallPath}");
                 }
@@ -90,9 +88,9 @@ namespace GeneralUpdate.Extension.Examples
                 }
             };
 
-            _manager.RollbackCompleted += (sender, args) =>
+            _host.RollbackCompleted += (sender, args) =>
             {
-                if (args.IsSuccessful)
+                if (args.Success)
                 {
                     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Rollback successful for '{args.ExtensionName}'");
                 }
@@ -108,27 +106,27 @@ namespace GeneralUpdate.Extension.Examples
         /// </summary>
         public void ListInstalledExtensions()
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return;
             }
 
-            var extensions = _manager.GetLocalExtensions();
-            
+            var extensions = _host.GetInstalledExtensions();
+
             Console.WriteLine($"\nInstalled Extensions ({extensions.Count}):");
             Console.WriteLine("".PadRight(80, '='));
-            
+
             foreach (var ext in extensions)
             {
-                Console.WriteLine($"Name: {ext.Metadata.Name}");
-                Console.WriteLine($"  ID: {ext.Metadata.Id}");
-                Console.WriteLine($"  Version: {ext.Metadata.Version}");
+                Console.WriteLine($"Name: {ext.Descriptor.DisplayName}");
+                Console.WriteLine($"  ID: {ext.Descriptor.ExtensionId}");
+                Console.WriteLine($"  Version: {ext.Descriptor.Version}");
                 Console.WriteLine($"  Installed: {ext.InstallDate:yyyy-MM-dd}");
                 Console.WriteLine($"  Auto-Update: {ext.AutoUpdateEnabled}");
                 Console.WriteLine($"  Enabled: {ext.IsEnabled}");
-                Console.WriteLine($"  Platform: {ext.Metadata.SupportedPlatforms}");
-                Console.WriteLine($"  Type: {ext.Metadata.ContentType}");
+                Console.WriteLine($"  Platform: {ext.Descriptor.SupportedPlatforms}");
+                Console.WriteLine($"  Type: {ext.Descriptor.ContentType}");
                 Console.WriteLine();
             }
         }
@@ -136,32 +134,32 @@ namespace GeneralUpdate.Extension.Examples
         /// <summary>
         /// Example: Fetch and display compatible remote extensions.
         /// </summary>
-        public async Task<List<RemoteExtension>> FetchCompatibleRemoteExtensions()
+        public async Task<List<Metadata.AvailableExtension>> FetchCompatibleExtensions()
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
-                return new List<RemoteExtension>();
+                Console.WriteLine("Host not initialized");
+                return new List<Metadata.AvailableExtension>();
             }
 
             // In a real application, fetch this from your server
-            string remoteJson = await FetchRemoteExtensionsFromServer();
-            
-            // Parse remote extensions
-            var allRemoteExtensions = _manager.ParseRemoteExtensions(remoteJson);
-            
+            string remoteJson = await FetchExtensionsFromServer();
+
+            // Parse available extensions
+            var allExtensions = _host.ParseAvailableExtensions(remoteJson);
+
             // Filter to only compatible extensions
-            var compatibleExtensions = _manager.GetCompatibleRemoteExtensions(allRemoteExtensions);
-            
-            Console.WriteLine($"\nCompatible Remote Extensions ({compatibleExtensions.Count}):");
+            var compatibleExtensions = _host.GetCompatibleExtensions(allExtensions);
+
+            Console.WriteLine($"\nCompatible Extensions ({compatibleExtensions.Count}):");
             Console.WriteLine("".PadRight(80, '='));
-            
+
             foreach (var ext in compatibleExtensions)
             {
-                Console.WriteLine($"Name: {ext.Metadata.Name}");
-                Console.WriteLine($"  Version: {ext.Metadata.Version}");
-                Console.WriteLine($"  Description: {ext.Metadata.Description}");
-                Console.WriteLine($"  Author: {ext.Metadata.Author}");
+                Console.WriteLine($"Name: {ext.Descriptor.DisplayName}");
+                Console.WriteLine($"  Version: {ext.Descriptor.Version}");
+                Console.WriteLine($"  Description: {ext.Descriptor.Description}");
+                Console.WriteLine($"  Author: {ext.Descriptor.Author}");
                 Console.WriteLine();
             }
 
@@ -171,29 +169,29 @@ namespace GeneralUpdate.Extension.Examples
         /// <summary>
         /// Example: Queue a specific extension for update.
         /// </summary>
-        public void QueueExtensionUpdate(string extensionId, List<RemoteExtension> remoteExtensions)
+        public void QueueExtensionUpdate(string extensionId, List<Metadata.AvailableExtension> availableExtensions)
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return;
             }
 
             // Find the best version for this extension
-            var bestVersion = _manager.FindBestUpgradeVersion(extensionId, remoteExtensions);
-            
+            var bestVersion = _host.FindBestUpgrade(extensionId, availableExtensions);
+
             if (bestVersion == null)
             {
                 Console.WriteLine($"No compatible version found for extension '{extensionId}'");
                 return;
             }
 
-            Console.WriteLine($"Queueing update for '{bestVersion.Metadata.Name}' to version {bestVersion.Metadata.Version}");
-            
+            Console.WriteLine($"Queueing update for '{bestVersion.Descriptor.DisplayName}' to version {bestVersion.Descriptor.Version}");
+
             try
             {
-                var queueItem = _manager.QueueExtensionUpdate(bestVersion, enableRollback: true);
-                Console.WriteLine($"Successfully queued. Queue ID: {queueItem.QueueId}");
+                var operation = _host.QueueUpdate(bestVersion, enableRollback: true);
+                Console.WriteLine($"Successfully queued. Operation ID: {operation.OperationId}");
             }
             catch (Exception ex)
             {
@@ -206,23 +204,23 @@ namespace GeneralUpdate.Extension.Examples
         /// </summary>
         public async Task<int> CheckAndQueueAutoUpdates()
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return 0;
             }
 
             Console.WriteLine("Checking for updates...");
-            
-            // Fetch remote extensions
-            var remoteExtensions = await FetchCompatibleRemoteExtensions();
-            
+
+            // Fetch available extensions
+            var availableExtensions = await FetchCompatibleExtensions();
+
             // Queue all auto-updates
-            var queuedItems = _manager.QueueAutoUpdates(remoteExtensions);
-            
-            Console.WriteLine($"Queued {queuedItems.Count} extension(s) for update");
-            
-            return queuedItems.Count;
+            var queuedOperations = _host.QueueAutoUpdates(availableExtensions);
+
+            Console.WriteLine($"Queued {queuedOperations.Count} extension(s) for update");
+
+            return queuedOperations.Count;
         }
 
         /// <summary>
@@ -230,34 +228,34 @@ namespace GeneralUpdate.Extension.Examples
         /// </summary>
         public async Task ProcessAllQueuedUpdates()
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return;
             }
 
-            var queueItems = _manager.GetUpdateQueue();
-            
-            if (queueItems.Count == 0)
+            var operations = _host.GetUpdateQueue();
+
+            if (operations.Count == 0)
             {
                 Console.WriteLine("No updates in queue");
                 return;
             }
 
-            Console.WriteLine($"Processing {queueItems.Count} queued update(s)...");
-            
-            await _manager.ProcessAllUpdatesAsync();
-            
+            Console.WriteLine($"Processing {operations.Count} queued update(s)...");
+
+            await _host.ProcessAllUpdatesAsync();
+
             Console.WriteLine("All updates processed");
-            
+
             // Check results
-            var successful = _manager.GetUpdateQueueByStatus(ExtensionUpdateStatus.UpdateSuccessful);
-            var failed = _manager.GetUpdateQueueByStatus(ExtensionUpdateStatus.UpdateFailed);
-            
+            var successful = _host.GetUpdatesByState(Download.UpdateState.UpdateSuccessful);
+            var failed = _host.GetUpdatesByState(Download.UpdateState.UpdateFailed);
+
             Console.WriteLine($"Successful: {successful.Count}, Failed: {failed.Count}");
-            
+
             // Clean up completed items
-            _manager.ClearCompletedUpdates();
+            _host.ClearCompletedUpdates();
         }
 
         /// <summary>
@@ -265,41 +263,41 @@ namespace GeneralUpdate.Extension.Examples
         /// </summary>
         public void ConfigureAutoUpdate()
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return;
             }
 
             // Enable global auto-update
-            _manager.GlobalAutoUpdateEnabled = true;
+            _host.GlobalAutoUpdateEnabled = true;
             Console.WriteLine("Global auto-update enabled");
 
             // Enable auto-update for specific extension
-            _manager.SetExtensionAutoUpdate("my-extension-id", true);
+            _host.SetAutoUpdate("my-extension-id", true);
             Console.WriteLine("Auto-update enabled for 'my-extension-id'");
 
             // Disable auto-update for another extension
-            _manager.SetExtensionAutoUpdate("another-extension-id", false);
+            _host.SetAutoUpdate("another-extension-id", false);
             Console.WriteLine("Auto-update disabled for 'another-extension-id'");
         }
 
         /// <summary>
         /// Example: Check version compatibility.
         /// </summary>
-        public void CheckVersionCompatibility(ExtensionMetadata metadata)
+        public void CheckVersionCompatibility(Metadata.ExtensionDescriptor descriptor)
         {
-            if (_manager == null)
+            if (_host == null)
             {
-                Console.WriteLine("Manager not initialized");
+                Console.WriteLine("Host not initialized");
                 return;
             }
 
-            bool compatible = _manager.IsExtensionCompatible(metadata);
-            
-            Console.WriteLine($"Extension '{metadata.Name}' version {metadata.Version}:");
-            Console.WriteLine($"  Client version: {_manager.ClientVersion}");
-            Console.WriteLine($"  Required range: {metadata.Compatibility.MinClientVersion} - {metadata.Compatibility.MaxClientVersion}");
+            bool compatible = _host.IsCompatible(descriptor);
+
+            Console.WriteLine($"Extension '{descriptor.DisplayName}' version {descriptor.Version}:");
+            Console.WriteLine($"  Host version: {_host.HostVersion}");
+            Console.WriteLine($"  Required range: {descriptor.Compatibility.MinHostVersion} - {descriptor.Compatibility.MaxHostVersion}");
             Console.WriteLine($"  Compatible: {(compatible ? "Yes" : "No")}");
         }
 
@@ -337,25 +335,25 @@ namespace GeneralUpdate.Extension.Examples
         /// <summary>
         /// Detect the current platform at runtime.
         /// </summary>
-        private ExtensionPlatform DetectCurrentPlatform()
+        private Metadata.TargetPlatform DetectCurrentPlatform()
         {
             if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-                return ExtensionPlatform.Windows;
-            
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
-                return ExtensionPlatform.Linux;
-            
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
-                return ExtensionPlatform.macOS;
+                return Metadata.TargetPlatform.Windows;
 
-            return ExtensionPlatform.None;
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+                return Metadata.TargetPlatform.Linux;
+
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
+                return Metadata.TargetPlatform.MacOS;
+
+            return Metadata.TargetPlatform.None;
         }
 
         /// <summary>
         /// Simulates fetching remote extensions from a server.
         /// In a real application, this would make an HTTP request to your extension server.
         /// </summary>
-        private async Task<string> FetchRemoteExtensionsFromServer()
+        private async Task<string> FetchExtensionsFromServer()
         {
             // Simulate network delay
             await Task.Delay(100);
@@ -369,7 +367,7 @@ namespace GeneralUpdate.Extension.Examples
             // Sample JSON response
             return @"[
                 {
-                    ""metadata"": {
+                    ""descriptor"": {
                         ""id"": ""sample-extension"",
                         ""name"": ""Sample Extension"",
                         ""version"": ""1.0.0"",
@@ -379,8 +377,8 @@ namespace GeneralUpdate.Extension.Examples
                         ""supportedPlatforms"": 7,
                         ""contentType"": 0,
                         ""compatibility"": {
-                            ""minClientVersion"": ""1.0.0"",
-                            ""maxClientVersion"": ""2.0.0""
+                            ""minHostVersion"": ""1.0.0"",
+                            ""maxHostVersion"": ""2.0.0""
                         },
                         ""downloadUrl"": ""https://example.com/extensions/sample-1.0.0.zip"",
                         ""hash"": ""sha256-example-hash"",
@@ -403,7 +401,7 @@ namespace GeneralUpdate.Extension.Examples
         public static async Task Main(string[] args)
         {
             var example = new ExtensionSystemExample();
-            
+
             try
             {
                 await example.RunCompleteUpdateWorkflow();
