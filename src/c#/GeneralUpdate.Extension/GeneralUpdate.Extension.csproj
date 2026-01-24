@@ -8,4 +8,9 @@
         <PackageReference Include="System.Text.Json" Version="8.0.5" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+    </ItemGroup>
+
 </Project>
