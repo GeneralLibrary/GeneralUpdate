@@ -46,5 +46,10 @@ namespace GeneralUpdate.Extension.Models
         /// New version after update (if applicable).
         /// </summary>
         public string NewVersion { get; set; }
+
+        /// <summary>
+        /// Downloaded file path (if applicable).
+        /// </summary>
+        public string DownloadedFilePath { get; set; }
     }
 }

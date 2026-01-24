@@ -323,9 +323,12 @@ namespace GeneralUpdate.Extension.Services
                 _eventBus.Publish(installingEvent);
                 PluginUpdateStatusChanged?.Invoke(this, installingEvent);
 
-                // Get the downloaded file path from the message or construct it
-                // This assumes the download queue stores files in a predictable location
-                var downloadPath = e.Message; // Or extract from event data
+                // Get the downloaded file path from the event
+                var downloadPath = e.DownloadedFilePath;
+                if (string.IsNullOrEmpty(downloadPath))
+                {
+                    throw new InvalidOperationException("Downloaded file path is not available");
+                }
 
                 // Install/Update the plugin
                 var success = await _pluginInstaller.UpdateAsync(e.Plugin, downloadPath);

@@ -282,7 +282,7 @@ namespace GeneralUpdate.Extension.Services
                     {
                         var fileName = $"{versionInfo.Name}.zip";
                         var downloadPath = Path.Combine(_downloadPath, fileName);
-                        OnPluginUpdateSucceeded(plugin, downloadPath);
+                        OnPluginDownloadSucceeded(plugin, downloadPath);
                     }
                 };
 
@@ -292,12 +292,6 @@ namespace GeneralUpdate.Extension.Services
 
                 // Launch download
                 await downloadManager.LaunchTasksAsync();
-
-                // Update status to Downloaded/UpdateSucceeded
-                lock (_lock)
-                {
-                    _statusMap[plugin.Id] = UpdateStatus.UpdateSucceeded;
-                }
             }
             catch (Exception ex)
             {
@@ -341,21 +335,22 @@ namespace GeneralUpdate.Extension.Services
             });
         }
 
-        private void OnDownloadCompleted(PluginInfo plugin, long bytesReceived, long totalBytes)
+        private void OnPluginDownloadSucceeded(PluginInfo plugin, string downloadedPath)
         {
-            // Progress event will be followed by success event
-            OnDownloadProgress(plugin, bytesReceived, totalBytes);
-        }
+            // Update status to Downloaded
+            lock (_lock)
+            {
+                _statusMap[plugin.Id] = UpdateStatus.Downloaded;
+            }
 
-        private void OnPluginUpdateSucceeded(PluginInfo plugin, string downloadedPath)
-        {
             PluginUpdateSucceeded?.Invoke(this, new PluginUpdateEvent
             {
                 Plugin = plugin,
-                Status = UpdateStatus.UpdateSucceeded,
+                Status = UpdateStatus.Downloaded,
                 Progress = 100,
                 Message = $"Plugin {plugin.Name} downloaded successfully",
-                NewVersion = plugin.AvailableVersion
+                NewVersion = plugin.AvailableVersion,
+                DownloadedFilePath = downloadedPath
             });
         }
 
