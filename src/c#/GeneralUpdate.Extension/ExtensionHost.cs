@@ -339,18 +339,18 @@ namespace GeneralUpdate.Extension
                 if (installed != null)
                 {
                     _catalog.AddOrUpdateInstalledExtension(installed);
-                    _updateQueue. ChangeState(operation.OperationId, Download.UpdateState.UpdateSuccessful);
+                    _updateQueue.ChangeState(operation.OperationId, Download.UpdateState.UpdateSuccessful);
                     return true;
                 }
                 else
                 {
-                    _updateQueue. ChangeState(operation.OperationId, Download.UpdateState.UpdateFailed, "Installation failed");
+                    _updateQueue.ChangeState(operation.OperationId, Download.UpdateState.UpdateFailed, "Installation failed");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _updateQueue. ChangeState(operation.OperationId, Download.UpdateState.UpdateFailed, ex.Message);
+                _updateQueue.ChangeState(operation.OperationId, Download.UpdateState.UpdateFailed, ex.Message);
                 GeneralUpdate.Common.Shared.GeneralTracer.Error($"Failed to process update for operation {operation.OperationId}", ex);
                 return false;
             }

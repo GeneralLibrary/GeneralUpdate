@@ -69,14 +69,14 @@ namespace GeneralUpdate.Extension.Download
 
             if (string.IsNullOrWhiteSpace(descriptor.DownloadUrl))
             {
-                _updateQueue. ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Download URL is missing");
+                _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Download URL is missing");
                 OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
                 return null;
             }
 
             try
             {
-                _updateQueue. ChangeState(operation.OperationId, UpdateState.Updating);
+                _updateQueue.ChangeState(operation.OperationId, UpdateState.Updating);
 
                 // Determine file format from URL or default to .zip
                 var format = !string.IsNullOrWhiteSpace(descriptor.DownloadUrl) && descriptor.DownloadUrl!.Contains(".")
@@ -118,14 +118,14 @@ namespace GeneralUpdate.Extension.Download
                 }
                 else
                 {
-                    _updateQueue. ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Downloaded file not found");
+                    _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Downloaded file not found");
                     OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                _updateQueue. ChangeState(operation.OperationId, UpdateState.UpdateFailed, ex.Message);
+                _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, ex.Message);
                 OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
                 GeneralUpdate.Common.Shared.GeneralTracer.Error($"Download failed for extension {descriptor.ExtensionId}", ex);
                 return null;
@@ -159,7 +159,7 @@ namespace GeneralUpdate.Extension.Download
         {
             if (!args.IsComplated)
             {
-                _updateQueue. ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Download completed with errors");
+                _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Download completed with errors");
             }
         }
 
@@ -168,7 +168,7 @@ namespace GeneralUpdate.Extension.Download
         /// </summary>
         private void OnDownloadError(UpdateOperation operation, MultiDownloadErrorEventArgs args)
         {
-            _updateQueue. ChangeState(operation.OperationId, UpdateState.UpdateFailed, args.Exception?.Message);
+            _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, args.Exception?.Message);
         }
 
         /// <summary>
