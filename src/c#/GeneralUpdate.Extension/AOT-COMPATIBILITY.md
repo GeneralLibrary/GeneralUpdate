@@ -54,7 +54,6 @@ The following scenarios have been verified to work with Native AOT:
 | Package | AOT Compatible | Notes |
 |---------|---------------|-------|
 | System.Text.Json | ✅ Yes | Use with source generators for best performance |
-| Microsoft.Extensions.DependencyInjection.Abstractions | ✅ Yes | Only abstractions, no runtime dependencies |
 | GeneralUpdate.Common | ⚠️ Check | Depends on implementation |
 | GeneralUpdate.Differential | ⚠️ Check | Depends on implementation |
 

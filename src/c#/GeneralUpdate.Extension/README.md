@@ -5,7 +5,7 @@ A production-ready VS Code-compliant extension/plugin update system with version
 ## Features
 
 - ✅ **VS Code Standard Compliance** - Extension metadata follows VS Code package.json structure
-- ✅ **Dependency Injection** - Full Prism and Microsoft.Extensions.DependencyInjection support
+- ✅ **Dependency Injection Ready** - Interfaces for all services, easy Prism/DI integration
 - ✅ **Multi-Platform** - Windows, Linux, macOS with platform-specific filtering
 - ✅ **Version Compatibility** - Min/max host version validation and automatic matching
 - ✅ **Update Queue** - Thread-safe queue with state tracking and event notifications
@@ -13,7 +13,7 @@ A production-ready VS Code-compliant extension/plugin update system with version
 - ✅ **Rollback Support** - Automatic backup and restoration on installation failure
 - ✅ **Package Generation** - Create extension packages from source directories
 - ✅ **AOT Compatible** - No reflection, supports Native AOT compilation
-- ✅ **Minimal Dependencies** - Only System.Text.Json required (beyond framework)
+- ✅ **Minimal Dependencies** - Only System.Text.Json required
 
 ## Quick Start
 
@@ -57,16 +57,81 @@ var installed = host.GetInstalledExtensions();
 
 ### 1. Dependency Injection Setup
 
+The extension system provides interfaces for all core services, making it easy to register with any DI container.
+
+#### With Prism
+
+```csharp
+using Prism.Ioc;
+using GeneralUpdate.Extension;
+
+public class YourModule : IModule
+{
+    public void RegisterTypes(IContainerRegistry containerRegistry)
+    {
+        var hostVersion = new Version(1, 0, 0);
+        var installPath = @"C:\MyApp\Extensions";
+        var downloadPath = @"C:\MyApp\Downloads";
+        var platform = Metadata.TargetPlatform.Windows;
+
+        // Register as singletons
+        containerRegistry.RegisterSingleton<Core.IExtensionCatalog>(() => 
+            new Core.ExtensionCatalog(installPath));
+        
+        containerRegistry.RegisterSingleton<Compatibility.ICompatibilityValidator>(() => 
+            new Compatibility.CompatibilityValidator(hostVersion));
+        
+        containerRegistry.RegisterSingleton<Download.IUpdateQueue, Download.UpdateQueue>();
+        
+        containerRegistry.RegisterSingleton<PackageGeneration.IExtensionPackageGenerator, 
+            PackageGeneration.ExtensionPackageGenerator>();
+        
+        containerRegistry.RegisterSingleton<IExtensionHost>(() => 
+            new ExtensionHost(hostVersion, installPath, downloadPath, platform));
+    }
+}
+
+// Resolve services
+var host = container.Resolve<IExtensionHost>();
+```
+
+#### With Microsoft.Extensions.DependencyInjection
+
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 
-services.AddExtensionSystem(
+var services = new ServiceCollection();
+var hostVersion = new Version(1, 0, 0);
+var installPath = @"C:\Extensions";
+var downloadPath = @"C:\Downloads";
+
+services.AddSingleton<Core.IExtensionCatalog>(sp => 
+    new Core.ExtensionCatalog(installPath));
+
+services.AddSingleton<Compatibility.ICompatibilityValidator>(sp => 
+    new Compatibility.CompatibilityValidator(hostVersion));
+
+services.AddSingleton<Download.IUpdateQueue, Download.UpdateQueue>();
+
+services.AddSingleton<PackageGeneration.IExtensionPackageGenerator, 
+    PackageGeneration.ExtensionPackageGenerator>();
+
+services.AddSingleton<IExtensionHost>(sp => 
+    new ExtensionHost(hostVersion, installPath, downloadPath, 
+        Metadata.TargetPlatform.Windows));
+
+var provider = services.BuildServiceProvider();
+var host = provider.GetRequiredService<IExtensionHost>();
+```
+
+#### Without DI (Direct Instantiation)
+
+```csharp
+var host = new ExtensionHost(
     new Version(1, 0, 0),
     @"C:\Extensions",
     @"C:\Downloads",
     Metadata.TargetPlatform.Windows);
-
-var host = provider.GetRequiredService<IExtensionHost>();
 ```
 
 ### 2. Loading and Managing Extensions
