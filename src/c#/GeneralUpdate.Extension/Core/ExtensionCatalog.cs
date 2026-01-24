@@ -98,13 +98,13 @@ namespace GeneralUpdate.Extension.Core
         /// <summary>
         /// Retrieves a specific installed extension by its unique identifier.
         /// </summary>
-        /// <param name="extensionId">The unique extension identifier to search for.</param>
+        /// <param name="extensionName">The unique extension identifier to search for.</param>
         /// <returns>The matching extension if found; otherwise, null.</returns>
-        public Installation.InstalledExtension? GetInstalledExtensionById(string extensionId)
+        public Installation.InstalledExtension? GetInstalledExtensionById(string extensionName)
         {
             lock (_lockObject)
             {
-                return _installedExtensions.FirstOrDefault(ext => ext.Descriptor.ExtensionId == extensionId);
+                return _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extensionName);
             }
         }
 
@@ -121,7 +121,7 @@ namespace GeneralUpdate.Extension.Core
 
             lock (_lockObject)
             {
-                var existing = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.ExtensionId == extension.Descriptor.ExtensionId);
+                var existing = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extension.Descriptor.Name);
 
                 if (existing != null)
                 {
@@ -137,12 +137,12 @@ namespace GeneralUpdate.Extension.Core
         /// Removes an installed extension from the catalog and deletes its manifest file.
         /// The extension directory is not removed.
         /// </summary>
-        /// <param name="extensionId">The unique identifier of the extension to remove.</param>
-        public void RemoveInstalledExtension(string extensionId)
+        /// <param name="extensionName">The unique identifier of the extension to remove.</param>
+        public void RemoveInstalledExtension(string extensionName)
         {
             lock (_lockObject)
             {
-                var extension = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.ExtensionId == extensionId);
+                var extension = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extensionName);
 
                 if (extension != null)
                 {
@@ -217,7 +217,7 @@ namespace GeneralUpdate.Extension.Core
             }
             catch (Exception ex)
             {
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Failed to save extension manifest for {extension.Descriptor.ExtensionId}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Failed to save extension manifest for {extension.Descriptor.Name}", ex);
             }
         }
     }

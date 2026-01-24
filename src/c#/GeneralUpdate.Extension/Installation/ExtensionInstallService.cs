@@ -69,8 +69,8 @@ namespace GeneralUpdate.Extension.Installation
             if (!File.Exists(packagePath))
                 throw new FileNotFoundException("Package file not found", packagePath);
 
-            var installPath = Path.Combine(_installBasePath, descriptor.ExtensionId);
-            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.ExtensionId}_{DateTime.Now:yyyyMMddHHmmss}");
+            var installPath = Path.Combine(_installBasePath, descriptor.Name);
+            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.Name}_{DateTime.Now:yyyyMMddHHmmss}");
 
             try
             {
@@ -109,20 +109,20 @@ namespace GeneralUpdate.Extension.Installation
                     Directory.Delete(backupPath, true);
                 }
 
-                OnInstallationCompleted(descriptor.ExtensionId, descriptor.DisplayName, true, installPath, null);
+                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, true, installPath, null);
                 return installed;
             }
             catch (Exception ex)
             {
-                OnInstallationCompleted(descriptor.ExtensionId, descriptor.DisplayName, false, installPath, ex.Message);
+                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, false, installPath, ex.Message);
 
                 // Attempt rollback if enabled
                 if (enableRollback && Directory.Exists(backupPath))
                 {
-                    await RollbackAsync(descriptor.ExtensionId, descriptor.DisplayName, backupPath, installPath);
+                    await RollbackAsync(descriptor.Name, descriptor.DisplayName, backupPath, installPath);
                 }
 
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Installation failed for extension {descriptor.ExtensionId}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Installation failed for extension {descriptor.Name}", ex);
                 return null;
             }
         }
@@ -146,8 +146,8 @@ namespace GeneralUpdate.Extension.Installation
             if (!Directory.Exists(patchPath))
                 throw new DirectoryNotFoundException("Patch directory not found");
 
-            var installPath = Path.Combine(_installBasePath, descriptor.ExtensionId);
-            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.ExtensionId}_{DateTime.Now:yyyyMMddHHmmss}");
+            var installPath = Path.Combine(_installBasePath, descriptor.Name);
+            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.Name}_{DateTime.Now:yyyyMMddHHmmss}");
 
             try
             {
@@ -197,20 +197,20 @@ namespace GeneralUpdate.Extension.Installation
                     Directory.Delete(backupPath, true);
                 }
 
-                OnInstallationCompleted(descriptor.ExtensionId, descriptor.DisplayName, true, installPath, null);
+                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, true, installPath, null);
                 return updated;
             }
             catch (Exception ex)
             {
-                OnInstallationCompleted(descriptor.ExtensionId, descriptor.DisplayName, false, installPath, ex.Message);
+                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, false, installPath, ex.Message);
 
                 // Attempt rollback if enabled
                 if (enableRollback && Directory.Exists(backupPath))
                 {
-                    await RollbackAsync(descriptor.ExtensionId, descriptor.DisplayName, backupPath, installPath);
+                    await RollbackAsync(descriptor.Name, descriptor.DisplayName, backupPath, installPath);
                 }
 
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Patch application failed for extension {descriptor.ExtensionId}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Patch application failed for extension {descriptor.Name}", ex);
                 return null;
             }
         }
@@ -219,7 +219,7 @@ namespace GeneralUpdate.Extension.Installation
         /// Performs a rollback by restoring an extension from its backup.
         /// Removes the failed installation and restores the previous state.
         /// </summary>
-        private async Task RollbackAsync(string extensionId, string extensionName, string backupPath, string installPath)
+        private async Task RollbackAsync(string extensionName, string displayName, string backupPath, string installPath)
         {
             try
             {
@@ -235,12 +235,12 @@ namespace GeneralUpdate.Extension.Installation
                 // Clean up backup
                 Directory.Delete(backupPath, true);
 
-                OnRollbackCompleted(extensionId, extensionName, true, null);
+                OnRollbackCompleted(extensionName, displayName, true, null);
             }
             catch (Exception ex)
             {
-                OnRollbackCompleted(extensionId, extensionName, false, ex.Message);
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Rollback failed for extension {extensionId}", ex);
+                OnRollbackCompleted(extensionName, displayName, false, ex.Message);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Rollback failed for extension {extensionName}", ex);
             }
         }
 
@@ -302,12 +302,12 @@ namespace GeneralUpdate.Extension.Installation
         /// <summary>
         /// Raises the InstallationCompleted event.
         /// </summary>
-        private void OnInstallationCompleted(string extensionId, string extensionName, bool success, string? installPath, string? errorMessage)
+        private void OnInstallationCompleted(string extensionName, string displayName, bool success, string? installPath, string? errorMessage)
         {
             InstallationCompleted?.Invoke(this, new EventHandlers.InstallationCompletedEventArgs
             {
-                ExtensionId = extensionId,
-                ExtensionName = extensionName,
+                Name = extensionName,
+                ExtensionName = displayName,
                 Success = success,
                 InstallPath = installPath,
                 ErrorMessage = errorMessage
@@ -317,12 +317,12 @@ namespace GeneralUpdate.Extension.Installation
         /// <summary>
         /// Raises the RollbackCompleted event.
         /// </summary>
-        private void OnRollbackCompleted(string extensionId, string extensionName, bool success, string? errorMessage)
+        private void OnRollbackCompleted(string extensionName, string displayName, bool success, string? errorMessage)
         {
             RollbackCompleted?.Invoke(this, new EventHandlers.RollbackCompletedEventArgs
             {
-                ExtensionId = extensionId,
-                ExtensionName = extensionName,
+                Name = extensionName,
+                ExtensionName = displayName,
                 Success = success,
                 ErrorMessage = errorMessage
             });

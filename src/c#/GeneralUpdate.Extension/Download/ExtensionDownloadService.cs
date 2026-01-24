@@ -70,7 +70,7 @@ namespace GeneralUpdate.Extension.Download
             if (string.IsNullOrWhiteSpace(descriptor.DownloadUrl))
             {
                 _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Download URL is missing");
-                OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
+                OnDownloadFailed(descriptor.Name, descriptor.DisplayName);
                 return null;
             }
 
@@ -86,7 +86,7 @@ namespace GeneralUpdate.Extension.Download
                 // Create version info for the download manager
                 var versionInfo = new VersionInfo
                 {
-                    Name = $"{descriptor.ExtensionId}_{descriptor.Version}",
+                    Name = $"{descriptor.Name}_{descriptor.Version}",
                     Url = descriptor.DownloadUrl,
                     Hash = descriptor.PackageHash,
                     Version = descriptor.Version,
@@ -113,21 +113,21 @@ namespace GeneralUpdate.Extension.Download
 
                 if (File.Exists(downloadedFilePath))
                 {
-                    OnDownloadSuccess(descriptor.ExtensionId, descriptor.DisplayName);
+                    OnDownloadSuccess(descriptor.Name, descriptor.DisplayName);
                     return downloadedFilePath;
                 }
                 else
                 {
                     _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, "Downloaded file not found");
-                    OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
+                    OnDownloadFailed(descriptor.Name, descriptor.DisplayName);
                     return null;
                 }
             }
             catch (Exception ex)
             {
                 _updateQueue.ChangeState(operation.OperationId, UpdateState.UpdateFailed, ex.Message);
-                OnDownloadFailed(descriptor.ExtensionId, descriptor.DisplayName);
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Download failed for extension {descriptor.ExtensionId}", ex);
+                OnDownloadFailed(descriptor.Name, descriptor.DisplayName);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Download failed for extension {descriptor.Name}", ex);
                 return null;
             }
         }
@@ -142,7 +142,7 @@ namespace GeneralUpdate.Extension.Download
 
             ProgressUpdated?.Invoke(this, new EventHandlers.DownloadProgressEventArgs
             {
-                ExtensionId = operation.Extension.Descriptor.ExtensionId,
+                Name = operation.Extension.Descriptor.Name,
                 ExtensionName = operation.Extension.Descriptor.DisplayName,
                 ProgressPercentage = progressPercentage,
                 TotalBytes = args.TotalBytesToReceive,
@@ -174,24 +174,24 @@ namespace GeneralUpdate.Extension.Download
         /// <summary>
         /// Raises the DownloadCompleted event when a download succeeds.
         /// </summary>
-        private void OnDownloadSuccess(string extensionId, string extensionName)
+        private void OnDownloadSuccess(string extensionName, string displayName)
         {
             DownloadCompleted?.Invoke(this, new EventHandlers.ExtensionEventArgs
             {
-                ExtensionId = extensionId,
-                ExtensionName = extensionName
+                Name = extensionName,
+                ExtensionName = displayName
             });
         }
 
         /// <summary>
         /// Raises the DownloadFailed event when a download fails.
         /// </summary>
-        private void OnDownloadFailed(string extensionId, string extensionName)
+        private void OnDownloadFailed(string extensionName, string displayName)
         {
             DownloadFailed?.Invoke(this, new EventHandlers.ExtensionEventArgs
             {
-                ExtensionId = extensionId,
-                ExtensionName = extensionName
+                Name = extensionName,
+                ExtensionName = displayName
             });
         }
     }

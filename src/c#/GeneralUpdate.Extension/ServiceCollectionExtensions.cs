@@ -46,6 +46,9 @@ namespace GeneralUpdate.Extension
 
             services.AddSingleton<Download.IUpdateQueue, Download.UpdateQueue>();
 
+            // Register package generator
+            services.AddSingleton<PackageGeneration.IExtensionPackageGenerator, PackageGeneration.ExtensionPackageGenerator>();
+
             // Register the main extension host
             services.AddSingleton<IExtensionHost>(sp =>
                 new ExtensionHost(

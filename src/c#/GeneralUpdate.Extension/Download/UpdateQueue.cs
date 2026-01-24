@@ -35,7 +35,7 @@ namespace GeneralUpdate.Extension.Download
             {
                 // Check if the extension is already queued or updating
                 var existing = _operations.FirstOrDefault(op =>
-                    op.Extension.Descriptor.ExtensionId == extension.Descriptor.ExtensionId &&
+                    op.Extension.Descriptor.Name == extension.Descriptor.Name &&
                     (op.State == UpdateState.Queued || op.State == UpdateState.Updating));
 
                 if (existing != null)
@@ -201,7 +201,7 @@ namespace GeneralUpdate.Extension.Download
         {
             StateChanged?.Invoke(this, new EventHandlers.UpdateStateChangedEventArgs
             {
-                ExtensionId = operation.Extension.Descriptor.ExtensionId,
+                Name = operation.Extension.Descriptor.Name,
                 ExtensionName = operation.Extension.Descriptor.DisplayName,
                 Operation = operation,
                 PreviousState = previousState,

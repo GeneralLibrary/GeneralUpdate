@@ -8,12 +8,13 @@ namespace GeneralUpdate.Extension.EventHandlers
     public class ExtensionEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets or sets the unique identifier of the extension associated with this event.
+        /// Gets or sets the unique identifier of the extension (lowercase name).
+        /// Following VS Code convention, this is the extension's unique name.
         /// </summary>
-        public string ExtensionId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the display name of the extension associated with this event.
+        /// Gets or sets the display name of the extension (human-readable).
         /// </summary>
         public string ExtensionName { get; set; } = string.Empty;
     }

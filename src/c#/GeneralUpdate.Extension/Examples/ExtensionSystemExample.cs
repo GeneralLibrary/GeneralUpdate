@@ -120,7 +120,7 @@ namespace GeneralUpdate.Extension.Examples
             foreach (var ext in extensions)
             {
                 Console.WriteLine($"Name: {ext.Descriptor.DisplayName}");
-                Console.WriteLine($"  ID: {ext.Descriptor.ExtensionId}");
+                Console.WriteLine($"  ID: {ext.Descriptor.Name}");
                 Console.WriteLine($"  Version: {ext.Descriptor.Version}");
                 Console.WriteLine($"  Installed: {ext.InstallDate:yyyy-MM-dd}");
                 Console.WriteLine($"  Auto-Update: {ext.AutoUpdateEnabled}");
@@ -159,7 +159,7 @@ namespace GeneralUpdate.Extension.Examples
                 Console.WriteLine($"Name: {ext.Descriptor.DisplayName}");
                 Console.WriteLine($"  Version: {ext.Descriptor.Version}");
                 Console.WriteLine($"  Description: {ext.Descriptor.Description}");
-                Console.WriteLine($"  Author: {ext.Descriptor.Author}");
+                Console.WriteLine($"  Author: {ext.Descriptor.Publisher}");
                 Console.WriteLine();
             }
 
@@ -169,7 +169,7 @@ namespace GeneralUpdate.Extension.Examples
         /// <summary>
         /// Example: Queue a specific extension for update.
         /// </summary>
-        public void QueueExtensionUpdate(string extensionId, List<Metadata.AvailableExtension> availableExtensions)
+        public void QueueExtensionUpdate(string extensionName, List<Metadata.AvailableExtension> availableExtensions)
         {
             if (_host == null)
             {
@@ -178,11 +178,11 @@ namespace GeneralUpdate.Extension.Examples
             }
 
             // Find the best version for this extension
-            var bestVersion = _host.FindBestUpgrade(extensionId, availableExtensions);
+            var bestVersion = _host.FindBestUpgrade(extensionName, availableExtensions);
 
             if (bestVersion == null)
             {
-                Console.WriteLine($"No compatible version found for extension '{extensionId}'");
+                Console.WriteLine($"No compatible version found for extension '{extensionName}'");
                 return;
             }
 

@@ -6,21 +6,25 @@ namespace GeneralUpdate.Extension.Metadata
 {
     /// <summary>
     /// Represents the comprehensive metadata descriptor for an extension package.
+    /// Follows VS Code extension manifest structure (package.json) standards.
     /// Provides all necessary information for discovery, compatibility checking, and installation.
     /// </summary>
     public class ExtensionDescriptor
     {
         /// <summary>
-        /// Gets or sets the unique identifier for the extension.
-        /// Must be unique across all extensions in the marketplace.
+        /// Gets or sets the unique extension identifier (lowercase, no spaces).
+        /// This is the unique identifier used in the marketplace and follows VS Code naming convention.
+        /// Example: "my-extension" or "publisher.extension-name"
         /// </summary>
-        [JsonPropertyName("id")]
-        public string ExtensionId { get; set; } = string.Empty;
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the human-readable display name of the extension.
+        /// This is shown in the UI and can contain spaces and mixed case.
+        /// Example: "My Extension" or "Awesome Extension Pack"
         /// </summary>
-        [JsonPropertyName("name")]
+        [JsonPropertyName("displayName")]
         public string DisplayName { get; set; } = string.Empty;
 
         /// <summary>
@@ -36,16 +40,36 @@ namespace GeneralUpdate.Extension.Metadata
         public string? Description { get; set; }
 
         /// <summary>
-        /// Gets or sets the author or publisher name of the extension.
+        /// Gets or sets the publisher identifier (follows VS Code convention).
+        /// The publisher is the organization or individual that published the extension.
         /// </summary>
-        [JsonPropertyName("author")]
-        public string? Author { get; set; }
+        [JsonPropertyName("publisher")]
+        public string? Publisher { get; set; }
 
         /// <summary>
         /// Gets or sets the license identifier (e.g., "MIT", "Apache-2.0").
         /// </summary>
         [JsonPropertyName("license")]
         public string? License { get; set; }
+
+        /// <summary>
+        /// Gets or sets the extension categories (follows VS Code convention).
+        /// Examples: "Programming Languages", "Debuggers", "Formatters", "Linters", etc.
+        /// </summary>
+        [JsonPropertyName("categories")]
+        public List<string>? Categories { get; set; }
+
+        /// <summary>
+        /// Gets or sets the icon path for the extension (relative to package root).
+        /// </summary>
+        [JsonPropertyName("icon")]
+        public string? Icon { get; set; }
+
+        /// <summary>
+        /// Gets or sets the repository URL for the extension source code.
+        /// </summary>
+        [JsonPropertyName("repository")]
+        public string? Repository { get; set; }
 
         /// <summary>
         /// Gets or sets the platforms supported by this extension.
@@ -63,8 +87,9 @@ namespace GeneralUpdate.Extension.Metadata
 
         /// <summary>
         /// Gets or sets the version compatibility constraints for the host application.
+        /// Similar to VS Code's "engines" field, specifies which host versions are supported.
         /// </summary>
-        [JsonPropertyName("compatibility")]
+        [JsonPropertyName("engines")]
         public VersionCompatibility Compatibility { get; set; } = new VersionCompatibility();
 
         /// <summary>

@@ -150,11 +150,11 @@ namespace GeneralUpdate.Extension
         /// <summary>
         /// Retrieves a specific installed extension by its unique identifier.
         /// </summary>
-        /// <param name="extensionId">The extension identifier to search for.</param>
+        /// <param name="extensionName">The extension identifier to search for.</param>
         /// <returns>The matching extension if found; otherwise, null.</returns>
-        public Installation.InstalledExtension? GetInstalledExtensionById(string extensionId)
+        public Installation.InstalledExtension? GetInstalledExtensionById(string extensionName)
         {
-            return _catalog.GetInstalledExtensionById(extensionId);
+            return _catalog.GetInstalledExtensionById(extensionName);
         }
 
         /// <summary>
@@ -190,11 +190,11 @@ namespace GeneralUpdate.Extension
         /// Sets the auto-update preference for a specific extension.
         /// Changes are persisted in the extension's manifest file.
         /// </summary>
-        /// <param name="extensionId">The extension identifier.</param>
+        /// <param name="extensionName">The extension identifier.</param>
         /// <param name="enabled">True to enable auto-updates; false to disable.</param>
-        public void SetAutoUpdate(string extensionId, bool enabled)
+        public void SetAutoUpdate(string extensionName, bool enabled)
         {
-            var extension = _catalog.GetInstalledExtensionById(extensionId);
+            var extension = _catalog.GetInstalledExtensionById(extensionName);
             if (extension != null)
             {
                 extension.AutoUpdateEnabled = enabled;
@@ -205,11 +205,11 @@ namespace GeneralUpdate.Extension
         /// <summary>
         /// Gets the auto-update preference for a specific extension.
         /// </summary>
-        /// <param name="extensionId">The extension identifier.</param>
+        /// <param name="extensionName">The extension identifier.</param>
         /// <returns>True if auto-updates are enabled; otherwise, false.</returns>
-        public bool GetAutoUpdate(string extensionId)
+        public bool GetAutoUpdate(string extensionName)
         {
-            var extension = _catalog.GetInstalledExtensionById(extensionId);
+            var extension = _catalog.GetInstalledExtensionById(extensionName);
             return extension?.AutoUpdateEnabled ?? false;
         }
 
@@ -268,7 +268,7 @@ namespace GeneralUpdate.Extension
 
                 // Find available versions for this extension
                 var versions = availableExtensions
-                    .Where(ext => ext.Descriptor.ExtensionId == installed.Descriptor.ExtensionId)
+                    .Where(ext => ext.Descriptor.Name == installed.Descriptor.Name)
                     .ToList();
 
                 if (!versions.Any())
@@ -288,7 +288,7 @@ namespace GeneralUpdate.Extension
                     {
                         // Log error but continue processing other extensions
                         GeneralUpdate.Common.Shared.GeneralTracer.Error(
-                            $"Failed to queue auto-update for extension {installed.Descriptor.ExtensionId}", ex);
+                            $"Failed to queue auto-update for extension {installed.Descriptor.Name}", ex);
                     }
                 }
             }
@@ -300,13 +300,13 @@ namespace GeneralUpdate.Extension
         /// Finds the best upgrade version for a specific extension.
         /// Selects the minimum supported version among the latest compatible versions.
         /// </summary>
-        /// <param name="extensionId">The extension identifier.</param>
+        /// <param name="extensionName">The extension identifier.</param>
         /// <param name="availableExtensions">Available versions of the extension.</param>
         /// <returns>The best compatible version if found; otherwise, null.</returns>
-        public Metadata.AvailableExtension? FindBestUpgrade(string extensionId, List<Metadata.AvailableExtension> availableExtensions)
+        public Metadata.AvailableExtension? FindBestUpgrade(string extensionName, List<Metadata.AvailableExtension> availableExtensions)
         {
             var versions = availableExtensions
-                .Where(ext => ext.Descriptor.ExtensionId == extensionId)
+                .Where(ext => ext.Descriptor.Name == extensionName)
                 .ToList();
 
             return _validator.FindMinimumSupportedLatest(versions);
