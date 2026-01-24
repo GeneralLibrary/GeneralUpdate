@@ -89,7 +89,7 @@ If you encounter AOT warnings or errors:
 
 1. **Check for reflection usage**
    ```bash
-   grep -r "typeof\|GetType\|Activator" YourCode.cs
+   grep -rE "typeof|GetType|Activator" YourCode.cs
    ```
 
 2. **Verify all types are concrete**

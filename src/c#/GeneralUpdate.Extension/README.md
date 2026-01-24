@@ -19,10 +19,13 @@ A production-ready VS Code-compliant extension/plugin update system with version
 
 ### Installation
 
-```bash
-# Reference the project
+Add as a project reference:
+
+```xml
 <ProjectReference Include="path\to\GeneralUpdate.Extension\GeneralUpdate.Extension.csproj" />
 ```
+
+Note: This library is currently distributed as source. A NuGet package may be available in the future.
 
 ### Basic Usage
 
@@ -51,8 +54,6 @@ var installed = host.GetInstalledExtensions();
 ```
 
 ## Complete Usage Guide
-
-See full documentation at: https://github.com/GeneralLibrary/GeneralUpdate
 
 ### 1. Dependency Injection Setup
 
