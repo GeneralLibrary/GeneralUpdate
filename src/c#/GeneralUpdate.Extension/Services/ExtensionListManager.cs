@@ -54,7 +54,7 @@ namespace GeneralUpdate.Extension.Services
                 catch (Exception ex)
                 {
                     // Log error but continue processing other extensions
-                    Console.WriteLine($"Error loading extension from {manifestFile}: {ex.Message}");
+                    GeneralUpdate.Common.Shared.GeneralTracer.Error($"Error loading extension from {manifestFile}", ex);
                 }
             }
         }
@@ -159,7 +159,7 @@ namespace GeneralUpdate.Extension.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing remote extensions: {ex.Message}");
+                GeneralUpdate.Common.Shared.GeneralTracer.Error("Error parsing remote extensions", ex);
                 return new List<RemoteExtension>();
             }
         }

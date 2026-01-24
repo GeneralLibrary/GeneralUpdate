@@ -156,19 +156,34 @@ namespace GeneralUpdate.Extension.Services
                 // Apply patch using DifferentialCore.Dirty
                 await DifferentialCore.Instance.Dirty(extensionInstallPath, patchPath);
 
+                // Load existing extension info to preserve InstallDate
+                LocalExtension? existingExtension = null;
+                var manifestPath = Path.Combine(extensionInstallPath, "manifest.json");
+                if (File.Exists(manifestPath))
+                {
+                    try
+                    {
+                        var existingJson = File.ReadAllText(manifestPath);
+                        existingExtension = System.Text.Json.JsonSerializer.Deserialize<LocalExtension>(existingJson);
+                    }
+                    catch
+                    {
+                        // If we can't read existing manifest, just proceed with new one
+                    }
+                }
+
                 // Create or update LocalExtension object
                 var localExtension = new LocalExtension
                 {
                     Metadata = extensionMetadata,
                     InstallPath = extensionInstallPath,
-                    InstallDate = DateTime.Now,
-                    AutoUpdateEnabled = true,
-                    IsEnabled = true,
+                    InstallDate = existingExtension?.InstallDate ?? DateTime.Now, // Preserve original install date
+                    AutoUpdateEnabled = existingExtension?.AutoUpdateEnabled ?? true,
+                    IsEnabled = existingExtension?.IsEnabled ?? true,
                     LastUpdateDate = DateTime.Now
                 };
 
                 // Save manifest
-                var manifestPath = Path.Combine(extensionInstallPath, "manifest.json");
                 var json = System.Text.Json.JsonSerializer.Serialize(localExtension, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(manifestPath, json);
 
