@@ -126,7 +126,6 @@ namespace GeneralUpdate.Extension.Examples
                 Console.WriteLine($"  Auto-Update: {ext.AutoUpdateEnabled}");
                 Console.WriteLine($"  Enabled: {ext.IsEnabled}");
                 Console.WriteLine($"  Platform: {ext.Descriptor.SupportedPlatforms}");
-                Console.WriteLine($"  Type: {ext.Descriptor.ContentType}");
                 Console.WriteLine();
             }
         }
@@ -375,7 +374,6 @@ namespace GeneralUpdate.Extension.Examples
                         ""author"": ""Extension Developer"",
                         ""license"": ""MIT"",
                         ""supportedPlatforms"": 7,
-                        ""contentType"": 0,
                         ""compatibility"": {
                             ""minHostVersion"": ""1.0.0"",
                             ""maxHostVersion"": ""2.0.0""

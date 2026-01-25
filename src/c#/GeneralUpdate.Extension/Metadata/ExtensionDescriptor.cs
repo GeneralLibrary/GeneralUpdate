@@ -79,13 +79,6 @@ namespace GeneralUpdate.Extension.Metadata
         public TargetPlatform SupportedPlatforms { get; set; } = TargetPlatform.All;
 
         /// <summary>
-        /// Gets or sets the content type classification of the extension.
-        /// Determines runtime requirements and execution model.
-        /// </summary>
-        [JsonPropertyName("contentType")]
-        public ExtensionContentType ContentType { get; set; } = ExtensionContentType.Custom;
-
-        /// <summary>
         /// Gets or sets the version compatibility constraints for the host application.
         /// Similar to VS Code's "engines" field, specifies which host versions are supported.
         /// </summary>

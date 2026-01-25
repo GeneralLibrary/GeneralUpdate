@@ -196,9 +196,6 @@ namespace GeneralUpdate.Extension.PackageGeneration
             // Add platform support
             manifest["supportedPlatforms"] = (int)descriptor.SupportedPlatforms;
 
-            // Add content type
-            manifest["contentType"] = (int)descriptor.ContentType;
-
             // Add dependencies if present
             if (descriptor.Dependencies != null && descriptor.Dependencies.Count > 0)
             {
