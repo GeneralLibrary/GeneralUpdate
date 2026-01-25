@@ -175,11 +175,15 @@ await generator.GeneratePackageAsync(
 ### 5. Version Compatibility Checking
 
 ```csharp
-// Check if an extension is compatible
+// Initialize validator with host version
+var hostVersion = new Version(1, 5, 0);
 var validator = new Compatibility.CompatibilityValidator(hostVersion);
+
+// Check if an extension is compatible
 bool isCompatible = validator.IsCompatible(extensionDescriptor);
 
 // Filter compatible extensions from a list
+var allExtensions = host.ParseAvailableExtensions(jsonFromServer);
 var compatible = validator.FilterCompatible(allExtensions);
 
 // Find the best version to install
@@ -190,9 +194,12 @@ var bestVersion = validator.FindMinimumSupportedLatest(versions);
 ### 6. Platform-Specific Operations
 
 ```csharp
-// Filter extensions by platform
+// Get available extensions
+var availableExtensions = host.GetCompatibleExtensions(remoteExtensions);
+
+// Filter extensions by platform using bitwise AND
 var windowsExtensions = availableExtensions
-    .Where(e => e.Descriptor.SupportedPlatforms.HasFlag(Metadata.TargetPlatform.Windows))
+    .Where(e => (e.Descriptor.SupportedPlatforms & Metadata.TargetPlatform.Windows) != 0)
     .ToList();
 
 // Check multi-platform support
@@ -258,6 +265,9 @@ foreach (var ext in installed)
 ### 9. Manual Update Control
 
 ```csharp
+// Get an available extension to update
+var availableExtension = host.GetCompatibleExtensions(remoteExtensions).FirstOrDefault();
+
 // Queue specific extension for update
 var operation = host.QueueUpdate(availableExtension, enableRollback: true);
 
