@@ -1,11 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>8.0</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.Text.Json" Version="8.0.5" />
+        <PackageReference Include="System.Text.Json" Version="10.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
     </ItemGroup>
 
 </Project>
