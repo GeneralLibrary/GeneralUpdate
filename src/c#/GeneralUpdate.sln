@@ -25,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generalupdate.CatBowl", "Ge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Extension", "GeneralUpdate.Extension\GeneralUpdate.Extension.csproj", "{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{245C36B9-612E-4AB0-979A-4D83A0D8117E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionTest", "ExtensionTest\ExtensionTest.csproj", "{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +71,10 @@ Global
 		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +89,7 @@ Global
 		{49D0687D-1321-48E9-84C3-936B10532367} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 		{1BA0EEDF-D75A-49E9-9244-EA32DFA130B3} = {74BE0282-A10D-4A81-A0F0-FAA79A6152B7}
 		{7B8E164F-C2D8-4C5F-8E20-450FB56AEB34} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
+		{3FA78F9A-A942-4F7E-A30D-70DF42E8A83D} = {245C36B9-612E-4AB0-979A-4D83A0D8117E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A7B2D0AD-E000-4749-BAC0-FF21B9872805}
