@@ -1,3 +1,4 @@
+using System.Linq;
 using GeneralUpdate.Extension.Download;
 using Xunit;
 
