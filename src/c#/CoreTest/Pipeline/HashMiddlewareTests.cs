@@ -70,9 +70,6 @@ namespace CoreTest.Pipeline
                     // Act - should not throw
                     await middleware.InvokeAsync(context);
                 }
-                
-                // Assert - if we got here without exception, the test passes
-                Assert.True(true);
             }
             finally
             {
@@ -111,9 +108,6 @@ namespace CoreTest.Pipeline
                     // Act - should not throw
                     await middleware.InvokeAsync(context);
                 }
-                
-                // Assert
-                Assert.True(true);
             }
             finally
             {

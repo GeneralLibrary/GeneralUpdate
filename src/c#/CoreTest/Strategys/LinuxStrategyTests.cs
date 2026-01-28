@@ -40,7 +40,6 @@ namespace CoreTest.Strategys
 
             // Act & Assert - should not throw
             strategy.Create(config);
-            Assert.True(true);
         }
     }
 }

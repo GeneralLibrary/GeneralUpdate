@@ -35,9 +35,6 @@ namespace CoreTest.Pipeline
 
             // Act - should return early without throwing
             await middleware.InvokeAsync(context);
-
-            // Assert - if we got here, the test passes
-            Assert.True(true);
         }
 
         /// <summary>
@@ -53,9 +50,6 @@ namespace CoreTest.Pipeline
 
             // Act - should return early without throwing
             await middleware.InvokeAsync(context);
-
-            // Assert
-            Assert.True(true);
         }
 
         /// <summary>
@@ -72,9 +66,6 @@ namespace CoreTest.Pipeline
 
             // Act - should return early without throwing
             await middleware.InvokeAsync(context);
-
-            // Assert
-            Assert.True(true);
         }
 
         /// <summary>

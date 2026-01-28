@@ -37,7 +37,6 @@ namespace CoreTest.Driver
             processor.AddCommand(mockCommand.Object);
 
             // Assert - if no exception, command was added
-            Assert.True(true);
         }
 
         /// <summary>
