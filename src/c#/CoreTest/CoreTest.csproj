@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\c#\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
     <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
 
