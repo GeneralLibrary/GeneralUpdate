@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\GeneralUpdate.Bowl\GeneralUpdate.Bowl.csproj" />
+        <ProjectReference Include="..\..\src\c#\GeneralUpdate.Bowl\GeneralUpdate.Bowl.csproj" />
     </ItemGroup>
 
 </Project>
