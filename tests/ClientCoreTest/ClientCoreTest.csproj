@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />
+    <ProjectReference Include="..\..\src\c#\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />
   </ItemGroup>
 
 </Project>
