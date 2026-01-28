@@ -31,7 +31,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionTest", "ExtensionT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Ext", "GeneralUpdate.Ext\GeneralUpdate.Ext.csproj", "{27028918-925E-45D4-BD72-199349B6E6AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTest", "CoreTest\CoreTest.csproj", "{D8B45203-B939-4628-AC77-C477A4AC5F45}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTest", "..\..\tests\CoreTest\CoreTest.csproj", "{D8B45203-B939-4628-AC77-C477A4AC5F45}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
