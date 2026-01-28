@@ -17,12 +17,6 @@ namespace GeneralUpdate.Extension.Metadata
         public bool IsPreRelease { get; set; }
 
         /// <summary>
-        /// Gets or sets the average user rating score for this extension.
-        /// Null if no ratings are available.
-        /// </summary>
-        public double? Rating { get; set; }
-
-        /// <summary>
         /// Gets or sets the total number of times this extension has been downloaded.
         /// Null if download statistics are not available.
         /// </summary>

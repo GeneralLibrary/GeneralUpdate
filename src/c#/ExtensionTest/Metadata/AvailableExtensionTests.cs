@@ -37,19 +37,6 @@ namespace ExtensionTest.Metadata
         }
 
         /// <summary>
-        /// Tests that a new AvailableExtension has Rating initialized to null.
-        /// </summary>
-        [Fact]
-        public void Constructor_ShouldSetRatingToNull()
-        {
-            // Act
-            var extension = new AvailableExtension();
-
-            // Assert
-            Assert.Null(extension.Rating);
-        }
-
-        /// <summary>
         /// Tests that a new AvailableExtension has DownloadCount initialized to null.
         /// </summary>
         [Fact]
@@ -100,42 +87,6 @@ namespace ExtensionTest.Metadata
         }
 
         /// <summary>
-        /// Tests that Rating property can be set and retrieved.
-        /// </summary>
-        [Fact]
-        public void Rating_CanBeSetAndRetrieved()
-        {
-            // Arrange
-            var extension = new AvailableExtension();
-            var expectedRating = 4.5;
-
-            // Act
-            extension.Rating = expectedRating;
-
-            // Assert
-            Assert.Equal(expectedRating, extension.Rating);
-        }
-
-        /// <summary>
-        /// Tests that Rating can be set to various valid values.
-        /// </summary>
-        [Theory]
-        [InlineData(0.0)]
-        [InlineData(2.5)]
-        [InlineData(5.0)]
-        public void Rating_CanBeSetToVariousValues(double rating)
-        {
-            // Arrange
-            var extension = new AvailableExtension();
-
-            // Act
-            extension.Rating = rating;
-
-            // Assert
-            Assert.Equal(rating, extension.Rating);
-        }
-
-        /// <summary>
         /// Tests that DownloadCount property can be set and retrieved.
         /// </summary>
         [Fact]
@@ -169,22 +120,6 @@ namespace ExtensionTest.Metadata
         }
 
         /// <summary>
-        /// Tests that Rating can be set back to null after having a value.
-        /// </summary>
-        [Fact]
-        public void Rating_CanBeSetBackToNull()
-        {
-            // Arrange
-            var extension = new AvailableExtension { Rating = 4.5 };
-
-            // Act
-            extension.Rating = null;
-
-            // Assert
-            Assert.Null(extension.Rating);
-        }
-
-        /// <summary>
         /// Tests that DownloadCount can be set back to null after having a value.
         /// </summary>
         [Fact]
@@ -198,33 +133,6 @@ namespace ExtensionTest.Metadata
 
             // Assert
             Assert.Null(extension.DownloadCount);
-        }
-
-        /// <summary>
-        /// Tests that all properties can be set together using object initializer.
-        /// </summary>
-        [Fact]
-        public void AllProperties_CanBeSetUsingObjectInitializer()
-        {
-            // Arrange & Act
-            var extension = new AvailableExtension
-            {
-                Descriptor = new ExtensionDescriptor
-                {
-                    Name = "test-extension",
-                    Version = "1.0.0"
-                },
-                IsPreRelease = true,
-                Rating = 4.8,
-                DownloadCount = 50000
-            };
-
-            // Assert
-            Assert.Equal("test-extension", extension.Descriptor.Name);
-            Assert.Equal("1.0.0", extension.Descriptor.Version);
-            Assert.True(extension.IsPreRelease);
-            Assert.Equal(4.8, extension.Rating);
-            Assert.Equal(50000, extension.DownloadCount);
         }
     }
 }
