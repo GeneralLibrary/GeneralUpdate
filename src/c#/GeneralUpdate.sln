@@ -31,7 +31,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtensionTest", "ExtensionT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Ext", "GeneralUpdate.Ext\GeneralUpdate.Ext.csproj", "{27028918-925E-45D4-BD72-199349B6E6AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialTest", "DifferentialTest\DifferentialTest.csproj", "{1CA55348-2645-4C17-8DD3-41196C9C357D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialTest", "..\..\tests\DifferentialTest\DifferentialTest.csproj", "{1CA55348-2645-4C17-8DD3-41196C9C357D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
