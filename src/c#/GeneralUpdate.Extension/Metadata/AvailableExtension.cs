@@ -15,11 +15,5 @@ namespace GeneralUpdate.Extension.Metadata
         /// Pre-release versions are typically beta or alpha builds.
         /// </summary>
         public bool IsPreRelease { get; set; }
-
-        /// <summary>
-        /// Gets or sets the total number of times this extension has been downloaded.
-        /// Null if download statistics are not available.
-        /// </summary>
-        public long? DownloadCount { get; set; }
     }
 }

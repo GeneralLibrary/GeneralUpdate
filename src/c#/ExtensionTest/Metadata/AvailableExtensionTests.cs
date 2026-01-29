@@ -37,19 +37,6 @@ namespace ExtensionTest.Metadata
         }
 
         /// <summary>
-        /// Tests that a new AvailableExtension has DownloadCount initialized to null.
-        /// </summary>
-        [Fact]
-        public void Constructor_ShouldSetDownloadCountToNull()
-        {
-            // Act
-            var extension = new AvailableExtension();
-
-            // Assert
-            Assert.Null(extension.DownloadCount);
-        }
-
-        /// <summary>
         /// Tests that Descriptor property can be set and retrieved.
         /// </summary>
         [Fact]
@@ -84,55 +71,6 @@ namespace ExtensionTest.Metadata
 
             // Assert
             Assert.True(extension.IsPreRelease);
-        }
-
-        /// <summary>
-        /// Tests that DownloadCount property can be set and retrieved.
-        /// </summary>
-        [Fact]
-        public void DownloadCount_CanBeSetAndRetrieved()
-        {
-            // Arrange
-            var extension = new AvailableExtension();
-            var expectedCount = 10000L;
-
-            // Act
-            extension.DownloadCount = expectedCount;
-
-            // Assert
-            Assert.Equal(expectedCount, extension.DownloadCount);
-        }
-
-        /// <summary>
-        /// Tests that DownloadCount can be set to zero.
-        /// </summary>
-        [Fact]
-        public void DownloadCount_CanBeSetToZero()
-        {
-            // Arrange
-            var extension = new AvailableExtension();
-
-            // Act
-            extension.DownloadCount = 0;
-
-            // Assert
-            Assert.Equal(0, extension.DownloadCount);
-        }
-
-        /// <summary>
-        /// Tests that DownloadCount can be set back to null after having a value.
-        /// </summary>
-        [Fact]
-        public void DownloadCount_CanBeSetBackToNull()
-        {
-            // Arrange
-            var extension = new AvailableExtension { DownloadCount = 1000 };
-
-            // Act
-            extension.DownloadCount = null;
-
-            // Assert
-            Assert.Null(extension.DownloadCount);
         }
     }
 }
