@@ -60,18 +60,6 @@ namespace GeneralUpdate.Extension.Metadata
         public List<string>? Categories { get; set; }
 
         /// <summary>
-        /// Gets or sets the icon path for the extension (relative to package root).
-        /// </summary>
-        [JsonPropertyName("icon")]
-        public string? Icon { get; set; }
-
-        /// <summary>
-        /// Gets or sets the repository URL for the extension source code.
-        /// </summary>
-        [JsonPropertyName("repository")]
-        public string? Repository { get; set; }
-
-        /// <summary>
         /// Gets or sets the platforms supported by this extension.
         /// Uses flags to allow multiple platform targets.
         /// </summary>

@@ -196,40 +196,6 @@ namespace ExtensionTest.Metadata
         }
 
         /// <summary>
-        /// Tests that Icon property can be set and retrieved.
-        /// </summary>
-        [Fact]
-        public void Icon_CanBeSetAndRetrieved()
-        {
-            // Arrange
-            var descriptor = new ExtensionDescriptor();
-            var expectedIcon = "icon.png";
-
-            // Act
-            descriptor.Icon = expectedIcon;
-
-            // Assert
-            Assert.Equal(expectedIcon, descriptor.Icon);
-        }
-
-        /// <summary>
-        /// Tests that Repository property can be set and retrieved.
-        /// </summary>
-        [Fact]
-        public void Repository_CanBeSetAndRetrieved()
-        {
-            // Arrange
-            var descriptor = new ExtensionDescriptor();
-            var expectedRepository = "https://github.com/user/repo";
-
-            // Act
-            descriptor.Repository = expectedRepository;
-
-            // Assert
-            Assert.Equal(expectedRepository, descriptor.Repository);
-        }
-
-        /// <summary>
         /// Tests that SupportedPlatforms property can be set and retrieved.
         /// </summary>
         [Fact]
@@ -456,8 +422,6 @@ namespace ExtensionTest.Metadata
                 Publisher = "Publisher",
                 License = "MIT",
                 Categories = new List<string>(),
-                Icon = "icon.png",
-                Repository = "repo",
                 DownloadUrl = "url",
                 PackageHash = "hash",
                 ReleaseDate = DateTime.Now,
@@ -470,8 +434,6 @@ namespace ExtensionTest.Metadata
             descriptor.Publisher = null;
             descriptor.License = null;
             descriptor.Categories = null;
-            descriptor.Icon = null;
-            descriptor.Repository = null;
             descriptor.DownloadUrl = null;
             descriptor.PackageHash = null;
             descriptor.ReleaseDate = null;
@@ -483,8 +445,6 @@ namespace ExtensionTest.Metadata
             Assert.Null(descriptor.Publisher);
             Assert.Null(descriptor.License);
             Assert.Null(descriptor.Categories);
-            Assert.Null(descriptor.Icon);
-            Assert.Null(descriptor.Repository);
             Assert.Null(descriptor.DownloadUrl);
             Assert.Null(descriptor.PackageHash);
             Assert.Null(descriptor.ReleaseDate);

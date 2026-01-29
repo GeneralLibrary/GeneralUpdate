@@ -162,16 +162,6 @@ namespace GeneralUpdate.Extension.PackageGeneration
                 manifest["categories"] = descriptor.Categories;
             }
 
-            if (!string.IsNullOrEmpty(descriptor.Icon))
-            {
-                manifest["icon"] = descriptor.Icon;
-            }
-
-            if (!string.IsNullOrEmpty(descriptor.Repository))
-            {
-                manifest["repository"] = descriptor.Repository;
-            }
-
             // Add engine/compatibility information
             if (descriptor.Compatibility != null)
             {

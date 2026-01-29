@@ -327,8 +327,6 @@ Extensions use a descriptor structure aligned with VS Code's package.json format
     "maxHostVersion": "2.0.0"
   },
   "categories": ["Programming Languages", "Debuggers"],
-  "icon": "icon.png",
-  "repository": "https://github.com/user/repo",
   "supportedPlatforms": 7
 }
 ```
@@ -362,8 +360,6 @@ var descriptor = new Metadata.ExtensionDescriptor
     Publisher = "publisher-name",
     License = "MIT",
     Categories = new List<string> { "Programming Languages" },
-    Icon = "icon.png",
-    Repository = "https://github.com/user/repo",
     SupportedPlatforms = Metadata.TargetPlatform.All,
     Compatibility = new Metadata.VersionCompatibility
     {
