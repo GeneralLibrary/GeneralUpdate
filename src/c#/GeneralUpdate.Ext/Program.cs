@@ -9,7 +9,7 @@ class Program
     {
         var installPath = @"C:\data\install";
         var downloadPath = @"C:\data\download";
-        var host = new ExtensionHost(new Version("1.0.0"), installPath, downloadPath);
+        var host = new GeneralExtensionHost(new Version("1.0.0"), installPath, downloadPath);
         host.InstallationCompleted += (_, _) =>
         {
             Console.WriteLine("Installation completed");

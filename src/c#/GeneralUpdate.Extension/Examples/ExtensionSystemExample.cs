@@ -26,7 +26,7 @@ namespace GeneralUpdate.Extension.Examples
             var currentPlatform = DetectCurrentPlatform();
 
             // Create the extension host
-            _host = new ExtensionHost(
+            _host = new GeneralExtensionHost(
                 hostVersion,
                 installPath,
                 downloadPath,

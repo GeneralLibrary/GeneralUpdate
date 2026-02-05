@@ -9,7 +9,7 @@ namespace GeneralUpdate.Extension
     /// Main orchestrator for the extension system.
     /// Coordinates extension discovery, compatibility validation, updates, and lifecycle management.
     /// </summary>
-    public class ExtensionHost : IExtensionHost
+    public class GeneralExtensionHost : IExtensionHost
     {
         private readonly Version _hostVersion;
         private readonly Metadata.TargetPlatform _targetPlatform;
@@ -79,7 +79,7 @@ namespace GeneralUpdate.Extension
         #endregion
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExtensionHost"/> class.
+        /// Initializes a new instance of the <see cref="GeneralExtensionHost"/> class.
         /// </summary>
         /// <param name="hostVersion">The current host application version.</param>
         /// <param name="installBasePath">Base directory for extension installations.</param>
@@ -87,7 +87,7 @@ namespace GeneralUpdate.Extension
         /// <param name="targetPlatform">The current platform (Windows/Linux/macOS).</param>
         /// <param name="downloadTimeout">Download timeout in seconds (default: 300).</param>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
-        public ExtensionHost(
+        public GeneralExtensionHost(
             Version hostVersion,
             string installBasePath,
             string downloadPath,
