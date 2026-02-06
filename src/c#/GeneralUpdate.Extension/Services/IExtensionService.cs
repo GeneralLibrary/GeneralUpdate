@@ -47,6 +47,15 @@ namespace GeneralUpdate.Extension.Services
         Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id);
 
         /// <summary>
+        /// Downloads an extension by ID with support for resumable downloads.
+        /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
+        /// </summary>
+        /// <param name="id">Extension ID</param>
+        /// <param name="startPosition">Starting byte position for resuming a download (0 for full download)</param>
+        /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
+        Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id, long startPosition);
+
+        /// <summary>
         /// Downloads an extension package asynchronously with progress tracking.
         /// Updates the operation state in the queue throughout the download process.
         /// </summary>

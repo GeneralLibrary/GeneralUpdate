@@ -241,6 +241,18 @@ namespace GeneralUpdate.Extension.Services
         /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
         public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id)
         {
+            return await Download(id, 0);
+        }
+
+        /// <summary>
+        /// Downloads an extension package by ID via HTTP GET request with support for resumable downloads.
+        /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
+        /// </summary>
+        /// <param name="id">Extension ID (Name)</param>
+        /// <param name="startPosition">Starting byte position for resuming a download (0 for full download)</param>
+        /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
+        public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id, long startPosition)
+        {
             try
             {
                 if (string.IsNullOrWhiteSpace(id))
@@ -248,14 +260,30 @@ namespace GeneralUpdate.Extension.Services
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
                 }
 
+                if (startPosition < 0)
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Start position cannot be negative");
+                }
+
                 // Construct download URL with encoded extension name
                 var encodedExtensionName = Uri.EscapeDataString(id);
                 var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
 
-                // Make HTTP GET request to download the file
-                var response = await _httpClient.GetAsync(downloadUrl);
+                // Create request message to support Range header
+                var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
 
-                if (!response.IsSuccessStatusCode)
+                // Add Range header if resuming from a specific position
+                if (startPosition > 0)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(startPosition, null);
+                }
+
+                // Make HTTP GET request to download the file
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                // Check for success status codes (200 for full content, 206 for partial content)
+                if (response.StatusCode != System.Net.HttpStatusCode.OK && 
+                    response.StatusCode != System.Net.HttpStatusCode.PartialContent)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure(
@@ -274,6 +302,8 @@ namespace GeneralUpdate.Extension.Services
                 {
                     fileName = response.Content.Headers.ContentDisposition.FileName.Trim('"');
                 }
+                // URL decode the filename if it was URL encoded
+                fileName = System.Net.WebUtility.UrlDecode(fileName);
 
                 var result = new DownloadExtensionDTO
                 {
