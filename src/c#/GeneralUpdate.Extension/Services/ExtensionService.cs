@@ -316,10 +316,8 @@ namespace GeneralUpdate.Extension.Services
             {
                 _updateQueue.ChangeState(operation.OperationId, GeneralUpdate.Extension.Download.UpdateState.Updating);
 
-                // Determine file format from descriptor or default to .zip
-                var format = !string.IsNullOrWhiteSpace(descriptor.DownloadUrl) && descriptor.DownloadUrl!.Contains(".")
-                    ? Path.GetExtension(descriptor.DownloadUrl)
-                    : ".zip";
+                // Default to .zip format
+                var format = ".zip";
 
                 // Create version info for the download manager
                 var versionInfo = new VersionInfo
@@ -449,6 +447,9 @@ namespace GeneralUpdate.Extension.Services
                 isCompatible = _validator.IsCompatible(descriptor);
             }
 
+            // Construct download URL from server URL
+            var downloadUrl = $"{_serverUrl}/Download/{descriptor.Name}";
+
             return new ExtensionDTO
             {
                 Id = descriptor.Name ?? string.Empty,
@@ -459,7 +460,7 @@ namespace GeneralUpdate.Extension.Services
                 UploadTime = descriptor.ReleaseDate,
                 Status = true, // Assume enabled if it's in the available list
                 Description = descriptor.Description,
-                Format = GetFileFormat(descriptor.DownloadUrl),
+                Format = ".zip", // Default format
                 Hash = descriptor.PackageHash,
                 Publisher = descriptor.Publisher,
                 License = descriptor.License,
@@ -470,29 +471,10 @@ namespace GeneralUpdate.Extension.Services
                 ReleaseDate = descriptor.ReleaseDate,
                 Dependencies = descriptor.Dependencies,
                 IsPreRelease = extension.IsPreRelease,
-                DownloadUrl = descriptor.DownloadUrl,
+                DownloadUrl = downloadUrl, // Use constructed URL from server
                 CustomProperties = descriptor.CustomProperties,
                 IsCompatible = isCompatible
             };
-        }
-
-        /// <summary>
-        /// Extracts file format from download URL
-        /// </summary>
-        private string? GetFileFormat(string? downloadUrl)
-        {
-            if (string.IsNullOrWhiteSpace(downloadUrl))
-                return null;
-
-            try
-            {
-                var extension = Path.GetExtension(downloadUrl);
-                return string.IsNullOrWhiteSpace(extension) ? null : extension;
-            }
-            catch
-            {
-                return null;
-            }
         }
     }
 }
