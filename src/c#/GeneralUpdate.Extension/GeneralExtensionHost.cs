@@ -120,7 +120,8 @@ namespace GeneralUpdate.Extension
                 new List<Metadata.AvailableExtension>(),
                 hostVersion,
                 _validator,
-                _downloadService);
+                _downloadService,
+                _updateQueue);
 
             // Wire up event handlers
             _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);

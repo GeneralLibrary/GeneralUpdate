@@ -17,6 +17,7 @@ namespace GeneralUpdate.Extension.Services
         private readonly Version? _hostVersion;
         private readonly Compatibility.ICompatibilityValidator? _validator;
         private readonly Download.ExtensionDownloadService? _downloadService;
+        private readonly Download.IUpdateQueue? _updateQueue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionService"/> class.
@@ -25,16 +26,19 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="hostVersion">Optional host version for compatibility checking</param>
         /// <param name="validator">Optional compatibility validator</param>
         /// <param name="downloadService">Optional download service</param>
+        /// <param name="updateQueue">Optional update queue for managing download operations</param>
         public ExtensionService(
             List<AvailableExtension> availableExtensions,
             Version? hostVersion = null,
             Compatibility.ICompatibilityValidator? validator = null,
-            Download.ExtensionDownloadService? downloadService = null)
+            Download.ExtensionDownloadService? downloadService = null,
+            Download.IUpdateQueue? updateQueue = null)
         {
             _availableExtensions = availableExtensions ?? throw new ArgumentNullException(nameof(availableExtensions));
             _hostVersion = hostVersion;
             _validator = validator;
             _downloadService = downloadService;
+            _updateQueue = updateQueue;
         }
 
         /// <summary>
@@ -183,6 +187,12 @@ namespace GeneralUpdate.Extension.Services
                         "Download service is not configured");
                 }
 
+                if (_updateQueue == null)
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                        "Update queue is not configured");
+                }
+
                 // Find the extension by ID (using Name as ID)
                 var extension = _availableExtensions.FirstOrDefault(e =>
                     e.Descriptor.Name?.Equals(id, StringComparison.OrdinalIgnoreCase) == true);
@@ -215,8 +225,8 @@ namespace GeneralUpdate.Extension.Services
                 // In a real implementation, you might want to download all dependencies
                 // and package them together or return multiple files
 
-                var updateQueue = new Download.UpdateQueue();
-                var operation = updateQueue.Enqueue(extension, false);
+                // Use the shared update queue instead of creating a new one
+                var operation = _updateQueue.Enqueue(extension, false);
 
                 var downloadedPath = await _downloadService.DownloadAsync(operation);
 
