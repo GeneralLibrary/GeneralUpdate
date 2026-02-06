@@ -409,8 +409,9 @@ namespace ExtensionTest.Services
             // Assert
             Assert.Equal(400, result1.Code);
             Assert.Equal(400, result2.Code);
-            Assert.Contains("null or empty", result1.Message);
-            Assert.Contains("null or empty", result2.Message);
+            // Should fail because download service is not configured
+            Assert.Contains("not configured", result1.Message);
+            Assert.Contains("not configured", result2.Message);
         }
     }
 }

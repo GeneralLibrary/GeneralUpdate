@@ -17,7 +17,6 @@ namespace GeneralUpdate.Extension.Services
         private readonly Version? _hostVersion;
         private readonly Compatibility.ICompatibilityValidator? _validator;
         private readonly Download.ExtensionDownloadService? _downloadService;
-        private readonly Download.IUpdateQueue? _updateQueue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionService"/> class.
@@ -26,19 +25,16 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="hostVersion">Optional host version for compatibility checking</param>
         /// <param name="validator">Optional compatibility validator</param>
         /// <param name="downloadService">Optional download service</param>
-        /// <param name="updateQueue">Optional update queue for managing download operations</param>
         public ExtensionService(
             List<AvailableExtension> availableExtensions,
             Version? hostVersion = null,
             Compatibility.ICompatibilityValidator? validator = null,
-            Download.ExtensionDownloadService? downloadService = null,
-            Download.IUpdateQueue? updateQueue = null)
+            Download.ExtensionDownloadService? downloadService = null)
         {
             _availableExtensions = availableExtensions ?? throw new ArgumentNullException(nameof(availableExtensions));
             _hostVersion = hostVersion;
             _validator = validator;
             _downloadService = downloadService;
-            _updateQueue = updateQueue;
         }
 
         /// <summary>
@@ -174,85 +170,14 @@ namespace GeneralUpdate.Extension.Services
         /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
         public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id)
         {
-            try
+            if (_downloadService == null)
             {
-                if (string.IsNullOrWhiteSpace(id))
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
-                }
-
-                if (_downloadService == null)
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        "Download service is not configured");
-                }
-
-                if (_updateQueue == null)
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        "Update queue is not configured");
-                }
-
-                // Find the extension by ID (using Name as ID)
-                var extension = _availableExtensions.FirstOrDefault(e =>
-                    e.Descriptor.Name?.Equals(id, StringComparison.OrdinalIgnoreCase) == true);
-
-                if (extension == null)
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Extension with ID '{id}' not found");
-                }
-
-                // Collect all extensions to download (main extension + dependencies)
-                var extensionsToDownload = new List<AvailableExtension> { extension };
-
-                // Resolve dependencies
-                if (extension.Descriptor.Dependencies != null && extension.Descriptor.Dependencies.Count > 0)
-                {
-                    foreach (var depId in extension.Descriptor.Dependencies)
-                    {
-                        var dependency = _availableExtensions.FirstOrDefault(e =>
-                            e.Descriptor.Name?.Equals(depId, StringComparison.OrdinalIgnoreCase) == true);
-
-                        if (dependency != null)
-                        {
-                            extensionsToDownload.Add(dependency);
-                        }
-                    }
-                }
-
-                // For now, we'll download only the main extension
-                // In a real implementation, you might want to download all dependencies
-                // and package them together or return multiple files
-
-                // Use the shared update queue instead of creating a new one
-                var operation = _updateQueue.Enqueue(extension, false);
-
-                var downloadedPath = await _downloadService.DownloadAsync(operation);
-
-                if (downloadedPath == null || !File.Exists(downloadedPath))
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Failed to download extension '{extension.Descriptor.DisplayName}'");
-                }
-
-                // Read the file into a memory stream
-                var fileBytes = File.ReadAllBytes(downloadedPath);
-                var stream = new MemoryStream(fileBytes);
-
-                var result = new DownloadExtensionDTO
-                {
-                    FileName = Path.GetFileName(downloadedPath),
-                    Stream = stream
-                };
-
-                return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+                return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                    "Download service is not configured");
             }
-            catch (Exception ex)
-            {
-                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
-                    $"Error downloading extension: {ex.Message}");
-            }
+
+            // Delegate to ExtensionDownloadService which now contains the unified download implementation
+            return await _downloadService.Download(id, _availableExtensions);
         }
 
         /// <summary>

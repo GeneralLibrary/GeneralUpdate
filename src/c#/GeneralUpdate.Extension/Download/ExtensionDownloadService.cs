@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Extension.DTOs;
+using GeneralUpdate.Extension.Metadata;
 
 namespace GeneralUpdate.Extension.Download
 {
@@ -193,6 +197,90 @@ namespace GeneralUpdate.Extension.Download
                 Name = extensionName,
                 ExtensionName = displayName
             });
+        }
+
+        /// <summary>
+        /// Downloads an extension and its dependencies by ID.
+        /// This is the public API method that wraps the internal DownloadAsync method.
+        /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
+        /// </summary>
+        /// <param name="id">Extension ID (Name)</param>
+        /// <param name="availableExtensions">List of available extensions to search from</param>
+        /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
+        public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id, List<AvailableExtension> availableExtensions)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
+                }
+
+                if (availableExtensions == null || availableExtensions.Count == 0)
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Available extensions list is empty");
+                }
+
+                // Find the extension by ID (using Name as ID)
+                var extension = availableExtensions.FirstOrDefault(e =>
+                    e.Descriptor.Name?.Equals(id, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (extension == null)
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                        $"Extension with ID '{id}' not found");
+                }
+
+                // Collect all extensions to download (main extension + dependencies)
+                var extensionsToDownload = new List<AvailableExtension> { extension };
+
+                // Resolve dependencies
+                if (extension.Descriptor.Dependencies != null && extension.Descriptor.Dependencies.Count > 0)
+                {
+                    foreach (var depId in extension.Descriptor.Dependencies)
+                    {
+                        var dependency = availableExtensions.FirstOrDefault(e =>
+                            e.Descriptor.Name?.Equals(depId, StringComparison.OrdinalIgnoreCase) == true);
+
+                        if (dependency != null)
+                        {
+                            extensionsToDownload.Add(dependency);
+                        }
+                    }
+                }
+
+                // For now, we'll download only the main extension
+                // In a real implementation, you might want to download all dependencies
+                // and package them together or return multiple files
+
+                // Use the shared update queue
+                var operation = _updateQueue.Enqueue(extension, false);
+
+                var downloadedPath = await DownloadAsync(operation);
+
+                if (downloadedPath == null || !File.Exists(downloadedPath))
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                        $"Failed to download extension '{extension.Descriptor.DisplayName}'");
+                }
+
+                // Read the file into a memory stream
+                var fileBytes = File.ReadAllBytes(downloadedPath);
+                var stream = new MemoryStream(fileBytes);
+
+                var result = new DownloadExtensionDTO
+                {
+                    FileName = Path.GetFileName(downloadedPath),
+                    Stream = stream
+                };
+
+                return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Error downloading extension: {ex.Message}");
+            }
         }
     }
 }
