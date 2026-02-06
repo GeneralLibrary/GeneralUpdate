@@ -234,18 +234,133 @@ namespace GeneralUpdate.Extension.Services
         }
 
         /// <summary>
-        /// Downloads an extension package by ID via HTTP GET request to the server.
+        /// Downloads an extension package by ID via HTTP GET request to the server with automatic resume support.
+        /// Automatically detects partial downloads and resumes from where it left off.
         /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
         /// </summary>
         /// <param name="id">Extension ID (Name)</param>
         /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
         public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id)
         {
-            return await Download(id, 0);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
+                }
+
+                // Construct download URL with encoded extension name
+                var encodedExtensionName = Uri.EscapeDataString(id);
+                var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
+
+                // Determine the temporary file path for partial downloads
+                var tempFileName = $"{id}.partial";
+                var tempFilePath = Path.Combine(_downloadPath, tempFileName);
+                
+                // Check if a partial download exists and get its size
+                long startPosition = 0;
+                if (File.Exists(tempFilePath))
+                {
+                    var fileInfo = new FileInfo(tempFilePath);
+                    startPosition = fileInfo.Length;
+                }
+
+                // Create request message to support Range header
+                var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+
+                // Add Range header if resuming from a specific position
+                if (startPosition > 0)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(startPosition, null);
+                }
+
+                // Make HTTP GET request to download the file
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                // Check for success status codes (200 for full content, 206 for partial content)
+                if (response.StatusCode != System.Net.HttpStatusCode.OK && 
+                    response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                        $"Server returned error {response.StatusCode}: {errorContent}");
+                }
+
+                // If we received a 200 (full content) response but we had a partial file, delete it and start fresh
+                if (response.StatusCode == System.Net.HttpStatusCode.OK && File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
+                    startPosition = 0;
+                }
+
+                // Download and append to the partial file
+                using (var responseStream = await response.Content.ReadAsStreamAsync())
+                {
+                    using (var fileStream = new FileStream(tempFilePath, 
+                        startPosition > 0 ? FileMode.Append : FileMode.Create, 
+                        FileAccess.Write, 
+                        FileShare.None))
+                    {
+                        await responseStream.CopyToAsync(fileStream);
+                    }
+                }
+
+                // Try to get filename from content-disposition header
+                var fileName = $"{id}.zip";
+                if (response.Content.Headers.ContentDisposition?.FileName != null)
+                {
+                    fileName = response.Content.Headers.ContentDisposition.FileName.Trim('"');
+                }
+                // URL decode the filename if it was URL encoded
+                fileName = System.Net.WebUtility.UrlDecode(fileName);
+
+                // Read the complete file into a memory stream
+                var memoryStream = new MemoryStream();
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    await fileStream.CopyToAsync(memoryStream);
+                }
+                memoryStream.Position = 0;
+
+                // Delete the temporary file now that we have it in memory
+                if (File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
+                }
+
+                var result = new DownloadExtensionDTO
+                {
+                    FileName = fileName,
+                    Stream = memoryStream
+                };
+
+                return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Request timeout: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"File I/O error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Error downloading extension: {ex.Message}");
+            }
         }
 
         /// <summary>
         /// Downloads an extension package by ID via HTTP GET request with support for resumable downloads.
+        /// This overload allows manual control of the resume position.
         /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
         /// </summary>
         /// <param name="id">Extension ID (Name)</param>
