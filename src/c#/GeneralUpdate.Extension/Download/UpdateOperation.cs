@@ -15,7 +15,7 @@ namespace GeneralUpdate.Extension.Download
         /// <summary>
         /// Gets or sets the extension to be updated.
         /// </summary>
-        public Metadata.AvailableExtension Extension { get; set; } = new Metadata.AvailableExtension();
+        public Metadata.ExtensionMetadata Extension { get; set; } = new Metadata.ExtensionMetadata();
 
         /// <summary>
         /// Gets or sets the current state of the update operation.

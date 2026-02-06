@@ -14,7 +14,7 @@ namespace GeneralUpdate.Extension.PackageGeneration
     /// </summary>
     public class ExtensionPackageGenerator : IExtensionPackageGenerator
     {
-        private readonly List<Func<string, Metadata.ExtensionDescriptor, Task>> _customGenerators = new List<Func<string, Metadata.ExtensionDescriptor, Task>>();
+        private readonly List<Func<string, Metadata.ExtensionMetadata, Task>> _customGenerators = new List<Func<string, Metadata.ExtensionMetadata, Task>>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExtensionPackageGenerator"/> class.
@@ -27,8 +27,8 @@ namespace GeneralUpdate.Extension.PackageGeneration
         /// Adds a custom generation step that will be executed during package generation.
         /// This allows for flexible extension of the generation logic.
         /// </summary>
-        /// <param name="generator">A custom generator function that takes the source directory and descriptor.</param>
-        public void AddCustomGenerator(Func<string, Metadata.ExtensionDescriptor, Task> generator)
+        /// <param name="generator">A custom generator function that takes the source directory and metadata.</param>
+        public void AddCustomGenerator(Func<string, Metadata.ExtensionMetadata, Task> generator)
         {
             if (generator == null)
                 throw new ArgumentNullException(nameof(generator));
@@ -38,20 +38,20 @@ namespace GeneralUpdate.Extension.PackageGeneration
 
         /// <summary>
         /// Generates an extension package (ZIP) from the specified source directory.
-        /// Creates a manifest.json from the descriptor and packages all files.
+        /// Creates a manifest.json from the metadata and packages all files.
         /// </summary>
         /// <param name="sourceDirectory">The source directory containing the extension files.</param>
-        /// <param name="descriptor">The extension descriptor metadata.</param>
+        /// <param name="metadata">The extension metadata metadata.</param>
         /// <param name="outputPath">The output path for the generated package file.</param>
         /// <returns>A task representing the asynchronous operation. Returns the path to the generated package.</returns>
         /// <exception cref="ArgumentNullException">Thrown when any required parameter is null.</exception>
         /// <exception cref="DirectoryNotFoundException">Thrown when source directory doesn't exist.</exception>
-        public async Task<string> GeneratePackageAsync(string sourceDirectory, Metadata.ExtensionDescriptor descriptor, string outputPath)
+        public async Task<string> GeneratePackageAsync(string sourceDirectory, Metadata.ExtensionMetadata metadata, string outputPath)
         {
             if (string.IsNullOrWhiteSpace(sourceDirectory))
                 throw new ArgumentNullException(nameof(sourceDirectory));
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
             if (string.IsNullOrWhiteSpace(outputPath))
                 throw new ArgumentNullException(nameof(outputPath));
 
@@ -81,12 +81,12 @@ namespace GeneralUpdate.Extension.PackageGeneration
                 CopyDirectory(sourceDirectory, tempDir);
 
                 // Generate manifest.json in the temp directory
-                await GenerateManifestAsync(tempDir, descriptor);
+                await GenerateManifestAsync(tempDir, metadata);
 
                 // Execute custom generators if any
                 foreach (var customGenerator in _customGenerators)
                 {
-                    await customGenerator(tempDir, descriptor);
+                    await customGenerator(tempDir, metadata);
                 }
 
                 // Create ZIP package
@@ -136,45 +136,45 @@ namespace GeneralUpdate.Extension.PackageGeneration
         }
 
         /// <summary>
-        /// Generates the manifest.json file from the extension descriptor.
+        /// Generates the manifest.json file from the extension metadata.
         /// Follows VS Code extension manifest structure.
         /// </summary>
         /// <param name="targetDirectory">The directory where the manifest will be created.</param>
-        /// <param name="descriptor">The extension descriptor.</param>
-        private Task GenerateManifestAsync(string targetDirectory, Metadata.ExtensionDescriptor descriptor)
+        /// <param name="metadata">The extension metadata.</param>
+        private Task GenerateManifestAsync(string targetDirectory, Metadata.ExtensionMetadata metadata)
         {
             var manifestPath = Path.Combine(targetDirectory, "manifest.json");
 
             // Create a manifest object that includes both VS Code standard fields and our custom fields
             var manifest = new Dictionary<string, object>
             {
-                ["name"] = descriptor.Name,
-                ["displayName"] = descriptor.DisplayName,
-                ["version"] = descriptor.Version,
-                ["description"] = descriptor.Description ?? string.Empty,
-                ["publisher"] = descriptor.Publisher ?? string.Empty,
-                ["license"] = descriptor.License ?? string.Empty
+                ["name"] = metadata.Name,
+                ["displayName"] = metadata.DisplayName,
+                ["version"] = metadata.Version,
+                ["description"] = metadata.Description ?? string.Empty,
+                ["publisher"] = metadata.Publisher ?? string.Empty,
+                ["license"] = metadata.License ?? string.Empty
             };
 
             // Add optional fields if present
-            if (descriptor.Categories != null && descriptor.Categories.Count > 0)
+            if (metadata.Categories != null && metadata.Categories.Count > 0)
             {
-                manifest["categories"] = descriptor.Categories;
+                manifest["categories"] = metadata.Categories;
             }
 
             // Add engine/compatibility information
-            if (descriptor.Compatibility != null)
+            if (metadata.Compatibility != null)
             {
                 var engines = new Dictionary<string, string>();
                 
-                if (descriptor.Compatibility.MinHostVersion != null)
+                if (metadata.Compatibility.MinHostVersion != null)
                 {
-                    engines["minHostVersion"] = descriptor.Compatibility.MinHostVersion.ToString();
+                    engines["minHostVersion"] = metadata.Compatibility.MinHostVersion.ToString();
                 }
                 
-                if (descriptor.Compatibility.MaxHostVersion != null)
+                if (metadata.Compatibility.MaxHostVersion != null)
                 {
-                    engines["maxHostVersion"] = descriptor.Compatibility.MaxHostVersion.ToString();
+                    engines["maxHostVersion"] = metadata.Compatibility.MaxHostVersion.ToString();
                 }
 
                 if (engines.Count > 0)
@@ -184,34 +184,34 @@ namespace GeneralUpdate.Extension.PackageGeneration
             }
 
             // Add platform support
-            manifest["supportedPlatforms"] = (int)descriptor.SupportedPlatforms;
+            manifest["supportedPlatforms"] = (int)metadata.SupportedPlatforms;
 
             // Add dependencies if present
-            if (descriptor.Dependencies != null && descriptor.Dependencies.Count > 0)
+            if (metadata.Dependencies != null && metadata.Dependencies.Count > 0)
             {
-                manifest["dependencies"] = descriptor.Dependencies;
+                manifest["dependencies"] = metadata.Dependencies;
             }
 
             // Add custom properties if present
-            if (descriptor.CustomProperties != null && descriptor.CustomProperties.Count > 0)
+            if (metadata.CustomProperties != null && metadata.CustomProperties.Count > 0)
             {
-                manifest["customProperties"] = descriptor.CustomProperties;
+                manifest["customProperties"] = metadata.CustomProperties;
             }
 
             // Add package metadata
-            if (!string.IsNullOrEmpty(descriptor.PackageHash))
+            if (!string.IsNullOrEmpty(metadata.PackageHash))
             {
-                manifest["hash"] = descriptor.PackageHash;
+                manifest["hash"] = metadata.PackageHash;
             }
 
-            if (descriptor.PackageSize > 0)
+            if (metadata.PackageSize > 0)
             {
-                manifest["size"] = descriptor.PackageSize;
+                manifest["size"] = metadata.PackageSize;
             }
 
-            if (descriptor.ReleaseDate.HasValue)
+            if (metadata.ReleaseDate.HasValue)
             {
-                manifest["releaseDate"] = descriptor.ReleaseDate.Value.ToString("o");
+                manifest["releaseDate"] = metadata.ReleaseDate.Value.ToString("o");
             }
 
             // Serialize and write to file

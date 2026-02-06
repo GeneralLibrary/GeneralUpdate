@@ -26,7 +26,7 @@ namespace GeneralUpdate.Extension.Download
         /// <param name="enableRollback">Whether to enable automatic rollback on installation failure.</param>
         /// <returns>The created or existing update operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="extension"/> is null.</exception>
-        public UpdateOperation Enqueue(Metadata.AvailableExtension extension, bool enableRollback = true)
+        public UpdateOperation Enqueue(Metadata.ExtensionMetadata extension, bool enableRollback = true)
         {
             if (extension == null)
                 throw new ArgumentNullException(nameof(extension));
@@ -35,7 +35,7 @@ namespace GeneralUpdate.Extension.Download
             {
                 // Check if the extension is already queued or updating
                 var existing = _operations.FirstOrDefault(op =>
-                    op.Extension.Descriptor.Name == extension.Descriptor.Name &&
+                    op.Extension.Name == extension.Name &&
                     (op.State == UpdateState.Queued || op.State == UpdateState.Updating));
 
                 if (existing != null)
@@ -201,8 +201,8 @@ namespace GeneralUpdate.Extension.Download
         {
             StateChanged?.Invoke(this, new EventHandlers.UpdateStateChangedEventArgs
             {
-                Name = operation.Extension.Descriptor.Name,
-                ExtensionName = operation.Extension.Descriptor.DisplayName,
+                Name = operation.Extension.Name,
+                ExtensionName = operation.Extension.DisplayName,
                 Operation = operation,
                 PreviousState = previousState,
                 CurrentState = currentState

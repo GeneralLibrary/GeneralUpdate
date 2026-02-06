@@ -8,9 +8,9 @@ namespace GeneralUpdate.Extension.Installation
     public class InstalledExtension
     {
         /// <summary>
-        /// Gets or sets the extension metadata descriptor.
+        /// Gets or sets the extension metadata metadata.
         /// </summary>
-        public Metadata.ExtensionDescriptor Descriptor { get; set; } = new Metadata.ExtensionDescriptor();
+        public Metadata.ExtensionMetadata Metadata { get; set; } = new Metadata.ExtensionMetadata();
 
         /// <summary>
         /// Gets or sets the local file system path where the extension is installed.

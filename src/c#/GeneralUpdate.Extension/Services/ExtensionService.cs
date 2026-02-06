@@ -21,7 +21,7 @@ namespace GeneralUpdate.Extension.Services
     /// </summary>
     public class ExtensionService : IExtensionService
     {
-        private List<AvailableExtension> _availableExtensions;
+        private List<ExtensionMetadata> _availableExtensions;
         private readonly Version? _hostVersion;
         private readonly Compatibility.ICompatibilityValidator? _validator;
         private readonly string _downloadPath;
@@ -60,7 +60,7 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic")</param>
         /// <param name="authToken">Optional HTTP authentication token</param>
         public ExtensionService(
-            List<AvailableExtension> availableExtensions,
+            List<ExtensionMetadata> availableExtensions,
             string downloadPath,
             Download.IUpdateQueue updateQueue,
             string serverUrl,
@@ -111,7 +111,7 @@ namespace GeneralUpdate.Extension.Services
         /// Updates the list of available extensions
         /// </summary>
         /// <param name="availableExtensions">New list of available extensions</param>
-        public void UpdateAvailableExtensions(List<AvailableExtension> availableExtensions)
+        public void UpdateAvailableExtensions(List<ExtensionMetadata> availableExtensions)
         {
             _availableExtensions = availableExtensions ?? throw new ArgumentNullException(nameof(availableExtensions));
         }
@@ -198,14 +198,14 @@ namespace GeneralUpdate.Extension.Services
                     var availableExtensions = result.Items
                         .Select(dto => MapFromExtensionDTO(dto))
                         .Where(ext => ext != null)
-                        .Cast<AvailableExtension>()
+                        .Cast<ExtensionMetadata>()
                         .ToList();
                     
                     // Merge with existing extensions
                     foreach (var ext in availableExtensions)
                     {
                         var existing = _availableExtensions.FirstOrDefault(e => 
-                            e.Descriptor.Name?.Equals(ext.Descriptor.Name, StringComparison.OrdinalIgnoreCase) == true);
+                            e.Name?.Equals(ext.Name, StringComparison.OrdinalIgnoreCase) == true);
                         
                         if (existing == null)
                         {
@@ -457,7 +457,7 @@ namespace GeneralUpdate.Extension.Services
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation));
 
-            var descriptor = operation.Extension.Descriptor;
+            var descriptor = operation.Extension;
 
             // Construct download URL from server URL and extension ID (URL-encoded for safety)
             var encodedExtensionName = Uri.EscapeDataString(descriptor.Name);
@@ -531,8 +531,8 @@ namespace GeneralUpdate.Extension.Services
 
             ProgressUpdated?.Invoke(this, new EventHandlers.DownloadProgressEventArgs
             {
-                Name = operation.Extension.Descriptor.Name,
-                ExtensionName = operation.Extension.Descriptor.DisplayName,
+                Name = operation.Extension.Name,
+                ExtensionName = operation.Extension.DisplayName,
                 ProgressPercentage = progressPercentage,
                 TotalBytes = args.TotalBytesToReceive,
                 ReceivedBytes = args.BytesReceived,
@@ -587,9 +587,9 @@ namespace GeneralUpdate.Extension.Services
         /// <summary>
         /// Maps an AvailableExtension to an ExtensionDTO
         /// </summary>
-        private ExtensionDTO MapToExtensionDTO(AvailableExtension extension, Version? hostVersion)
+        private ExtensionDTO MapToExtensionDTO(ExtensionMetadata extension, Version? hostVersion)
         {
-            var descriptor = extension.Descriptor;
+            var descriptor = extension;
 
             // Determine compatibility if host version is provided
             bool? isCompatible = null;
@@ -632,7 +632,7 @@ namespace GeneralUpdate.Extension.Services
         /// <summary>
         /// Maps an ExtensionDTO to an AvailableExtension
         /// </summary>
-        private AvailableExtension? MapFromExtensionDTO(ExtensionDTO dto)
+        private ExtensionMetadata? MapFromExtensionDTO(ExtensionDTO dto)
         {
             if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
                 return null;
@@ -646,7 +646,7 @@ namespace GeneralUpdate.Extension.Services
             if (!string.IsNullOrWhiteSpace(dto.MaxHostVersion))
                 Version.TryParse(dto.MaxHostVersion, out maxVersion);
 
-            var descriptor = new ExtensionDescriptor
+            var descriptor = new ExtensionMetadata
             {
                 Name = dto.Name,
                 DisplayName = dto.DisplayName ?? dto.Name,
@@ -669,11 +669,7 @@ namespace GeneralUpdate.Extension.Services
                 CustomProperties = dto.CustomProperties
             };
 
-            return new AvailableExtension
-            {
-                Descriptor = descriptor,
-                IsPreRelease = dto.IsPreRelease
-            };
+            return descriptor;
         }
     }
 }

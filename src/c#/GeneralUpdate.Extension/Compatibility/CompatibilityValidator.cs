@@ -23,18 +23,18 @@ namespace GeneralUpdate.Extension.Compatibility
         }
 
         /// <summary>
-        /// Checks if an extension descriptor meets the host version requirements.
+        /// Checks if an extension metadata meets the host version requirements.
         /// Evaluates both minimum and maximum version constraints.
         /// </summary>
-        /// <param name="descriptor">The extension descriptor to validate.</param>
+        /// <param name="metadata">The extension metadata to validate.</param>
         /// <returns>True if the extension is compatible with the host version; otherwise, false.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="descriptor"/> is null.</exception>
-        public bool IsCompatible(Metadata.ExtensionDescriptor descriptor)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="metadata"/> is null.</exception>
+        public bool IsCompatible(Metadata.ExtensionMetadata metadata)
         {
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
 
-            return descriptor.Compatibility.IsCompatibleWith(_hostVersion);
+            return metadata.Compatibility.IsCompatibleWith(_hostVersion);
         }
 
         /// <summary>
@@ -43,13 +43,13 @@ namespace GeneralUpdate.Extension.Compatibility
         /// </summary>
         /// <param name="extensions">The list of extensions to filter.</param>
         /// <returns>A filtered list containing only compatible extensions.</returns>
-        public List<Metadata.AvailableExtension> FilterCompatible(List<Metadata.AvailableExtension> extensions)
+        public List<Metadata.ExtensionMetadata> FilterCompatible(List<Metadata.ExtensionMetadata> extensions)
         {
             if (extensions == null)
-                return new List<Metadata.AvailableExtension>();
+                return new List<Metadata.ExtensionMetadata>();
 
             return extensions
-                .Where(ext => IsCompatible(ext.Descriptor))
+                .Where(ext => IsCompatible(ext))
                 .ToList();
         }
 
@@ -59,14 +59,14 @@ namespace GeneralUpdate.Extension.Compatibility
         /// </summary>
         /// <param name="extensions">List of extension versions to evaluate.</param>
         /// <returns>The latest compatible version if found; otherwise, null.</returns>
-        public Metadata.AvailableExtension? FindLatestCompatible(List<Metadata.AvailableExtension> extensions)
+        public Metadata.ExtensionMetadata? FindLatestCompatible(List<Metadata.ExtensionMetadata> extensions)
         {
             if (extensions == null || !extensions.Any())
                 return null;
 
             return extensions
-                .Where(ext => IsCompatible(ext.Descriptor))
-                .OrderByDescending(ext => ext.Descriptor.GetVersionObject())
+                .Where(ext => IsCompatible(ext))
+                .OrderByDescending(ext => ext.GetVersionObject())
                 .FirstOrDefault();
         }
 
@@ -76,14 +76,14 @@ namespace GeneralUpdate.Extension.Compatibility
         /// </summary>
         /// <param name="extensions">List of extension versions to evaluate.</param>
         /// <returns>The minimum supported latest version if found; otherwise, null.</returns>
-        public Metadata.AvailableExtension? FindMinimumSupportedLatest(List<Metadata.AvailableExtension> extensions)
+        public Metadata.ExtensionMetadata? FindMinimumSupportedLatest(List<Metadata.ExtensionMetadata> extensions)
         {
             if (extensions == null || !extensions.Any())
                 return null;
 
             // First, filter to only compatible extensions
             var compatibleExtensions = extensions
-                .Where(ext => IsCompatible(ext.Descriptor))
+                .Where(ext => IsCompatible(ext))
                 .ToList();
 
             if (!compatibleExtensions.Any())
@@ -91,7 +91,7 @@ namespace GeneralUpdate.Extension.Compatibility
 
             // Find the maximum version among all compatible extensions
             var maxVersion = compatibleExtensions
-                .Select(ext => ext.Descriptor.GetVersionObject())
+                .Select(ext => ext.GetVersionObject())
                 .Where(v => v != null)
                 .OrderByDescending(v => v)
                 .FirstOrDefault();
@@ -101,7 +101,7 @@ namespace GeneralUpdate.Extension.Compatibility
 
             // Return the extension with that maximum version
             return compatibleExtensions
-                .FirstOrDefault(ext => ext.Descriptor.GetVersionObject() == maxVersion);
+                .FirstOrDefault(ext => ext.GetVersionObject() == maxVersion);
         }
 
         /// <summary>
@@ -111,24 +111,24 @@ namespace GeneralUpdate.Extension.Compatibility
         /// <param name="installed">The currently installed extension.</param>
         /// <param name="availableVersions">Available versions of the extension from the remote source.</param>
         /// <returns>The latest compatible update if available; otherwise, null.</returns>
-        public Metadata.AvailableExtension? GetCompatibleUpdate(Installation.InstalledExtension installed, List<Metadata.AvailableExtension> availableVersions)
+        public Metadata.ExtensionMetadata? GetCompatibleUpdate(Installation.InstalledExtension installed, List<Metadata.ExtensionMetadata> availableVersions)
         {
             if (installed == null || availableVersions == null || !availableVersions.Any())
                 return null;
 
-            var installedVersion = installed.Descriptor.GetVersionObject();
+            var installedVersion = installed.Metadata.GetVersionObject();
             if (installedVersion == null)
                 return null;
 
             // Find the latest compatible version that is newer than the installed version
             return availableVersions
-                .Where(ext => IsCompatible(ext.Descriptor))
+                .Where(ext => IsCompatible(ext))
                 .Where(ext =>
                 {
-                    var availableVersion = ext.Descriptor.GetVersionObject();
+                    var availableVersion = ext.GetVersionObject();
                     return availableVersion != null && availableVersion > installedVersion;
                 })
-                .OrderByDescending(ext => ext.Descriptor.GetVersionObject())
+                .OrderByDescending(ext => ext.GetVersionObject())
                 .FirstOrDefault();
         }
     }

@@ -34,7 +34,7 @@ class Program
             Console.WriteLine("Downloading...");
         };
 
-        host.QueueUpdate(new AvailableExtension());
+        //host.QueueUpdate(new AvailableExtension());
         await host.ProcessNextUpdateAsync();
 
         Console.Read();

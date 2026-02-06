@@ -91,18 +91,11 @@ namespace GeneralUpdate.Extension
         Installation.InstalledExtension? GetInstalledExtensionById(string extensionId);
 
         /// <summary>
-        /// Parses available extensions from JSON data.
-        /// </summary>
-        /// <param name="json">JSON string containing extension metadata.</param>
-        /// <returns>A list of available extensions.</returns>
-        List<Metadata.AvailableExtension> ParseAvailableExtensions(string json);
-
-        /// <summary>
         /// Gets available extensions compatible with the current host and platform.
         /// </summary>
         /// <param name="availableExtensions">List of available extensions from the server.</param>
         /// <returns>A filtered list of compatible extensions.</returns>
-        List<Metadata.AvailableExtension> GetCompatibleExtensions(List<Metadata.AvailableExtension> availableExtensions);
+        List<Metadata.ExtensionMetadata> GetCompatibleExtensions(List<Metadata.ExtensionMetadata> availableExtensions);
 
         #endregion
 
@@ -132,14 +125,14 @@ namespace GeneralUpdate.Extension
         /// <param name="extension">The extension to update.</param>
         /// <param name="enableRollback">Whether to enable rollback on failure.</param>
         /// <returns>The created update operation.</returns>
-        Download.UpdateOperation QueueUpdate(Metadata.AvailableExtension extension, bool enableRollback = true);
+        Download.UpdateOperation QueueUpdate(Metadata.ExtensionMetadata extension, bool enableRollback = true);
 
         /// <summary>
         /// Automatically queues updates for all installed extensions with auto-update enabled.
         /// </summary>
         /// <param name="availableExtensions">List of available extensions to check for updates.</param>
         /// <returns>A list of update operations that were queued.</returns>
-        List<Download.UpdateOperation> QueueAutoUpdates(List<Metadata.AvailableExtension> availableExtensions);
+        List<Download.UpdateOperation> QueueAutoUpdates(List<Metadata.ExtensionMetadata> availableExtensions);
 
         /// <summary>
         /// Finds the best upgrade version for a specific extension.
@@ -148,7 +141,7 @@ namespace GeneralUpdate.Extension
         /// <param name="extensionId">The extension identifier.</param>
         /// <param name="availableExtensions">Available versions of the extension.</param>
         /// <returns>The best compatible version if found; otherwise, null.</returns>
-        Metadata.AvailableExtension? FindBestUpgrade(string extensionId, List<Metadata.AvailableExtension> availableExtensions);
+        Metadata.ExtensionMetadata? FindBestUpgrade(string extensionId, List<Metadata.ExtensionMetadata> availableExtensions);
 
         /// <summary>
         /// Processes the next queued update operation.
@@ -185,11 +178,11 @@ namespace GeneralUpdate.Extension
         #region Compatibility
 
         /// <summary>
-        /// Checks if an extension descriptor is compatible with the current host version.
+        /// Checks if an extension metadata is compatible with the current host version.
         /// </summary>
-        /// <param name="descriptor">The extension descriptor to validate.</param>
+        /// <param name="metadata">The extension metadata to validate.</param>
         /// <returns>True if compatible; otherwise, false.</returns>
-        bool IsCompatible(Metadata.ExtensionDescriptor descriptor);
+        bool IsCompatible(Metadata.ExtensionMetadata metadata);
 
         #endregion
 

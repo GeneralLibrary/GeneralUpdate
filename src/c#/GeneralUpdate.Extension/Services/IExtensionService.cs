@@ -29,7 +29,7 @@ namespace GeneralUpdate.Extension.Services
         /// Updates the list of available extensions
         /// </summary>
         /// <param name="availableExtensions">New list of available extensions</param>
-        void UpdateAvailableExtensions(List<Metadata.AvailableExtension> availableExtensions);
+        void UpdateAvailableExtensions(List<Metadata.ExtensionMetadata> availableExtensions);
 
         /// <summary>
         /// Queries available extensions based on filter criteria

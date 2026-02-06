@@ -47,18 +47,11 @@ namespace GeneralUpdate.Extension.Core
         void RemoveInstalledExtension(string extensionId);
 
         /// <summary>
-        /// Parses available extensions from JSON data.
-        /// </summary>
-        /// <param name="json">JSON string containing extension data.</param>
-        /// <returns>A list of available extensions.</returns>
-        List<Metadata.AvailableExtension> ParseAvailableExtensions(string json);
-
-        /// <summary>
         /// Filters available extensions by target platform.
         /// </summary>
         /// <param name="extensions">The list of extensions to filter.</param>
         /// <param name="platform">The platform to filter by.</param>
         /// <returns>A filtered list of extensions compatible with the specified platform.</returns>
-        List<Metadata.AvailableExtension> FilterByPlatform(List<Metadata.AvailableExtension> extensions, Metadata.TargetPlatform platform);
+        List<Metadata.ExtensionMetadata> FilterByPlatform(List<Metadata.ExtensionMetadata> extensions, Metadata.TargetPlatform platform);
     }
 }

@@ -17,10 +17,10 @@ namespace GeneralUpdate.Extension.PackageGeneration
         /// Generates an extension package (ZIP) from the specified source directory.
         /// </summary>
         /// <param name="sourceDirectory">The source directory containing the extension files.</param>
-        /// <param name="descriptor">The extension descriptor metadata.</param>
+        /// <param name="metadata">The extension metadata metadata.</param>
         /// <param name="outputPath">The output path for the generated package file.</param>
         /// <returns>A task representing the asynchronous operation. Returns the path to the generated package.</returns>
-        Task<string> GeneratePackageAsync(string sourceDirectory, Metadata.ExtensionDescriptor descriptor, string outputPath);
+        Task<string> GeneratePackageAsync(string sourceDirectory, Metadata.ExtensionMetadata metadata, string outputPath);
 
         /// <summary>
         /// Validates that the source directory contains required extension files.

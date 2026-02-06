@@ -20,7 +20,7 @@ namespace GeneralUpdate.Extension.Download
         /// <param name="extension">The extension to update.</param>
         /// <param name="enableRollback">Whether to enable rollback on failure.</param>
         /// <returns>The created update operation.</returns>
-        UpdateOperation Enqueue(Metadata.AvailableExtension extension, bool enableRollback = true);
+        UpdateOperation Enqueue(Metadata.ExtensionMetadata extension, bool enableRollback = true);
 
         /// <summary>
         /// Gets the next queued update operation.

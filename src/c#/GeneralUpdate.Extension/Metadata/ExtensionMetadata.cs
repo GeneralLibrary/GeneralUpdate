@@ -5,11 +5,11 @@ using System.Text.Json.Serialization;
 namespace GeneralUpdate.Extension.Metadata
 {
     /// <summary>
-    /// Represents the comprehensive metadata descriptor for an extension package.
+    /// Represents the comprehensive metadata metadata for an extension package.
     /// Follows VS Code extension manifest structure (package.json) standards.
     /// Provides all necessary information for discovery, compatibility checking, and installation.
     /// </summary>
-    public class ExtensionDescriptor
+    public class ExtensionMetadata
     {
         /// <summary>
         /// Gets or sets the unique extension identifier (lowercase, no spaces).
@@ -112,6 +112,13 @@ namespace GeneralUpdate.Extension.Metadata
         [JsonPropertyName("properties")]
         public Dictionary<string, string>? CustomProperties { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether this is a pre-release version.
+        /// Pre-release versions are typically beta or alpha builds.
+        /// </summary>
+        [JsonPropertyName("isPreRelease")]
+        public bool IsPreRelease { get; set; }
+        
         /// <summary>
         /// Parses the version string and returns a Version object.
         /// </summary>

@@ -102,7 +102,7 @@ namespace GeneralUpdate.Extension
 
             // Initialize extension service with empty list (will be updated via ParseAvailableExtensions)
             _extensionService = new Services.ExtensionService(
-                new List<Metadata.AvailableExtension>(),
+                new List<Metadata.ExtensionMetadata>(),
                 config.DownloadPath,
                 _updateQueue,
                 config.ServerUrl,
@@ -159,26 +159,14 @@ namespace GeneralUpdate.Extension
         {
             return _catalog.GetInstalledExtensionById(extensionName);
         }
-
-        /// <summary>
-        /// Parses available extensions from JSON data received from the server.
-        /// </summary>
-        /// <param name="json">JSON string containing extension metadata.</param>
-        /// <returns>A list of parsed available extensions.</returns>
-        public List<Metadata.AvailableExtension> ParseAvailableExtensions(string json)
-        {
-            var extensions = _catalog.ParseAvailableExtensions(json);
-            _extensionService.UpdateAvailableExtensions(extensions);
-            return extensions;
-        }
-
+        
         /// <summary>
         /// Gets available extensions that are compatible with the current host version and platform.
         /// Applies both platform and version compatibility filters.
         /// </summary>
         /// <param name="availableExtensions">List of available extensions from the server.</param>
         /// <returns>A filtered list of compatible extensions.</returns>
-        public List<Metadata.AvailableExtension> GetCompatibleExtensions(List<Metadata.AvailableExtension> availableExtensions)
+        public List<Metadata.ExtensionMetadata> GetCompatibleExtensions(List<Metadata.ExtensionMetadata> availableExtensions)
         {
             // First filter by platform
             var platformFiltered = _catalog.FilterByPlatform(availableExtensions, _targetPlatform);
@@ -230,23 +218,23 @@ namespace GeneralUpdate.Extension
         /// <returns>The created update operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="extension"/> is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the extension is incompatible.</exception>
-        public Download.UpdateOperation QueueUpdate(Metadata.AvailableExtension extension, bool enableRollback = true)
+        public Download.UpdateOperation QueueUpdate(Metadata.ExtensionMetadata extension, bool enableRollback = true)
         {
             if (extension == null)
                 throw new ArgumentNullException(nameof(extension));
 
             // Verify compatibility
-            if (!_validator.IsCompatible(extension.Descriptor))
+            if (!_validator.IsCompatible(extension))
             {
                 throw new InvalidOperationException(
-                    $"Extension '{extension.Descriptor.DisplayName}' is not compatible with host version {_hostVersion}");
+                    $"Extension '{extension.DisplayName}' is not compatible with host version {_hostVersion}");
             }
 
             // Verify platform support
-            if ((extension.Descriptor.SupportedPlatforms & _targetPlatform) == 0)
+            if ((extension.SupportedPlatforms & _targetPlatform) == 0)
             {
                 throw new InvalidOperationException(
-                    $"Extension '{extension.Descriptor.DisplayName}' does not support the current platform");
+                    $"Extension '{extension.DisplayName}' does not support the current platform");
             }
 
             return _updateQueue.Enqueue(extension, enableRollback);
@@ -258,7 +246,7 @@ namespace GeneralUpdate.Extension
         /// </summary>
         /// <param name="availableExtensions">List of available extensions to check for updates.</param>
         /// <returns>A list of update operations that were queued.</returns>
-        public List<Download.UpdateOperation> QueueAutoUpdates(List<Metadata.AvailableExtension> availableExtensions)
+        public List<Download.UpdateOperation> QueueAutoUpdates(List<Metadata.ExtensionMetadata> availableExtensions)
         {
             if (!_globalAutoUpdateEnabled)
                 return new List<Download.UpdateOperation>();
@@ -273,7 +261,7 @@ namespace GeneralUpdate.Extension
 
                 // Find available versions for this extension
                 var versions = availableExtensions
-                    .Where(ext => ext.Descriptor.Name == installed.Descriptor.Name)
+                    .Where(ext => ext.Name == installed.Metadata.Name)
                     .ToList();
 
                 if (!versions.Any())
@@ -293,7 +281,7 @@ namespace GeneralUpdate.Extension
                     {
                         // Log error but continue processing other extensions
                         GeneralUpdate.Common.Shared.GeneralTracer.Error(
-                            $"Failed to queue auto-update for extension {installed.Descriptor.Name}", ex);
+                            $"Failed to queue auto-update for extension {installed.Metadata.Name}", ex);
                     }
                 }
             }
@@ -308,10 +296,10 @@ namespace GeneralUpdate.Extension
         /// <param name="extensionName">The extension identifier.</param>
         /// <param name="availableExtensions">Available versions of the extension.</param>
         /// <returns>The best compatible version if found; otherwise, null.</returns>
-        public Metadata.AvailableExtension? FindBestUpgrade(string extensionName, List<Metadata.AvailableExtension> availableExtensions)
+        public Metadata.ExtensionMetadata? FindBestUpgrade(string extensionName, List<Metadata.ExtensionMetadata> availableExtensions)
         {
             var versions = availableExtensions
-                .Where(ext => ext.Descriptor.Name == extensionName)
+                .Where(ext => ext.Name == extensionName)
                 .ToList();
 
             return _validator.FindMinimumSupportedLatest(versions);
@@ -338,7 +326,7 @@ namespace GeneralUpdate.Extension
                 // Install the extension
                 var installed = await _installService.InstallAsync(
                     downloadedPath,
-                    operation.Extension.Descriptor,
+                    operation.Extension,
                     operation.EnableRollback);
 
                 if (installed != null)
@@ -407,13 +395,13 @@ namespace GeneralUpdate.Extension
         #region Compatibility
 
         /// <summary>
-        /// Checks if an extension descriptor is compatible with the current host version.
+        /// Checks if an extension metadata is compatible with the current host version.
         /// </summary>
-        /// <param name="descriptor">The extension descriptor to validate.</param>
+        /// <param name="metadata">The extension metadata to validate.</param>
         /// <returns>True if compatible; otherwise, false.</returns>
-        public bool IsCompatible(Metadata.ExtensionDescriptor descriptor)
+        public bool IsCompatible(Metadata.ExtensionMetadata metadata)
         {
-            return _validator.IsCompatible(descriptor);
+            return _validator.IsCompatible(metadata);
         }
         
         #endregion

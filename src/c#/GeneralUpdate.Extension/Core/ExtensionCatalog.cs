@@ -90,7 +90,7 @@ namespace GeneralUpdate.Extension.Core
             lock (_lockObject)
             {
                 return _installedExtensions
-                    .Where(ext => (ext.Descriptor.SupportedPlatforms & platform) != 0)
+                    .Where(ext => (ext.Metadata.SupportedPlatforms & platform) != 0)
                     .ToList();
             }
         }
@@ -104,7 +104,7 @@ namespace GeneralUpdate.Extension.Core
         {
             lock (_lockObject)
             {
-                return _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extensionName);
+                return _installedExtensions.FirstOrDefault(ext => ext.Metadata.Name == extensionName);
             }
         }
 
@@ -121,7 +121,7 @@ namespace GeneralUpdate.Extension.Core
 
             lock (_lockObject)
             {
-                var existing = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extension.Descriptor.Name);
+                var existing = _installedExtensions.FirstOrDefault(ext => ext.Metadata.Name == extension.Metadata.Name);
 
                 if (existing != null)
                 {
@@ -142,7 +142,7 @@ namespace GeneralUpdate.Extension.Core
         {
             lock (_lockObject)
             {
-                var extension = _installedExtensions.FirstOrDefault(ext => ext.Descriptor.Name == extensionName);
+                var extension = _installedExtensions.FirstOrDefault(ext => ext.Metadata.Name == extensionName);
 
                 if (extension != null)
                 {
@@ -164,42 +164,20 @@ namespace GeneralUpdate.Extension.Core
                 }
             }
         }
-
-        /// <summary>
-        /// Parses a JSON string containing available extensions from a remote source.
-        /// </summary>
-        /// <param name="json">The JSON-formatted extension data.</param>
-        /// <returns>A list of parsed available extensions, or an empty list if parsing fails.</returns>
-        public List<Metadata.AvailableExtension> ParseAvailableExtensions(string json)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-                return new List<Metadata.AvailableExtension>();
-
-            try
-            {
-                var extensions = JsonSerializer.Deserialize<List<Metadata.AvailableExtension>>(json);
-                return extensions ?? new List<Metadata.AvailableExtension>();
-            }
-            catch (Exception ex)
-            {
-                GeneralUpdate.Common.Shared.GeneralTracer.Error("Failed to parse available extensions JSON", ex);
-                return new List<Metadata.AvailableExtension>();
-            }
-        }
-
+        
         /// <summary>
         /// Filters available extensions to only include those supporting the specified platform.
         /// </summary>
         /// <param name="extensions">The list of extensions to filter.</param>
         /// <param name="platform">The target platform to filter by.</param>
         /// <returns>A filtered list of platform-compatible extensions.</returns>
-        public List<Metadata.AvailableExtension> FilterByPlatform(List<Metadata.AvailableExtension> extensions, Metadata.TargetPlatform platform)
+        public List<Metadata.ExtensionMetadata> FilterByPlatform(List<Metadata.ExtensionMetadata> extensions, Metadata.TargetPlatform platform)
         {
             if (extensions == null)
-                return new List<Metadata.AvailableExtension>();
+                return new List<Metadata.ExtensionMetadata>();
 
             return extensions
-                .Where(ext => (ext.Descriptor.SupportedPlatforms & platform) != 0)
+                .Where(ext => (ext.SupportedPlatforms & platform) != 0)
                 .ToList();
         }
 
@@ -217,7 +195,7 @@ namespace GeneralUpdate.Extension.Core
             }
             catch (Exception ex)
             {
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Failed to save extension manifest for {extension.Descriptor.Name}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Failed to save extension manifest for {extension.Metadata.Name}", ex);
             }
         }
     }

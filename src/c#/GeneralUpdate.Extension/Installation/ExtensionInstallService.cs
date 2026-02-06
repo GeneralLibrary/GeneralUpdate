@@ -55,22 +55,22 @@ namespace GeneralUpdate.Extension.Installation
         /// Automatically creates backups and supports rollback on failure.
         /// </summary>
         /// <param name="packagePath">Path to the extension package file.</param>
-        /// <param name="descriptor">Extension metadata descriptor.</param>
+        /// <param name="metadata">Extension metadata metadata.</param>
         /// <param name="enableRollback">Whether to enable automatic rollback on installation failure.</param>
         /// <returns>The installed extension object if successful; otherwise, null.</returns>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
         /// <exception cref="FileNotFoundException">Thrown when the package file doesn't exist.</exception>
-        public async Task<InstalledExtension?> InstallAsync(string packagePath, Metadata.ExtensionDescriptor descriptor, bool enableRollback = true)
+        public async Task<InstalledExtension?> InstallAsync(string packagePath, Metadata.ExtensionMetadata metadata, bool enableRollback = true)
         {
             if (string.IsNullOrWhiteSpace(packagePath))
                 throw new ArgumentNullException(nameof(packagePath));
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
             if (!File.Exists(packagePath))
                 throw new FileNotFoundException("Package file not found", packagePath);
 
-            var installPath = Path.Combine(_installBasePath, descriptor.Name);
-            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.Name}_{DateTime.Now:yyyyMMddHHmmss}");
+            var installPath = Path.Combine(_installBasePath, metadata.Name);
+            var backupPath = Path.Combine(_backupBasePath, $"{metadata.Name}_{DateTime.Now:yyyyMMddHHmmss}");
 
             try
             {
@@ -92,7 +92,7 @@ namespace GeneralUpdate.Extension.Installation
                 // Create the installed extension object
                 var installed = new InstalledExtension
                 {
-                    Descriptor = descriptor,
+                    Metadata = metadata,
                     InstallPath = installPath,
                     InstallDate = DateTime.Now,
                     AutoUpdateEnabled = true,
@@ -109,20 +109,20 @@ namespace GeneralUpdate.Extension.Installation
                     Directory.Delete(backupPath, true);
                 }
 
-                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, true, installPath, null);
+                OnInstallationCompleted(metadata.Name, metadata.DisplayName, true, installPath, null);
                 return installed;
             }
             catch (Exception ex)
             {
-                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, false, installPath, ex.Message);
+                OnInstallationCompleted(metadata.Name, metadata.DisplayName, false, installPath, ex.Message);
 
                 // Attempt rollback if enabled
                 if (enableRollback && Directory.Exists(backupPath))
                 {
-                    await RollbackAsync(descriptor.Name, descriptor.DisplayName, backupPath, installPath);
+                    await RollbackAsync(metadata.Name, metadata.DisplayName, backupPath, installPath);
                 }
 
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Installation failed for extension {descriptor.Name}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Installation failed for extension {metadata.Name}", ex);
                 return null;
             }
         }
@@ -132,22 +132,22 @@ namespace GeneralUpdate.Extension.Installation
         /// Useful for incremental updates that don't require full package downloads.
         /// </summary>
         /// <param name="patchPath">Path to the directory containing patch files.</param>
-        /// <param name="descriptor">Extension metadata descriptor for the target version.</param>
+        /// <param name="metadata">Extension metadata metadata for the target version.</param>
         /// <param name="enableRollback">Whether to enable automatic rollback on patch failure.</param>
         /// <returns>The updated extension object if successful; otherwise, null.</returns>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
         /// <exception cref="DirectoryNotFoundException">Thrown when the patch directory doesn't exist.</exception>
-        public async Task<InstalledExtension?> ApplyPatchAsync(string patchPath, Metadata.ExtensionDescriptor descriptor, bool enableRollback = true)
+        public async Task<InstalledExtension?> ApplyPatchAsync(string patchPath, Metadata.ExtensionMetadata metadata, bool enableRollback = true)
         {
             if (string.IsNullOrWhiteSpace(patchPath))
                 throw new ArgumentNullException(nameof(patchPath));
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (metadata == null)
+                throw new ArgumentNullException(nameof(metadata));
             if (!Directory.Exists(patchPath))
                 throw new DirectoryNotFoundException("Patch directory not found");
 
-            var installPath = Path.Combine(_installBasePath, descriptor.Name);
-            var backupPath = Path.Combine(_backupBasePath, $"{descriptor.Name}_{DateTime.Now:yyyyMMddHHmmss}");
+            var installPath = Path.Combine(_installBasePath, metadata.Name);
+            var backupPath = Path.Combine(_backupBasePath, $"{metadata.Name}_{DateTime.Now:yyyyMMddHHmmss}");
 
             try
             {
@@ -180,7 +180,7 @@ namespace GeneralUpdate.Extension.Installation
                 // Create updated extension object
                 var updated = new InstalledExtension
                 {
-                    Descriptor = descriptor,
+                    Metadata = metadata,
                     InstallPath = installPath,
                     InstallDate = existing?.InstallDate ?? DateTime.Now,
                     AutoUpdateEnabled = existing?.AutoUpdateEnabled ?? true,
@@ -197,20 +197,20 @@ namespace GeneralUpdate.Extension.Installation
                     Directory.Delete(backupPath, true);
                 }
 
-                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, true, installPath, null);
+                OnInstallationCompleted(metadata.Name, metadata.DisplayName, true, installPath, null);
                 return updated;
             }
             catch (Exception ex)
             {
-                OnInstallationCompleted(descriptor.Name, descriptor.DisplayName, false, installPath, ex.Message);
+                OnInstallationCompleted(metadata.Name, metadata.DisplayName, false, installPath, ex.Message);
 
                 // Attempt rollback if enabled
                 if (enableRollback && Directory.Exists(backupPath))
                 {
-                    await RollbackAsync(descriptor.Name, descriptor.DisplayName, backupPath, installPath);
+                    await RollbackAsync(metadata.Name, metadata.DisplayName, backupPath, installPath);
                 }
 
-                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Patch application failed for extension {descriptor.Name}", ex);
+                GeneralUpdate.Common.Shared.GeneralTracer.Error($"Patch application failed for extension {metadata.Name}", ex);
                 return null;
             }
         }

@@ -12,7 +12,7 @@ namespace ExtensionTest.Installation
     public class InstalledExtensionTests
     {
         /// <summary>
-        /// Tests that a new InstalledExtension has Descriptor initialized.
+        /// Tests that a new InstalledExtension has Metadata initialized.
         /// </summary>
         [Fact]
         public void Constructor_ShouldInitializeDescriptor()
@@ -21,7 +21,7 @@ namespace ExtensionTest.Installation
             var extension = new InstalledExtension();
 
             // Assert
-            Assert.NotNull(extension.Descriptor);
+            Assert.NotNull(extension.Metadata);
         }
 
         /// <summary>
@@ -77,24 +77,24 @@ namespace ExtensionTest.Installation
         }
 
         /// <summary>
-        /// Tests that Descriptor property can be set and retrieved.
+        /// Tests that Metadata property can be set and retrieved.
         /// </summary>
         [Fact]
         public void Descriptor_CanBeSetAndRetrieved()
         {
             // Arrange
             var extension = new InstalledExtension();
-            var descriptor = new ExtensionDescriptor
+            var descriptor = new ExtensionMetadata
             {
                 Name = "test-extension",
                 Version = "1.0.0"
             };
 
             // Act
-            extension.Descriptor = descriptor;
+            extension.Metadata = descriptor;
 
             // Assert
-            Assert.Same(descriptor, extension.Descriptor);
+            Assert.Same(descriptor, extension.Metadata);
         }
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace ExtensionTest.Installation
             // Act
             var extension = new InstalledExtension
             {
-                Descriptor = new ExtensionDescriptor
+                Metadata = new ExtensionMetadata
                 {
                     Name = "test-extension",
                     Version = "2.0.0"
@@ -222,8 +222,8 @@ namespace ExtensionTest.Installation
             };
 
             // Assert
-            Assert.Equal("test-extension", extension.Descriptor.Name);
-            Assert.Equal("2.0.0", extension.Descriptor.Version);
+            Assert.Equal("test-extension", extension.Metadata.Name);
+            Assert.Equal("2.0.0", extension.Metadata.Version);
             Assert.Equal("/usr/local/extensions/test", extension.InstallPath);
             Assert.Equal(installDate, extension.InstallDate);
             Assert.False(extension.AutoUpdateEnabled);
