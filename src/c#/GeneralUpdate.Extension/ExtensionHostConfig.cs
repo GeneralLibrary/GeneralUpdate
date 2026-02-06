@@ -27,6 +27,13 @@ namespace GeneralUpdate.Extension
         public string DownloadPath { get; set; } = null!;
 
         /// <summary>
+        /// Gets or sets the server URL for extension queries and downloads.
+        /// This is the base URL used to construct Query and Download endpoints.
+        /// Example: "https://your-server.com/api/extensions"
+        /// </summary>
+        public string ServerUrl { get; set; } = null!;
+
+        /// <summary>
         /// Gets or sets the target platform (Windows/Linux/macOS).
         /// Defaults to Windows if not specified.
         /// </summary>
@@ -62,6 +69,8 @@ namespace GeneralUpdate.Extension
                 throw new ArgumentNullException(nameof(InstallBasePath));
             if (string.IsNullOrWhiteSpace(DownloadPath))
                 throw new ArgumentNullException(nameof(DownloadPath));
+            if (string.IsNullOrWhiteSpace(ServerUrl))
+                throw new ArgumentNullException(nameof(ServerUrl));
         }
     }
 }

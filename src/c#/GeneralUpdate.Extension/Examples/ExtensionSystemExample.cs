@@ -21,6 +21,7 @@ namespace GeneralUpdate.Extension.Examples
             var hostVersion = new Version(1, 5, 0);
             var installPath = @"C:\MyApp\Extensions";
             var downloadPath = @"C:\MyApp\Temp\Downloads";
+            var serverUrl = "https://your-server.com/api/extensions";
 
             // Detect current platform
             var currentPlatform = DetectCurrentPlatform();
@@ -31,6 +32,7 @@ namespace GeneralUpdate.Extension.Examples
                 HostVersion = hostVersion,
                 InstallBasePath = installPath,
                 DownloadPath = downloadPath,
+                ServerUrl = serverUrl,
                 TargetPlatform = currentPlatform,
                 DownloadTimeout = 300 // 5 minutes
             };

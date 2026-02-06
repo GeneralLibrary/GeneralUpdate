@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Shared.Object;
@@ -25,6 +29,8 @@ namespace GeneralUpdate.Extension.Services
         private readonly Download.IUpdateQueue _updateQueue;
         private readonly string? _authScheme;
         private readonly string? _authToken;
+        private readonly string _serverUrl;
+        private readonly HttpClient _httpClient;
 
         /// <summary>
         /// Occurs when download progress updates during package retrieval.
@@ -47,6 +53,7 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="availableExtensions">List of available extensions</param>
         /// <param name="downloadPath">Directory path where extension packages will be downloaded</param>
         /// <param name="updateQueue">The update queue for managing operation state</param>
+        /// <param name="serverUrl">Server base URL for extension queries and downloads</param>
         /// <param name="hostVersion">Optional host version for compatibility checking</param>
         /// <param name="validator">Optional compatibility validator</param>
         /// <param name="downloadTimeout">Timeout in seconds for download operations (default: 300)</param>
@@ -56,6 +63,7 @@ namespace GeneralUpdate.Extension.Services
             List<AvailableExtension> availableExtensions,
             string downloadPath,
             Download.IUpdateQueue updateQueue,
+            string serverUrl,
             Version? hostVersion = null,
             Compatibility.ICompatibilityValidator? validator = null,
             int downloadTimeout = 300,
@@ -67,13 +75,31 @@ namespace GeneralUpdate.Extension.Services
             if (string.IsNullOrWhiteSpace(downloadPath))
                 throw new ArgumentNullException(nameof(downloadPath));
             
+            if (string.IsNullOrWhiteSpace(serverUrl))
+                throw new ArgumentNullException(nameof(serverUrl));
+            
             _downloadPath = downloadPath;
+            // Remove trailing slashes for consistent URL construction (only forward slashes expected in URLs)
+            _serverUrl = serverUrl.TrimEnd('/');
             _updateQueue = updateQueue ?? throw new ArgumentNullException(nameof(updateQueue));
             _downloadTimeout = downloadTimeout;
             _hostVersion = hostVersion;
             _validator = validator;
             _authScheme = authScheme;
             _authToken = authToken;
+
+            // Initialize HttpClient with timeout
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(_downloadTimeout)
+            };
+
+            // Set authentication headers if provided
+            if (!string.IsNullOrWhiteSpace(_authScheme) && !string.IsNullOrWhiteSpace(_authToken))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue(_authScheme, _authToken);
+            }
 
             if (!Directory.Exists(_downloadPath))
             {
@@ -91,123 +117,125 @@ namespace GeneralUpdate.Extension.Services
         }
 
         /// <summary>
-        /// Queries available extensions based on filter criteria
+        /// Queries available extensions based on filter criteria via HTTP request to the server
         /// </summary>
         /// <param name="query">Query parameters including pagination and filters</param>
         /// <returns>Paginated result of extensions matching the query</returns>
-        public Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> Query(ExtensionQueryDTO query)
+        public async Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> Query(ExtensionQueryDTO query)
         {
             try
             {
                 if (query == null)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "Query parameter cannot be null"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "Query parameter cannot be null");
                 }
 
                 // Validate pagination parameters
                 if (query.PageNumber < 1)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "PageNumber must be greater than 0"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "PageNumber must be greater than 0");
                 }
 
                 if (query.PageSize < 1)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "PageSize must be greater than 0"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "PageSize must be greater than 0");
                 }
 
-                // Parse host version if provided
-                Version? queryHostVersion = null;
+                // Build query string from parameters
+                var queryParams = new List<string>();
+                queryParams.Add($"PageNumber={query.PageNumber}");
+                queryParams.Add($"PageSize={query.PageSize}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Name))
+                    queryParams.Add($"Name={Uri.EscapeDataString(query.Name)}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Publisher))
+                    queryParams.Add($"Publisher={Uri.EscapeDataString(query.Publisher)}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Category))
+                    queryParams.Add($"Category={Uri.EscapeDataString(query.Category)}");
+                
+                if (query.TargetPlatform.HasValue)
+                    queryParams.Add($"TargetPlatform={(int)query.TargetPlatform.Value}");
+                
                 if (!string.IsNullOrWhiteSpace(query.HostVersion))
+                    queryParams.Add($"HostVersion={Uri.EscapeDataString(query.HostVersion)}");
+                
+                queryParams.Add($"IncludePreRelease={query.IncludePreRelease}");
+                
+                if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+                    queryParams.Add($"SearchTerm={Uri.EscapeDataString(query.SearchTerm)}");
+
+                var queryString = string.Join("&", queryParams);
+                var requestUrl = $"{_serverUrl}/Query?{queryString}";
+
+                // Make HTTP GET request
+                var response = await _httpClient.GetAsync(requestUrl);
+                
+                if (!response.IsSuccessStatusCode)
                 {
-                    if (!Version.TryParse(query.HostVersion, out queryHostVersion))
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        $"Server returned error {response.StatusCode}: {errorContent}");
+                }
+
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<PagedResultDTO<ExtensionDTO>>(jsonContent, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result == null)
+                {
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "Failed to deserialize server response");
+                }
+
+                // Update local cache with results
+                if (result.Items != null && result.Items.Any())
+                {
+                    var availableExtensions = result.Items
+                        .Select(dto => MapFromExtensionDTO(dto))
+                        .Where(ext => ext != null)
+                        .Cast<AvailableExtension>()
+                        .ToList();
+                    
+                    // Merge with existing extensions
+                    foreach (var ext in availableExtensions)
                     {
-                        return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                            $"Invalid host version format: {query.HostVersion}"));
+                        var existing = _availableExtensions.FirstOrDefault(e => 
+                            e.Descriptor.Name?.Equals(ext.Descriptor.Name, StringComparison.OrdinalIgnoreCase) == true);
+                        
+                        if (existing == null)
+                        {
+                            _availableExtensions.Add(ext);
+                        }
                     }
                 }
 
-                // Use query host version if provided, otherwise use service host version
-                var effectiveHostVersion = queryHostVersion ?? _hostVersion;
-
-                // Start with all available extensions
-                IEnumerable<AvailableExtension> filtered = _availableExtensions;
-
-                // Apply filters
-                if (!string.IsNullOrWhiteSpace(query.Name))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Name?.IndexOf(query.Name, StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.Publisher))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Publisher?.IndexOf(query.Publisher, StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.Category))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Categories?.Any(c =>
-                            c.IndexOf(query.Category, StringComparison.OrdinalIgnoreCase) >= 0) == true);
-                }
-
-                if (query.TargetPlatform.HasValue && query.TargetPlatform.Value != TargetPlatform.None)
-                {
-                    filtered = filtered.Where(e =>
-                        (e.Descriptor.SupportedPlatforms & query.TargetPlatform.Value) != 0);
-                }
-
-                if (!query.IncludePreRelease)
-                {
-                    filtered = filtered.Where(e => !e.IsPreRelease);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.SearchTerm))
-                {
-                    filtered = filtered.Where(e =>
-                        (e.Descriptor.Name?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (e.Descriptor.DisplayName?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (e.Descriptor.Description?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0));
-                }
-
-                // Convert to list for pagination
-                var filteredList = filtered.ToList();
-
-                // Calculate pagination
-                var totalCount = filteredList.Count;
-                var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);
-
-                // Apply pagination
-                var items = filteredList
-                    .Skip((query.PageNumber - 1) * query.PageSize)
-                    .Take(query.PageSize)
-                    .Select(e => MapToExtensionDTO(e, effectiveHostVersion))
-                    .ToList();
-
-                var result = new PagedResultDTO<ExtensionDTO>
-                {
-                    PageNumber = query.PageNumber,
-                    PageSize = query.PageSize,
-                    TotalCount = totalCount,
-                    TotalPages = totalPages,
-                    Items = items
-                };
-
-                return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Success(result));
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"Request timeout: {ex.Message}");
             }
             catch (Exception ex)
             {
-                return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
-                    $"Error querying extensions: {ex.Message}"));
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"Error querying extensions: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Downloads an extension and its dependencies by ID.
+        /// Downloads an extension package by ID via HTTP GET request to the server with automatic resume support.
+        /// Automatically detects partial downloads and resumes from where it left off.
         /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
         /// </summary>
         /// <param name="id">Extension ID (Name)</param>
@@ -221,65 +249,194 @@ namespace GeneralUpdate.Extension.Services
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
                 }
 
-                if (_availableExtensions == null || _availableExtensions.Count == 0)
+                // Construct download URL with encoded extension name
+                var encodedExtensionName = Uri.EscapeDataString(id);
+                var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
+
+                // Determine the temporary file path for partial downloads
+                var tempFileName = $"{id}.partial";
+                var tempFilePath = Path.Combine(_downloadPath, tempFileName);
+                
+                // Check if a partial download exists and get its size
+                long startPosition = 0;
+                if (File.Exists(tempFilePath))
                 {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Available extensions list is empty");
+                    var fileInfo = new FileInfo(tempFilePath);
+                    startPosition = fileInfo.Length;
                 }
 
-                // Find the extension by ID (using Name as ID)
-                var extension = _availableExtensions.FirstOrDefault(e =>
-                    e.Descriptor.Name?.Equals(id, StringComparison.OrdinalIgnoreCase) == true);
+                // Create request message to support Range header
+                var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
 
-                if (extension == null)
+                // Add Range header if resuming from a specific position
+                if (startPosition > 0)
                 {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(startPosition, null);
+                }
+
+                // Make HTTP GET request to download the file
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                // Check for success status codes (200 for full content, 206 for partial content)
+                if (response.StatusCode != System.Net.HttpStatusCode.OK && 
+                    response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Extension with ID '{id}' not found");
+                        $"Server returned error {response.StatusCode}: {errorContent}");
                 }
 
-                // Collect all extensions to download (main extension + dependencies)
-                var extensionsToDownload = new List<AvailableExtension> { extension };
-
-                // Resolve dependencies
-                if (extension.Descriptor.Dependencies != null && extension.Descriptor.Dependencies.Count > 0)
+                // If we received a 200 (full content) response but we had a partial file, delete it and start fresh
+                if (response.StatusCode == System.Net.HttpStatusCode.OK && File.Exists(tempFilePath))
                 {
-                    foreach (var depId in extension.Descriptor.Dependencies)
-                    {
-                        var dependency = _availableExtensions.FirstOrDefault(e =>
-                            e.Descriptor.Name?.Equals(depId, StringComparison.OrdinalIgnoreCase) == true);
+                    File.Delete(tempFilePath);
+                    startPosition = 0;
+                }
 
-                        if (dependency != null)
-                        {
-                            extensionsToDownload.Add(dependency);
-                        }
+                // Download and append to the partial file
+                using (var responseStream = await response.Content.ReadAsStreamAsync())
+                {
+                    using (var fileStream = new FileStream(tempFilePath, 
+                        startPosition > 0 ? FileMode.Append : FileMode.Create, 
+                        FileAccess.Write, 
+                        FileShare.None))
+                    {
+                        await responseStream.CopyToAsync(fileStream);
                     }
                 }
 
-                // For now, we'll download only the main extension
-                // In a real implementation, you might want to download all dependencies
-                // and package them together or return multiple files
-
-                // Use the shared update queue
-                var operation = _updateQueue.Enqueue(extension, false);
-
-                var downloadedPath = await DownloadAsync(operation);
-
-                if (downloadedPath == null || !File.Exists(downloadedPath))
+                // Try to get filename from content-disposition header
+                var fileName = $"{id}.zip";
+                if (response.Content.Headers.ContentDisposition?.FileName != null)
                 {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Failed to download extension '{extension.Descriptor.DisplayName}'");
+                    fileName = response.Content.Headers.ContentDisposition.FileName.Trim('"');
                 }
+                // URL decode the filename if it was URL encoded
+                fileName = System.Net.WebUtility.UrlDecode(fileName);
 
-                // Read the file into a memory stream
-                var fileBytes = File.ReadAllBytes(downloadedPath);
-                var stream = new MemoryStream(fileBytes);
+                // Read the complete file into a memory stream
+                var memoryStream = new MemoryStream();
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    await fileStream.CopyToAsync(memoryStream);
+                }
+                memoryStream.Position = 0;
+
+                // Delete the temporary file now that we have it in memory
+                if (File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
+                }
 
                 var result = new DownloadExtensionDTO
                 {
-                    FileName = Path.GetFileName(downloadedPath),
-                    Stream = stream
+                    FileName = fileName,
+                    Stream = memoryStream
                 };
 
                 return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Request timeout: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"File I/O error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Error downloading extension: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Downloads an extension package by ID via HTTP GET request with support for resumable downloads.
+        /// This overload allows manual control of the resume position.
+        /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
+        /// </summary>
+        /// <param name="id">Extension ID (Name)</param>
+        /// <param name="startPosition">Starting byte position for resuming a download (0 for full download)</param>
+        /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
+        public async Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id, long startPosition)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
+                }
+
+                if (startPosition < 0)
+                {
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Start position cannot be negative");
+                }
+
+                // Construct download URL with encoded extension name
+                var encodedExtensionName = Uri.EscapeDataString(id);
+                var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
+
+                // Create request message to support Range header
+                var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+
+                // Add Range header if resuming from a specific position
+                if (startPosition > 0)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(startPosition, null);
+                }
+
+                // Make HTTP GET request to download the file
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                // Check for success status codes (200 for full content, 206 for partial content)
+                if (response.StatusCode != System.Net.HttpStatusCode.OK && 
+                    response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
+                        $"Server returned error {response.StatusCode}: {errorContent}");
+                }
+
+                // Read the file content as stream
+                var stream = await response.Content.ReadAsStreamAsync();
+                var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                // Try to get filename from content-disposition header
+                var fileName = $"{id}.zip";
+                if (response.Content.Headers.ContentDisposition?.FileName != null)
+                {
+                    fileName = response.Content.Headers.ContentDisposition.FileName.Trim('"');
+                }
+                // URL decode the filename if it was URL encoded
+                fileName = System.Net.WebUtility.UrlDecode(fileName);
+
+                var result = new DownloadExtensionDTO
+                {
+                    FileName = fileName,
+                    Stream = memoryStream
+                };
+
+                return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Request timeout: {ex.Message}");
             }
             catch (Exception ex)
             {
@@ -302,27 +459,22 @@ namespace GeneralUpdate.Extension.Services
 
             var descriptor = operation.Extension.Descriptor;
 
-            if (string.IsNullOrWhiteSpace(descriptor.DownloadUrl))
-            {
-                _updateQueue.ChangeState(operation.OperationId, GeneralUpdate.Extension.Download.UpdateState.UpdateFailed, "Download URL is missing");
-                OnDownloadFailed(descriptor.Name, descriptor.DisplayName);
-                return null;
-            }
+            // Construct download URL from server URL and extension ID (URL-encoded for safety)
+            var encodedExtensionName = Uri.EscapeDataString(descriptor.Name);
+            var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
 
             try
             {
                 _updateQueue.ChangeState(operation.OperationId, GeneralUpdate.Extension.Download.UpdateState.Updating);
 
-                // Determine file format from URL or default to .zip
-                var format = !string.IsNullOrWhiteSpace(descriptor.DownloadUrl) && descriptor.DownloadUrl!.Contains(".")
-                    ? Path.GetExtension(descriptor.DownloadUrl)
-                    : ".zip";
+                // Default to .zip format
+                var format = ".zip";
 
                 // Create version info for the download manager
                 var versionInfo = new VersionInfo
                 {
                     Name = $"{descriptor.Name}_{descriptor.Version}",
-                    Url = descriptor.DownloadUrl,
+                    Url = downloadUrl,
                     Hash = descriptor.PackageHash,
                     Version = descriptor.Version,
                     Size = descriptor.PackageSize,
@@ -446,6 +598,10 @@ namespace GeneralUpdate.Extension.Services
                 isCompatible = _validator.IsCompatible(descriptor);
             }
 
+            // Construct download URL from server URL (URL-encoded for safety)
+            var encodedExtensionName = Uri.EscapeDataString(descriptor.Name ?? string.Empty);
+            var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
+
             return new ExtensionDTO
             {
                 Id = descriptor.Name ?? string.Empty,
@@ -456,7 +612,7 @@ namespace GeneralUpdate.Extension.Services
                 UploadTime = descriptor.ReleaseDate,
                 Status = true, // Assume enabled if it's in the available list
                 Description = descriptor.Description,
-                Format = GetFileFormat(descriptor.DownloadUrl),
+                Format = ".zip", // Default format
                 Hash = descriptor.PackageHash,
                 Publisher = descriptor.Publisher,
                 License = descriptor.License,
@@ -467,29 +623,57 @@ namespace GeneralUpdate.Extension.Services
                 ReleaseDate = descriptor.ReleaseDate,
                 Dependencies = descriptor.Dependencies,
                 IsPreRelease = extension.IsPreRelease,
-                DownloadUrl = descriptor.DownloadUrl,
+                DownloadUrl = downloadUrl, // Use constructed URL from server
                 CustomProperties = descriptor.CustomProperties,
                 IsCompatible = isCompatible
             };
         }
 
         /// <summary>
-        /// Extracts file format from download URL
+        /// Maps an ExtensionDTO to an AvailableExtension
         /// </summary>
-        private string? GetFileFormat(string? downloadUrl)
+        private AvailableExtension? MapFromExtensionDTO(ExtensionDTO dto)
         {
-            if (string.IsNullOrWhiteSpace(downloadUrl))
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
                 return null;
 
-            try
+            Version? minVersion = null;
+            Version? maxVersion = null;
+
+            if (!string.IsNullOrWhiteSpace(dto.MinHostVersion))
+                Version.TryParse(dto.MinHostVersion, out minVersion);
+
+            if (!string.IsNullOrWhiteSpace(dto.MaxHostVersion))
+                Version.TryParse(dto.MaxHostVersion, out maxVersion);
+
+            var descriptor = new ExtensionDescriptor
             {
-                var extension = Path.GetExtension(downloadUrl);
-                return string.IsNullOrWhiteSpace(extension) ? null : extension;
-            }
-            catch
+                Name = dto.Name,
+                DisplayName = dto.DisplayName ?? dto.Name,
+                Version = dto.Version ?? "1.0.0",
+                Description = dto.Description,
+                Publisher = dto.Publisher,
+                License = dto.License,
+                Categories = dto.Categories,
+                SupportedPlatforms = dto.SupportedPlatforms,
+                Compatibility = new VersionCompatibility
+                {
+                    MinHostVersion = minVersion,
+                    MaxHostVersion = maxVersion
+                },
+                DownloadUrl = dto.DownloadUrl,
+                PackageHash = dto.Hash,
+                PackageSize = dto.FileSize ?? 0,
+                ReleaseDate = dto.ReleaseDate,
+                Dependencies = dto.Dependencies,
+                CustomProperties = dto.CustomProperties
+            };
+
+            return new AvailableExtension
             {
-                return null;
-            }
+                Descriptor = descriptor,
+                IsPreRelease = dto.IsPreRelease
+            };
         }
     }
 }
