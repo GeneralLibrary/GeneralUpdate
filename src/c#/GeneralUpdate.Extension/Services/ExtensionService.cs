@@ -25,6 +25,7 @@ namespace GeneralUpdate.Extension.Services
         private readonly Download.IUpdateQueue _updateQueue;
         private readonly string? _authScheme;
         private readonly string? _authToken;
+        private readonly string _serverUrl;
 
         /// <summary>
         /// Occurs when download progress updates during package retrieval.
@@ -47,6 +48,7 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="availableExtensions">List of available extensions</param>
         /// <param name="downloadPath">Directory path where extension packages will be downloaded</param>
         /// <param name="updateQueue">The update queue for managing operation state</param>
+        /// <param name="serverUrl">Server base URL for extension queries and downloads</param>
         /// <param name="hostVersion">Optional host version for compatibility checking</param>
         /// <param name="validator">Optional compatibility validator</param>
         /// <param name="downloadTimeout">Timeout in seconds for download operations (default: 300)</param>
@@ -56,6 +58,7 @@ namespace GeneralUpdate.Extension.Services
             List<AvailableExtension> availableExtensions,
             string downloadPath,
             Download.IUpdateQueue updateQueue,
+            string serverUrl,
             Version? hostVersion = null,
             Compatibility.ICompatibilityValidator? validator = null,
             int downloadTimeout = 300,
@@ -67,7 +70,11 @@ namespace GeneralUpdate.Extension.Services
             if (string.IsNullOrWhiteSpace(downloadPath))
                 throw new ArgumentNullException(nameof(downloadPath));
             
+            if (string.IsNullOrWhiteSpace(serverUrl))
+                throw new ArgumentNullException(nameof(serverUrl));
+            
             _downloadPath = downloadPath;
+            _serverUrl = serverUrl.TrimEnd('/'); // Remove trailing slash for consistent URL construction
             _updateQueue = updateQueue ?? throw new ArgumentNullException(nameof(updateQueue));
             _downloadTimeout = downloadTimeout;
             _hostVersion = hostVersion;
@@ -302,18 +309,14 @@ namespace GeneralUpdate.Extension.Services
 
             var descriptor = operation.Extension.Descriptor;
 
-            if (string.IsNullOrWhiteSpace(descriptor.DownloadUrl))
-            {
-                _updateQueue.ChangeState(operation.OperationId, GeneralUpdate.Extension.Download.UpdateState.UpdateFailed, "Download URL is missing");
-                OnDownloadFailed(descriptor.Name, descriptor.DisplayName);
-                return null;
-            }
+            // Construct download URL from server URL and extension ID
+            var downloadUrl = $"{_serverUrl}/Download/{descriptor.Name}";
 
             try
             {
                 _updateQueue.ChangeState(operation.OperationId, GeneralUpdate.Extension.Download.UpdateState.Updating);
 
-                // Determine file format from URL or default to .zip
+                // Determine file format from descriptor or default to .zip
                 var format = !string.IsNullOrWhiteSpace(descriptor.DownloadUrl) && descriptor.DownloadUrl!.Contains(".")
                     ? Path.GetExtension(descriptor.DownloadUrl)
                     : ".zip";
@@ -322,7 +325,7 @@ namespace GeneralUpdate.Extension.Services
                 var versionInfo = new VersionInfo
                 {
                     Name = $"{descriptor.Name}_{descriptor.Version}",
-                    Url = descriptor.DownloadUrl,
+                    Url = downloadUrl,
                     Hash = descriptor.PackageHash,
                     Version = descriptor.Version,
                     Size = descriptor.PackageSize,

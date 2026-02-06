@@ -109,6 +109,7 @@ namespace GeneralUpdate.Extension
                 new List<Metadata.AvailableExtension>(),
                 config.DownloadPath,
                 _updateQueue,
+                config.ServerUrl,
                 config.HostVersion,
                 _validator,
                 config.DownloadTimeout,
@@ -130,6 +131,7 @@ namespace GeneralUpdate.Extension
         /// <param name="hostVersion">The current host application version.</param>
         /// <param name="installBasePath">Base directory for extension installations.</param>
         /// <param name="downloadPath">Directory for downloading extension packages.</param>
+        /// <param name="serverUrl">Server base URL for extension queries and downloads.</param>
         /// <param name="targetPlatform">The current platform (Windows/Linux/macOS).</param>
         /// <param name="downloadTimeout">Download timeout in seconds (default: 300).</param>
         /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic").</param>
@@ -140,6 +142,7 @@ namespace GeneralUpdate.Extension
             Version hostVersion,
             string installBasePath,
             string downloadPath,
+            string serverUrl,
             Metadata.TargetPlatform targetPlatform = Metadata.TargetPlatform.Windows,
             int downloadTimeout = 300,
             string? authScheme = null,
@@ -149,6 +152,7 @@ namespace GeneralUpdate.Extension
                 HostVersion = hostVersion,
                 InstallBasePath = installBasePath,
                 DownloadPath = downloadPath,
+                ServerUrl = serverUrl,
                 TargetPlatform = targetPlatform,
                 DownloadTimeout = downloadTimeout,
                 AuthScheme = authScheme,

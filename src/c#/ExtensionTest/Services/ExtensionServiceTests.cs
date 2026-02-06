@@ -81,7 +81,7 @@ namespace ExtensionTest.Services
         private ExtensionService CreateExtensionService(List<AvailableExtension> extensions)
         {
             var updateQueue = new GeneralUpdate.Extension.Download.UpdateQueue();
-            return new ExtensionService(extensions, "/tmp/test-downloads", updateQueue);
+            return new ExtensionService(extensions, "/tmp/test-downloads", updateQueue, "https://test-server.com/api/extensions");
         }
 
         [Fact]

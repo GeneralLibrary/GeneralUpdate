@@ -34,12 +34,17 @@ Note: This library is currently distributed as source. A NuGet package may be av
 using GeneralUpdate.Extension;
 using GeneralUpdate.Extension.Metadata;
 
-// Create extension host
-var host = new ExtensionHost(
-    hostVersion: new Version(1, 0, 0),
-    installPath: @"C:\MyApp\Extensions",
-    downloadPath: @"C:\MyApp\Downloads",
-    targetPlatform: TargetPlatform.Windows);
+// Create extension host with configuration
+var config = new ExtensionHostConfig
+{
+    HostVersion = new Version(1, 0, 0),
+    InstallBasePath = @"C:\MyApp\Extensions",
+    DownloadPath = @"C:\MyApp\Downloads",
+    ServerUrl = "https://your-server.com/api/extensions",
+    TargetPlatform = TargetPlatform.Windows
+};
+
+var host = new GeneralExtensionHost(config);
 
 // Load installed extensions
 host.LoadInstalledExtensions();
@@ -70,17 +75,21 @@ public class YourModule : IModule
 {
     public void RegisterTypes(IContainerRegistry containerRegistry)
     {
-        var hostVersion = new Version(1, 0, 0);
-        var installPath = @"C:\MyApp\Extensions";
-        var downloadPath = @"C:\MyApp\Downloads";
-        var platform = Metadata.TargetPlatform.Windows;
+        var config = new ExtensionHostConfig
+        {
+            HostVersion = new Version(1, 0, 0),
+            InstallBasePath = @"C:\MyApp\Extensions",
+            DownloadPath = @"C:\MyApp\Downloads",
+            ServerUrl = "https://your-server.com/api/extensions",
+            TargetPlatform = Metadata.TargetPlatform.Windows
+        };
 
         // Register as singletons
         containerRegistry.RegisterSingleton<Core.IExtensionCatalog>(() => 
-            new Core.ExtensionCatalog(installPath));
+            new Core.ExtensionCatalog(config.InstallBasePath));
         
         containerRegistry.RegisterSingleton<Compatibility.ICompatibilityValidator>(() => 
-            new Compatibility.CompatibilityValidator(hostVersion));
+            new Compatibility.CompatibilityValidator(config.HostVersion));
         
         containerRegistry.RegisterSingleton<Download.IUpdateQueue, Download.UpdateQueue>();
         
@@ -88,7 +97,7 @@ public class YourModule : IModule
             PackageGeneration.ExtensionPackageGenerator>();
         
         containerRegistry.RegisterSingleton<IExtensionHost>(() => 
-            new ExtensionHost(hostVersion, installPath, downloadPath, platform));
+            new GeneralExtensionHost(config));
     }
 }
 
@@ -102,15 +111,20 @@ var host = container.Resolve<IExtensionHost>();
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
-var hostVersion = new Version(1, 0, 0);
-var installPath = @"C:\Extensions";
-var downloadPath = @"C:\Downloads";
+var config = new ExtensionHostConfig
+{
+    HostVersion = new Version(1, 0, 0),
+    InstallBasePath = @"C:\Extensions",
+    DownloadPath = @"C:\Downloads",
+    ServerUrl = "https://your-server.com/api/extensions",
+    TargetPlatform = Metadata.TargetPlatform.Windows
+};
 
 services.AddSingleton<Core.IExtensionCatalog>(sp => 
-    new Core.ExtensionCatalog(installPath));
+    new Core.ExtensionCatalog(config.InstallBasePath));
 
 services.AddSingleton<Compatibility.ICompatibilityValidator>(sp => 
-    new Compatibility.CompatibilityValidator(hostVersion));
+    new Compatibility.CompatibilityValidator(config.HostVersion));
 
 services.AddSingleton<Download.IUpdateQueue, Download.UpdateQueue>();
 
@@ -118,8 +132,7 @@ services.AddSingleton<PackageGeneration.IExtensionPackageGenerator,
     PackageGeneration.ExtensionPackageGenerator>();
 
 services.AddSingleton<IExtensionHost>(sp => 
-    new ExtensionHost(hostVersion, installPath, downloadPath, 
-        Metadata.TargetPlatform.Windows));
+    new GeneralExtensionHost(config));
 
 var provider = services.BuildServiceProvider();
 var host = provider.GetRequiredService<IExtensionHost>();
@@ -128,11 +141,16 @@ var host = provider.GetRequiredService<IExtensionHost>();
 #### Without DI (Direct Instantiation)
 
 ```csharp
-var host = new ExtensionHost(
-    new Version(1, 0, 0),
-    @"C:\Extensions",
-    @"C:\Downloads",
-    Metadata.TargetPlatform.Windows);
+var config = new ExtensionHostConfig
+{
+    HostVersion = new Version(1, 0, 0),
+    InstallBasePath = @"C:\Extensions",
+    DownloadPath = @"C:\Downloads",
+    ServerUrl = "https://your-server.com/api/extensions",
+    TargetPlatform = Metadata.TargetPlatform.Windows
+};
+
+var host = new GeneralExtensionHost(config);
 ```
 
 ### 2. Loading and Managing Extensions
