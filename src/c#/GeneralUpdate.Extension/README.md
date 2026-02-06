@@ -59,6 +59,32 @@ host.UpdateStateChanged += (sender, args) =>
 var installed = host.GetInstalledExtensions();
 ```
 
+## Server URL Architecture
+
+The extension system uses a server-based architecture for querying and downloading extensions. The `ServerUrl` configured in `ExtensionHostConfig` serves as the base URL for all extension operations.
+
+### URL Construction
+
+The system automatically constructs the following endpoints:
+
+- **Query Endpoint**: `{ServerUrl}/Query` - Used for searching and filtering extensions
+- **Download Endpoint**: `{ServerUrl}/Download/{ExtensionName}` - Used for downloading extension packages
+
+### Example
+
+If your `ServerUrl` is `https://your-server.com/api/extensions`:
+- Query endpoint: `https://your-server.com/api/extensions/Query`
+- Download for extension "my-extension": `https://your-server.com/api/extensions/Download/my-extension`
+
+### Server Requirements
+
+Your server should implement these endpoints:
+
+1. **Query Endpoint** - Returns available extensions based on filter criteria
+2. **Download Endpoint** - Returns the extension package file (typically .zip format)
+
+The `DownloadUrl` field in extension descriptors is now optional and primarily for backward compatibility. The system constructs download URLs dynamically from the configured ServerUrl.
+
 ## Complete Usage Guide
 
 ### 1. Dependency Injection Setup

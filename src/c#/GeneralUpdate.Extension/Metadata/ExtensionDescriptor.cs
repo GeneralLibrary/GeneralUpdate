@@ -75,6 +75,9 @@ namespace GeneralUpdate.Extension.Metadata
 
         /// <summary>
         /// Gets or sets the download URL for the extension package.
+        /// NOTE: This field is optional and primarily for backward compatibility.
+        /// The system constructs download URLs dynamically from the ServerUrl configured in ExtensionHostConfig.
+        /// Format: {ServerUrl}/Download/{ExtensionName}
         /// </summary>
         [JsonPropertyName("downloadUrl")]
         public string? DownloadUrl { get; set; }
