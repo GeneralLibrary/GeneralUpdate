@@ -94,7 +94,7 @@ namespace GeneralUpdate.Extension.DTOs
         public DateTime? ReleaseDate { get; set; }
 
         /// <summary>
-        /// List of extension IDs (Guids) that this extension depends on
+        /// List of extension names (identifiers) that this extension depends on
         /// </summary>
         public List<string>? Dependencies { get; set; }
 

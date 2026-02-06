@@ -23,10 +23,11 @@ namespace GeneralUpdate.Extension.Services
         Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> Query(ExtensionQueryDTO query);
 
         /// <summary>
-        /// Downloads an extension and its dependencies by ID
+        /// Downloads an extension and its dependencies by ID.
+        /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
         /// </summary>
         /// <param name="id">Extension ID</param>
-        /// <returns>Download result containing file name and stream</returns>
+        /// <returns>Download result containing file name and stream. The caller must dispose the stream.</returns>
         Task<HttpResponseDTO<DownloadExtensionDTO>> Download(string id);
     }
 }
