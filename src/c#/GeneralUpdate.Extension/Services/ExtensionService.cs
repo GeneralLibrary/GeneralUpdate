@@ -74,7 +74,8 @@ namespace GeneralUpdate.Extension.Services
                 throw new ArgumentNullException(nameof(serverUrl));
             
             _downloadPath = downloadPath;
-            _serverUrl = serverUrl.TrimEnd('/'); // Remove trailing slash for consistent URL construction
+            // Remove trailing slashes for consistent URL construction (only forward slashes expected in URLs)
+            _serverUrl = serverUrl.TrimEnd('/');
             _updateQueue = updateQueue ?? throw new ArgumentNullException(nameof(updateQueue));
             _downloadTimeout = downloadTimeout;
             _hostVersion = hostVersion;
@@ -309,8 +310,9 @@ namespace GeneralUpdate.Extension.Services
 
             var descriptor = operation.Extension.Descriptor;
 
-            // Construct download URL from server URL and extension ID
-            var downloadUrl = $"{_serverUrl}/Download/{descriptor.Name}";
+            // Construct download URL from server URL and extension ID (URL-encoded for safety)
+            var encodedExtensionName = Uri.EscapeDataString(descriptor.Name);
+            var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
 
             try
             {
@@ -447,8 +449,9 @@ namespace GeneralUpdate.Extension.Services
                 isCompatible = _validator.IsCompatible(descriptor);
             }
 
-            // Construct download URL from server URL
-            var downloadUrl = $"{_serverUrl}/Download/{descriptor.Name}";
+            // Construct download URL from server URL (URL-encoded for safety)
+            var encodedExtensionName = Uri.EscapeDataString(descriptor.Name ?? string.Empty);
+            var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
 
             return new ExtensionDTO
             {
