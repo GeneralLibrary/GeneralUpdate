@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GeneralUpdate.Extension.DTOs;
 
 namespace GeneralUpdate.Extension
 {
@@ -41,11 +42,6 @@ namespace GeneralUpdate.Extension
             get => _globalAutoUpdateEnabled;
             set => _globalAutoUpdateEnabled = value;
         }
-
-        /// <summary>
-        /// Gets the extension service for query and download operations.
-        /// </summary>
-        public Services.IExtensionService ExtensionService => _extensionService;
 
         #endregion
 
@@ -123,42 +119,6 @@ namespace GeneralUpdate.Extension
             _extensionService.DownloadFailed += (sender, args) => DownloadFailed?.Invoke(sender, args);
             _installService.InstallationCompleted += (sender, args) => InstallationCompleted?.Invoke(sender, args);
             _installService.RollbackCompleted += (sender, args) => RollbackCompleted?.Invoke(sender, args);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GeneralExtensionHost"/> class.
-        /// </summary>
-        /// <param name="hostVersion">The current host application version.</param>
-        /// <param name="installBasePath">Base directory for extension installations.</param>
-        /// <param name="downloadPath">Directory for downloading extension packages.</param>
-        /// <param name="serverUrl">Server base URL for extension queries and downloads.</param>
-        /// <param name="targetPlatform">The current platform (Windows/Linux/macOS).</param>
-        /// <param name="downloadTimeout">Download timeout in seconds (default: 300).</param>
-        /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic").</param>
-        /// <param name="authToken">Optional HTTP authentication token.</param>
-        /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
-        [Obsolete("Use the constructor that accepts ExtensionHostConfig for better maintainability.")]
-        public GeneralExtensionHost(
-            Version hostVersion,
-            string installBasePath,
-            string downloadPath,
-            string serverUrl,
-            Metadata.TargetPlatform targetPlatform = Metadata.TargetPlatform.Windows,
-            int downloadTimeout = 300,
-            string? authScheme = null,
-            string? authToken = null)
-            : this(new ExtensionHostConfig
-            {
-                HostVersion = hostVersion,
-                InstallBasePath = installBasePath,
-                DownloadPath = downloadPath,
-                ServerUrl = serverUrl,
-                TargetPlatform = targetPlatform,
-                DownloadTimeout = downloadTimeout,
-                AuthScheme = authScheme,
-                AuthToken = authToken
-            })
-        {
         }
 
         #region Extension Catalog
@@ -455,7 +415,17 @@ namespace GeneralUpdate.Extension
         {
             return _validator.IsCompatible(descriptor);
         }
-
+        
         #endregion
+        
+        /// <summary>
+        /// Queries remote extensions from the server with pagination and filtering.
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        public Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> QueryRemoteExtensions(ExtensionQueryDTO query)
+        {
+            return _extensionService.Query(query);
+        }
     }
 }

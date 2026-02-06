@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using GeneralUpdate.Extension.DTOs;
 
 namespace GeneralUpdate.Extension
 {
@@ -26,11 +27,6 @@ namespace GeneralUpdate.Extension
         /// Gets or sets a value indicating whether automatic updates are globally enabled.
         /// </summary>
         bool GlobalAutoUpdateEnabled { get; set; }
-
-        /// <summary>
-        /// Gets the extension service for query and download operations.
-        /// </summary>
-        Services.IExtensionService ExtensionService { get; }
 
         #endregion
 
@@ -194,6 +190,12 @@ namespace GeneralUpdate.Extension
         /// <param name="descriptor">The extension descriptor to validate.</param>
         /// <returns>True if compatible; otherwise, false.</returns>
         bool IsCompatible(Metadata.ExtensionDescriptor descriptor);
+
+        #endregion
+
+        #region Remote Queries
+
+        Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> QueryRemoteExtensions(ExtensionQueryDTO query);
 
         #endregion
     }
