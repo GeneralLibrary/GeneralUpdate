@@ -30,6 +30,14 @@ namespace GeneralUpdate.Common.Download
             _manager = manager;
             _version = version;
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(_manager.TimeOut) };
+            
+            // Set authentication headers if provided
+            if (!string.IsNullOrEmpty(version?.AuthScheme) && !string.IsNullOrEmpty(version?.AuthToken))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue(version.AuthScheme, version.AuthToken);
+            }
+            
             _timer = new Timer(_=> Statistics(), null, 0, 1000);
         }
 

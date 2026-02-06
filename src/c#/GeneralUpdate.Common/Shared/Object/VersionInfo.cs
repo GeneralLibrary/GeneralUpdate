@@ -40,4 +40,16 @@ public class VersionInfo
 
     [JsonPropertyName("size")]
     public long? Size { get; set; }
+
+    /// <summary>
+    /// HTTP authentication scheme (e.g., "Bearer", "Basic") for download requests.
+    /// </summary>
+    [JsonPropertyName("authScheme")]
+    public string? AuthScheme { get; set; }
+
+    /// <summary>
+    /// HTTP authentication token for download requests.
+    /// </summary>
+    [JsonPropertyName("authToken")]
+    public string? AuthToken { get; set; }
 }

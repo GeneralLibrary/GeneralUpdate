@@ -16,8 +16,8 @@ namespace GeneralUpdate.Extension
         private readonly Core.IExtensionCatalog _catalog;
         private readonly Compatibility.ICompatibilityValidator _validator;
         private readonly Download.IUpdateQueue _updateQueue;
-        private readonly Download.ExtensionDownloadService _downloadService;
         private readonly Installation.ExtensionInstallService _installService;
+        private readonly Services.IExtensionService _extensionService;
         private bool _globalAutoUpdateEnabled = true;
 
         #region Properties
@@ -41,6 +41,11 @@ namespace GeneralUpdate.Extension
             get => _globalAutoUpdateEnabled;
             set => _globalAutoUpdateEnabled = value;
         }
+
+        /// <summary>
+        /// Gets the extension service for query and download operations.
+        /// </summary>
+        public Services.IExtensionService ExtensionService => _extensionService;
 
         #endregion
 
@@ -79,6 +84,47 @@ namespace GeneralUpdate.Extension
         #endregion
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="GeneralExtensionHost"/> class using a configuration object.
+        /// </summary>
+        /// <param name="config">Configuration settings for the extension host.</param>
+        /// <exception cref="ArgumentNullException">Thrown when config is null or required properties are missing.</exception>
+        public GeneralExtensionHost(ExtensionHostConfig config)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
+            
+            config.Validate();
+
+            _hostVersion = config.HostVersion;
+            _targetPlatform = config.TargetPlatform;
+
+            // Initialize core services
+            _catalog = new Core.ExtensionCatalog(config.InstallBasePath);
+            _validator = new Compatibility.CompatibilityValidator(config.HostVersion);
+            _updateQueue = new Download.UpdateQueue();
+            _installService = new Installation.ExtensionInstallService(config.InstallBasePath);
+
+            // Initialize extension service with empty list (will be updated via ParseAvailableExtensions)
+            _extensionService = new Services.ExtensionService(
+                new List<Metadata.AvailableExtension>(),
+                config.DownloadPath,
+                _updateQueue,
+                config.HostVersion,
+                _validator,
+                config.DownloadTimeout,
+                config.AuthScheme,
+                config.AuthToken);
+
+            // Wire up event handlers
+            _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);
+            _extensionService.ProgressUpdated += (sender, args) => DownloadProgress?.Invoke(sender, args);
+            _extensionService.DownloadCompleted += (sender, args) => DownloadCompleted?.Invoke(sender, args);
+            _extensionService.DownloadFailed += (sender, args) => DownloadFailed?.Invoke(sender, args);
+            _installService.InstallationCompleted += (sender, args) => InstallationCompleted?.Invoke(sender, args);
+            _installService.RollbackCompleted += (sender, args) => RollbackCompleted?.Invoke(sender, args);
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="GeneralExtensionHost"/> class.
         /// </summary>
         /// <param name="hostVersion">The current host application version.</param>
@@ -86,36 +132,29 @@ namespace GeneralUpdate.Extension
         /// <param name="downloadPath">Directory for downloading extension packages.</param>
         /// <param name="targetPlatform">The current platform (Windows/Linux/macOS).</param>
         /// <param name="downloadTimeout">Download timeout in seconds (default: 300).</param>
+        /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic").</param>
+        /// <param name="authToken">Optional HTTP authentication token.</param>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
+        [Obsolete("Use the constructor that accepts ExtensionHostConfig for better maintainability.")]
         public GeneralExtensionHost(
             Version hostVersion,
             string installBasePath,
             string downloadPath,
             Metadata.TargetPlatform targetPlatform = Metadata.TargetPlatform.Windows,
-            int downloadTimeout = 300)
+            int downloadTimeout = 300,
+            string? authScheme = null,
+            string? authToken = null)
+            : this(new ExtensionHostConfig
+            {
+                HostVersion = hostVersion,
+                InstallBasePath = installBasePath,
+                DownloadPath = downloadPath,
+                TargetPlatform = targetPlatform,
+                DownloadTimeout = downloadTimeout,
+                AuthScheme = authScheme,
+                AuthToken = authToken
+            })
         {
-            _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
-            if (string.IsNullOrWhiteSpace(installBasePath))
-                throw new ArgumentNullException(nameof(installBasePath));
-            if (string.IsNullOrWhiteSpace(downloadPath))
-                throw new ArgumentNullException(nameof(downloadPath));
-
-            _targetPlatform = targetPlatform;
-
-            // Initialize core services
-            _catalog = new Core.ExtensionCatalog(installBasePath);
-            _validator = new Compatibility.CompatibilityValidator(hostVersion);
-            _updateQueue = new Download.UpdateQueue();
-            _downloadService = new Download.ExtensionDownloadService(downloadPath, _updateQueue, downloadTimeout);
-            _installService = new Installation.ExtensionInstallService(installBasePath);
-
-            // Wire up event handlers
-            _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);
-            _downloadService.ProgressUpdated += (sender, args) => DownloadProgress?.Invoke(sender, args);
-            _downloadService.DownloadCompleted += (sender, args) => DownloadCompleted?.Invoke(sender, args);
-            _downloadService.DownloadFailed += (sender, args) => DownloadFailed?.Invoke(sender, args);
-            _installService.InstallationCompleted += (sender, args) => InstallationCompleted?.Invoke(sender, args);
-            _installService.RollbackCompleted += (sender, args) => RollbackCompleted?.Invoke(sender, args);
         }
 
         #region Extension Catalog
@@ -164,7 +203,9 @@ namespace GeneralUpdate.Extension
         /// <returns>A list of parsed available extensions.</returns>
         public List<Metadata.AvailableExtension> ParseAvailableExtensions(string json)
         {
-            return _catalog.ParseAvailableExtensions(json);
+            var extensions = _catalog.ParseAvailableExtensions(json);
+            _extensionService.UpdateAvailableExtensions(extensions);
+            return extensions;
         }
 
         /// <summary>
@@ -325,7 +366,7 @@ namespace GeneralUpdate.Extension
             try
             {
                 // Download the extension package
-                var downloadedPath = await _downloadService.DownloadAsync(operation);
+                var downloadedPath = await _extensionService.DownloadAsync(operation);
 
                 if (downloadedPath == null)
                     return false;

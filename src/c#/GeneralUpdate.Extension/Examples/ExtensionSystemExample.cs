@@ -25,14 +25,17 @@ namespace GeneralUpdate.Extension.Examples
             // Detect current platform
             var currentPlatform = DetectCurrentPlatform();
 
-            // Create the extension host
-            _host = new GeneralExtensionHost(
-                hostVersion,
-                installPath,
-                downloadPath,
-                currentPlatform,
-                downloadTimeout: 300 // 5 minutes
-            );
+            // Create the extension host using the new config-based approach
+            var config = new ExtensionHostConfig
+            {
+                HostVersion = hostVersion,
+                InstallBasePath = installPath,
+                DownloadPath = downloadPath,
+                TargetPlatform = currentPlatform,
+                DownloadTimeout = 300 // 5 minutes
+            };
+
+            _host = new GeneralExtensionHost(config);
 
             // Subscribe to events for monitoring
             SubscribeToEvents();
