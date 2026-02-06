@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Shared.Object;
@@ -26,6 +30,7 @@ namespace GeneralUpdate.Extension.Services
         private readonly string? _authScheme;
         private readonly string? _authToken;
         private readonly string _serverUrl;
+        private readonly HttpClient _httpClient;
 
         /// <summary>
         /// Occurs when download progress updates during package retrieval.
@@ -83,6 +88,19 @@ namespace GeneralUpdate.Extension.Services
             _authScheme = authScheme;
             _authToken = authToken;
 
+            // Initialize HttpClient with timeout
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(_downloadTimeout)
+            };
+
+            // Set authentication headers if provided
+            if (!string.IsNullOrWhiteSpace(_authScheme) && !string.IsNullOrWhiteSpace(_authToken))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue(_authScheme, _authToken);
+            }
+
             if (!Directory.Exists(_downloadPath))
             {
                 Directory.CreateDirectory(_downloadPath);
@@ -99,123 +117,124 @@ namespace GeneralUpdate.Extension.Services
         }
 
         /// <summary>
-        /// Queries available extensions based on filter criteria
+        /// Queries available extensions based on filter criteria via HTTP request to the server
         /// </summary>
         /// <param name="query">Query parameters including pagination and filters</param>
         /// <returns>Paginated result of extensions matching the query</returns>
-        public Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> Query(ExtensionQueryDTO query)
+        public async Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> Query(ExtensionQueryDTO query)
         {
             try
             {
                 if (query == null)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "Query parameter cannot be null"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "Query parameter cannot be null");
                 }
 
                 // Validate pagination parameters
                 if (query.PageNumber < 1)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "PageNumber must be greater than 0"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "PageNumber must be greater than 0");
                 }
 
                 if (query.PageSize < 1)
                 {
-                    return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                        "PageSize must be greater than 0"));
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "PageSize must be greater than 0");
                 }
 
-                // Parse host version if provided
-                Version? queryHostVersion = null;
+                // Build query string from parameters
+                var queryParams = new List<string>();
+                queryParams.Add($"PageNumber={query.PageNumber}");
+                queryParams.Add($"PageSize={query.PageSize}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Name))
+                    queryParams.Add($"Name={Uri.EscapeDataString(query.Name)}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Publisher))
+                    queryParams.Add($"Publisher={Uri.EscapeDataString(query.Publisher)}");
+                
+                if (!string.IsNullOrWhiteSpace(query.Category))
+                    queryParams.Add($"Category={Uri.EscapeDataString(query.Category)}");
+                
+                if (query.TargetPlatform.HasValue)
+                    queryParams.Add($"TargetPlatform={(int)query.TargetPlatform.Value}");
+                
                 if (!string.IsNullOrWhiteSpace(query.HostVersion))
+                    queryParams.Add($"HostVersion={Uri.EscapeDataString(query.HostVersion)}");
+                
+                queryParams.Add($"IncludePreRelease={query.IncludePreRelease}");
+                
+                if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+                    queryParams.Add($"SearchTerm={Uri.EscapeDataString(query.SearchTerm)}");
+
+                var queryString = string.Join("&", queryParams);
+                var requestUrl = $"{_serverUrl}/Query?{queryString}";
+
+                // Make HTTP GET request
+                var response = await _httpClient.GetAsync(requestUrl);
+                
+                if (!response.IsSuccessStatusCode)
                 {
-                    if (!Version.TryParse(query.HostVersion, out queryHostVersion))
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        $"Server returned error {response.StatusCode}: {errorContent}");
+                }
+
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<PagedResultDTO<ExtensionDTO>>(jsonContent, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result == null)
+                {
+                    return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
+                        "Failed to deserialize server response");
+                }
+
+                // Update local cache with results
+                if (result.Items != null && result.Items.Any())
+                {
+                    var availableExtensions = result.Items
+                        .Select(dto => MapFromExtensionDTO(dto))
+                        .Where(ext => ext != null)
+                        .Cast<AvailableExtension>()
+                        .ToList();
+                    
+                    // Merge with existing extensions
+                    foreach (var ext in availableExtensions)
                     {
-                        return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Failure(
-                            $"Invalid host version format: {query.HostVersion}"));
+                        var existing = _availableExtensions.FirstOrDefault(e => 
+                            e.Descriptor.Name?.Equals(ext.Descriptor.Name, StringComparison.OrdinalIgnoreCase) == true);
+                        
+                        if (existing == null)
+                        {
+                            _availableExtensions.Add(ext);
+                        }
                     }
                 }
 
-                // Use query host version if provided, otherwise use service host version
-                var effectiveHostVersion = queryHostVersion ?? _hostVersion;
-
-                // Start with all available extensions
-                IEnumerable<AvailableExtension> filtered = _availableExtensions;
-
-                // Apply filters
-                if (!string.IsNullOrWhiteSpace(query.Name))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Name?.IndexOf(query.Name, StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.Publisher))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Publisher?.IndexOf(query.Publisher, StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.Category))
-                {
-                    filtered = filtered.Where(e =>
-                        e.Descriptor.Categories?.Any(c =>
-                            c.IndexOf(query.Category, StringComparison.OrdinalIgnoreCase) >= 0) == true);
-                }
-
-                if (query.TargetPlatform.HasValue && query.TargetPlatform.Value != TargetPlatform.None)
-                {
-                    filtered = filtered.Where(e =>
-                        (e.Descriptor.SupportedPlatforms & query.TargetPlatform.Value) != 0);
-                }
-
-                if (!query.IncludePreRelease)
-                {
-                    filtered = filtered.Where(e => !e.IsPreRelease);
-                }
-
-                if (!string.IsNullOrWhiteSpace(query.SearchTerm))
-                {
-                    filtered = filtered.Where(e =>
-                        (e.Descriptor.Name?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (e.Descriptor.DisplayName?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (e.Descriptor.Description?.IndexOf(query.SearchTerm, StringComparison.OrdinalIgnoreCase) >= 0));
-                }
-
-                // Convert to list for pagination
-                var filteredList = filtered.ToList();
-
-                // Calculate pagination
-                var totalCount = filteredList.Count;
-                var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);
-
-                // Apply pagination
-                var items = filteredList
-                    .Skip((query.PageNumber - 1) * query.PageSize)
-                    .Take(query.PageSize)
-                    .Select(e => MapToExtensionDTO(e, effectiveHostVersion))
-                    .ToList();
-
-                var result = new PagedResultDTO<ExtensionDTO>
-                {
-                    PageNumber = query.PageNumber,
-                    PageSize = query.PageSize,
-                    TotalCount = totalCount,
-                    TotalPages = totalPages,
-                    Items = items
-                };
-
-                return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Success(result));
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"Request timeout: {ex.Message}");
             }
             catch (Exception ex)
             {
-                return Task.FromResult(HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
-                    $"Error querying extensions: {ex.Message}"));
+                return HttpResponseDTO<PagedResultDTO<ExtensionDTO>>.InnerException(
+                    $"Error querying extensions: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Downloads an extension and its dependencies by ID.
+        /// Downloads an extension package by ID via HTTP GET request to the server.
         /// Note: The caller is responsible for disposing the Stream in the returned DownloadExtensionDTO.
         /// </summary>
         /// <param name="id">Extension ID (Name)</param>
@@ -229,65 +248,50 @@ namespace GeneralUpdate.Extension.Services
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure("Extension ID cannot be null or empty");
                 }
 
-                if (_availableExtensions == null || _availableExtensions.Count == 0)
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure("Available extensions list is empty");
-                }
+                // Construct download URL with encoded extension name
+                var encodedExtensionName = Uri.EscapeDataString(id);
+                var downloadUrl = $"{_serverUrl}/Download/{encodedExtensionName}";
 
-                // Find the extension by ID (using Name as ID)
-                var extension = _availableExtensions.FirstOrDefault(e =>
-                    e.Descriptor.Name?.Equals(id, StringComparison.OrdinalIgnoreCase) == true);
+                // Make HTTP GET request to download the file
+                var response = await _httpClient.GetAsync(downloadUrl);
 
-                if (extension == null)
+                if (!response.IsSuccessStatusCode)
                 {
+                    var errorContent = await response.Content.ReadAsStringAsync();
                     return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Extension with ID '{id}' not found");
+                        $"Server returned error {response.StatusCode}: {errorContent}");
                 }
 
-                // Collect all extensions to download (main extension + dependencies)
-                var extensionsToDownload = new List<AvailableExtension> { extension };
+                // Read the file content as stream
+                var stream = await response.Content.ReadAsStreamAsync();
+                var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
 
-                // Resolve dependencies
-                if (extension.Descriptor.Dependencies != null && extension.Descriptor.Dependencies.Count > 0)
+                // Try to get filename from content-disposition header
+                var fileName = $"{id}.zip";
+                if (response.Content.Headers.ContentDisposition?.FileName != null)
                 {
-                    foreach (var depId in extension.Descriptor.Dependencies)
-                    {
-                        var dependency = _availableExtensions.FirstOrDefault(e =>
-                            e.Descriptor.Name?.Equals(depId, StringComparison.OrdinalIgnoreCase) == true);
-
-                        if (dependency != null)
-                        {
-                            extensionsToDownload.Add(dependency);
-                        }
-                    }
+                    fileName = response.Content.Headers.ContentDisposition.FileName.Trim('"');
                 }
-
-                // For now, we'll download only the main extension
-                // In a real implementation, you might want to download all dependencies
-                // and package them together or return multiple files
-
-                // Use the shared update queue
-                var operation = _updateQueue.Enqueue(extension, false);
-
-                var downloadedPath = await DownloadAsync(operation);
-
-                if (downloadedPath == null || !File.Exists(downloadedPath))
-                {
-                    return HttpResponseDTO<DownloadExtensionDTO>.Failure(
-                        $"Failed to download extension '{extension.Descriptor.DisplayName}'");
-                }
-
-                // Read the file into a memory stream
-                var fileBytes = File.ReadAllBytes(downloadedPath);
-                var stream = new MemoryStream(fileBytes);
 
                 var result = new DownloadExtensionDTO
                 {
-                    FileName = Path.GetFileName(downloadedPath),
-                    Stream = stream
+                    FileName = fileName,
+                    Stream = memoryStream
                 };
 
                 return HttpResponseDTO<DownloadExtensionDTO>.Success(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"HTTP request error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                return HttpResponseDTO<DownloadExtensionDTO>.InnerException(
+                    $"Request timeout: {ex.Message}");
             }
             catch (Exception ex)
             {
@@ -477,6 +481,53 @@ namespace GeneralUpdate.Extension.Services
                 DownloadUrl = downloadUrl, // Use constructed URL from server
                 CustomProperties = descriptor.CustomProperties,
                 IsCompatible = isCompatible
+            };
+        }
+
+        /// <summary>
+        /// Maps an ExtensionDTO to an AvailableExtension
+        /// </summary>
+        private AvailableExtension? MapFromExtensionDTO(ExtensionDTO dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
+                return null;
+
+            Version? minVersion = null;
+            Version? maxVersion = null;
+
+            if (!string.IsNullOrWhiteSpace(dto.MinHostVersion))
+                Version.TryParse(dto.MinHostVersion, out minVersion);
+
+            if (!string.IsNullOrWhiteSpace(dto.MaxHostVersion))
+                Version.TryParse(dto.MaxHostVersion, out maxVersion);
+
+            var descriptor = new ExtensionDescriptor
+            {
+                Name = dto.Name,
+                DisplayName = dto.DisplayName ?? dto.Name,
+                Version = dto.Version ?? "1.0.0",
+                Description = dto.Description,
+                Publisher = dto.Publisher,
+                License = dto.License,
+                Categories = dto.Categories,
+                SupportedPlatforms = dto.SupportedPlatforms,
+                Compatibility = new VersionCompatibility
+                {
+                    MinHostVersion = minVersion,
+                    MaxHostVersion = maxVersion
+                },
+                DownloadUrl = dto.DownloadUrl,
+                PackageHash = dto.Hash,
+                PackageSize = dto.FileSize ?? 0,
+                ReleaseDate = dto.ReleaseDate,
+                Dependencies = dto.Dependencies,
+                CustomProperties = dto.CustomProperties
+            };
+
+            return new AvailableExtension
+            {
+                Descriptor = descriptor,
+                IsPreRelease = dto.IsPreRelease
             };
         }
     }
