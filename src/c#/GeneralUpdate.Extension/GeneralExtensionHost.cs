@@ -91,13 +91,17 @@ namespace GeneralUpdate.Extension
         /// <param name="downloadPath">Directory for downloading extension packages.</param>
         /// <param name="targetPlatform">The current platform (Windows/Linux/macOS).</param>
         /// <param name="downloadTimeout">Download timeout in seconds (default: 300).</param>
+        /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic").</param>
+        /// <param name="authToken">Optional HTTP authentication token.</param>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
         public GeneralExtensionHost(
             Version hostVersion,
             string installBasePath,
             string downloadPath,
             Metadata.TargetPlatform targetPlatform = Metadata.TargetPlatform.Windows,
-            int downloadTimeout = 300)
+            int downloadTimeout = 300,
+            string? authScheme = null,
+            string? authToken = null)
         {
             _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
             if (string.IsNullOrWhiteSpace(installBasePath))
@@ -120,7 +124,9 @@ namespace GeneralUpdate.Extension
                 _updateQueue,
                 hostVersion,
                 _validator,
-                downloadTimeout);
+                downloadTimeout,
+                authScheme,
+                authToken);
 
             // Wire up event handlers
             _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);

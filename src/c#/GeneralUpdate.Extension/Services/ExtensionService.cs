@@ -23,6 +23,8 @@ namespace GeneralUpdate.Extension.Services
         private readonly string _downloadPath;
         private readonly int _downloadTimeout;
         private readonly Download.IUpdateQueue _updateQueue;
+        private readonly string? _authScheme;
+        private readonly string? _authToken;
 
         /// <summary>
         /// Occurs when download progress updates during package retrieval.
@@ -48,13 +50,17 @@ namespace GeneralUpdate.Extension.Services
         /// <param name="hostVersion">Optional host version for compatibility checking</param>
         /// <param name="validator">Optional compatibility validator</param>
         /// <param name="downloadTimeout">Timeout in seconds for download operations (default: 300)</param>
+        /// <param name="authScheme">Optional HTTP authentication scheme (e.g., "Bearer", "Basic")</param>
+        /// <param name="authToken">Optional HTTP authentication token</param>
         public ExtensionService(
             List<AvailableExtension> availableExtensions,
             string downloadPath,
             Download.IUpdateQueue updateQueue,
             Version? hostVersion = null,
             Compatibility.ICompatibilityValidator? validator = null,
-            int downloadTimeout = 300)
+            int downloadTimeout = 300,
+            string? authScheme = null,
+            string? authToken = null)
         {
             _availableExtensions = availableExtensions ?? throw new ArgumentNullException(nameof(availableExtensions));
             
@@ -66,6 +72,8 @@ namespace GeneralUpdate.Extension.Services
             _downloadTimeout = downloadTimeout;
             _hostVersion = hostVersion;
             _validator = validator;
+            _authScheme = authScheme;
+            _authToken = authToken;
 
             if (!Directory.Exists(_downloadPath))
             {
@@ -318,7 +326,9 @@ namespace GeneralUpdate.Extension.Services
                     Hash = descriptor.PackageHash,
                     Version = descriptor.Version,
                     Size = descriptor.PackageSize,
-                    Format = format
+                    Format = format,
+                    AuthScheme = _authScheme,
+                    AuthToken = _authToken
                 };
 
                 // Initialize download manager with configured settings
