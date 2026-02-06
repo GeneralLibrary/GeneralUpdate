@@ -18,6 +18,7 @@ namespace GeneralUpdate.Extension
         private readonly Download.IUpdateQueue _updateQueue;
         private readonly Download.ExtensionDownloadService _downloadService;
         private readonly Installation.ExtensionInstallService _installService;
+        private readonly Services.IExtensionService _extensionService;
         private bool _globalAutoUpdateEnabled = true;
 
         #region Properties
@@ -41,6 +42,11 @@ namespace GeneralUpdate.Extension
             get => _globalAutoUpdateEnabled;
             set => _globalAutoUpdateEnabled = value;
         }
+
+        /// <summary>
+        /// Gets the extension service for query and download operations.
+        /// </summary>
+        public Services.IExtensionService ExtensionService => _extensionService;
 
         #endregion
 
@@ -109,6 +115,13 @@ namespace GeneralUpdate.Extension
             _downloadService = new Download.ExtensionDownloadService(downloadPath, _updateQueue, downloadTimeout);
             _installService = new Installation.ExtensionInstallService(installBasePath);
 
+            // Initialize extension service with empty list (will be updated via ParseAvailableExtensions)
+            _extensionService = new Services.ExtensionService(
+                new List<Metadata.AvailableExtension>(),
+                hostVersion,
+                _validator,
+                _downloadService);
+
             // Wire up event handlers
             _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);
             _downloadService.ProgressUpdated += (sender, args) => DownloadProgress?.Invoke(sender, args);
@@ -164,7 +177,9 @@ namespace GeneralUpdate.Extension
         /// <returns>A list of parsed available extensions.</returns>
         public List<Metadata.AvailableExtension> ParseAvailableExtensions(string json)
         {
-            return _catalog.ParseAvailableExtensions(json);
+            var extensions = _catalog.ParseAvailableExtensions(json);
+            _extensionService.UpdateAvailableExtensions(extensions);
+            return extensions;
         }
 
         /// <summary>

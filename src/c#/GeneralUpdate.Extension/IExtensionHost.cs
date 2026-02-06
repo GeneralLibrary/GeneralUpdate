@@ -27,6 +27,11 @@ namespace GeneralUpdate.Extension
         /// </summary>
         bool GlobalAutoUpdateEnabled { get; set; }
 
+        /// <summary>
+        /// Gets the extension service for query and download operations.
+        /// </summary>
+        Services.IExtensionService ExtensionService { get; }
+
         #endregion
 
         #region Events
