@@ -16,7 +16,6 @@ namespace GeneralUpdate.Extension
         private readonly Core.IExtensionCatalog _catalog;
         private readonly Compatibility.ICompatibilityValidator _validator;
         private readonly Download.IUpdateQueue _updateQueue;
-        private readonly Download.ExtensionDownloadService _downloadService;
         private readonly Installation.ExtensionInstallService _installService;
         private readonly Services.IExtensionService _extensionService;
         private bool _globalAutoUpdateEnabled = true;
@@ -112,21 +111,22 @@ namespace GeneralUpdate.Extension
             _catalog = new Core.ExtensionCatalog(installBasePath);
             _validator = new Compatibility.CompatibilityValidator(hostVersion);
             _updateQueue = new Download.UpdateQueue();
-            _downloadService = new Download.ExtensionDownloadService(downloadPath, _updateQueue, downloadTimeout);
             _installService = new Installation.ExtensionInstallService(installBasePath);
 
             // Initialize extension service with empty list (will be updated via ParseAvailableExtensions)
             _extensionService = new Services.ExtensionService(
                 new List<Metadata.AvailableExtension>(),
+                downloadPath,
+                _updateQueue,
                 hostVersion,
                 _validator,
-                _downloadService);
+                downloadTimeout);
 
             // Wire up event handlers
             _updateQueue.StateChanged += (sender, args) => UpdateStateChanged?.Invoke(sender, args);
-            _downloadService.ProgressUpdated += (sender, args) => DownloadProgress?.Invoke(sender, args);
-            _downloadService.DownloadCompleted += (sender, args) => DownloadCompleted?.Invoke(sender, args);
-            _downloadService.DownloadFailed += (sender, args) => DownloadFailed?.Invoke(sender, args);
+            _extensionService.ProgressUpdated += (sender, args) => DownloadProgress?.Invoke(sender, args);
+            _extensionService.DownloadCompleted += (sender, args) => DownloadCompleted?.Invoke(sender, args);
+            _extensionService.DownloadFailed += (sender, args) => DownloadFailed?.Invoke(sender, args);
             _installService.InstallationCompleted += (sender, args) => InstallationCompleted?.Invoke(sender, args);
             _installService.RollbackCompleted += (sender, args) => RollbackCompleted?.Invoke(sender, args);
         }
@@ -340,7 +340,7 @@ namespace GeneralUpdate.Extension
             try
             {
                 // Download the extension package
-                var downloadedPath = await _downloadService.DownloadAsync(operation);
+                var downloadedPath = await _extensionService.DownloadAsync(operation);
 
                 if (downloadedPath == null)
                     return false;

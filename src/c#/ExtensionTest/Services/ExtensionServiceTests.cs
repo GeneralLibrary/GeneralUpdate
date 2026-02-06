@@ -78,12 +78,18 @@ namespace ExtensionTest.Services
             };
         }
 
+        private ExtensionService CreateExtensionService(List<AvailableExtension> extensions)
+        {
+            var updateQueue = new GeneralUpdate.Extension.Download.UpdateQueue();
+            return new ExtensionService(extensions, "/tmp/test-downloads", updateQueue);
+        }
+
         [Fact]
         public async Task Query_WithValidQuery_ShouldReturnPagedResults()
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -108,7 +114,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -135,7 +141,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -160,7 +166,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -183,7 +189,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -206,7 +212,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -231,7 +237,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -255,7 +261,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -280,7 +286,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 0,
@@ -301,7 +307,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
             var query = new ExtensionQueryDTO
             {
                 PageNumber = 1,
@@ -322,7 +328,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
 
             // Act
             var result = await service.Query(null!);
@@ -338,7 +344,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var initialExtensions = CreateTestExtensions();
-            var service = new ExtensionService(initialExtensions);
+            var service = CreateExtensionService(initialExtensions);
             var newExtensions = new List<AvailableExtension>
             {
                 new AvailableExtension
@@ -363,27 +369,11 @@ namespace ExtensionTest.Services
         }
 
         [Fact]
-        public async Task Download_WithoutDownloadService_ShouldReturnFailure()
-        {
-            // Arrange
-            var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
-
-            // Act
-            var result = await service.Download("test-extension-1");
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(400, result.Code);
-            Assert.Contains("not configured", result.Message);
-        }
-
-        [Fact]
         public async Task Download_WithInvalidId_ShouldReturnFailure()
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
 
             // Act
             var result = await service.Download("non-existent-extension");
@@ -391,8 +381,8 @@ namespace ExtensionTest.Services
             // Assert
             Assert.NotNull(result);
             Assert.Equal(400, result.Code);
-            // Should fail because download service is not configured
-            Assert.Contains("not configured", result.Message);
+            // Should fail because extension is not found
+            Assert.Contains("not found", result.Message);
         }
 
         [Fact]
@@ -400,7 +390,7 @@ namespace ExtensionTest.Services
         {
             // Arrange
             var extensions = CreateTestExtensions();
-            var service = new ExtensionService(extensions);
+            var service = CreateExtensionService(extensions);
 
             // Act
             var result1 = await service.Download(null!);
@@ -409,9 +399,9 @@ namespace ExtensionTest.Services
             // Assert
             Assert.Equal(400, result1.Code);
             Assert.Equal(400, result2.Code);
-            // Should fail because download service is not configured
-            Assert.Contains("not configured", result1.Message);
-            Assert.Contains("not configured", result2.Message);
+            // Should fail because ID is null or empty
+            Assert.Contains("null or empty", result1.Message);
+            Assert.Contains("null or empty", result2.Message);
         }
     }
 }
