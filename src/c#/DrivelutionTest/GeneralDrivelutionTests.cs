@@ -153,7 +153,8 @@ public class GeneralDrivelutionTests
             // Assert
             Assert.NotNull(result);
             // The result might fail due to validation or permissions, but should not crash
-            Assert.True(result.Success || !result.Success);
+            // Verify that result status is one of the valid enum values
+            Assert.True(Enum.IsDefined(typeof(UpdateStatus), result.Status));
         }
         finally
         {
@@ -197,7 +198,8 @@ public class GeneralDrivelutionTests
 
             // Assert
             Assert.NotNull(result);
-            Assert.True(result.Success || !result.Success);
+            // Verify that result status is one of the valid enum values
+            Assert.True(Enum.IsDefined(typeof(UpdateStatus), result.Status));
         }
         finally
         {
@@ -232,8 +234,8 @@ public class GeneralDrivelutionTests
             // Act
             var result = await GeneralDrivelution.ValidateAsync(driverInfo);
 
-            // Assert
-            Assert.True(result || !result); // Should return a boolean value
+            // Assert - Should return a boolean value without throwing
+            // No assertion needed - the test passes if no exception is thrown
         }
         finally
         {

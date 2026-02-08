@@ -368,16 +368,17 @@ public class RestartHelperTests
     }
 
     /// <summary>
-    /// Tests that RestartSystemAsync does not throw on supported platforms.
-    /// Note: We won't actually restart the system during tests.
+    /// Tests that RestartHelper methods are callable without throwing exceptions
+    /// in non-privileged test environment (actual restart will fail due to permissions).
+    /// Note: We cannot actually restart the system during tests.
     /// </summary>
     [Fact]
-    public async Task RestartSystemAsync_OnSupportedPlatform_DoesNotThrow()
+    public void RestartHelper_PublicMethods_AreCallable()
     {
-        // This test just ensures the method doesn't throw an exception
-        // We won't actually execute restart as that would affect the test environment
+        // This test documents that the RestartHelper class and its public methods exist
+        // and are callable. Actual restart functionality cannot be safely tested in unit tests.
         // Act & Assert
-        var exception = await Record.ExceptionAsync(() => Task.FromResult(true));
-        Assert.Null(exception);
+        Assert.True(RestartHelper.IsRestartRequired(RestartMode.None) == false);
+        Assert.True(RestartHelper.IsRestartRequired(RestartMode.Prompt) == true);
     }
 }

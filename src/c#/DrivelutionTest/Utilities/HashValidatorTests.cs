@@ -6,7 +6,7 @@ namespace DrivelutionTest.Utilities;
 /// Tests for HashValidator utility class.
 /// Validates file hash computation and validation functionality.
 /// </summary>
-public class HashValidatorTests
+public class HashValidatorTests : IDisposable
 {
     private readonly string _testFilePath;
     private readonly string _testContent = "Hello, World! This is test content for hash validation.";
@@ -21,7 +21,7 @@ public class HashValidatorTests
     /// <summary>
     /// Cleanup temporary test files.
     /// </summary>
-    ~HashValidatorTests()
+    public void Dispose()
     {
         if (File.Exists(_testFilePath))
         {
