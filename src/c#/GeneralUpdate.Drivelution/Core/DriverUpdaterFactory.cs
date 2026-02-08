@@ -12,7 +12,7 @@ namespace GeneralUpdate.Drivelution.Core;
 /// 驱动更新器工厂类 - 自动检测平台并创建相应的实现
 /// Driver updater factory - Automatically detects platform and creates appropriate implementation
 /// </summary>
-public static class DriverUpdaterFactory
+public static class DrivelutionFactory
 {
     /// <summary>
     /// 创建适合当前平台的驱动更新器
@@ -22,7 +22,7 @@ public static class DriverUpdaterFactory
     /// <param name="options">配置选项（可选）/ Configuration options (optional)</param>
     /// <returns>平台特定的驱动更新器实现 / Platform-specific driver updater implementation</returns>
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when current platform is not supported</exception>
-    public static IGeneralDrivelution Create(ILogger? logger = null, DriverUpdateOptions? options = null)
+    public static IGeneralDrivelution Create(ILogger? logger = null, DrivelutionOptions? options = null)
     {
         // Use default logger if not provided
         logger ??= CreateDefaultLogger(options);
@@ -149,7 +149,7 @@ public static class DriverUpdaterFactory
     /// 创建默认日志记录器
     /// Creates a default logger
     /// </summary>
-    private static ILogger CreateDefaultLogger(DriverUpdateOptions? options = null)
+    private static ILogger CreateDefaultLogger(DrivelutionOptions? options = null)
     {
         if (options != null)
         {

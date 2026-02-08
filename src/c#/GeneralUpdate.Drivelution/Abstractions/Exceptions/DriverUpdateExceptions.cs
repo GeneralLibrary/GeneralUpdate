@@ -4,19 +4,19 @@ namespace GeneralUpdate.Drivelution.Abstractions.Exceptions;
 /// 驱动更新基础异常
 /// Base exception for driver update
 /// </summary>
-public class DriverUpdateException : Exception
+public class DrivelutionException : Exception
 {
     public string ErrorCode { get; set; }
     public bool CanRetry { get; set; }
 
-    public DriverUpdateException(string message, string errorCode = "DU_UNKNOWN", bool canRetry = false)
+    public DrivelutionException(string message, string errorCode = "DU_UNKNOWN", bool canRetry = false)
         : base(message)
     {
         ErrorCode = errorCode;
         CanRetry = canRetry;
     }
 
-    public DriverUpdateException(string message, Exception innerException, string errorCode = "DU_UNKNOWN", bool canRetry = false)
+    public DrivelutionException(string message, Exception innerException, string errorCode = "DU_UNKNOWN", bool canRetry = false)
         : base(message, innerException)
     {
         ErrorCode = errorCode;
@@ -28,7 +28,7 @@ public class DriverUpdateException : Exception
 /// 权限异常
 /// Permission exception
 /// </summary>
-public class DriverPermissionException : DriverUpdateException
+public class DriverPermissionException : DrivelutionException
 {
     public DriverPermissionException(string message)
         : base(message, "DU_PERMISSION_DENIED", false)
@@ -45,7 +45,7 @@ public class DriverPermissionException : DriverUpdateException
 /// 校验失败异常
 /// Validation failed exception
 /// </summary>
-public class DriverValidationException : DriverUpdateException
+public class DriverValidationException : DrivelutionException
 {
     public string ValidationType { get; set; }
 
@@ -66,7 +66,7 @@ public class DriverValidationException : DriverUpdateException
 /// 安装失败异常
 /// Installation failed exception
 /// </summary>
-public class DriverInstallationException : DriverUpdateException
+public class DriverInstallationException : DrivelutionException
 {
     public DriverInstallationException(string message, bool canRetry = true)
         : base(message, "DU_INSTALLATION_FAILED", canRetry)
@@ -83,7 +83,7 @@ public class DriverInstallationException : DriverUpdateException
 /// 备份失败异常
 /// Backup failed exception
 /// </summary>
-public class DriverBackupException : DriverUpdateException
+public class DriverBackupException : DrivelutionException
 {
     public DriverBackupException(string message)
         : base(message, "DU_BACKUP_FAILED", true)
@@ -100,7 +100,7 @@ public class DriverBackupException : DriverUpdateException
 /// 回滚失败异常
 /// Rollback failed exception
 /// </summary>
-public class DriverRollbackException : DriverUpdateException
+public class DriverRollbackException : DrivelutionException
 {
     public DriverRollbackException(string message)
         : base(message, "DU_ROLLBACK_FAILED", false)
@@ -117,7 +117,7 @@ public class DriverRollbackException : DriverUpdateException
 /// 兼容性异常
 /// Compatibility exception
 /// </summary>
-public class DriverCompatibilityException : DriverUpdateException
+public class DriverCompatibilityException : DrivelutionException
 {
     public DriverCompatibilityException(string message)
         : base(message, "DU_COMPATIBILITY_FAILED", false)

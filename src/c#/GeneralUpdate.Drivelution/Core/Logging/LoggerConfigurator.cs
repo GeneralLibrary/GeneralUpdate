@@ -16,7 +16,7 @@ public static class LoggerConfigurator
     /// </summary>
     /// <param name="options">驱动更新配置选项 / Driver update configuration options</param>
     /// <returns>配置好的日志器 / Configured logger</returns>
-    public static ILogger ConfigureLogger(DriverUpdateOptions options)
+    public static ILogger ConfigureLogger(DrivelutionOptions options)
     {
         if (options == null)
         {
@@ -40,7 +40,7 @@ public static class LoggerConfigurator
         if (options.EnableFileLogging)
         {
             var logPath = string.IsNullOrWhiteSpace(options.LogFilePath)
-                ? "./Logs/driver-update-.log"
+                ? "./Logs/drivelution-.log"
                 : options.LogFilePath;
 
             loggerConfig.WriteTo.File(
@@ -88,7 +88,7 @@ public static class LoggerConfigurator
             .WriteTo.Console(
                 outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
-                "./Logs/driver-update-.log",
+                "./Logs/drivelution-.log",
                 rollingInterval: RollingInterval.Day,
                 outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                 retainedFileCountLimit: 30)

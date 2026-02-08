@@ -31,7 +31,7 @@ public class GeneralDrivelutionTests
     public void Create_WithOptions_ReturnsNonNullInstance()
     {
         // Arrange
-        var options = new DriverUpdateOptions
+        var options = new DrivelutionOptions
         {
             LogLevel = "Information",
             LogFilePath = "./logs/test.log"
@@ -74,7 +74,7 @@ public class GeneralDrivelutionTests
             .MinimumLevel.Debug()
             .WriteTo.Console()
             .CreateLogger();
-        var options = new DriverUpdateOptions
+        var options = new DrivelutionOptions
         {
             LogLevel = "Debug"
         };
