@@ -73,10 +73,10 @@ using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 
 // Configure options
-var options = new DriverUpdateOptions
+var options = new DrivelutionOptions
 {
     LogLevel = "Debug",
-    LogFilePath = "./Logs/driver-update-.log",
+    LogFilePath = "./Logs/drivelution-.log",
     EnableConsoleLogging = true,
     EnableFileLogging = true,
     DefaultBackupPath = "./Backups",
@@ -272,7 +272,7 @@ var driverInfo = new DriverInfo
 #### GPG Signature Validation
 ```csharp
 // Linux drivers can be validated using GPG signatures
-var options = new DriverUpdateOptions
+var options = new DrivelutionOptions
 {
     TrustedGpgKeys = new List<string>
     {
@@ -531,10 +531,10 @@ var updater = GeneralDrivelution.Create();
 ### Custom Logging Configuration
 
 ```csharp
-var options = new DriverUpdateOptions
+var options = new DrivelutionOptions
 {
     LogLevel = "Debug",                           // Verbose logging
-    LogFilePath = "./Logs/driver-update-.log",    // Rolling file logs
+    LogFilePath = "./Logs/drivelution-.log",    // Rolling file logs
     EnableConsoleLogging = true,                  // Console output
     EnableFileLogging = true                      // File output
 };
@@ -707,7 +707,7 @@ catch (OperationCanceledException)
 ### 5. Log Everything
 
 ```csharp
-var options = new DriverUpdateOptions
+var options = new DrivelutionOptions
 {
     LogLevel = "Info",                 // Use Info level in production
     EnableFileLogging = true,          // Keep file logs for auditing
@@ -718,7 +718,7 @@ var options = new DriverUpdateOptions
 ### 6. Clean Up Old Backups
 
 ```csharp
-var options = new DriverUpdateOptions
+var options = new DrivelutionOptions
 {
     AutoCleanupBackups = true,         // Enable automatic cleanup
     BackupsToKeep = 5                  // Keep last 5 backups
@@ -751,7 +751,7 @@ var strategy = new UpdateStrategy
 ```csharp
 public async Task<bool> PerformSilentUpdateAsync(DriverInfo driverInfo)
 {
-    var options = new DriverUpdateOptions
+    var options = new DrivelutionOptions
     {
         EnableConsoleLogging = false,   // No console output
         EnableFileLogging = true,       // Log to file
@@ -919,7 +919,7 @@ sudo ./YourApp
 **Solution**:
 ```csharp
 // Enable detailed logging to identify the specific validation failure
-var options = new DriverUpdateOptions { LogLevel = "Debug" };
+var options = new DrivelutionOptions { LogLevel = "Debug" };
 var updater = GeneralDrivelution.Create(options);
 
 // Try validation separately
@@ -1060,10 +1060,10 @@ var strategy = new UpdateStrategy
 
 ```csharp
 // Create updater with default options
-IGeneralDrivelution Create(DriverUpdateOptions? options = null)
+IGeneralDrivelution Create(DrivelutionOptions? options = null)
 
 // Create updater with custom logger
-IGeneralDrivelution Create(ILogger logger, DriverUpdateOptions? options = null)
+IGeneralDrivelution Create(ILogger logger, DrivelutionOptions? options = null)
 
 // Quick update with default settings
 Task<UpdateResult> QuickUpdateAsync(DriverInfo driverInfo, CancellationToken cancellationToken = default)

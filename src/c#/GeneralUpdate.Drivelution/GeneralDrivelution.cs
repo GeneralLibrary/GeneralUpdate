@@ -21,7 +21,7 @@ namespace GeneralUpdate.Drivelution;
 /// 
 /// // 带配置使用
 /// // With configuration
-/// var options = new DriverUpdateOptions { LogLevel = "Info" };
+/// var options = new DrivelutionOptions { LogLevel = "Info" };
 /// var updater = GeneralDrivelution.Create(options);
 /// var result = await updater.UpdateAsync(driverInfo, strategy);
 /// </code>
@@ -35,13 +35,13 @@ public static class GeneralDrivelution
     /// <param name="options">配置选项（可选）/ Configuration options (optional)</param>
     /// <returns>适配当前平台的驱动更新器 / Platform-adapted driver updater</returns>
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when platform is not supported</exception>
-    public static IGeneralDrivelution Create(DriverUpdateOptions? options = null)
+    public static IGeneralDrivelution Create(DrivelutionOptions? options = null)
     {
         var logger = options != null 
             ? LoggerConfigurator.ConfigureLogger(options) 
             : LoggerConfigurator.CreateDefaultLogger();
 
-        return Core.DriverUpdaterFactory.Create(logger, options);
+        return Core.DrivelutionFactory.Create(logger, options);
     }
 
     /// <summary>
@@ -51,9 +51,9 @@ public static class GeneralDrivelution
     /// <param name="logger">自定义日志记录器 / Custom logger</param>
     /// <param name="options">配置选项（可选）/ Configuration options (optional)</param>
     /// <returns>适配当前平台的驱动更新器 / Platform-adapted driver updater</returns>
-    public static IGeneralDrivelution Create(ILogger logger, DriverUpdateOptions? options = null)
+    public static IGeneralDrivelution Create(ILogger logger, DrivelutionOptions? options = null)
     {
-        return Core.DriverUpdaterFactory.Create(logger, options);
+        return Core.DrivelutionFactory.Create(logger, options);
     }
 
     /// <summary>
@@ -119,8 +119,8 @@ public static class GeneralDrivelution
     {
         return new PlatformInfo
         {
-            Platform = Core.DriverUpdaterFactory.GetCurrentPlatform(),
-            IsSupported = Core.DriverUpdaterFactory.IsPlatformSupported(),
+            Platform = Core.DrivelutionFactory.GetCurrentPlatform(),
+            IsSupported = Core.DrivelutionFactory.IsPlatformSupported(),
             OperatingSystem = CompatibilityChecker.GetCurrentOS(),
             Architecture = CompatibilityChecker.GetCurrentArchitecture(),
             SystemVersion = CompatibilityChecker.GetSystemVersion()

@@ -434,7 +434,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     {
         return new ErrorInfo
         {
-            Code = ex is DriverUpdateException dex ? dex.ErrorCode : "DU_UNKNOWN",
+            Code = ex is DrivelutionException dex ? dex.ErrorCode : "DR_UNKNOWN",
             Type = type,
             Message = ex.Message,
             Details = ex.ToString(),

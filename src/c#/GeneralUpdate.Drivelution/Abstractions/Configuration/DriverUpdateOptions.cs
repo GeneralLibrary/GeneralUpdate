@@ -4,7 +4,7 @@ namespace GeneralUpdate.Drivelution.Abstractions.Configuration;
 /// 驱动更新配置选项
 /// Driver update configuration options
 /// </summary>
-public class DriverUpdateOptions
+public class DrivelutionOptions
 {
     /// <summary>
     /// 默认备份路径
@@ -22,7 +22,7 @@ public class DriverUpdateOptions
     /// 日志文件路径
     /// Log file path
     /// </summary>
-    public string LogFilePath { get; set; } = "./Logs/driver-update-.log";
+    public string LogFilePath { get; set; } = "./Logs/drivelution-.log";
 
     /// <summary>
     /// 是否启用控制台日志
