@@ -1,0 +1,127 @@
+using System.Runtime.Versioning;
+using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Exceptions;
+using Serilog;
+
+namespace GeneralUpdate.Drivelution.Linux.Implementation;
+
+/// <summary>
+/// Linux驱动备份实现
+/// Linux driver backup implementation
+/// </summary>
+[SupportedOSPlatform("linux")]
+public class LinuxDriverBackup : IDriverBackup
+{
+    private readonly ILogger _logger;
+
+    public LinuxDriverBackup(ILogger logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> BackupAsync(
+        string sourcePath,
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!File.Exists(sourcePath))
+            {
+                throw new FileNotFoundException($"Source file not found: {sourcePath}");
+            }
+
+            var backupDir = Path.GetDirectoryName(backupPath);
+            if (!string.IsNullOrEmpty(backupDir) && !Directory.Exists(backupDir))
+            {
+                Directory.CreateDirectory(backupDir);
+            }
+
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var fileName = Path.GetFileNameWithoutExtension(backupPath);
+            var extension = Path.GetExtension(backupPath);
+            var backupPathWithTimestamp = Path.Combine(
+                backupDir ?? string.Empty,
+                $"{fileName}_{timestamp}{extension}");
+
+            using (var sourceStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            using (var destinationStream = new FileStream(backupPathWithTimestamp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, true))
+            {
+                await sourceStream.CopyToAsync(destinationStream, cancellationToken);
+            }
+
+            _logger.Information("Backup completed: {BackupPath}", backupPathWithTimestamp);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to backup driver");
+            throw new DriverBackupException($"Failed to backup driver: {ex.Message}", ex);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> RestoreAsync(
+        string backupPath,
+        string targetPath,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!File.Exists(backupPath))
+            {
+                throw new FileNotFoundException($"Backup file not found: {backupPath}");
+            }
+
+            var targetDir = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            if (File.Exists(targetPath))
+            {
+                File.Move(targetPath, $"{targetPath}.old", true);
+            }
+
+            using (var sourceStream = new FileStream(backupPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            using (var destinationStream = new FileStream(targetPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, true))
+            {
+                await sourceStream.CopyToAsync(destinationStream, cancellationToken);
+            }
+
+            _logger.Information("Restore completed");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to restore driver");
+            throw new DriverRollbackException($"Failed to restore driver: {ex.Message}", ex);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> DeleteBackupAsync(
+        string backupPath,
+        CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() =>
+        {
+            try
+            {
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to delete backup");
+                return false;
+            }
+        }, cancellationToken);
+    }
+}

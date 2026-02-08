@@ -39,6 +39,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialTest", "Differe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTest", "CoreTest\CoreTest.csproj", "{360D8FA4-C973-4700-B264-C52DCCD0AF4E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeneralUpdate.Drivelution", "GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj", "{18CC58F3-A37D-4FAC-817E-F97339254914}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -229,6 +231,18 @@ Global
 		{360D8FA4-C973-4700-B264-C52DCCD0AF4E}.Release|x64.Build.0 = Release|Any CPU
 		{360D8FA4-C973-4700-B264-C52DCCD0AF4E}.Release|x86.ActiveCfg = Release|Any CPU
 		{360D8FA4-C973-4700-B264-C52DCCD0AF4E}.Release|x86.Build.0 = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|x64.Build.0 = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Debug|x86.Build.0 = Debug|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|x64.ActiveCfg = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|x64.Build.0 = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|x86.ActiveCfg = Release|Any CPU
+		{18CC58F3-A37D-4FAC-817E-F97339254914}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -249,6 +263,7 @@ Global
 		{3590E969-0958-49ED-91A0-605ACC0B203C} = {245C36B9-612E-4AB0-979A-4D83A0D8117E}
 		{D20E4300-45FA-451F-BCFA-AFBF7B32373A} = {245C36B9-612E-4AB0-979A-4D83A0D8117E}
 		{360D8FA4-C973-4700-B264-C52DCCD0AF4E} = {245C36B9-612E-4AB0-979A-4D83A0D8117E}
+		{18CC58F3-A37D-4FAC-817E-F97339254914} = {91F059E6-7AD3-4FB7-9604-30A7849C6EFF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A7B2D0AD-E000-4749-BAC0-FF21B9872805}
