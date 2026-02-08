@@ -9,14 +9,14 @@ public class DrivelutionException : Exception
     public string ErrorCode { get; set; }
     public bool CanRetry { get; set; }
 
-    public DrivelutionException(string message, string errorCode = "DU_UNKNOWN", bool canRetry = false)
+    public DrivelutionException(string message, string errorCode = "DR_UNKNOWN", bool canRetry = false)
         : base(message)
     {
         ErrorCode = errorCode;
         CanRetry = canRetry;
     }
 
-    public DrivelutionException(string message, Exception innerException, string errorCode = "DU_UNKNOWN", bool canRetry = false)
+    public DrivelutionException(string message, Exception innerException, string errorCode = "DR_UNKNOWN", bool canRetry = false)
         : base(message, innerException)
     {
         ErrorCode = errorCode;
@@ -31,12 +31,12 @@ public class DrivelutionException : Exception
 public class DriverPermissionException : DrivelutionException
 {
     public DriverPermissionException(string message)
-        : base(message, "DU_PERMISSION_DENIED", false)
+        : base(message, "DR_PERMISSION_DENIED", false)
     {
     }
 
     public DriverPermissionException(string message, Exception innerException)
-        : base(message, innerException, "DU_PERMISSION_DENIED", false)
+        : base(message, innerException, "DR_PERMISSION_DENIED", false)
     {
     }
 }
@@ -50,13 +50,13 @@ public class DriverValidationException : DrivelutionException
     public string ValidationType { get; set; }
 
     public DriverValidationException(string message, string validationType)
-        : base(message, "DU_VALIDATION_FAILED", false)
+        : base(message, "DR_VALIDATION_FAILED", false)
     {
         ValidationType = validationType;
     }
 
     public DriverValidationException(string message, string validationType, Exception innerException)
-        : base(message, innerException, "DU_VALIDATION_FAILED", false)
+        : base(message, innerException, "DR_VALIDATION_FAILED", false)
     {
         ValidationType = validationType;
     }
@@ -69,12 +69,12 @@ public class DriverValidationException : DrivelutionException
 public class DriverInstallationException : DrivelutionException
 {
     public DriverInstallationException(string message, bool canRetry = true)
-        : base(message, "DU_INSTALLATION_FAILED", canRetry)
+        : base(message, "DR_INSTALLATION_FAILED", canRetry)
     {
     }
 
     public DriverInstallationException(string message, Exception innerException, bool canRetry = true)
-        : base(message, innerException, "DU_INSTALLATION_FAILED", canRetry)
+        : base(message, innerException, "DR_INSTALLATION_FAILED", canRetry)
     {
     }
 }
@@ -86,12 +86,12 @@ public class DriverInstallationException : DrivelutionException
 public class DriverBackupException : DrivelutionException
 {
     public DriverBackupException(string message)
-        : base(message, "DU_BACKUP_FAILED", true)
+        : base(message, "DR_BACKUP_FAILED", true)
     {
     }
 
     public DriverBackupException(string message, Exception innerException)
-        : base(message, innerException, "DU_BACKUP_FAILED", true)
+        : base(message, innerException, "DR_BACKUP_FAILED", true)
     {
     }
 }
@@ -103,12 +103,12 @@ public class DriverBackupException : DrivelutionException
 public class DriverRollbackException : DrivelutionException
 {
     public DriverRollbackException(string message)
-        : base(message, "DU_ROLLBACK_FAILED", false)
+        : base(message, "DR_ROLLBACK_FAILED", false)
     {
     }
 
     public DriverRollbackException(string message, Exception innerException)
-        : base(message, innerException, "DU_ROLLBACK_FAILED", false)
+        : base(message, innerException, "DR_ROLLBACK_FAILED", false)
     {
     }
 }
@@ -120,12 +120,12 @@ public class DriverRollbackException : DrivelutionException
 public class DriverCompatibilityException : DrivelutionException
 {
     public DriverCompatibilityException(string message)
-        : base(message, "DU_COMPATIBILITY_FAILED", false)
+        : base(message, "DR_COMPATIBILITY_FAILED", false)
     {
     }
 
     public DriverCompatibilityException(string message, Exception innerException)
-        : base(message, innerException, "DU_COMPATIBILITY_FAILED", false)
+        : base(message, innerException, "DR_COMPATIBILITY_FAILED", false)
     {
     }
 }
