@@ -513,7 +513,6 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析驱动文件信息
     /// Parses driver file information
     /// </summary>
     private async Task<DriverInfo?> ParseDriverFileAsync(string filePath, CancellationToken cancellationToken)
@@ -590,7 +589,6 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析INF文件
     /// Parses INF file
     /// </summary>
     private async Task ParseInfFileAsync(string infPath, DriverInfo driverInfo, CancellationToken cancellationToken)

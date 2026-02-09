@@ -423,7 +423,6 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析驱动文件信息
     /// Parses driver file information
     /// </summary>
     private async Task<DriverInfo?> ParseDriverFileAsync(string filePath, CancellationToken cancellationToken)
@@ -470,7 +469,6 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析内核模块
     /// Parses kernel module
     /// </summary>
     private async Task ParseKernelModuleAsync(string koPath, DriverInfo driverInfo, CancellationToken cancellationToken)
@@ -516,7 +514,6 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析Debian包
     /// Parses Debian package
     /// </summary>
     private async Task ParseDebPackageAsync(string debPath, DriverInfo driverInfo, CancellationToken cancellationToken)
@@ -556,7 +553,6 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <summary>
-    /// 解析RPM包
     /// Parses RPM package
     /// </summary>
     private async Task ParseRpmPackageAsync(string rpmPath, DriverInfo driverInfo, CancellationToken cancellationToken)
