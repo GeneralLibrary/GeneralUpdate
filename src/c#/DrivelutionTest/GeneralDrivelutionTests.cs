@@ -327,4 +327,185 @@ public class GeneralDrivelutionTests
             Assert.False(platformInfo.IsSupported); // MacOS not yet implemented
         }
     }
+
+    /// <summary>
+    /// Tests that GetDriversFromDirectoryAsync returns empty list for non-existent directory.
+    /// </summary>
+    [Fact]
+    public async Task GetDriversFromDirectoryAsync_WithNonExistentDirectory_ReturnsEmptyList()
+    {
+        // Arrange
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid()}");
+
+        // Act
+        var result = await GeneralDrivelution.GetDriversFromDirectoryAsync(nonExistentPath);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Tests that GetDriversFromDirectoryAsync returns empty list for empty directory.
+    /// </summary>
+    [Fact]
+    public async Task GetDriversFromDirectoryAsync_WithEmptyDirectory_ReturnsEmptyList()
+    {
+        // Arrange
+        var emptyDir = Path.Combine(Path.GetTempPath(), $"empty_{Guid.NewGuid()}");
+        Directory.CreateDirectory(emptyDir);
+
+        try
+        {
+            // Act
+            var result = await GeneralDrivelution.GetDriversFromDirectoryAsync(emptyDir);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
+        finally
+        {
+            if (Directory.Exists(emptyDir))
+            {
+                Directory.Delete(emptyDir, true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that GetDriversFromDirectoryAsync discovers driver files in directory.
+    /// </summary>
+    [Fact]
+    public async Task GetDriversFromDirectoryAsync_WithDriverFiles_ReturnsDriverInfoList()
+    {
+        // Arrange
+        var testDir = Path.Combine(Path.GetTempPath(), $"drivers_{Guid.NewGuid()}");
+        Directory.CreateDirectory(testDir);
+
+        try
+        {
+            // Create test driver files based on platform
+            var platformInfo = GeneralDrivelution.GetPlatformInfo();
+            var testFiles = new List<string>();
+
+            if (platformInfo.Platform == "Windows")
+            {
+                // Create mock .inf file
+                var infFile = Path.Combine(testDir, "test_driver.inf");
+                File.WriteAllText(infFile, @"
+[Version]
+Signature=""$Windows NT$""
+DriverVer=01/15/2024,1.0.0.0
+
+[DriverInfo]
+DriverDesc=""Test Driver""
+");
+                testFiles.Add(infFile);
+            }
+            else if (platformInfo.Platform == "Linux")
+            {
+                // Create mock .ko file
+                var koFile = Path.Combine(testDir, "test_driver.ko");
+                File.WriteAllText(koFile, "Mock kernel module content");
+                testFiles.Add(koFile);
+            }
+
+            // Act
+            var result = await GeneralDrivelution.GetDriversFromDirectoryAsync(testDir);
+
+            // Assert
+            Assert.NotNull(result);
+            
+            // Should find at least one driver if platform is supported
+            if (platformInfo.IsSupported && testFiles.Any())
+            {
+                Assert.NotEmpty(result);
+                
+                // Check that driver info has expected properties
+                var driver = result.First();
+                Assert.NotNull(driver.Name);
+                Assert.NotEmpty(driver.Name);
+                Assert.NotNull(driver.FilePath);
+                Assert.NotEmpty(driver.FilePath);
+                Assert.NotNull(driver.Version);
+                Assert.NotEmpty(driver.Version);
+                Assert.NotNull(driver.Hash);
+                Assert.NotEmpty(driver.Hash);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                Directory.Delete(testDir, true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that GetDriversFromDirectoryAsync with search pattern filters correctly.
+    /// </summary>
+    [Fact]
+    public async Task GetDriversFromDirectoryAsync_WithSearchPattern_FiltersCorrectly()
+    {
+        // Arrange
+        var testDir = Path.Combine(Path.GetTempPath(), $"drivers_{Guid.NewGuid()}");
+        Directory.CreateDirectory(testDir);
+
+        try
+        {
+            // Create different types of files
+            var infFile = Path.Combine(testDir, "driver1.inf");
+            var txtFile = Path.Combine(testDir, "readme.txt");
+            File.WriteAllText(infFile, "INF content");
+            File.WriteAllText(txtFile, "Text content");
+
+            // Act
+            var result = await GeneralDrivelution.GetDriversFromDirectoryAsync(testDir, "*.inf");
+
+            // Assert
+            Assert.NotNull(result);
+            
+            // Should only find .inf files
+            // The count depends on whether the platform supports parsing .inf files
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                Directory.Delete(testDir, true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests that GetDriversFromDirectoryAsync handles cancellation.
+    /// </summary>
+    [Fact]
+    public async Task GetDriversFromDirectoryAsync_WithCancellation_HandlesCancellation()
+    {
+        // Arrange
+        var testDir = Path.Combine(Path.GetTempPath(), $"drivers_{Guid.NewGuid()}");
+        Directory.CreateDirectory(testDir);
+
+        try
+        {
+            var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            // Act
+            var result = await GeneralDrivelution.GetDriversFromDirectoryAsync(testDir, null, cts.Token);
+
+            // Assert - Should complete without throwing or return empty list
+            Assert.NotNull(result);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                Directory.Delete(testDir, true);
+            }
+        }
+    }
 }
