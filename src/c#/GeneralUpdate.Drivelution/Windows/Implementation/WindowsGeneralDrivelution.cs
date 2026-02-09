@@ -547,23 +547,30 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 if (WindowsSignatureHelper.IsFileSigned(filePath))
                 {
                     // Try to extract publisher from certificate
-                    using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(filePath);
-                    if (cert != null)
+                    using var cert2 = new System.Security.Cryptography.X509Certificates.X509Certificate2(filePath);
+                    var subject = cert2.Subject;
+                    
+                    // Extract CN (Common Name) from subject
+                    var cnIndex = subject.IndexOf("CN=");
+                    if (cnIndex >= 0)
                     {
-                        using var cert2 = new System.Security.Cryptography.X509Certificates.X509Certificate2(cert);
-                        var subject = cert2.Subject;
+                        var cnStart = cnIndex + 3;
+                        var cnEnd = subject.IndexOf(',', cnStart);
                         
-                        // Extract CN (Common Name) from subject
-                        if (subject.Contains("CN="))
+                        string publisher;
+                        if (cnEnd > cnStart)
                         {
-                            var cnStart = subject.IndexOf("CN=") + 3;
-                            var cnEnd = subject.IndexOf(',', cnStart);
-                            var publisher = cnEnd > cnStart ? subject.Substring(cnStart, cnEnd - cnStart) : subject.Substring(cnStart);
-                            
-                            if (!string.IsNullOrEmpty(publisher))
-                            {
-                                driverInfo.TrustedPublishers.Add(publisher);
-                            }
+                            publisher = subject.Substring(cnStart, cnEnd - cnStart);
+                        }
+                        else
+                        {
+                            // No comma after CN, take the rest of the string
+                            publisher = subject.Substring(cnStart);
+                        }
+                        
+                        if (!string.IsNullOrEmpty(publisher))
+                        {
+                            driverInfo.TrustedPublishers.Add(publisher);
                         }
                     }
                 }

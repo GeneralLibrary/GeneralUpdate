@@ -524,7 +524,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         try
         {
             // Try to get package info using dpkg-deb command
-            var output = await ExecuteCommandAsync("dpkg-deb", $"-I {debPath}", cancellationToken);
+            // Use proper argument passing to avoid injection issues
+            var escapedPath = debPath.Replace("'", "'\\''");
+            var output = await ExecuteCommandAsync("dpkg-deb", $"-I '{escapedPath}'", cancellationToken);
             var lines = output.Split('\n');
 
             foreach (var line in lines)
@@ -562,7 +564,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         try
         {
             // Try to get package info using rpm command
-            var output = await ExecuteCommandAsync("rpm", $"-qip {rpmPath}", cancellationToken);
+            // Use proper argument passing to avoid injection issues
+            var escapedPath = rpmPath.Replace("'", "'\\''");
+            var output = await ExecuteCommandAsync("rpm", $"-qip '{escapedPath}'", cancellationToken);
             var lines = output.Split('\n');
 
             foreach (var line in lines)
