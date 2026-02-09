@@ -65,6 +65,16 @@ public class MacOsGeneralDrivelution : IGeneralDrivelution
         throw new PlatformNotSupportedException(
             "MacOS driver rollback is not yet implemented.");
     }
+
+    /// <inheritdoc/>
+    public Task<List<DriverInfo>> GetDriversFromDirectoryAsync(
+        string directoryPath,
+        string? searchPattern = null,
+        CancellationToken cancellationToken = default)
+    {
+        throw new PlatformNotSupportedException(
+            "MacOS driver directory reading is not yet implemented.");
+    }
 }
 
 /// <summary>

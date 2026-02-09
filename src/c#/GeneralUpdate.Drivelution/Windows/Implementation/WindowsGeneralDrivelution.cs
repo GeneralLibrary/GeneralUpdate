@@ -457,4 +457,193 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             _ => "Contact support for assistance"
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<List<DriverInfo>> GetDriversFromDirectoryAsync(
+        string directoryPath,
+        string? searchPattern = null,
+        CancellationToken cancellationToken = default)
+    {
+        var driverInfoList = new List<DriverInfo>();
+
+        try
+        {
+            _logger.Information("Reading driver information from directory: {DirectoryPath}", directoryPath);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                _logger.Warning("Directory not found: {DirectoryPath}", directoryPath);
+                return driverInfoList;
+            }
+
+            // Default to .inf files for Windows
+            var pattern = searchPattern ?? "*.inf";
+            var driverFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+
+            _logger.Information("Found {Count} driver files matching pattern: {Pattern}", driverFiles.Length, pattern);
+
+            foreach (var filePath in driverFiles)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+
+                try
+                {
+                    var driverInfo = await ParseDriverFileAsync(filePath, cancellationToken);
+                    if (driverInfo != null)
+                    {
+                        driverInfoList.Add(driverInfo);
+                        _logger.Information("Parsed driver: {DriverName} v{Version}", driverInfo.Name, driverInfo.Version);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+                }
+            }
+
+            _logger.Information("Successfully loaded {Count} driver(s) from directory", driverInfoList.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error reading drivers from directory: {DirectoryPath}", directoryPath);
+        }
+
+        return driverInfoList;
+    }
+
+    /// <summary>
+    /// 解析驱动文件信息
+    /// Parses driver file information
+    /// </summary>
+    private async Task<DriverInfo?> ParseDriverFileAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+            var driverInfo = new DriverInfo
+            {
+                Name = fileName,
+                FilePath = filePath,
+                TargetOS = "Windows",
+                Architecture = Environment.Is64BitOperatingSystem ? "x64" : "x86"
+            };
+
+            // For .inf files, try to parse version and other metadata
+            if (filePath.EndsWith(".inf", StringComparison.OrdinalIgnoreCase))
+            {
+                await ParseInfFileAsync(filePath, driverInfo, cancellationToken);
+            }
+
+            // Get file hash for integrity validation
+            driverInfo.Hash = await HashValidator.ComputeHashAsync(filePath, "SHA256", cancellationToken);
+            driverInfo.HashAlgorithm = "SHA256";
+
+            // Get signature information if available
+            try
+            {
+                if (WindowsSignatureHelper.IsFileSigned(filePath))
+                {
+                    // Try to extract publisher from certificate
+                    using var cert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(filePath);
+                    if (cert != null)
+                    {
+                        using var cert2 = new System.Security.Cryptography.X509Certificates.X509Certificate2(cert);
+                        var subject = cert2.Subject;
+                        
+                        // Extract CN (Common Name) from subject
+                        if (subject.Contains("CN="))
+                        {
+                            var cnStart = subject.IndexOf("CN=") + 3;
+                            var cnEnd = subject.IndexOf(',', cnStart);
+                            var publisher = cnEnd > cnStart ? subject.Substring(cnStart, cnEnd - cnStart) : subject.Substring(cnStart);
+                            
+                            if (!string.IsNullOrEmpty(publisher))
+                            {
+                                driverInfo.TrustedPublishers.Add(publisher);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug(ex, "Could not get signature for file: {FilePath}", filePath);
+            }
+
+            return driverInfo;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 解析INF文件
+    /// Parses INF file
+    /// </summary>
+    private async Task ParseInfFileAsync(string infPath, DriverInfo driverInfo, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var content = await File.ReadAllTextAsync(infPath, cancellationToken);
+            var lines = content.Split('\n');
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+
+                // Parse version
+                if (trimmedLine.StartsWith("DriverVer", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = trimmedLine.Split('=');
+                    if (parts.Length > 1)
+                    {
+                        var verParts = parts[1].Split(',');
+                        if (verParts.Length > 1)
+                        {
+                            driverInfo.Version = verParts[1].Trim();
+                        }
+                        if (verParts.Length > 0 && DateTime.TryParse(verParts[0].Trim(), out var releaseDate))
+                        {
+                            driverInfo.ReleaseDate = releaseDate;
+                        }
+                    }
+                }
+                // Parse description
+                else if (trimmedLine.StartsWith("DriverDesc", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = trimmedLine.Split('=');
+                    if (parts.Length > 1)
+                    {
+                        driverInfo.Description = parts[1].Trim().Trim('"', '%');
+                    }
+                }
+                // Parse hardware ID
+                else if (trimmedLine.StartsWith("HardwareId", StringComparison.OrdinalIgnoreCase) ||
+                         trimmedLine.Contains("HW_ID", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = trimmedLine.Split('=');
+                    if (parts.Length > 1)
+                    {
+                        driverInfo.HardwareId = parts[1].Trim().Trim('"');
+                    }
+                }
+            }
+
+            // If version is still empty, try to infer from filename or use default
+            if (string.IsNullOrEmpty(driverInfo.Version))
+            {
+                driverInfo.Version = "1.0.0";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Could not parse INF file: {InfPath}", infPath);
+        }
+    }
 }

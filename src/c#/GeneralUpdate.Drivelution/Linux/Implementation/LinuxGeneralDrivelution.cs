@@ -359,4 +359,243 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         var fileName = Path.GetFileName(driverInfo.FilePath);
         return Path.Combine(baseBackupPath, fileName);
     }
+
+    /// <inheritdoc/>
+    public async Task<List<DriverInfo>> GetDriversFromDirectoryAsync(
+        string directoryPath,
+        string? searchPattern = null,
+        CancellationToken cancellationToken = default)
+    {
+        var driverInfoList = new List<DriverInfo>();
+
+        try
+        {
+            _logger.Information("Reading driver information from directory: {DirectoryPath}", directoryPath);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                _logger.Warning("Directory not found: {DirectoryPath}", directoryPath);
+                return driverInfoList;
+            }
+
+            // Default to kernel modules for Linux
+            var pattern = searchPattern ?? "*.ko";
+            var driverFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
+
+            // Also look for .deb and .rpm packages if no specific pattern was provided
+            if (searchPattern == null)
+            {
+                var debFiles = Directory.GetFiles(directoryPath, "*.deb", SearchOption.AllDirectories);
+                var rpmFiles = Directory.GetFiles(directoryPath, "*.rpm", SearchOption.AllDirectories);
+                driverFiles = driverFiles.Concat(debFiles).Concat(rpmFiles).ToArray();
+            }
+
+            _logger.Information("Found {Count} driver files matching pattern: {Pattern}", driverFiles.Length, pattern);
+
+            foreach (var filePath in driverFiles)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+
+                try
+                {
+                    var driverInfo = await ParseDriverFileAsync(filePath, cancellationToken);
+                    if (driverInfo != null)
+                    {
+                        driverInfoList.Add(driverInfo);
+                        _logger.Information("Parsed driver: {DriverName} v{Version}", driverInfo.Name, driverInfo.Version);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+                }
+            }
+
+            _logger.Information("Successfully loaded {Count} driver(s) from directory", driverInfoList.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Error reading drivers from directory: {DirectoryPath}", directoryPath);
+        }
+
+        return driverInfoList;
+    }
+
+    /// <summary>
+    /// 解析驱动文件信息
+    /// Parses driver file information
+    /// </summary>
+    private async Task<DriverInfo?> ParseDriverFileAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+
+            var driverInfo = new DriverInfo
+            {
+                Name = fileName,
+                FilePath = filePath,
+                TargetOS = "Linux",
+                Architecture = Environment.Is64BitOperatingSystem ? "x64" : "x86"
+            };
+
+            // Parse based on file type
+            if (extension == ".ko")
+            {
+                await ParseKernelModuleAsync(filePath, driverInfo, cancellationToken);
+            }
+            else if (extension == ".deb")
+            {
+                await ParseDebPackageAsync(filePath, driverInfo, cancellationToken);
+            }
+            else if (extension == ".rpm")
+            {
+                await ParseRpmPackageAsync(filePath, driverInfo, cancellationToken);
+            }
+
+            // Get file hash for integrity validation
+            driverInfo.Hash = await HashValidator.ComputeHashAsync(filePath, "SHA256", cancellationToken);
+            driverInfo.HashAlgorithm = "SHA256";
+
+            return driverInfo;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 解析内核模块
+    /// Parses kernel module
+    /// </summary>
+    private async Task ParseKernelModuleAsync(string koPath, DriverInfo driverInfo, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to get module info using modinfo command
+            var output = await ExecuteCommandAsync("modinfo", koPath, cancellationToken);
+            var lines = output.Split('\n');
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+
+                if (trimmedLine.StartsWith("version:", StringComparison.OrdinalIgnoreCase))
+                {
+                    driverInfo.Version = trimmedLine.Substring(8).Trim();
+                }
+                else if (trimmedLine.StartsWith("description:", StringComparison.OrdinalIgnoreCase))
+                {
+                    driverInfo.Description = trimmedLine.Substring(12).Trim();
+                }
+                else if (trimmedLine.StartsWith("alias:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var alias = trimmedLine.Substring(6).Trim();
+                    if (string.IsNullOrEmpty(driverInfo.HardwareId))
+                    {
+                        driverInfo.HardwareId = alias;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(driverInfo.Version))
+            {
+                driverInfo.Version = "1.0.0";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Could not get module info for: {KoPath}", koPath);
+            driverInfo.Version = "1.0.0";
+        }
+    }
+
+    /// <summary>
+    /// 解析Debian包
+    /// Parses Debian package
+    /// </summary>
+    private async Task ParseDebPackageAsync(string debPath, DriverInfo driverInfo, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to get package info using dpkg-deb command
+            var output = await ExecuteCommandAsync("dpkg-deb", $"-I {debPath}", cancellationToken);
+            var lines = output.Split('\n');
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+
+                if (trimmedLine.StartsWith("Version:", StringComparison.OrdinalIgnoreCase))
+                {
+                    driverInfo.Version = trimmedLine.Substring(8).Trim();
+                }
+                else if (trimmedLine.StartsWith("Description:", StringComparison.OrdinalIgnoreCase))
+                {
+                    driverInfo.Description = trimmedLine.Substring(12).Trim();
+                }
+            }
+
+            if (string.IsNullOrEmpty(driverInfo.Version))
+            {
+                driverInfo.Version = "1.0.0";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Could not get package info for: {DebPath}", debPath);
+            driverInfo.Version = "1.0.0";
+        }
+    }
+
+    /// <summary>
+    /// 解析RPM包
+    /// Parses RPM package
+    /// </summary>
+    private async Task ParseRpmPackageAsync(string rpmPath, DriverInfo driverInfo, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Try to get package info using rpm command
+            var output = await ExecuteCommandAsync("rpm", $"-qip {rpmPath}", cancellationToken);
+            var lines = output.Split('\n');
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+
+                if (trimmedLine.StartsWith("Version", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = trimmedLine.Split(':');
+                    if (parts.Length > 1)
+                    {
+                        driverInfo.Version = parts[1].Trim();
+                    }
+                }
+                else if (trimmedLine.StartsWith("Summary", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = trimmedLine.Split(':');
+                    if (parts.Length > 1)
+                    {
+                        driverInfo.Description = parts[1].Trim();
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(driverInfo.Version))
+            {
+                driverInfo.Version = "1.0.0";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Could not get package info for: {RpmPath}", rpmPath);
+            driverInfo.Version = "1.0.0";
+        }
+    }
 }

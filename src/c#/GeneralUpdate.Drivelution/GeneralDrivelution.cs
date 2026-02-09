@@ -126,6 +126,23 @@ public static class GeneralDrivelution
             SystemVersion = CompatibilityChecker.GetSystemVersion()
         };
     }
+
+    /// <summary>
+    /// 从本地目录读取驱动信息
+    /// Reads driver information from local directory
+    /// </summary>
+    /// <param name="directoryPath">目录路径 / Directory path</param>
+    /// <param name="searchPattern">搜索模式（可选，例如 "*.inf", "*.ko"）/ Search pattern (optional, e.g., "*.inf", "*.ko")</param>
+    /// <param name="cancellationToken">取消令牌 / Cancellation token</param>
+    /// <returns>驱动信息列表 / List of driver information</returns>
+    public static async Task<List<DriverInfo>> GetDriversFromDirectoryAsync(
+        string directoryPath,
+        string? searchPattern = null,
+        CancellationToken cancellationToken = default)
+    {
+        var updater = Create();
+        return await updater.GetDriversFromDirectoryAsync(directoryPath, searchPattern, cancellationToken);
+    }
 }
 
 /// <summary>
