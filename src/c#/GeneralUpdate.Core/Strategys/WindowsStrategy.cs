@@ -35,8 +35,7 @@ namespace GeneralUpdate.Core.Strategys
             return new PipelineBuilder(context)
                 .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                 .UseMiddleware<CompressMiddleware>()
-                .UseMiddleware<HashMiddleware>()
-                .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
+                .UseMiddleware<HashMiddleware>();
         }
 
         protected override void OnExecuteComplete()
