@@ -24,7 +24,6 @@ namespace GeneralUpdate.Core.Strategys
             if (_configinfo.DriveEnabled == true)
             {
                 context.Add("DriverDirectory", _configinfo.DriverDirectory);
-                context.Add("FieldMappings", _configinfo.FieldMappings);
             }
             
             return context;
