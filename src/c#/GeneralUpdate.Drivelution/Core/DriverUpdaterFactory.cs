@@ -24,23 +24,23 @@ public static class DrivelutionFactory
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when current platform is not supported</exception>
     public static IGeneralDrivelution Create(IDrivelutionLogger? logger = null, DrivelutionOptions? options = null)
     {
-        // Use default logger if not provided
+        // Use default logger if not provided (kept for backward compatibility but not used internally anymore)
         logger ??= CreateDefaultLogger(options);
 
         // Detect platform and create appropriate implementation
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             logger.Information("Detected Windows platform, creating WindowsGeneralDrivelution");
-            var validator = new WindowsDriverValidator(logger);
-            var backup = new WindowsDriverBackup(logger);
-            return new WindowsGeneralDrivelution(logger, validator, backup);
+            var validator = new WindowsDriverValidator();
+            var backup = new WindowsDriverBackup();
+            return new WindowsGeneralDrivelution(validator, backup);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             logger.Information("Detected Linux platform, creating LinuxGeneralDrivelution");
-            var validator = new LinuxDriverValidator(logger);
-            var backup = new LinuxDriverBackup(logger);
-            return new LinuxGeneralDrivelution(logger, validator, backup);
+            var validator = new LinuxDriverValidator();
+            var backup = new LinuxDriverBackup();
+            return new LinuxGeneralDrivelution(validator, backup);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -72,11 +72,11 @@ public static class DrivelutionFactory
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return new WindowsDriverValidator(logger);
+            return new WindowsDriverValidator();
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            return new LinuxDriverValidator(logger);
+            return new LinuxDriverValidator();
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -100,11 +100,11 @@ public static class DrivelutionFactory
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return new WindowsDriverBackup(logger);
+            return new WindowsDriverBackup();
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            return new LinuxDriverBackup(logger);
+            return new LinuxDriverBackup();
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {

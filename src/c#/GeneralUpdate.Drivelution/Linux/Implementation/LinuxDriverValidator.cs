@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
-using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Linux.Helpers;
@@ -14,11 +14,8 @@ namespace GeneralUpdate.Drivelution.Linux.Implementation;
 [SupportedOSPlatform("linux")]
 public class LinuxDriverValidator : IDriverValidator
 {
-    private readonly IDrivelutionLogger _logger;
-
-    public LinuxDriverValidator(IDrivelutionLogger logger)
+    public LinuxDriverValidator()
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -49,7 +46,7 @@ public class LinuxDriverValidator : IDriverValidator
             return await LinuxSignatureHelper.ValidateGpgSignatureAsync(filePath, signaturePath, trustedPublishers);
         }
 
-        _logger.Warning($"No signature file found for: {filePath}");
+        GeneralTracer.Warn($"No signature file found for: {filePath}");
         return !trustedPublishers.Any(); // If no trusted publishers specified, accept unsigned
     }
 

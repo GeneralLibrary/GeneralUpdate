@@ -1,6 +1,6 @@
 using System.Runtime.Versioning;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
-using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
@@ -15,11 +15,8 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsDriverValidator : IDriverValidator
 {
-    private readonly IDrivelutionLogger _logger;
-
-    public WindowsDriverValidator(IDrivelutionLogger logger)
+    public WindowsDriverValidator()
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -29,7 +26,7 @@ public class WindowsDriverValidator : IDriverValidator
         string hashAlgorithm = "SHA256",
         CancellationToken cancellationToken = default)
     {
-        _logger.Information($"Validating file integrity: {filePath}");
+        GeneralTracer.Info($"Validating file integrity: {filePath}");
 
         try
         {
@@ -37,18 +34,18 @@ public class WindowsDriverValidator : IDriverValidator
 
             if (isValid)
             {
-                _logger.Information("File integrity validation succeeded");
+                GeneralTracer.Info("File integrity validation succeeded");
             }
             else
             {
-                _logger.Warning("File integrity validation failed - hash mismatch");
+                GeneralTracer.Warn("File integrity validation failed - hash mismatch");
             }
 
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.Error("File integrity validation failed with exception", ex);
+            GeneralTracer.Error("File integrity validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate file integrity: {ex.Message}",
                 "Integrity",
@@ -62,7 +59,7 @@ public class WindowsDriverValidator : IDriverValidator
         IEnumerable<string> trustedPublishers,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information($"Validating driver signature: {filePath}");
+        GeneralTracer.Info($"Validating driver signature: {filePath}");
 
         try
         {
@@ -70,18 +67,18 @@ public class WindowsDriverValidator : IDriverValidator
 
             if (isValid)
             {
-                _logger.Information("Driver signature validation succeeded");
+                GeneralTracer.Info("Driver signature validation succeeded");
             }
             else
             {
-                _logger.Warning("Driver signature validation failed");
+                GeneralTracer.Warn("Driver signature validation failed");
             }
 
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.Error("Driver signature validation failed with exception", ex);
+            GeneralTracer.Error("Driver signature validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate driver signature: {ex.Message}",
                 "Signature",
@@ -94,7 +91,7 @@ public class WindowsDriverValidator : IDriverValidator
         DriverInfo driverInfo,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information($"Validating driver compatibility for: {driverInfo.Name}");
+        GeneralTracer.Info($"Validating driver compatibility for: {driverInfo.Name}");
 
         try
         {
@@ -102,13 +99,13 @@ public class WindowsDriverValidator : IDriverValidator
 
             if (isCompatible)
             {
-                _logger.Information("Driver compatibility validation succeeded");
+                GeneralTracer.Info("Driver compatibility validation succeeded");
             }
             else
             {
-                _logger.Warning("Driver compatibility validation failed");
+                GeneralTracer.Warn("Driver compatibility validation failed");
                 var report = CompatibilityChecker.GetCompatibilityReport(driverInfo);
-                _logger.Warning($"Compatibility report: Current OS={report.CurrentOS}, Target OS={report.TargetOS}, " +
+                GeneralTracer.Warn($"Compatibility report: Current OS={report.CurrentOS}, Target OS={report.TargetOS}, " +
                               $"Current Arch={report.CurrentArchitecture}, Target Arch={report.TargetArchitecture}");
             }
 
@@ -116,7 +113,7 @@ public class WindowsDriverValidator : IDriverValidator
         }
         catch (Exception ex)
         {
-            _logger.Error("Driver compatibility validation failed with exception", ex);
+            GeneralTracer.Error("Driver compatibility validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate driver compatibility: {ex.Message}",
                 "Compatibility",

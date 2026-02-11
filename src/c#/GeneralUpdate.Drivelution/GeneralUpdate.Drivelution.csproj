@@ -12,4 +12,8 @@
     <TrimMode>full</TrimMode>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+  </ItemGroup>
+
 </Project>
