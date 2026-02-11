@@ -1,7 +1,7 @@
 using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using Serilog;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 
 namespace DrivelutionTest;
 
@@ -33,8 +33,7 @@ public class GeneralDrivelutionTests
         // Arrange
         var options = new DrivelutionOptions
         {
-            LogLevel = "Information",
-            LogFilePath = "./logs/test.log"
+            DefaultBackupPath = "./backups"
         };
 
         // Act
@@ -51,10 +50,7 @@ public class GeneralDrivelutionTests
     public void Create_WithCustomLogger_ReturnsNonNullInstance()
     {
         // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
+        var logger = new DrivelutionLogger();
 
         // Act
         var updater = GeneralDrivelution.Create(logger);
@@ -70,13 +66,10 @@ public class GeneralDrivelutionTests
     public void Create_WithCustomLoggerAndOptions_ReturnsInstance()
     {
         // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
+        var logger = new DrivelutionLogger();
         var options = new DrivelutionOptions
         {
-            LogLevel = "Debug"
+            DefaultBackupPath = "./backups"
         };
 
         // Act
