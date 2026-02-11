@@ -43,6 +43,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <param name="scheme">The URL scheme for update requests</param>
         /// <param name="token">The authentication token</param>
         /// <param name="script">The Linux permission script</param>
+        /// <param name="driverDirectory">The directory path containing driver files</param>
         /// <param name="blackFileFormats">List of file format extensions to skip</param>
         /// <param name="blackFiles">List of specific files to skip</param>
         /// <param name="skipDirectories">List of directories to skip</param>
@@ -64,6 +65,7 @@ namespace GeneralUpdate.Common.Shared.Object
             , string scheme
             , string token
             , string script
+            , string driverDirectory
             , List<string> blackFileFormats
             , List<string> blackFiles
             , List<string> skipDirectories)
@@ -98,6 +100,7 @@ namespace GeneralUpdate.Common.Shared.Object
             Scheme = scheme;
             Token = token;
             Script = script;
+            DriverDirectory = driverDirectory;
             
             // Set blacklist parameters
             BlackFileFormats = blackFileFormats;
@@ -229,5 +232,12 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         [JsonPropertyName("Script")]
         public string Script { get; set; }
+        
+        /// <summary>
+        /// The directory path containing driver files for driver update functionality.
+        /// Used when DriveEnabled is true to locate and install driver files.
+        /// </summary>
+        [JsonPropertyName("DriverDirectory")]
+        public string DriverDirectory { get; set; }
     }
 }

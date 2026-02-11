@@ -43,6 +43,7 @@ namespace GeneralUpdate.Common.Shared.Object
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.Script = source.Script;
+            target.DriverDirectory = source.DriverDirectory;
 
             // Map GlobalConfigInfo-specific fields
             target.UpdateUrl = source.UpdateUrl;
@@ -92,6 +93,7 @@ namespace GeneralUpdate.Common.Shared.Object
                 scheme: source.Scheme,
                 token: source.Token,
                 script: source.Script,
+                driverDirectory: source.DriverDirectory,  // Driver directory for driver updates
                 blackFileFormats: blackFileFormats,       // From BlackListManager
                 blackFiles: blackFiles,                   // From BlackListManager
                 skipDirectories: skipDirectories          // From BlackListManager
@@ -127,6 +129,7 @@ namespace GeneralUpdate.Common.Shared.Object
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.Script = source.Script;
+            target.DriverDirectory = source.DriverDirectory;
         }
     }
 }
