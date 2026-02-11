@@ -2,7 +2,6 @@ using System.Runtime.InteropServices;
 using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Windows.Implementation;
 using GeneralUpdate.Drivelution.Linux.Implementation;
 using GeneralUpdate.Drivelution.MacOS.Implementation;
@@ -19,12 +18,10 @@ public static class DrivelutionFactory
     /// 创建适合当前平台的驱动更新器
     /// Creates a driver updater suitable for the current platform
     /// </summary>
-    /// <param name="logger">日志记录器（已废弃，内部使用GeneralTracer）/ Logger (deprecated, uses GeneralTracer internally)</param>
     /// <param name="options">配置选项（可选）/ Configuration options (optional)</param>
     /// <returns>平台特定的驱动更新器实现 / Platform-specific driver updater implementation</returns>
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when current platform is not supported</exception>
-    [Obsolete("Logger parameter is deprecated and will be ignored. The implementation now uses GeneralTracer for logging. Call Create(null, options) or omit the logger parameter.", false)]
-    public static IGeneralDrivelution Create(IDrivelutionLogger? logger = null, DrivelutionOptions? options = null)
+    public static IGeneralDrivelution Create(DrivelutionOptions? options = null)
     {
         // Detect platform and create appropriate implementation
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -63,10 +60,8 @@ public static class DrivelutionFactory
     /// 创建适合当前平台的驱动验证器
     /// Creates a driver validator suitable for the current platform
     /// </summary>
-    /// <param name="logger">日志记录器（已废弃，内部使用GeneralTracer）/ Logger (deprecated, uses GeneralTracer internally)</param>
     /// <returns>平台特定的驱动验证器实现 / Platform-specific driver validator implementation</returns>
-    [Obsolete("Logger parameter is deprecated and will be ignored. The implementation now uses GeneralTracer for logging. Call CreateValidator() without parameters.", false)]
-    public static IDriverValidator CreateValidator(IDrivelutionLogger? logger = null)
+    public static IDriverValidator CreateValidator()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -90,10 +85,8 @@ public static class DrivelutionFactory
     /// 创建适合当前平台的驱动备份管理器
     /// Creates a driver backup manager suitable for the current platform
     /// </summary>
-    /// <param name="logger">日志记录器（已废弃，内部使用GeneralTracer）/ Logger (deprecated, uses GeneralTracer internally)</param>
     /// <returns>平台特定的驱动备份实现 / Platform-specific driver backup implementation</returns>
-    [Obsolete("Logger parameter is deprecated and will be ignored. The implementation now uses GeneralTracer for logging. Call CreateBackup() without parameters.", false)]
-    public static IDriverBackup CreateBackup(IDrivelutionLogger? logger = null)
+    public static IDriverBackup CreateBackup()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -140,14 +133,5 @@ public static class DrivelutionFactory
         return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
                RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         // MacOS is planned but not yet implemented
-    }
-
-    /// <summary>
-    /// 创建默认日志记录器
-    /// Creates a default logger
-    /// </summary>
-    private static IDrivelutionLogger CreateDefaultLogger(DrivelutionOptions? options = null)
-    {
-        return Logging.LoggerConfigurator.ConfigureLogger(options);
     }
 }

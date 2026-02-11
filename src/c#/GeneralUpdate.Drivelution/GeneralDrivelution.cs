@@ -1,8 +1,6 @@
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Models;
-using GeneralUpdate.Drivelution.Core.Logging;
 using GeneralUpdate.Drivelution.Core.Utilities;
 
 namespace GeneralUpdate.Drivelution;
@@ -33,19 +31,7 @@ public static class GeneralDrivelution
     /// <exception cref="PlatformNotSupportedException">Thrown when platform is not supported</exception>
     public static IGeneralDrivelution Create(DrivelutionOptions? options = null)
     {
-        var logger = LoggerConfigurator.ConfigureLogger(options);
-        return Core.DrivelutionFactory.Create(logger, options);
-    }
-
-    /// <summary>
-    /// Creates a driver updater instance (with custom logger)
-    /// </summary>
-    /// <param name="logger">Custom logger</param>
-    /// <param name="options">Configuration options (optional)</param>
-    /// <returns>Platform-adapted driver updater</returns>
-    public static IGeneralDrivelution Create(IDrivelutionLogger logger, DrivelutionOptions? options = null)
-    {
-        return Core.DrivelutionFactory.Create(logger, options);
+        return Core.DrivelutionFactory.Create(options);
     }
 
     /// <summary>

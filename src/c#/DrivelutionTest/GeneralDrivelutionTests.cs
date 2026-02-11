@@ -1,7 +1,6 @@
 using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using GeneralUpdate.Drivelution.Abstractions.Events;
 
 namespace DrivelutionTest;
 
@@ -38,42 +37,6 @@ public class GeneralDrivelutionTests
 
         // Act
         var updater = GeneralDrivelution.Create(options);
-
-        // Assert
-        Assert.NotNull(updater);
-    }
-
-    /// <summary>
-    /// Tests that Create method with custom logger returns a non-null instance.
-    /// </summary>
-    [Fact]
-    public void Create_WithCustomLogger_ReturnsNonNullInstance()
-    {
-        // Arrange
-        var logger = new DrivelutionLogger();
-
-        // Act
-        var updater = GeneralDrivelution.Create(logger);
-
-        // Assert
-        Assert.NotNull(updater);
-    }
-
-    /// <summary>
-    /// Tests that Create method with custom logger and options returns instance.
-    /// </summary>
-    [Fact]
-    public void Create_WithCustomLoggerAndOptions_ReturnsInstance()
-    {
-        // Arrange
-        var logger = new DrivelutionLogger();
-        var options = new DrivelutionOptions
-        {
-            DefaultBackupPath = "./backups"
-        };
-
-        // Act
-        var updater = GeneralDrivelution.Create(logger, options);
 
         // Assert
         Assert.NotNull(updater);
