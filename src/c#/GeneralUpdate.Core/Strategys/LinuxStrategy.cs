@@ -33,8 +33,7 @@ public class LinuxStrategy : AbstractStrategy
         return new PipelineBuilder(context)
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
-            .UseMiddleware<HashMiddleware>()
-            .UseMiddlewareIf<DriverMiddleware>(_configinfo.DriveEnabled);
+            .UseMiddleware<HashMiddleware>();
     }
 
     public override void Execute()
