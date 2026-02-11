@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Events;
@@ -33,8 +32,6 @@ public class LinuxDriverValidator : IDriverValidator
     }
 
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("Signature validation may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Signature validation may require runtime code generation on some platforms")]
     public async Task<bool> ValidateSignatureAsync(
         string filePath,
         IEnumerable<string> trustedPublishers,

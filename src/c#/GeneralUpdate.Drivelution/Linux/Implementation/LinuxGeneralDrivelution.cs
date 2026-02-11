@@ -1,5 +1,4 @@
 using System.Runtime.Versioning;
-using System.Diagnostics.CodeAnalysis;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
@@ -28,8 +27,6 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("Update process may include signature validation that requires runtime reflection on some platforms")]
-    [RequiresDynamicCode("Update process may include signature validation that requires runtime code generation on some platforms")]
     public async Task<UpdateResult> UpdateAsync(
         DriverInfo driverInfo,
         UpdateStrategy strategy,

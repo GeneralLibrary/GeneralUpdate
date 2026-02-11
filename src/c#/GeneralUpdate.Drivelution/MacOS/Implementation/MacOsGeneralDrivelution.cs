@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
@@ -24,8 +23,6 @@ namespace GeneralUpdate.Drivelution.MacOS.Implementation;
 public class MacOsGeneralDrivelution : IGeneralDrivelution
 {
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("Update process may include signature validation that requires runtime reflection on some platforms")]
-    [RequiresDynamicCode("Update process may include signature validation that requires runtime code generation on some platforms")]
     public Task<UpdateResult> UpdateAsync(
         DriverInfo driverInfo,
         UpdateStrategy strategy,
@@ -37,8 +34,6 @@ public class MacOsGeneralDrivelution : IGeneralDrivelution
     }
 
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("Validation includes signature validation that may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Validation includes signature validation that may require runtime code generation on some platforms")]
     public Task<bool> ValidateAsync(
         DriverInfo driverInfo,
         CancellationToken cancellationToken = default)
@@ -96,8 +91,6 @@ public class MacOSDriverValidator : IDriverValidator
     }
 
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("Signature validation may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Signature validation may require runtime code generation on some platforms")]
     public Task<bool> ValidateSignatureAsync(
         string filePath,
         IEnumerable<string> trustedPublishers,
