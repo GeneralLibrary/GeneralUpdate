@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Windows.Implementation;
 using GeneralUpdate.Drivelution.Linux.Implementation;
 using GeneralUpdate.Drivelution.MacOS.Implementation;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Core;
 
@@ -22,7 +22,7 @@ public static class DrivelutionFactory
     /// <param name="options">配置选项（可选）/ Configuration options (optional)</param>
     /// <returns>平台特定的驱动更新器实现 / Platform-specific driver updater implementation</returns>
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when current platform is not supported</exception>
-    public static IGeneralDrivelution Create(ILogger? logger = null, DrivelutionOptions? options = null)
+    public static IGeneralDrivelution Create(IDrivelutionLogger? logger = null, DrivelutionOptions? options = null)
     {
         // Use default logger if not provided
         logger ??= CreateDefaultLogger(options);
@@ -53,7 +53,7 @@ public static class DrivelutionFactory
         else
         {
             var osDescription = RuntimeInformation.OSDescription;
-            logger.Error("Unsupported platform detected: {Platform}", osDescription);
+            logger.Error("Unsupported platform detected: {Platform}", null, osDescription);
             throw new PlatformNotSupportedException(
                 $"Current platform '{osDescription}' is not supported. " +
                 "Supported platforms: Windows (8+), Linux (Ubuntu 18.04+, CentOS 7+, Debian 10+)");
@@ -66,7 +66,7 @@ public static class DrivelutionFactory
     /// </summary>
     /// <param name="logger">日志记录器 / Logger</param>
     /// <returns>平台特定的驱动验证器实现 / Platform-specific driver validator implementation</returns>
-    public static IDriverValidator CreateValidator(ILogger? logger = null)
+    public static IDriverValidator CreateValidator(IDrivelutionLogger? logger = null)
     {
         logger ??= CreateDefaultLogger();
 
@@ -94,7 +94,7 @@ public static class DrivelutionFactory
     /// </summary>
     /// <param name="logger">日志记录器 / Logger</param>
     /// <returns>平台特定的驱动备份实现 / Platform-specific driver backup implementation</returns>
-    public static IDriverBackup CreateBackup(ILogger? logger = null)
+    public static IDriverBackup CreateBackup(IDrivelutionLogger? logger = null)
     {
         logger ??= CreateDefaultLogger();
 
@@ -149,15 +149,8 @@ public static class DrivelutionFactory
     /// 创建默认日志记录器
     /// Creates a default logger
     /// </summary>
-    private static ILogger CreateDefaultLogger(DrivelutionOptions? options = null)
+    private static IDrivelutionLogger CreateDefaultLogger(DrivelutionOptions? options = null)
     {
-        if (options != null)
-        {
-            return Logging.LoggerConfigurator.ConfigureLogger(options);
-        }
-        else
-        {
-            return Logging.LoggerConfigurator.CreateDefaultLogger();
-        }
+        return Logging.LoggerConfigurator.ConfigureLogger(options);
     }
 }

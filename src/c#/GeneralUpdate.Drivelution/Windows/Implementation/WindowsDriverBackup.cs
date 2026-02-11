@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Windows.Implementation;
 
@@ -12,9 +12,9 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsDriverBackup : IDriverBackup
 {
-    private readonly ILogger _logger;
+    private readonly IDrivelutionLogger _logger;
 
-    public WindowsDriverBackup(ILogger logger)
+    public WindowsDriverBackup(IDrivelutionLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -62,7 +62,7 @@ public class WindowsDriverBackup : IDriverBackup
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to backup driver");
+            _logger.Error("Failed to backup driver", ex);
             throw new DriverBackupException($"Failed to backup driver: {ex.Message}", ex);
         }
     }
@@ -110,7 +110,7 @@ public class WindowsDriverBackup : IDriverBackup
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to restore driver");
+            _logger.Error("Failed to restore driver", ex);
             throw new DriverRollbackException($"Failed to restore driver: {ex.Message}", ex);
         }
     }
@@ -140,7 +140,7 @@ public class WindowsDriverBackup : IDriverBackup
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to delete backup");
+                _logger.Error("Failed to delete backup", ex);
                 return false;
             }
         }, cancellationToken);

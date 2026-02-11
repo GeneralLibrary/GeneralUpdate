@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Windows.Helpers;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Windows.Implementation;
 
@@ -16,11 +16,11 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsGeneralDrivelution : IGeneralDrivelution
 {
-    private readonly ILogger _logger;
+    private readonly IDrivelutionLogger _logger;
     private readonly IDriverValidator _validator;
     private readonly IDriverBackup _backup;
 
-    public WindowsGeneralDrivelution(ILogger logger, IDriverValidator validator, IDriverBackup backup)
+    public WindowsGeneralDrivelution(IDrivelutionLogger logger, IDriverValidator validator, IDriverBackup backup)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
@@ -116,7 +116,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (DriverPermissionException ex)
         {
-            _logger.Error(ex, "Permission denied during driver update");
+            _logger.Error("Permission denied during driver update", ex);
             result.Success = false;
             result.Status = UpdateStatus.Failed;
             result.Error = CreateErrorInfo(ex, ErrorType.PermissionDenied, false);
@@ -124,7 +124,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (DriverValidationException ex)
         {
-            _logger.Error(ex, "Validation failed during driver update");
+            _logger.Error("Validation failed during driver update", ex);
             result.Success = false;
             result.Status = UpdateStatus.Failed;
             result.Error = CreateErrorInfo(ex, ErrorType.HashValidationFailed, false);
@@ -132,7 +132,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (DriverInstallationException ex)
         {
-            _logger.Error(ex, "Installation failed during driver update");
+            _logger.Error("Installation failed during driver update", ex);
             result.Success = false;
             result.Status = UpdateStatus.Failed;
             result.Error = CreateErrorInfo(ex, ErrorType.InstallationFailed, ex.CanRetry);
@@ -152,7 +152,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Unexpected error during driver update");
+            _logger.Error("Unexpected error during driver update", ex);
             result.Success = false;
             result.Status = UpdateStatus.Failed;
             result.Error = CreateErrorInfo(ex, ErrorType.Unknown, false);
@@ -178,7 +178,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             // Validate file exists
             if (!File.Exists(driverInfo.FilePath))
             {
-                _logger.Error("Driver file not found: {FilePath}", driverInfo.FilePath);
+                _logger.Error($"Driver file not found: {driverInfo.FilePath}");
                 return false;
             }
 
@@ -217,7 +217,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Driver validation failed");
+            _logger.Error("Driver validation failed", ex);
             return false;
         }
     }
@@ -231,7 +231,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to backup driver");
+            _logger.Error("Failed to backup driver", ex);
             return false;
         }
     }
@@ -250,7 +250,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             
             if (!Directory.Exists(backupPath))
             {
-                _logger.Error("Backup directory not found: {BackupPath}", backupPath);
+                _logger.Error($"Backup directory not found: {backupPath}");
                 return false;
             }
 
@@ -278,7 +278,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning(ex, "Failed to restore driver from: {InfFile}", infFile);
+                        _logger.Warning($"Failed to restore driver from: {infFile}", ex);
                     }
                 }
             }
@@ -287,7 +287,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to rollback driver");
+            _logger.Error("Failed to rollback driver", ex);
             throw new DriverRollbackException($"Failed to rollback driver: {ex.Message}", ex);
         }
     }
@@ -317,7 +317,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Driver installation failed");
+            _logger.Error("Driver installation failed", ex);
             throw new DriverInstallationException($"Failed to install driver: {ex.Message}", ex);
         }
     }
@@ -352,8 +352,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
 
         if (process.ExitCode != 0)
         {
-            _logger.Error("PnPUtil failed with exit code {ExitCode}. Error: {Error}",
-                process.ExitCode, error);
+            _logger.Error($"PnPUtil failed with exit code {process.ExitCode}. Error: {error}");
             throw new DriverInstallationException(
                 $"PnPUtil failed with exit code {process.ExitCode}: {error}");
         }
@@ -400,7 +399,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to verify driver installation");
+            _logger.Warning("Failed to verify driver installation", ex);
             // Return true to not block the update if verification fails
             return true;
         }
@@ -425,7 +424,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Rollback failed");
+            _logger.Error("Rollback failed", ex);
             return false;
         }
     }
@@ -498,7 +497,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+                    _logger.Warning($"Failed to parse driver file: {filePath}", ex);
                 }
             }
 
@@ -506,7 +505,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error reading drivers from directory: {DirectoryPath}", directoryPath);
+            _logger.Error($"Error reading drivers from directory: {directoryPath}", ex);
         }
 
         return driverInfoList;
@@ -574,16 +573,16 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.Debug(ex, "Could not get signature for file: {FilePath}", filePath);
+                _logger.Debug($"Could not get signature for file: {filePath}");
             }
 
             return driverInfo;
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+            _logger.Warning($"Failed to parse driver file: {filePath}", ex);
             return null;
         }
     }
@@ -646,9 +645,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.Debug(ex, "Could not parse INF file: {InfPath}", infPath);
+            _logger.Debug($"Could not parse INF file: {infPath}");
         }
     }
 }

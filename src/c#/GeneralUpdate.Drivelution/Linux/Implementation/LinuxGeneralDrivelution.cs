@@ -1,11 +1,11 @@
 using System.Runtime.Versioning;
 using System.Diagnostics.CodeAnalysis;
 using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Linux.Helpers;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Linux.Implementation;
 
@@ -16,11 +16,11 @@ namespace GeneralUpdate.Drivelution.Linux.Implementation;
 [SupportedOSPlatform("linux")]
 public class LinuxGeneralDrivelution : IGeneralDrivelution
 {
-    private readonly ILogger _logger;
+    private readonly IDrivelutionLogger _logger;
     private readonly IDriverValidator _validator;
     private readonly IDriverBackup _backup;
 
-    public LinuxGeneralDrivelution(ILogger logger, IDriverValidator validator, IDriverBackup backup)
+    public LinuxGeneralDrivelution(IDrivelutionLogger logger, IDriverValidator validator, IDriverBackup backup)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
@@ -43,8 +43,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
         try
         {
-            _logger.Information("Starting driver update for: {DriverName} v{Version}",
-                driverInfo.Name, driverInfo.Version);
+            _logger.Information($"Starting driver update for: {driverInfo.Name} v{driverInfo.Version}");
 
             // Permission check
             await LinuxPermissionHelper.EnsureSudoAsync();
@@ -77,7 +76,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Driver update failed");
+            _logger.Error("Driver update failed", ex);
             result.Success = false;
             result.Status = UpdateStatus.Failed;
             result.Error = new ErrorInfo
@@ -131,11 +130,11 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
     {
         try
         {
-            _logger.Information("Rolling back driver from backup: {BackupPath}", backupPath);
+            _logger.Information($"Rolling back driver from backup: {backupPath}");
             
             if (!Directory.Exists(backupPath))
             {
-                _logger.Error("Backup directory not found: {BackupPath}", backupPath);
+                _logger.Error($"Backup directory not found: {backupPath}");
                 return false;
             }
 
@@ -144,7 +143,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
             
             if (!koFiles.Any())
             {
-                _logger.Warning("No kernel module backups found in: {BackupPath}", backupPath);
+                _logger.Warning($"No kernel module backups found in: {backupPath}");
                 return false;
             }
 
@@ -152,7 +151,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
             {
                 try
                 {
-                    _logger.Information("Attempting to restore kernel module: {Module}", koFile);
+                    _logger.Information($"Attempting to restore kernel module: {koFile}");
                     
                     // Copy back to /lib/modules or appropriate location
                     var moduleName = Path.GetFileNameWithoutExtension(koFile);
@@ -161,11 +160,11 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                     await ExecuteCommandAsync("modprobe", $"-r {moduleName}", cancellationToken);
                     
                     // Try to reload the backed-up module (if system supports it)
-                    _logger.Information("Restored module: {Module}", moduleName);
+                    _logger.Information($"Restored module: {moduleName}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning(ex, "Failed to restore module: {Module}", koFile);
+                    _logger.Warning($"Failed to restore module: {koFile}", ex);
                 }
             }
 
@@ -173,14 +172,14 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to rollback driver");
+            _logger.Error("Failed to rollback driver", ex);
             return false;
         }
     }
 
     private async Task ExecuteDriverInstallationAsync(DriverInfo driverInfo, CancellationToken cancellationToken)
     {
-        _logger.Information("Installing Linux driver: {DriverPath}", driverInfo.FilePath);
+        _logger.Information($"Installing Linux driver: {driverInfo.FilePath}");
         
         var filePath = driverInfo.FilePath;
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
@@ -205,7 +204,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
             }
             else
             {
-                _logger.Warning("Unknown driver format: {Extension}. Attempting generic installation.", extension);
+                _logger.Warning($"Unknown driver format: {extension}. Attempting generic installation.");
                 // Try to detect and install generically
                 await InstallKernelModuleAsync(filePath, cancellationToken);
             }
@@ -214,7 +213,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to install Linux driver");
+            _logger.Error("Failed to install Linux driver", ex);
             throw new DriverInstallationException(
                 $"Failed to install Linux driver: {ex.Message}", ex);
         }
@@ -222,7 +221,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
     private async Task InstallKernelModuleAsync(string modulePath, CancellationToken cancellationToken)
     {
-        _logger.Information("Installing kernel module: {ModulePath}", modulePath);
+        _logger.Information($"Installing kernel module: {modulePath}");
         
         var moduleName = Path.GetFileNameWithoutExtension(modulePath);
         
@@ -244,7 +243,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 var kernelVersion = await GetKernelVersionAsync(cancellationToken);
                 var targetDir = $"/lib/modules/{kernelVersion}/extra";
                 
-                _logger.Information("Target module directory: {TargetDir}", targetDir);
+                _logger.Information($"Target module directory: {targetDir}");
                 
                 // Note: This would typically require root permissions
                 // In a real scenario, you'd use sudo or elevated permissions
@@ -254,7 +253,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to load kernel module");
+                _logger.Error("Failed to load kernel module", ex);
                 throw;
             }
         }
@@ -262,7 +261,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
     private async Task InstallDebPackageAsync(string packagePath, CancellationToken cancellationToken)
     {
-        _logger.Information("Installing Debian package: {PackagePath}", packagePath);
+        _logger.Information($"Installing Debian package: {packagePath}");
         
         try
         {
@@ -272,14 +271,14 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to install Debian package");
+            _logger.Error("Failed to install Debian package", ex);
             throw;
         }
     }
 
     private async Task InstallRpmPackageAsync(string packagePath, CancellationToken cancellationToken)
     {
-        _logger.Information("Installing RPM package: {PackagePath}", packagePath);
+        _logger.Information($"Installing RPM package: {packagePath}");
         
         try
         {
@@ -298,7 +297,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to install RPM package");
+            _logger.Error("Failed to install RPM package", ex);
             throw;
         }
     }
@@ -341,8 +340,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
         if (process.ExitCode != 0)
         {
-            _logger.Warning("Command {Command} {Arguments} exited with code {ExitCode}. Error: {Error}",
-                command, arguments, process.ExitCode, error);
+            _logger.Warning($"Command {command} {arguments} exited with code {process.ExitCode}. Error: {error}");
             throw new InvalidOperationException($"Command failed with exit code {process.ExitCode}: {error}");
         }
 
@@ -370,11 +368,11 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
         try
         {
-            _logger.Information("Reading driver information from directory: {DirectoryPath}", directoryPath);
+            _logger.Information($"Reading driver information from directory: {directoryPath}");
 
             if (!Directory.Exists(directoryPath))
             {
-                _logger.Warning("Directory not found: {DirectoryPath}", directoryPath);
+                _logger.Warning($"Directory not found: {directoryPath}");
                 return driverInfoList;
             }
 
@@ -390,7 +388,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverFiles = driverFiles.Concat(debFiles).Concat(rpmFiles).ToArray();
             }
 
-            _logger.Information("Found {Count} driver files matching pattern: {Pattern}", driverFiles.Length, pattern);
+            _logger.Information($"Found {driverFiles.Length} driver files matching pattern: {pattern}");
 
             foreach (var filePath in driverFiles)
             {
@@ -403,20 +401,20 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                     if (driverInfo != null)
                     {
                         driverInfoList.Add(driverInfo);
-                        _logger.Information("Parsed driver: {DriverName} v{Version}", driverInfo.Name, driverInfo.Version);
+                        _logger.Information($"Parsed driver: {driverInfo.Name} v{driverInfo.Version}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+                    _logger.Warning($"Failed to parse driver file: {filePath}", ex);
                 }
             }
 
-            _logger.Information("Successfully loaded {Count} driver(s) from directory", driverInfoList.Count);
+            _logger.Information($"Successfully loaded {driverInfoList.Count} driver(s) from directory");
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error reading drivers from directory: {DirectoryPath}", directoryPath);
+            _logger.Error($"Error reading drivers from directory: {directoryPath}", ex);
         }
 
         return driverInfoList;
@@ -463,7 +461,7 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Failed to parse driver file: {FilePath}", filePath);
+            _logger.Warning($"Failed to parse driver file: {filePath}", ex);
             return null;
         }
     }
@@ -506,9 +504,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.Debug(ex, "Could not get module info for: {KoPath}", koPath);
+            _logger.Debug($"Could not get module info for: {koPath}");
             driverInfo.Version = "1.0.0";
         }
     }
@@ -545,9 +543,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.Debug(ex, "Could not get package info for: {DebPath}", debPath);
+            _logger.Debug($"Could not get package info for: {debPath}");
             driverInfo.Version = "1.0.0";
         }
     }
@@ -592,9 +590,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.Debug(ex, "Could not get package info for: {RpmPath}", rpmPath);
+            _logger.Debug($"Could not get package info for: {rpmPath}");
             driverInfo.Version = "1.0.0";
         }
     }

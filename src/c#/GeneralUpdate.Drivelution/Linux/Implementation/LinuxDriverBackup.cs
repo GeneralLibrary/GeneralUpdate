@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Linux.Implementation;
 
@@ -12,9 +12,9 @@ namespace GeneralUpdate.Drivelution.Linux.Implementation;
 [SupportedOSPlatform("linux")]
 public class LinuxDriverBackup : IDriverBackup
 {
-    private readonly ILogger _logger;
+    private readonly IDrivelutionLogger _logger;
 
-    public LinuxDriverBackup(ILogger logger)
+    public LinuxDriverBackup(IDrivelutionLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -51,12 +51,12 @@ public class LinuxDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Backup completed: {BackupPath}", backupPathWithTimestamp);
+            _logger.Information($"Backup completed: {backupPathWithTimestamp}");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to backup driver");
+            _logger.Error("Failed to backup driver", ex);
             throw new DriverBackupException($"Failed to backup driver: {ex.Message}", ex);
         }
     }
@@ -96,7 +96,7 @@ public class LinuxDriverBackup : IDriverBackup
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to restore driver");
+            _logger.Error("Failed to restore driver", ex);
             throw new DriverRollbackException($"Failed to restore driver: {ex.Message}", ex);
         }
     }
@@ -119,7 +119,7 @@ public class LinuxDriverBackup : IDriverBackup
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to delete backup");
+                _logger.Error("Failed to delete backup", ex);
                 return false;
             }
         }, cancellationToken);

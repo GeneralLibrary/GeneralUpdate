@@ -1,11 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using GeneralUpdate.Drivelution.Abstractions;
+using GeneralUpdate.Drivelution.Abstractions.Events;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Windows.Helpers;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Windows.Implementation;
 
@@ -16,9 +15,9 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsDriverValidator : IDriverValidator
 {
-    private readonly ILogger _logger;
+    private readonly IDrivelutionLogger _logger;
 
-    public WindowsDriverValidator(ILogger logger)
+    public WindowsDriverValidator(IDrivelutionLogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -49,7 +48,7 @@ public class WindowsDriverValidator : IDriverValidator
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "File integrity validation failed with exception");
+            _logger.Error("File integrity validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate file integrity: {ex.Message}",
                 "Integrity",
@@ -58,8 +57,6 @@ public class WindowsDriverValidator : IDriverValidator
     }
 
     /// <inheritdoc/>
-    [RequiresUnreferencedCode("X509Certificate validation may require runtime reflection")]
-    [RequiresDynamicCode("X509Certificate validation may require runtime code generation")]
     public async Task<bool> ValidateSignatureAsync(
         string filePath,
         IEnumerable<string> trustedPublishers,
@@ -84,7 +81,7 @@ public class WindowsDriverValidator : IDriverValidator
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Driver signature validation failed with exception");
+            _logger.Error("Driver signature validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate driver signature: {ex.Message}",
                 "Signature",
@@ -120,7 +117,7 @@ public class WindowsDriverValidator : IDriverValidator
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Driver compatibility validation failed with exception");
+            _logger.Error("Driver compatibility validation failed with exception", ex);
             throw new DriverValidationException(
                 $"Failed to validate driver compatibility: {ex.Message}",
                 "Compatibility",

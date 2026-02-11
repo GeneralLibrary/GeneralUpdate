@@ -12,29 +12,7 @@ public class DrivelutionOptions
     /// </summary>
     public string DefaultBackupPath { get; set; } = "./DriverBackups";
 
-    /// <summary>
-    /// 日志级别（Debug/Info/Warn/Error/Fatal）
-    /// Log level (Debug/Info/Warn/Error/Fatal)
-    /// </summary>
-    public string LogLevel { get; set; } = "Info";
 
-    /// <summary>
-    /// 日志文件路径
-    /// Log file path
-    /// </summary>
-    public string LogFilePath { get; set; } = "./Logs/drivelution-.log";
-
-    /// <summary>
-    /// 是否启用控制台日志
-    /// Enable console logging
-    /// </summary>
-    public bool EnableConsoleLogging { get; set; } = true;
-
-    /// <summary>
-    /// 是否启用文件日志
-    /// Enable file logging
-    /// </summary>
-    public bool EnableFileLogging { get; set; } = true;
 
     /// <summary>
     /// 默认重试次数
