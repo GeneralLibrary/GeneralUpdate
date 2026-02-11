@@ -157,9 +157,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                     // Try to reload the backed-up module (if system supports it)
                     GeneralTracer.Info($"Restored module: {moduleName}");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    GeneralTracer.Warn($"Failed to restore module: {koFile}");
+                    GeneralTracer.Warn($"Failed to restore module: {koFile} - {ex.Message}");
                 }
             }
 
@@ -399,9 +399,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                         GeneralTracer.Info($"Parsed driver: {driverInfo.Name} v{driverInfo.Version}");
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    GeneralTracer.Warn($"Failed to parse driver file: {filePath}");
+                    GeneralTracer.Warn($"Failed to parse driver file: {filePath} - {ex.Message}");
                 }
             }
 
@@ -454,9 +454,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
 
             return driverInfo;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralTracer.Warn($"Failed to parse driver file: {filePath}");
+            GeneralTracer.Warn($"Failed to parse driver file: {filePath} - {ex.Message}");
             return null;
         }
     }

@@ -272,9 +272,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                         GeneralTracer.Info($"Attempting to restore driver from: {infFile}");
                         await InstallDriverUsingPnPUtilAsync(infFile, cancellationToken);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        GeneralTracer.Warn($"Failed to restore driver from: {infFile}");
+                        GeneralTracer.Warn($"Failed to restore driver from: {infFile} - {ex.Message}");
                     }
                 }
             }
@@ -393,9 +393,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             GeneralTracer.Info($"Driver verification result: {isInstalled}");
             return isInstalled;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralTracer.Warn("Failed to verify driver installation");
+            GeneralTracer.Warn($"Failed to verify driver installation - {ex.Message}");
             // Return true to not block the update if verification fails
             return true;
         }
@@ -491,9 +491,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                         GeneralTracer.Info($"Parsed driver: {driverInfo.Name} v{driverInfo.Version}");
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    GeneralTracer.Warn($"Failed to parse driver file: {filePath}");
+                    GeneralTracer.Warn($"Failed to parse driver file: {filePath} - {ex.Message}");
                 }
             }
 
@@ -576,9 +576,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
 
             return driverInfo;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralTracer.Warn($"Failed to parse driver file: {filePath}");
+            GeneralTracer.Warn($"Failed to parse driver file: {filePath} - {ex.Message}");
             return null;
         }
     }

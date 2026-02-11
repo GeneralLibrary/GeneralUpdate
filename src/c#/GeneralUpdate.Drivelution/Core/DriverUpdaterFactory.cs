@@ -24,7 +24,8 @@ public static class DrivelutionFactory
     /// <exception cref="PlatformNotSupportedException">当前平台不支持时抛出 / Thrown when current platform is not supported</exception>
     public static IGeneralDrivelution Create(IDrivelutionLogger? logger = null, DrivelutionOptions? options = null)
     {
-        // Use default logger if not provided (kept for backward compatibility but not used internally anymore)
+        // Note: Logger parameter is kept for backward compatibility with existing callers,
+        // but internally the implementation now uses GeneralTracer for logging
         logger ??= CreateDefaultLogger(options);
 
         // Detect platform and create appropriate implementation
