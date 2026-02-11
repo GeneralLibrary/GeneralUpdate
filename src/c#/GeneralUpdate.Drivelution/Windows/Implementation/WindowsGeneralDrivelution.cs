@@ -41,8 +41,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
 
         try
         {
-            _logger.Information("Starting driver update for: {DriverName} v{Version}",
-                driverInfo.Name, driverInfo.Version);
+            _logger.Information($"Starting driver update for: {driverInfo.Name} v{driverInfo.Version}");
 
             result.StepLogs.Add($"[{DateTime.Now:HH:mm:ss}] Starting driver update");
 
@@ -78,7 +77,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 if (await BackupAsync(driverInfo, backupPath, cancellationToken))
                 {
                     result.BackupPath = backupPath;
-                    _logger.Information("Backup created at: {BackupPath}", backupPath);
+                    _logger.Information($"Backup created at: {backupPath}");
                 }
             }
 
@@ -161,8 +160,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         finally
         {
             result.EndTime = DateTime.UtcNow;
-            _logger.Information("Driver update process ended. Duration: {Duration}ms, Success: {Success}",
-                result.DurationMs, result.Success);
+            _logger.Information($"Driver update process ended. Duration: {result.DurationMs}ms, Success: {result.Success}");
         }
 
         return result;
@@ -171,7 +169,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     /// <inheritdoc/>
     public async Task<bool> ValidateAsync(DriverInfo driverInfo, CancellationToken cancellationToken = default)
     {
-        _logger.Information("Validating driver: {DriverName}", driverInfo.Name);
+        _logger.Information($"Validating driver: {driverInfo.Name}");
 
         try
         {
@@ -241,7 +239,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     {
         try
         {
-            _logger.Information("Rolling back driver from backup: {BackupPath}", backupPath);
+            _logger.Information($"Rolling back driver from backup: {backupPath}");
             
             // Implement rollback logic
             // This involves:
@@ -258,11 +256,11 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             var backupFiles = Directory.GetFiles(backupPath, "*.*", SearchOption.AllDirectories);
             if (!backupFiles.Any())
             {
-                _logger.Warning("No backup files found in: {BackupPath}", backupPath);
+                _logger.Warning($"No backup files found in: {backupPath}");
                 return false;
             }
 
-            _logger.Information("Found {Count} backup files", backupFiles.Length);
+            _logger.Information($"Found {backupFiles.Length} backup files");
             
             // For INF-based drivers, try to reinstall the backed up version
             var infFiles = backupFiles.Where(f => f.EndsWith(".inf", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -273,7 +271,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 {
                     try
                     {
-                        _logger.Information("Attempting to restore driver from: {InfFile}", infFile);
+                        _logger.Information($"Attempting to restore driver from: {infFile}");
                         await InstallDriverUsingPnPUtilAsync(infFile, cancellationToken);
                     }
                     catch (Exception ex)
@@ -301,7 +299,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
         UpdateStrategy strategy,
         CancellationToken cancellationToken)
     {
-        _logger.Information("Executing driver installation: {DriverPath}", driverInfo.FilePath);
+        _logger.Information($"Executing driver installation: {driverInfo.FilePath}");
 
         try
         {
@@ -328,7 +326,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     /// </summary>
     private async Task InstallDriverUsingPnPUtilAsync(string driverPath, CancellationToken cancellationToken)
     {
-        _logger.Information("Installing driver using PnPUtil: {DriverPath}", driverPath);
+        _logger.Information($"Installing driver using PnPUtil: {driverPath}");
 
         var startInfo = new ProcessStartInfo
         {
@@ -348,7 +346,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
 
         await process.WaitForExitAsync(cancellationToken);
 
-        _logger.Information("PnPUtil output: {Output}", output);
+        _logger.Information($"PnPUtil output: {output}");
 
         if (process.ExitCode != 0)
         {
@@ -366,7 +364,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
     {
         try
         {
-            _logger.Information("Verifying driver installation for: {DriverPath}", driverInfo.FilePath);
+            _logger.Information($"Verifying driver installation for: {driverInfo.FilePath}");
             
             // Use PnPUtil to enumerate installed drivers and check if our driver is present
             var processStartInfo = new ProcessStartInfo
@@ -394,7 +392,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             bool isInstalled = output.Contains(driverFileName, StringComparison.OrdinalIgnoreCase) ||
                              output.Contains(Path.GetFileNameWithoutExtension(driverInfo.FilePath), StringComparison.OrdinalIgnoreCase);
 
-            _logger.Information("Driver verification result: {IsInstalled}", isInstalled);
+            _logger.Information($"Driver verification result: {isInstalled}");
             return isInstalled;
         }
         catch (Exception ex)
@@ -467,11 +465,11 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
 
         try
         {
-            _logger.Information("Reading driver information from directory: {DirectoryPath}", directoryPath);
+            _logger.Information($"Reading driver information from directory: {directoryPath}");
 
             if (!Directory.Exists(directoryPath))
             {
-                _logger.Warning("Directory not found: {DirectoryPath}", directoryPath);
+                _logger.Warning($"Directory not found: {directoryPath}");
                 return driverInfoList;
             }
 
@@ -479,7 +477,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
             var pattern = searchPattern ?? "*.inf";
             var driverFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories);
 
-            _logger.Information("Found {Count} driver files matching pattern: {Pattern}", driverFiles.Length, pattern);
+            _logger.Information($"Found {driverFiles.Length} driver files matching pattern: {pattern}");
 
             foreach (var filePath in driverFiles)
             {
@@ -492,7 +490,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                     if (driverInfo != null)
                     {
                         driverInfoList.Add(driverInfo);
-                        _logger.Information("Parsed driver: {DriverName} v{Version}", driverInfo.Name, driverInfo.Version);
+                        _logger.Information($"Parsed driver: {driverInfo.Name} v{driverInfo.Version}");
                     }
                 }
                 catch (Exception ex)
@@ -501,7 +499,7 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 }
             }
 
-            _logger.Information("Successfully loaded {Count} driver(s) from directory", driverInfoList.Count);
+            _logger.Information($"Successfully loaded {driverInfoList.Count} driver(s) from directory");
         }
         catch (Exception ex)
         {
@@ -573,9 +571,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.Debug($"Could not get signature for file: {filePath}");
+                _logger.Debug($"Could not get signature for file: {filePath}", ex);
             }
 
             return driverInfo;
@@ -645,9 +643,9 @@ public class WindowsGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _logger.Debug($"Could not parse INF file: {infPath}");
+            _logger.Debug($"Could not parse INF file: {infPath}", ex);
         }
     }
 }

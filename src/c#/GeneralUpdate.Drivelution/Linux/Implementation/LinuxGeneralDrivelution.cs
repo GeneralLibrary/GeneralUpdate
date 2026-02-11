@@ -501,9 +501,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.Debug($"Could not get module info for: {koPath}");
+            _logger.Debug($"Could not get module info for: {koPath}", ex);
             driverInfo.Version = "1.0.0";
         }
     }
@@ -540,9 +540,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.Debug($"Could not get package info for: {debPath}");
+            _logger.Debug($"Could not get package info for: {debPath}", ex);
             driverInfo.Version = "1.0.0";
         }
     }
@@ -587,9 +587,9 @@ public class LinuxGeneralDrivelution : IGeneralDrivelution
                 driverInfo.Version = "1.0.0";
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _logger.Debug($"Could not get package info for: {rpmPath}");
+            _logger.Debug($"Could not get package info for: {rpmPath}", ex);
             driverInfo.Version = "1.0.0";
         }
     }

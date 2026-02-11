@@ -53,7 +53,7 @@ public static class DrivelutionFactory
         else
         {
             var osDescription = RuntimeInformation.OSDescription;
-            logger.Error("Unsupported platform detected: {Platform}", null, osDescription);
+            logger.Error($"Unsupported platform detected: {osDescription}");
             throw new PlatformNotSupportedException(
                 $"Current platform '{osDescription}' is not supported. " +
                 "Supported platforms: Windows (8+), Linux (Ubuntu 18.04+, CentOS 7+, Debian 10+)");

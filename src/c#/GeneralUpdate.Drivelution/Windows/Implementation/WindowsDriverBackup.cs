@@ -25,7 +25,7 @@ public class WindowsDriverBackup : IDriverBackup
         string backupPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Backing up driver from {SourcePath} to {BackupPath}", sourcePath, backupPath);
+        _logger.Information($"Backing up driver from {sourcePath} to {backupPath}");
 
         try
         {
@@ -39,7 +39,7 @@ public class WindowsDriverBackup : IDriverBackup
             if (!string.IsNullOrEmpty(backupDir) && !Directory.Exists(backupDir))
             {
                 Directory.CreateDirectory(backupDir);
-                _logger.Information("Created backup directory: {BackupDir}", backupDir);
+                _logger.Information($"Created backup directory: {backupDir}");
             }
 
             // Add timestamp to backup filename to avoid conflicts
@@ -57,7 +57,7 @@ public class WindowsDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Driver backup completed successfully: {BackupPath}", backupPathWithTimestamp);
+            _logger.Information($"Driver backup completed successfully: {backupPathWithTimestamp}");
             return true;
         }
         catch (Exception ex)
@@ -73,7 +73,7 @@ public class WindowsDriverBackup : IDriverBackup
         string targetPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Restoring driver from {BackupPath} to {TargetPath}", backupPath, targetPath);
+        _logger.Information($"Restoring driver from {backupPath} to {targetPath}");
 
         try
         {
@@ -87,7 +87,7 @@ public class WindowsDriverBackup : IDriverBackup
             if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
             {
                 Directory.CreateDirectory(targetDir);
-                _logger.Information("Created target directory: {TargetDir}", targetDir);
+                _logger.Information($"Created target directory: {targetDir}");
             }
 
             // Backup existing target file if it exists
@@ -95,7 +95,7 @@ public class WindowsDriverBackup : IDriverBackup
             {
                 var tempBackup = $"{targetPath}.old";
                 File.Move(targetPath, tempBackup, true);
-                _logger.Information("Moved existing file to temporary backup: {TempBackup}", tempBackup);
+                _logger.Information($"Moved existing file to temporary backup: {tempBackup}");
             }
 
             // Copy backup file to target location
@@ -120,7 +120,7 @@ public class WindowsDriverBackup : IDriverBackup
         string backupPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Deleting backup: {BackupPath}", backupPath);
+        _logger.Information($"Deleting backup: {backupPath}");
 
         return await Task.Run(() =>
         {
@@ -134,7 +134,7 @@ public class WindowsDriverBackup : IDriverBackup
                 }
                 else
                 {
-                    _logger.Warning("Backup file not found: {BackupPath}", backupPath);
+                    _logger.Warning($"Backup file not found: {backupPath}");
                     return false;
                 }
             }

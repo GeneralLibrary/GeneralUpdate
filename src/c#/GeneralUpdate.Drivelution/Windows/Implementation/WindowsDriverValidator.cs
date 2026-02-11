@@ -29,7 +29,7 @@ public class WindowsDriverValidator : IDriverValidator
         string hashAlgorithm = "SHA256",
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Validating file integrity: {FilePath}", filePath);
+        _logger.Information($"Validating file integrity: {filePath}");
 
         try
         {
@@ -62,7 +62,7 @@ public class WindowsDriverValidator : IDriverValidator
         IEnumerable<string> trustedPublishers,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Validating driver signature: {FilePath}", filePath);
+        _logger.Information($"Validating driver signature: {filePath}");
 
         try
         {
@@ -94,7 +94,7 @@ public class WindowsDriverValidator : IDriverValidator
         DriverInfo driverInfo,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Validating driver compatibility for: {DriverName}", driverInfo.Name);
+        _logger.Information($"Validating driver compatibility for: {driverInfo.Name}");
 
         try
         {
@@ -108,9 +108,8 @@ public class WindowsDriverValidator : IDriverValidator
             {
                 _logger.Warning("Driver compatibility validation failed");
                 var report = CompatibilityChecker.GetCompatibilityReport(driverInfo);
-                _logger.Warning("Compatibility report: Current OS={CurrentOS}, Target OS={TargetOS}, " +
-                              "Current Arch={CurrentArch}, Target Arch={TargetArch}",
-                              report.CurrentOS, report.TargetOS, report.CurrentArchitecture, report.TargetArchitecture);
+                _logger.Warning($"Compatibility report: Current OS={report.CurrentOS}, Target OS={report.TargetOS}, " +
+                              $"Current Arch={report.CurrentArchitecture}, Target Arch={report.TargetArchitecture}");
             }
 
             return isCompatible;

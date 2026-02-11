@@ -14,17 +14,17 @@ public interface IDrivelutionLogger
     /// <summary>
     /// Logs a debug message
     /// </summary>
-    void Debug(string message, params object[] args);
+    void Debug(string message, Exception? exception = null, params object[] args);
     
     /// <summary>
     /// Logs an information message
     /// </summary>
-    void Information(string message, params object[] args);
+    void Information(string message, Exception? exception = null, params object[] args);
     
     /// <summary>
     /// Logs a warning message
     /// </summary>
-    void Warning(string message, params object[] args);
+    void Warning(string message, Exception? exception = null, params object[] args);
     
     /// <summary>
     /// Logs an error message

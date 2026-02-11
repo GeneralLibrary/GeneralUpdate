@@ -9,21 +9,21 @@ public class DrivelutionLogger : IDrivelutionLogger
     public event EventHandler<LogEventArgs>? LogMessage;
     
     /// <inheritdoc />
-    public void Debug(string message, params object[] args)
+    public void Debug(string message, Exception? exception = null, params object[] args)
     {
-        RaiseLogEvent(LogLevel.Debug, message, null, args);
+        RaiseLogEvent(LogLevel.Debug, message, exception, args);
     }
     
     /// <inheritdoc />
-    public void Information(string message, params object[] args)
+    public void Information(string message, Exception? exception = null, params object[] args)
     {
-        RaiseLogEvent(LogLevel.Information, message, null, args);
+        RaiseLogEvent(LogLevel.Information, message, exception, args);
     }
     
     /// <inheritdoc />
-    public void Warning(string message, params object[] args)
+    public void Warning(string message, Exception? exception = null, params object[] args)
     {
-        RaiseLogEvent(LogLevel.Warning, message, null, args);
+        RaiseLogEvent(LogLevel.Warning, message, exception, args);
     }
     
     /// <inheritdoc />
@@ -42,6 +42,7 @@ public class DrivelutionLogger : IDrivelutionLogger
     {
         try
         {
+            // Format message if args provided
             var formattedMessage = args.Length > 0 ? string.Format(message, args) : message;
             
             var eventArgs = new LogEventArgs
