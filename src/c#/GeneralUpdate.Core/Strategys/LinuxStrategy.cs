@@ -21,7 +21,7 @@ public class LinuxStrategy : AbstractStrategy
         // Driver middleware (Linux-specific)
         if (_configinfo.DriveEnabled == true)
         {
-            context.Add("DriverOutPut", StorageManager.GetTempDirectory("DriverOutPut"));
+            context.Add("DriverDirectory", _configinfo.DriverDirectory);
             context.Add("FieldMappings", _configinfo.FieldMappings);
         }
         
@@ -30,10 +30,14 @@ public class LinuxStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
-        return new PipelineBuilder(context)
+        var builder = new PipelineBuilder(context)
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
             .UseMiddleware<HashMiddleware>();
+#if NET8_0_OR_GREATER
+        builder.UseMiddlewareIf<DrivelutionMiddleware>(_configinfo.DriveEnabled == true);
+#endif
+        return builder;
     }
 
     public override void Execute()

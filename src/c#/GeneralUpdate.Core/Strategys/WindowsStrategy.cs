@@ -23,7 +23,7 @@ namespace GeneralUpdate.Core.Strategys
             // Driver middleware (Windows-specific)
             if (_configinfo.DriveEnabled == true)
             {
-                context.Add("DriverOutPut", StorageManager.GetTempDirectory("DriverOutPut"));
+                context.Add("DriverDirectory", _configinfo.DriverDirectory);
                 context.Add("FieldMappings", _configinfo.FieldMappings);
             }
             
@@ -32,10 +32,14 @@ namespace GeneralUpdate.Core.Strategys
 
         protected override PipelineBuilder BuildPipeline(PipelineContext context)
         {
-            return new PipelineBuilder(context)
+            var builder = new PipelineBuilder(context)
                 .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                 .UseMiddleware<CompressMiddleware>()
                 .UseMiddleware<HashMiddleware>();
+#if NET8_0_OR_GREATER
+            builder.UseMiddlewareIf<DrivelutionMiddleware>(_configinfo.DriveEnabled == true);
+#endif
+            return builder;
         }
 
         protected override void OnExecuteComplete()
