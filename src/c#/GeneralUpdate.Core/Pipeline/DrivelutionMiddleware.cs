@@ -92,7 +92,7 @@ public class DrivelutionMiddleware : IMiddleware
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("Error in DrivelutionMiddleware", ex);
+            GeneralTracer.Error($"Error in DrivelutionMiddleware while processing directory '{context.Get<string>("DriverDirectory")}'", ex);
             throw;
         }
     }
