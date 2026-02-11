@@ -22,7 +22,7 @@
     <RepositoryType>public</RepositoryType>
     <PackageTags>upgrade,update</PackageTags>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
@@ -89,6 +89,9 @@
     <Compile Include="..\GeneralUpdate.Differential\Binary\IChecksum.cs" Link="Common\IChecksum.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <ProjectReference Include="..\GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\" />

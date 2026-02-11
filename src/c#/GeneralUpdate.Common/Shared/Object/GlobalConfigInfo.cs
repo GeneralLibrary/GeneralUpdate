@@ -101,6 +101,12 @@ public class GlobalConfigInfo : BaseConfigInfo
     public bool? DriveEnabled { get; set; }
 
     /// <summary>
+    /// Directory path containing driver files for update.
+    /// Used when DriveEnabled is true to locate driver files for installation.
+    /// </summary>
+    public string DriverDirectory { get; set; }
+
+    /// <summary>
     /// Indicates whether differential patch update is enabled.
     /// Computed from UpdateOption.Patch or defaults to true.
     /// </summary>

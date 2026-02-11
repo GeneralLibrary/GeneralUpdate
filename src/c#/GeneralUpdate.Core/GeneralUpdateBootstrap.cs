@@ -221,7 +221,8 @@ namespace GeneralUpdate.Core
                 Token = processInfo.Token,
                 DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
                 PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
-                Script = processInfo.Script
+                Script = processInfo.Script,
+                DriverDirectory = processInfo.DriverDirectory
             };
         }
 
