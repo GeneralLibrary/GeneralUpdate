@@ -12,10 +12,4 @@
     <TrimMode>full</TrimMode>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.3.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-  </ItemGroup>
-
 </Project>
