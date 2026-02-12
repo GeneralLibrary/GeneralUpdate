@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <!-- NuGet Package Metadata -->
-    <Version>9.5.10</Version>
+    <Version>10.2.1</Version>
     <Authors>JusterZhu</Authors>
     <Company>juster.zhu</Company>
     <Title>GeneralUpdate.Extension</Title>
