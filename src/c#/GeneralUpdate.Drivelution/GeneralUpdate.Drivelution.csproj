@@ -12,8 +12,11 @@
     <TrimMode>full</TrimMode>
   </PropertyGroup>
 
+  <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
   <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
   </ItemGroup>
 
 </Project>
