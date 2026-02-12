@@ -36,7 +36,7 @@ jobs:
             "GeneralUpdate.Drivelution",
             "GeneralUpdate.Extension"
           )
-          
+
           foreach ($project in $projects) {
             dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
