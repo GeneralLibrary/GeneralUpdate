@@ -18,7 +18,7 @@ jobs:
       - name: 安装.NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'  # 与现有CI配置保持一致
+          dotnet-version: '10.0.x'  # 支持GeneralUpdate.Drivelution的.NET 10目标框架
 
       - name: 恢复依赖
         run: dotnet restore ./src/c#/GeneralUpdate.sln  # 使用解决方案统一恢复
@@ -33,9 +33,11 @@ jobs:
             "GeneralUpdate.ClientCore",
             "GeneralUpdate.Common",
             "GeneralUpdate.Core",
-            "GeneralUpdate.Differential"
+            "GeneralUpdate.Differential",
+            "GeneralUpdate.Drivelution",
+            "GeneralUpdate.Extension"
           )
-          
+
           foreach ($project in $projects) {
             dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
