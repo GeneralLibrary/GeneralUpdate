@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Windows.Implementation;
 
@@ -12,11 +12,8 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsDriverBackup : IDriverBackup
 {
-    private readonly ILogger _logger;
-
-    public WindowsDriverBackup(ILogger logger)
+    public WindowsDriverBackup()
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -25,7 +22,7 @@ public class WindowsDriverBackup : IDriverBackup
         string backupPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Backing up driver from {SourcePath} to {BackupPath}", sourcePath, backupPath);
+        GeneralTracer.Info($"Backing up driver from {sourcePath} to {backupPath}");
 
         try
         {
@@ -39,7 +36,7 @@ public class WindowsDriverBackup : IDriverBackup
             if (!string.IsNullOrEmpty(backupDir) && !Directory.Exists(backupDir))
             {
                 Directory.CreateDirectory(backupDir);
-                _logger.Information("Created backup directory: {BackupDir}", backupDir);
+                GeneralTracer.Info($"Created backup directory: {backupDir}");
             }
 
             // Add timestamp to backup filename to avoid conflicts
@@ -57,12 +54,12 @@ public class WindowsDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Driver backup completed successfully: {BackupPath}", backupPathWithTimestamp);
+            GeneralTracer.Info($"Driver backup completed successfully: {backupPathWithTimestamp}");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to backup driver");
+            GeneralTracer.Error("Failed to backup driver", ex);
             throw new DriverBackupException($"Failed to backup driver: {ex.Message}", ex);
         }
     }
@@ -73,7 +70,7 @@ public class WindowsDriverBackup : IDriverBackup
         string targetPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Restoring driver from {BackupPath} to {TargetPath}", backupPath, targetPath);
+        GeneralTracer.Info($"Restoring driver from {backupPath} to {targetPath}");
 
         try
         {
@@ -87,7 +84,7 @@ public class WindowsDriverBackup : IDriverBackup
             if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
             {
                 Directory.CreateDirectory(targetDir);
-                _logger.Information("Created target directory: {TargetDir}", targetDir);
+                GeneralTracer.Info($"Created target directory: {targetDir}");
             }
 
             // Backup existing target file if it exists
@@ -95,7 +92,7 @@ public class WindowsDriverBackup : IDriverBackup
             {
                 var tempBackup = $"{targetPath}.old";
                 File.Move(targetPath, tempBackup, true);
-                _logger.Information("Moved existing file to temporary backup: {TempBackup}", tempBackup);
+                GeneralTracer.Info($"Moved existing file to temporary backup: {tempBackup}");
             }
 
             // Copy backup file to target location
@@ -105,12 +102,12 @@ public class WindowsDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Driver restore completed successfully");
+            GeneralTracer.Info("Driver restore completed successfully");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to restore driver");
+            GeneralTracer.Error("Failed to restore driver", ex);
             throw new DriverRollbackException($"Failed to restore driver: {ex.Message}", ex);
         }
     }
@@ -120,7 +117,7 @@ public class WindowsDriverBackup : IDriverBackup
         string backupPath,
         CancellationToken cancellationToken = default)
     {
-        _logger.Information("Deleting backup: {BackupPath}", backupPath);
+        GeneralTracer.Info($"Deleting backup: {backupPath}");
 
         return await Task.Run(() =>
         {
@@ -129,18 +126,18 @@ public class WindowsDriverBackup : IDriverBackup
                 if (File.Exists(backupPath))
                 {
                     File.Delete(backupPath);
-                    _logger.Information("Backup deleted successfully");
+                    GeneralTracer.Info("Backup deleted successfully");
                     return true;
                 }
                 else
                 {
-                    _logger.Warning("Backup file not found: {BackupPath}", backupPath);
+                    GeneralTracer.Warn($"Backup file not found: {backupPath}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to delete backup");
+                GeneralTracer.Error("Failed to delete backup", ex);
                 return false;
             }
         }, cancellationToken);

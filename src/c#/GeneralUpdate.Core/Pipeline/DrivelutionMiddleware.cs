@@ -1,7 +1,6 @@
-#if NET8_0_OR_GREATER
+#if NET10_0_OR_GREATER
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,8 +16,6 @@ namespace GeneralUpdate.Core.Pipeline;
 /// </summary>
 public class DrivelutionMiddleware : IMiddleware
 {
-    [RequiresUnreferencedCode("Driver update process includes signature validation that may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Driver update process includes signature validation that may require runtime code generation on some platforms")]
     public async Task InvokeAsync(PipelineContext context)
     {
         try

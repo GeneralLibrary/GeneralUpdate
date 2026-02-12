@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution.Linux.Implementation;
 
@@ -12,11 +12,8 @@ namespace GeneralUpdate.Drivelution.Linux.Implementation;
 [SupportedOSPlatform("linux")]
 public class LinuxDriverBackup : IDriverBackup
 {
-    private readonly ILogger _logger;
-
-    public LinuxDriverBackup(ILogger logger)
+    public LinuxDriverBackup()
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -51,12 +48,12 @@ public class LinuxDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Backup completed: {BackupPath}", backupPathWithTimestamp);
+            GeneralTracer.Info($"Backup completed: {backupPathWithTimestamp}");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to backup driver");
+            GeneralTracer.Error("Failed to backup driver", ex);
             throw new DriverBackupException($"Failed to backup driver: {ex.Message}", ex);
         }
     }
@@ -91,12 +88,12 @@ public class LinuxDriverBackup : IDriverBackup
                 await sourceStream.CopyToAsync(destinationStream, cancellationToken);
             }
 
-            _logger.Information("Restore completed");
+            GeneralTracer.Info("Restore completed");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to restore driver");
+            GeneralTracer.Error("Failed to restore driver", ex);
             throw new DriverRollbackException($"Failed to restore driver: {ex.Message}", ex);
         }
     }
@@ -119,7 +116,7 @@ public class LinuxDriverBackup : IDriverBackup
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to delete backup");
+                GeneralTracer.Error("Failed to delete backup", ex);
                 return false;
             }
         }, cancellationToken);

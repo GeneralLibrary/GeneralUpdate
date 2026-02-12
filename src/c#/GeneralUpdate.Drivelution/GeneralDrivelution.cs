@@ -1,9 +1,7 @@
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Models;
-using GeneralUpdate.Drivelution.Core.Logging;
 using GeneralUpdate.Drivelution.Core.Utilities;
-using Serilog;
 
 namespace GeneralUpdate.Drivelution;
 
@@ -18,7 +16,7 @@ namespace GeneralUpdate.Drivelution;
 /// var result = await updater.UpdateAsync(driverInfo, strategy);
 /// 
 /// // With configuration
-/// var options = new DrivelutionOptions { LogLevel = "Info" };
+/// var options = new DrivelutionOptions { };
 /// var updater = GeneralDrivelution.Create(options);
 /// var result = await updater.UpdateAsync(driverInfo, strategy);
 /// </code>
@@ -33,22 +31,7 @@ public static class GeneralDrivelution
     /// <exception cref="PlatformNotSupportedException">Thrown when platform is not supported</exception>
     public static IGeneralDrivelution Create(DrivelutionOptions? options = null)
     {
-        var logger = options != null 
-            ? LoggerConfigurator.ConfigureLogger(options) 
-            : LoggerConfigurator.CreateDefaultLogger();
-
-        return Core.DrivelutionFactory.Create(logger, options);
-    }
-
-    /// <summary>
-    /// Creates a driver updater instance (with custom logger)
-    /// </summary>
-    /// <param name="logger">Custom logger</param>
-    /// <param name="options">Configuration options (optional)</param>
-    /// <returns>Platform-adapted driver updater</returns>
-    public static IGeneralDrivelution Create(ILogger logger, DrivelutionOptions? options = null)
-    {
-        return Core.DrivelutionFactory.Create(logger, options);
+        return Core.DrivelutionFactory.Create(options);
     }
 
     /// <summary>

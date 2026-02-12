@@ -35,7 +35,7 @@ namespace GeneralUpdate.Core.Strategys
                 .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                 .UseMiddleware<CompressMiddleware>()
                 .UseMiddleware<HashMiddleware>();
-#if NET8_0_OR_GREATER
+#if NET10_0_OR_GREATER
             builder.UseMiddlewareIf<DrivelutionMiddleware>(_configinfo.DriveEnabled == true);
 #endif
             return builder;

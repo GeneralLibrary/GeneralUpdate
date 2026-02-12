@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 
 namespace GeneralUpdate.Drivelution.Abstractions;
@@ -28,12 +27,6 @@ public interface IDriverValidator
     /// <param name="trustedPublishers">信任的发布者列表 / Trusted publishers list</param>
     /// <param name="cancellationToken">取消令牌 / Cancellation token</param>
     /// <returns>验证是否通过 / Validation result</returns>
-    /// <remarks>
-    /// Note: On Windows, this may require reflection for X509Certificate validation.
-    /// Platform-specific implementations should add appropriate AOT compatibility attributes.
-    /// </remarks>
-    [RequiresUnreferencedCode("Signature validation may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Signature validation may require runtime code generation on some platforms")]
     Task<bool> ValidateSignatureAsync(string filePath, IEnumerable<string> trustedPublishers, CancellationToken cancellationToken = default);
 
     /// <summary>

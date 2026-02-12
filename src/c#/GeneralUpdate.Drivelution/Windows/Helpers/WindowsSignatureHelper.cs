@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography.X509Certificates;
-using System.Diagnostics.CodeAnalysis;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 
 namespace GeneralUpdate.Drivelution.Windows.Helpers;
@@ -20,8 +19,6 @@ public static class WindowsSignatureHelper
     /// <param name="filePath">文件路径 / File path</param>
     /// <param name="trustedPublishers">信任的发布者列表 / Trusted publishers list</param>
     /// <returns>是否验证通过 / Whether validation succeeded</returns>
-    [RequiresUnreferencedCode("X509Certificate validation may require runtime reflection")]
-    [RequiresDynamicCode("X509Certificate validation may require runtime code generation")]
     public static async Task<bool> ValidateAuthenticodeSignatureAsync(string filePath, IEnumerable<string> trustedPublishers)
     {
         return await Task.Run(() => ValidateAuthenticodeSignature(filePath, trustedPublishers));
@@ -34,8 +31,6 @@ public static class WindowsSignatureHelper
     /// <param name="filePath">文件路径 / File path</param>
     /// <param name="trustedPublishers">信任的发布者列表 / Trusted publishers list</param>
     /// <returns>是否验证通过 / Whether validation succeeded</returns>
-    [RequiresUnreferencedCode("X509Certificate validation may require runtime reflection")]
-    [RequiresDynamicCode("X509Certificate validation may require runtime code generation")]
     public static bool ValidateAuthenticodeSignature(string filePath, IEnumerable<string> trustedPublishers)
     {
         if (!File.Exists(filePath))
@@ -118,8 +113,6 @@ public static class WindowsSignatureHelper
     /// </summary>
     /// <param name="filePath">文件路径 / File path</param>
     /// <returns>是否已签名 / Whether signed</returns>
-    [RequiresUnreferencedCode("X509Certificate validation may require runtime reflection")]
-    [RequiresDynamicCode("X509Certificate validation may require runtime code generation")]
     public static bool IsFileSigned(string filePath)
     {
         if (!File.Exists(filePath))

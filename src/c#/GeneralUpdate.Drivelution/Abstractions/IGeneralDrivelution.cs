@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 
 namespace GeneralUpdate.Drivelution.Abstractions;
@@ -15,11 +14,6 @@ public interface IGeneralDrivelution
     /// <param name="strategy">Update strategy</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Update result</returns>
-    /// <remarks>
-    /// Note: Update process may include signature validation that requires reflection on some platforms.
-    /// </remarks>
-    [RequiresUnreferencedCode("Update process may include signature validation that requires runtime reflection on some platforms")]
-    [RequiresDynamicCode("Update process may include signature validation that requires runtime code generation on some platforms")]
     Task<UpdateResult> UpdateAsync(DriverInfo driverInfo, UpdateStrategy strategy, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -28,11 +22,6 @@ public interface IGeneralDrivelution
     /// <param name="driverInfo">Driver information</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Validation result</returns>
-    /// <remarks>
-    /// Note: Includes signature validation that may require reflection on some platforms.
-    /// </remarks>
-    [RequiresUnreferencedCode("Validation includes signature validation that may require runtime reflection on some platforms")]
-    [RequiresDynamicCode("Validation includes signature validation that may require runtime code generation on some platforms")]
     Task<bool> ValidateAsync(DriverInfo driverInfo, CancellationToken cancellationToken = default);
 
     /// <summary>

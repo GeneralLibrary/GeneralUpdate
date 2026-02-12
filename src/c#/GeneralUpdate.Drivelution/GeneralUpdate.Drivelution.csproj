@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!-- Enable AOT compilation support -->
@@ -12,10 +12,11 @@
     <TrimMode>full</TrimMode>
   </PropertyGroup>
 
+  <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.3.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
   </ItemGroup>
 
 </Project>

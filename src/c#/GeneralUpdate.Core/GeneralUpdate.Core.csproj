@@ -22,7 +22,10 @@
     <RepositoryType>public</RepositoryType>
     <PackageTags>upgrade,update</PackageTags>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\GeneralUpdate.Common\Compress\CompressProvider.cs" Link="Common\CompressProvider.cs" />
@@ -90,8 +93,39 @@
     <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <ProjectReference Include="..\GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj" />
+  <!-- Link Drivelution files for net10.0 target only -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Configuration\DriverUpdateOptions.cs" Link="Common\DriverUpdateOptions.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Events\DrivelutionLogger.cs" Link="Common\DrivelutionLogger.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Events\IDrivelutionLogger.cs" Link="Common\IDrivelutionLogger.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Events\LogEventArgs.cs" Link="Common\LogEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Exceptions\DriverUpdateExceptions.cs" Link="Common\DriverUpdateExceptions.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\IDriverBackup.cs" Link="Common\IDriverBackup.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\IDriverValidator.cs" Link="Common\IDriverValidator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\IGeneralDrivelution.cs" Link="Common\IGeneralDrivelution.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\INetworkDownloader.cs" Link="Common\INetworkDownloader.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\DriverInfo.cs" Link="Common\DriverInfo.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\ErrorInfo.cs" Link="Common\ErrorInfo.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\UpdateResult.cs" Link="Common\UpdateResult.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\UpdateStrategy.cs" Link="Common\UpdateStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\DriverUpdaterFactory.cs" Link="Common\DriverUpdaterFactory.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Logging\LoggerConfigurator.cs" Link="Common\LoggerConfigurator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\CompatibilityChecker.cs" Link="Common\CompatibilityChecker.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\HashValidator.cs" Link="Common\HashValidator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\RestartHelper.cs" Link="Common\RestartHelper.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\VersionComparer.cs" Link="Common\VersionComparer.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\GeneralDrivelution.cs" Link="Common\GeneralDrivelution.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Linux\Helpers\LinuxPermissionHelper.cs" Link="Common\LinuxPermissionHelper.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Linux\Helpers\LinuxSignatureHelper.cs" Link="Common\LinuxSignatureHelper.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Linux\Implementation\LinuxDriverBackup.cs" Link="Common\LinuxDriverBackup.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Linux\Implementation\LinuxDriverValidator.cs" Link="Common\LinuxDriverValidator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Linux\Implementation\LinuxGeneralDrivelution.cs" Link="Common\LinuxGeneralDrivelution.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\MacOS\Implementation\MacOsGeneralDrivelution.cs" Link="Common\MacOsGeneralDrivelution.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Windows\Helpers\WindowsPermissionHelper.cs" Link="Common\WindowsPermissionHelper.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Windows\Helpers\WindowsSignatureHelper.cs" Link="Common\WindowsSignatureHelper.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsDriverBackup.cs" Link="Common\WindowsDriverBackup.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsDriverValidator.cs" Link="Common\WindowsDriverValidator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsGeneralDrivelution.cs" Link="Common\WindowsGeneralDrivelution.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\" />

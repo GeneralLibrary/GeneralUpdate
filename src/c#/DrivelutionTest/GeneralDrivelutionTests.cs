@@ -1,7 +1,6 @@
 using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using Serilog;
 
 namespace DrivelutionTest;
 
@@ -33,54 +32,11 @@ public class GeneralDrivelutionTests
         // Arrange
         var options = new DrivelutionOptions
         {
-            LogLevel = "Information",
-            LogFilePath = "./logs/test.log"
+            DefaultBackupPath = "./backups"
         };
 
         // Act
         var updater = GeneralDrivelution.Create(options);
-
-        // Assert
-        Assert.NotNull(updater);
-    }
-
-    /// <summary>
-    /// Tests that Create method with custom logger returns a non-null instance.
-    /// </summary>
-    [Fact]
-    public void Create_WithCustomLogger_ReturnsNonNullInstance()
-    {
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        // Act
-        var updater = GeneralDrivelution.Create(logger);
-
-        // Assert
-        Assert.NotNull(updater);
-    }
-
-    /// <summary>
-    /// Tests that Create method with custom logger and options returns instance.
-    /// </summary>
-    [Fact]
-    public void Create_WithCustomLoggerAndOptions_ReturnsInstance()
-    {
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
-        var options = new DrivelutionOptions
-        {
-            LogLevel = "Debug"
-        };
-
-        // Act
-        var updater = GeneralDrivelution.Create(logger, options);
 
         // Assert
         Assert.NotNull(updater);

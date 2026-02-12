@@ -1,8 +1,6 @@
 using GeneralUpdate.Drivelution.Core;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
-using Serilog;
-using Serilog.Core;
 
 namespace DrivelutionTest.Core;
 
@@ -27,26 +25,6 @@ public class DrivelutionFactoryTests
     }
 
     /// <summary>
-    /// Tests that Create method accepts custom logger.
-    /// </summary>
-    [Fact]
-    public void Create_WithCustomLogger_ReturnsInstance()
-    {
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        // Act
-        var updater = DrivelutionFactory.Create(logger);
-
-        // Assert
-        Assert.NotNull(updater);
-        Assert.IsAssignableFrom<IGeneralDrivelution>(updater);
-    }
-
-    /// <summary>
     /// Tests that Create method accepts custom options.
     /// </summary>
     [Fact]
@@ -55,12 +33,11 @@ public class DrivelutionFactoryTests
         // Arrange
         var options = new DrivelutionOptions
         {
-            LogLevel = "Debug",
-            LogFilePath = "./logs/test.log"
+            DefaultBackupPath = "./backups"
         };
 
         // Act
-        var updater = DrivelutionFactory.Create(null, options);
+        var updater = DrivelutionFactory.Create(options);
 
         // Assert
         Assert.NotNull(updater);
@@ -98,7 +75,7 @@ public class DrivelutionFactoryTests
     /// Tests that CreateValidator returns a non-null instance.
     /// </summary>
     [Fact]
-    public void CreateValidator_WithoutLogger_ReturnsNonNullInstance()
+    public void CreateValidator_WithoutParameters_ReturnsNonNullInstance()
     {
         // Skip on MacOS and Unknown platforms
         var platform = DrivelutionFactory.GetCurrentPlatform();
@@ -119,7 +96,7 @@ public class DrivelutionFactoryTests
     /// Tests that CreateBackup returns a non-null instance.
     /// </summary>
     [Fact]
-    public void CreateBackup_WithoutLogger_ReturnsNonNullInstance()
+    public void CreateBackup_WithoutParameters_ReturnsNonNullInstance()
     {
         // Skip on MacOS and Unknown platforms
         var platform = DrivelutionFactory.GetCurrentPlatform();
@@ -134,58 +111,6 @@ public class DrivelutionFactoryTests
         // Assert
         Assert.NotNull(backup);
         Assert.IsAssignableFrom<IDriverBackup>(backup);
-    }
-
-    /// <summary>
-    /// Tests that CreateValidator with custom logger works correctly.
-    /// </summary>
-    [Fact]
-    public void CreateValidator_WithCustomLogger_ReturnsInstance()
-    {
-        // Skip on MacOS and Unknown platforms
-        var platform = DrivelutionFactory.GetCurrentPlatform();
-        if (platform == "MacOS" || platform == "Unknown")
-        {
-            return;
-        }
-
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        // Act
-        var validator = DrivelutionFactory.CreateValidator(logger);
-
-        // Assert
-        Assert.NotNull(validator);
-    }
-
-    /// <summary>
-    /// Tests that CreateBackup with custom logger works correctly.
-    /// </summary>
-    [Fact]
-    public void CreateBackup_WithCustomLogger_ReturnsInstance()
-    {
-        // Skip on MacOS and Unknown platforms
-        var platform = DrivelutionFactory.GetCurrentPlatform();
-        if (platform == "MacOS" || platform == "Unknown")
-        {
-            return;
-        }
-
-        // Arrange
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        // Act
-        var backup = DrivelutionFactory.CreateBackup(logger);
-
-        // Assert
-        Assert.NotNull(backup);
     }
 
     /// <summary>
