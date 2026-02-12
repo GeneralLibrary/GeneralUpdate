@@ -31,9 +31,10 @@ jobs:
           $projects = @(
             "GeneralUpdate.Bowl",
             "GeneralUpdate.ClientCore",
-            "GeneralUpdate.Common",
             "GeneralUpdate.Core",
-            "GeneralUpdate.Differential"
+            "GeneralUpdate.Differential",
+            "GeneralUpdate.Drivelution",
+            "GeneralUpdate.Extension"
           )
           
           foreach ($project in $projects) {
