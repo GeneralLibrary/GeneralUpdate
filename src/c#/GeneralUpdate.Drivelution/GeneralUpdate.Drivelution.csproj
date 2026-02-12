@@ -10,6 +10,21 @@
     <IsTrimmable>true</IsTrimmable>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimMode>full</TrimMode>
+    <!-- NuGet Package Metadata -->
+    <Version>9.5.10</Version>
+    <Authors>JusterZhu</Authors>
+    <Company>juster.zhu</Company>
+    <Title>GeneralUpdate.Drivelution</Title>
+    <Description>A cross-platform driver update management system with support for Windows, Linux, and macOS. Provides driver backup, validation, version comparison, and automatic rollback capabilities.</Description>
+    <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
+    <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
+    <PackageIcon>GeneralUpdate.png</PackageIcon>
+    <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
+    <RepositoryType>public</RepositoryType>
+    <PackageTags>driver,update,upgrade,backup,validation,cross-platform,linux,windows,macos</PackageTags>
+    <PackageReleaseNotes>Cross-platform driver update management with backup, validation, and rollback support for Windows, Linux, and macOS platforms.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
@@ -17,6 +32,15 @@
     <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
     <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
+  </ItemGroup>
+
+  <!-- Package Icon -->
+  <ItemGroup>
+    <None Include="../../../imgs/GeneralUpdate.png">
+      <Pack>True</Pack>
+      <Link>%(Filename)%(Extension)</Link>
+      <PackagePath>./</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
