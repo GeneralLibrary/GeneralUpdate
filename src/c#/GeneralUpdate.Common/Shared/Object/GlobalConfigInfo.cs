@@ -113,12 +113,6 @@ public class GlobalConfigInfo : BaseConfigInfo
     public bool? PatchEnabled { get; set; }
 
     /// <summary>
-    /// Dictionary for custom field name mappings.
-    /// Used for flexible configuration transformations in specific scenarios.
-    /// </summary>
-    public Dictionary<string, string> FieldMappings { get; set; }
-
-    /// <summary>
     /// Directory path where the current version files are backed up before update.
     /// Computed by combining InstallPath with a versioned directory name.
     /// </summary>

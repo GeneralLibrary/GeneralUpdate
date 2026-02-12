@@ -84,13 +84,7 @@ namespace GeneralUpdate.Core
             InitBlackList();
             return this;
         }
-
-        public GeneralUpdateBootstrap SetFieldMappings(Dictionary<string, string> fieldMappings)
-        {
-            _configInfo.FieldMappings = fieldMappings;
-            return this;
-        }
-
+        
         public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool>? func)
         {
             _customSkipOption = func;

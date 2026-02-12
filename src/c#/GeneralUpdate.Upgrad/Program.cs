@@ -50,8 +50,6 @@ namespace GeneralUpdate.Upgrad
                     //整个更新过程出现的任何问题都会通过这个事件通知
                     .AddListenerException(OnException)
                     .SetConfig(configinfo)
-                    //设置字段映射表，用于解析所有驱动包的信息的字符串
-                    //.SetFieldMappings(fieldMappingsCN)
                     //是否开启驱动更新
                     //.Option(UpdateOption.Drive, true)
                     //.Option(UpdateOption.Patch, false)
@@ -96,7 +94,6 @@ namespace GeneralUpdate.Upgrad
                 .SetDriverFileExtension(fileExtension)
                 .SetOutPutDirectory(outPutPath)
                 .SetDriverDirectory(driversPath)
-                .SetFieldMappings(fieldMappingsCN)
                 .Build();
 
             var processor = new DriverProcessor();
