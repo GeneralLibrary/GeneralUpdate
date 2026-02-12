@@ -49,26 +49,6 @@ namespace CoreTest.Bootstrap
         }
 
         /// <summary>
-        /// Tests that SetFieldMappings returns the bootstrap instance for chaining.
-        /// </summary>
-        [Fact]
-        public void SetFieldMappings_ReturnsBootstrapInstance()
-        {
-            // Arrange
-            var bootstrap = new GeneralUpdateBootstrap();
-            var fieldMappings = new Dictionary<string, string>
-            {
-                { "field1", "value1" }
-            };
-
-            // Act
-            var result = bootstrap.SetFieldMappings(fieldMappings);
-
-            // Assert
-            Assert.Same(bootstrap, result);
-        }
-
-        /// <summary>
         /// Tests that SetCustomSkipOption returns the bootstrap instance for chaining.
         /// </summary>
         [Fact]
@@ -199,7 +179,6 @@ namespace CoreTest.Bootstrap
                     UpdateUrl = "https://example.com/update",
                     ClientVersion = "1.0.0"
                 })
-                .SetFieldMappings(new Dictionary<string, string> { { "key", "value" } })
                 .SetCustomSkipOption(() => false)
                 .AddListenerException((sender, e) => { });
 
