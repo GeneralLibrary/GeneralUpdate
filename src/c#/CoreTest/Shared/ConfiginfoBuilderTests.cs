@@ -184,6 +184,11 @@ namespace CoreTest.Shared
                 // Linux-specific assertions
                 Assert.DoesNotContain(".exe", config.AppName);
             }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // macOS-specific assertions
+                Assert.DoesNotContain(".exe", config.AppName);
+            }
         }
 
         /// <summary>
@@ -591,6 +596,33 @@ namespace CoreTest.Shared
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
             // Linux should have a default permission script
+            Assert.NotEmpty(config.Script);
+            Assert.Contains("chmod", config.Script);
+        }
+
+        /// <summary>
+        /// Tests that macOS platform generates appropriate defaults.
+        /// </summary>
+        [Fact]
+        public void Build_OnMacOS_GeneratesMacOSDefaults()
+        {
+            // This test will only verify behavior on macOS
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return; // Skip on non-macOS platforms
+            }
+
+            // Arrange
+            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+
+            // Act
+            var config = builder.Build();
+
+            // Assert
+            Assert.DoesNotContain(".exe", config.AppName);
+            // Should use the current application's base directory
+            Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
+            // macOS should have a default permission script
             Assert.NotEmpty(config.Script);
             Assert.Contains("chmod", config.Script);
         }

@@ -98,9 +98,13 @@ namespace GeneralUpdate.Common.Shared.Object
             {
                 InitializeLinuxDefaults();
             }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                InitializeMacOSDefaults();
+            }
             else
             {
-                // Fallback to Linux-style defaults for other platforms
+                // Fallback to Linux-style defaults for other Unix-like platforms
                 InitializeLinuxDefaults();
             }
             
@@ -143,6 +147,26 @@ namespace GeneralUpdate.Common.Shared.Object
             _mainAppName = "app";
             
             // Default shell script for granting file permissions on Linux
+            _script = @"#!/bin/bash
+chmod +x ""$1""
+";
+        }
+
+        /// <summary>
+        /// Initializes default values specific to macOS platform.
+        /// </summary>
+        private void InitializeMacOSDefaults()
+        {
+            // Use the current application's base directory (no admin privileges required)
+            // This extracts the path from the host program's runtime location
+            _installPath = AppDomain.CurrentDomain.BaseDirectory;
+            
+            // macOS uses forward slash as path separator (handled automatically by Path.Combine)
+            // macOS executables typically don't have .exe extension (similar to Linux)
+            _appName = "app";
+            _mainAppName = "app";
+            
+            // Default shell script for granting file permissions on macOS
             _script = @"#!/bin/bash
 chmod +x ""$1""
 ";

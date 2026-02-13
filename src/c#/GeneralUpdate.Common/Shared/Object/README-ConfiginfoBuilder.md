@@ -33,18 +33,18 @@ var config2 = ConfiginfoBuilder
 ✅ **Smart Defaults**: Platform-appropriate paths, separators, and configurations  
 ✅ **Fluent API**: Clean, readable method chaining  
 ✅ **Type-Safe**: Compile-time parameter validation  
-✅ **Well-Tested**: 32 comprehensive unit tests
+✅ **Well-Tested**: 34 comprehensive unit tests
 
 ## Platform Detection
 
 The builder automatically adapts based on your runtime environment:
 
-| Aspect | Windows | Linux |
-|--------|---------|-------|
-| Install Path | Current app directory | Current app directory |
-| App Names | `App.exe` | `app` |
-| Script | Empty | chmod script |
-| Path Separator | `\` (automatic) | `/` (automatic) |
+| Aspect | Windows | Linux | macOS |
+|--------|---------|-------|-------|
+| Install Path | Current app directory | Current app directory | Current app directory |
+| App Names | `App.exe` | `app` | `app` |
+| Script | Empty | chmod script | chmod script |
+| Path Separator | `\` (automatic) | `/` (automatic) | `/` (automatic) |
 
 ## Documentation
 

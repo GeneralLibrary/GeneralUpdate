@@ -46,6 +46,13 @@ The builder automatically detects the runtime platform and sets appropriate defa
 - **Path Separator**: Forward slash (`/`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
+### macOS Platform
+- **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
+- **App Names**: No `.exe` extension (e.g., `app`)
+- **Script**: Default chmod script for granting execution permissions
+- **Path Separator**: Forward slash (`/`) - handled automatically by .NET
+- **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
+
 **Note**: The install path defaults to the current application's running directory, which does not require administrator privileges and automatically extracts the location from the host program.
 
 ## Customizing Configuration
