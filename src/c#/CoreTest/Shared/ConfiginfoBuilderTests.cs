@@ -32,6 +32,37 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
+        /// Tests that the Create factory method properly initializes with valid parameters.
+        /// </summary>
+        [Fact]
+        public void Create_WithValidParameters_CreatesInstance()
+        {
+            // Act
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+
+            // Assert
+            Assert.NotNull(builder);
+        }
+
+        /// <summary>
+        /// Tests that Create factory method produces same result as constructor.
+        /// </summary>
+        [Fact]
+        public void Create_ProducesSameResultAsConstructor()
+        {
+            // Act
+            var config1 = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme).Build();
+            var config2 = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+
+            // Assert
+            Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
+            Assert.Equal(config1.Token, config2.Token);
+            Assert.Equal(config1.Scheme, config2.Scheme);
+            Assert.Equal(config1.InstallPath, config2.InstallPath);
+            Assert.Equal(config1.AppName, config2.AppName);
+        }
+
+        /// <summary>
         /// Tests that the constructor throws ArgumentException when UpdateUrl is null.
         /// </summary>
         [Fact]

@@ -2,6 +2,8 @@
 
 The `ConfiginfoBuilder` class provides a simple and convenient way to create `Configinfo` objects for the GeneralUpdate system. It only requires three essential parameters while automatically generating platform-appropriate defaults for all other configuration items.
 
+**Design Philosophy**: Inspired by zero-configuration patterns from projects like [Velopack](https://github.com/velopack/velopack), this builder minimizes required configuration while maintaining flexibility through optional fluent setters.
+
 ## Basic Usage
 
 ### Minimal Configuration
@@ -11,12 +13,17 @@ The simplest way to create a `Configinfo` object is to provide just the three re
 ```csharp
 using GeneralUpdate.Common.Shared.Object;
 
-// Create a builder with required parameters only
+// Method 1: Direct constructor (traditional)
 var config = new ConfiginfoBuilder(
     updateUrl: "https://api.example.com/updates",
     token: "your-auth-token",
     scheme: "https"
 ).Build();
+
+// Method 2: Factory method (recommended, more fluent)
+var config2 = ConfiginfoBuilder
+    .Create("https://api.example.com/updates", "your-auth-token", "https")
+    .Build();
 
 // The config object now has all necessary defaults set based on the platform
 ```

@@ -9,6 +9,7 @@ namespace GeneralUpdate.Common.Shared.Object
     /// Universal ConfigInfo builder class that simplifies creation of update configurations.
     /// Only requires three essential parameters (UpdateUrl, Token, Scheme) while automatically
     /// generating platform-appropriate defaults for all other configuration items.
+    /// Inspired by zero-configuration design patterns from projects like Velopack.
     /// </summary>
     public class ConfiginfoBuilder
     {
@@ -39,7 +40,23 @@ namespace GeneralUpdate.Common.Shared.Object
         private List<string> _skipDirectorys;
 
         /// <summary>
+        /// Creates a new ConfiginfoBuilder instance using the specified update URL, authentication token, and scheme.
+        /// This is the primary factory method for creating a builder with zero-configuration defaults.
+        /// All other configuration properties will be automatically initialized with platform-appropriate defaults.
+        /// </summary>
+        /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
+        /// <param name="token">The authentication token used for API requests.</param>
+        /// <param name="scheme">The URL scheme used for update requests (e.g., "http" or "https").</param>
+        /// <returns>A new ConfiginfoBuilder instance with all defaults initialized.</returns>
+        /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
+        public static ConfiginfoBuilder Create(string updateUrl, string token, string scheme)
+        {
+            return new ConfiginfoBuilder(updateUrl, token, scheme);
+        }
+
+        /// <summary>
         /// Initializes a new instance of the ConfiginfoBuilder with required parameters.
+        /// Consider using <see cref="Create(string, string, string)"/> for a more fluent API.
         /// </summary>
         /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
         /// <param name="token">The authentication token used for API requests.</param>

@@ -14,12 +14,10 @@ namespace ConfiginfoBuilderExample
             Console.WriteLine("=== ConfiginfoBuilder Usage Examples ===\n");
 
             // Example 1: Minimal configuration (recommended for most cases)
-            Console.WriteLine("Example 1: Minimal Configuration");
-            var minimalConfig = new ConfiginfoBuilder(
-                updateUrl: "https://api.example.com/updates",
-                token: "your-auth-token",
-                scheme: "https"
-            ).Build();
+            Console.WriteLine("Example 1: Minimal Configuration - Using Factory Method");
+            var minimalConfig = ConfiginfoBuilder
+                .Create("https://api.example.com/updates", "your-auth-token", "https")
+                .Build();
             
             Console.WriteLine($"  UpdateUrl: {minimalConfig.UpdateUrl}");
             Console.WriteLine($"  Token: {minimalConfig.Token}");
@@ -30,7 +28,7 @@ namespace ConfiginfoBuilderExample
             Console.WriteLine();
 
             // Example 2: Custom configuration with method chaining
-            Console.WriteLine("Example 2: Custom Configuration");
+            Console.WriteLine("Example 2: Custom Configuration - Using Constructor");
             var customConfig = new ConfiginfoBuilder(
                 "https://api.example.com/updates",
                 "Bearer abc123xyz",
