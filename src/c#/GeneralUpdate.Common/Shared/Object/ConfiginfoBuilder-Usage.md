@@ -30,12 +30,14 @@ The builder automatically detects the runtime platform and sets appropriate defa
 - **App Names**: Uses `.exe` extension (e.g., `App.exe`)
 - **Script**: Empty (Windows doesn't typically need permission scripts)
 - **Path Separator**: Backslash (`\`) - handled automatically by .NET
+- **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
 ### Linux Platform
 - **Install Path**: `~/.config/GeneralUpdate`
 - **App Names**: No `.exe` extension (e.g., `app`)
 - **Script**: Default chmod script for granting execution permissions
 - **Path Separator**: Forward slash (`/`) - handled automatically by .NET
+- **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
 ## Customizing Configuration
 
@@ -69,10 +71,17 @@ var config = new ConfiginfoBuilder(updateUrl, token, scheme)
 
 ### Configuring File Filters
 
+You can customize which files should be excluded from updates. By default, `.log` and `.tmp` files are excluded:
+
 ```csharp
-var config = new ConfiginfoBuilder(updateUrl, token, scheme)
+// Use default black formats
+var config1 = new ConfiginfoBuilder(updateUrl, token, scheme).Build();
+// config1.BlackFormats will contain ConfiginfoBuilder.DefaultBlackFormats (.log, .tmp)
+
+// Override with custom filters
+var config2 = new ConfiginfoBuilder(updateUrl, token, scheme)
     .SetBlackFiles(new List<string> { "config.json", "user.dat" })
-    .SetBlackFormats(new List<string> { ".log", ".tmp", ".cache" })
+    .SetBlackFormats(new List<string> { ".log", ".tmp", ".cache", ".bak" })
     .SetSkipDirectorys(new List<string> { "/temp", "/logs" })
     .Build();
 ```
