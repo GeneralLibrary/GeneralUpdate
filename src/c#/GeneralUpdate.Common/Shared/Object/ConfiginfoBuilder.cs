@@ -98,9 +98,9 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         private void InitializeWindowsDefaults()
         {
-            // Use APPDATA for configuration storage on Windows
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _installPath = Path.Combine(appDataPath, "GeneralUpdate");
+            // Use the current application's base directory (no admin privileges required)
+            // This extracts the path from the host program's runtime location
+            _installPath = AppDomain.CurrentDomain.BaseDirectory;
             
             // Windows uses backslash as path separator (handled automatically by Path.Combine)
             // Set Windows-specific executable names
@@ -116,10 +116,9 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         private void InitializeLinuxDefaults()
         {
-            // Use ~/.config for configuration storage on Linux (XDG Base Directory Specification)
-            var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var configPath = Path.Combine(homeDirectory, ".config");
-            _installPath = Path.Combine(configPath, "GeneralUpdate");
+            // Use the current application's base directory (no admin privileges required)
+            // This extracts the path from the host program's runtime location
+            _installPath = AppDomain.CurrentDomain.BaseDirectory;
             
             // Linux uses forward slash as path separator (handled automatically by Path.Combine)
             // Linux executables typically don't have .exe extension

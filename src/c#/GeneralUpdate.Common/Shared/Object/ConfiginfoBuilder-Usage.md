@@ -26,18 +26,20 @@ var config = new ConfiginfoBuilder(
 The builder automatically detects the runtime platform and sets appropriate defaults:
 
 ### Windows Platform
-- **Install Path**: `%APPDATA%\GeneralUpdate`
+- **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
 - **App Names**: Uses `.exe` extension (e.g., `App.exe`)
 - **Script**: Empty (Windows doesn't typically need permission scripts)
 - **Path Separator**: Backslash (`\`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
 ### Linux Platform
-- **Install Path**: `~/.config/GeneralUpdate`
+- **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
 - **App Names**: No `.exe` extension (e.g., `app`)
 - **Script**: Default chmod script for granting execution permissions
 - **Path Separator**: Forward slash (`/`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
+
+**Note**: The install path defaults to the current application's running directory, which does not require administrator privileges and automatically extracts the location from the host program.
 
 ## Customizing Configuration
 
@@ -252,12 +254,12 @@ var config = new ConfiginfoBuilder(updateUrl, token, scheme).Build();
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
     Console.WriteLine($"Windows config: {config.InstallPath}");
-    // Output: Windows config: C:\Users\Username\AppData\Roaming\GeneralUpdate
+    // Output: Windows config: C:\MyApp\ (current application directory)
 }
 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 {
     Console.WriteLine($"Linux config: {config.InstallPath}");
-    // Output: Linux config: /home/username/.config/GeneralUpdate
+    // Output: Linux config: /opt/myapp/ (current application directory)
 }
 ```
 

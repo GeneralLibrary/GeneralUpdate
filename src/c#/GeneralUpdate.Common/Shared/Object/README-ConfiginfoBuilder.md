@@ -34,7 +34,7 @@ The builder automatically adapts based on your runtime environment:
 
 | Aspect | Windows | Linux |
 |--------|---------|-------|
-| Install Path | `%APPDATA%\GeneralUpdate` | `~/.config/GeneralUpdate` |
+| Install Path | Current app directory | Current app directory |
 | App Names | `App.exe` | `app` |
 | Script | Empty | chmod script |
 | Path Separator | `\` (automatic) | `/` (automatic) |

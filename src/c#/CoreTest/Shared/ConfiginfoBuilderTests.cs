@@ -140,18 +140,18 @@ namespace CoreTest.Shared
             // Assert
             Assert.NotNull(config.InstallPath);
             
+            // InstallPath should be the current application's base directory
+            Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
+            
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Windows-specific assertions
                 Assert.Contains("App.exe", config.AppName);
-                Assert.Contains("GeneralUpdate", config.InstallPath);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 // Linux-specific assertions
                 Assert.DoesNotContain(".exe", config.AppName);
-                Assert.Contains(".config", config.InstallPath);
-                Assert.Contains("GeneralUpdate", config.InstallPath);
             }
         }
 
@@ -531,7 +531,8 @@ namespace CoreTest.Shared
 
             // Assert
             Assert.Contains("App.exe", config.AppName);
-            Assert.Contains("GeneralUpdate", config.InstallPath);
+            // Should use the current application's base directory
+            Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
             // Windows script should be empty
             Assert.Empty(config.Script);
         }
@@ -556,8 +557,8 @@ namespace CoreTest.Shared
 
             // Assert
             Assert.DoesNotContain(".exe", config.AppName);
-            Assert.Contains(".config", config.InstallPath);
-            Assert.Contains("GeneralUpdate", config.InstallPath);
+            // Should use the current application's base directory
+            Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
             // Linux should have a default permission script
             Assert.NotEmpty(config.Script);
             Assert.Contains("chmod", config.Script);
