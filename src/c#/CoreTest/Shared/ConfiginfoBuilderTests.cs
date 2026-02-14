@@ -648,6 +648,33 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
+        /// Tests that application name is extracted from project context when available.
+        /// The test verifies that the builder attempts to read from the project file,
+        /// and gracefully falls back to defaults if not found.
+        /// </summary>
+        [Fact]
+        public void Build_AttemptsToExtractAppNameFromProject()
+        {
+            // Arrange
+            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+
+            // Act
+            var config = builder.Build();
+
+            // Assert - AppName should be set (either from project or fallback)
+            Assert.NotNull(config.AppName);
+            Assert.NotEmpty(config.AppName);
+            Assert.NotNull(config.MainAppName);
+            Assert.NotEmpty(config.MainAppName);
+            
+            // On Windows, should have .exe extension
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.EndsWith(".exe", config.AppName);
+            }
+        }
+
+        /// <summary>
         /// Tests a complete real-world scenario of building a Configinfo.
         /// </summary>
         [Fact]

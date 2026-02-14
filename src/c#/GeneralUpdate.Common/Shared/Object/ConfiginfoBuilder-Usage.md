@@ -4,6 +4,31 @@ The `ConfiginfoBuilder` class provides a simple and convenient way to create `Co
 
 **Design Philosophy**: Inspired by zero-configuration patterns from projects like [Velopack](https://github.com/velopack/velopack), this builder minimizes required configuration while maintaining flexibility through optional fluent setters.
 
+## Automatic Configuration Detection
+
+The ConfiginfoBuilder implements intelligent zero-configuration by automatically extracting information from your project:
+
+### Application Name Auto-Detection
+
+The builder automatically attempts to read the application name from your project file (`.csproj`):
+
+1. **Searches** for csproj files in the application's directory and up to 3 parent directories
+2. **Extracts** the `<AssemblyName>` property if specified
+3. **Falls back** to the csproj file name if `AssemblyName` is not defined
+4. **Applies** platform-specific extensions (`.exe` on Windows, none on Linux/macOS)
+
+**Example:**
+```xml
+<!-- MyApp.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>MyApplication</AssemblyName>
+  </PropertyGroup>
+</Project>
+```
+
+When the builder runs, it will automatically use `MyApplication.exe` on Windows or `MyApplication` on Linux/macOS, without any manual configuration needed!
+
 ## Basic Usage
 
 ### Minimal Configuration
@@ -26,6 +51,7 @@ var config2 = ConfiginfoBuilder
     .Build();
 
 // The config object now has all necessary defaults set based on the platform
+// Application name is automatically detected from your project file!
 ```
 
 ## Platform-Specific Defaults
@@ -34,21 +60,21 @@ The builder automatically detects the runtime platform and sets appropriate defa
 
 ### Windows Platform
 - **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
-- **App Names**: Uses `.exe` extension (e.g., `App.exe`)
+- **App Names**: Auto-detected from csproj + `.exe` extension (e.g., `MyApp.exe`)
 - **Script**: Empty (Windows doesn't typically need permission scripts)
 - **Path Separator**: Backslash (`\`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
 ### Linux Platform
 - **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
-- **App Names**: No `.exe` extension (e.g., `app`)
+- **App Names**: Auto-detected from csproj, no `.exe` extension (e.g., `myapp`)
 - **Script**: Default chmod script for granting execution permissions
 - **Path Separator**: Forward slash (`/`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)
 
 ### macOS Platform
 - **Install Path**: Current application's base directory (via `AppDomain.CurrentDomain.BaseDirectory`)
-- **App Names**: No `.exe` extension (e.g., `app`)
+- **App Names**: Auto-detected from csproj, no `.exe` extension (e.g., `myapp`)
 - **Script**: Default chmod script for granting execution permissions
 - **Path Separator**: Forward slash (`/`) - handled automatically by .NET
 - **Black Formats**: `.log`, `.tmp` (from `ConfiginfoBuilder.DefaultBlackFormats`)

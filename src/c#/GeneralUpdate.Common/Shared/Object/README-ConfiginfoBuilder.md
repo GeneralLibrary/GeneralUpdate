@@ -6,6 +6,12 @@ The `ConfiginfoBuilder` class provides a simple, fluent API for creating `Config
 
 **Design Inspiration**: The zero-configuration approach is inspired by projects like [Velopack](https://github.com/velopack/velopack), focusing on sensible defaults extracted from the running application with minimal user input required.
 
+## Auto-Configuration Features
+
+🔍 **Application Name Detection**: Automatically reads from your `.csproj` file  
+📂 **Path Extraction**: Uses host program's base directory  
+🖥️ **Platform Detection**: Adapts to Windows, Linux, and macOS  
+
 ## Quick Start
 
 ```csharp
@@ -23,17 +29,18 @@ var config2 = ConfiginfoBuilder
     .Create("https://api.example.com/updates", "your-auth-token", "https")
     .Build();
 
-// That's it! All defaults are set automatically based on your platform.
+// That's it! Application name and all defaults are set automatically!
 ```
 
 ## Key Features
 
 ✅ **Minimal Parameters**: Only 3 required parameters (UpdateUrl, Token, Scheme)  
-✅ **Cross-Platform**: Automatically detects and adapts to Windows/Linux  
+✅ **Cross-Platform**: Automatically detects and adapts to Windows/Linux/macOS  
 ✅ **Smart Defaults**: Platform-appropriate paths, separators, and configurations  
+✅ **Auto-Discovery**: Reads application name from project file (.csproj)  
 ✅ **Fluent API**: Clean, readable method chaining  
 ✅ **Type-Safe**: Compile-time parameter validation  
-✅ **Well-Tested**: 34 comprehensive unit tests
+✅ **Well-Tested**: 36 comprehensive unit tests
 
 ## Platform Detection
 
@@ -42,7 +49,7 @@ The builder automatically adapts based on your runtime environment:
 | Aspect | Windows | Linux | macOS |
 |--------|---------|-------|-------|
 | Install Path | Current app directory | Current app directory | Current app directory |
-| App Names | `App.exe` | `app` | `app` |
+| App Names | Auto from csproj + `.exe` | Auto from csproj | Auto from csproj |
 | Script | Empty | chmod script | chmod script |
 | Path Separator | `\` (automatic) | `/` (automatic) | `/` (automatic) |
 

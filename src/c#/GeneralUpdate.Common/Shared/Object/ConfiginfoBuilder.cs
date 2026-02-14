@@ -90,22 +90,25 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         private void InitializePlatformDefaults()
         {
+            // Try to extract application name from project file
+            string detectedAppName = TryExtractApplicationNameFromProject();
+            
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                InitializeWindowsDefaults();
+                InitializeWindowsDefaults(detectedAppName);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                InitializeLinuxDefaults();
+                InitializeLinuxDefaults(detectedAppName);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                InitializeMacOSDefaults();
+                InitializeMacOSDefaults(detectedAppName);
             }
             else
             {
                 // Fallback to Linux-style defaults for other Unix-like platforms
-                InitializeLinuxDefaults();
+                InitializeLinuxDefaults(detectedAppName);
             }
             
             // Initialize common defaults
@@ -115,18 +118,95 @@ namespace GeneralUpdate.Common.Shared.Object
         }
 
         /// <summary>
+        /// Attempts to extract the application name from the project file (csproj).
+        /// This implements zero-configuration by reading from the host program's project metadata.
+        /// </summary>
+        /// <returns>The extracted application name, or null if not found.</returns>
+        private string TryExtractApplicationNameFromProject()
+        {
+            try
+            {
+                // Start from the application's base directory
+                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string currentDirectory = baseDirectory;
+                
+                // Search up to 3 levels up for a csproj file
+                for (int i = 0; i < 3; i++)
+                {
+                    if (string.IsNullOrEmpty(currentDirectory))
+                        break;
+                    
+                    // Look for csproj files in the current directory
+                    string[] csprojFiles = Directory.GetFiles(currentDirectory, "*.csproj", SearchOption.TopDirectoryOnly);
+                    
+                    if (csprojFiles.Length > 0)
+                    {
+                        // Use the first csproj file found
+                        string csprojPath = csprojFiles[0];
+                        return ExtractAssemblyNameFromCsproj(csprojPath);
+                    }
+                    
+                    // Move up one directory
+                    DirectoryInfo parentDir = Directory.GetParent(currentDirectory);
+                    currentDirectory = parentDir?.FullName;
+                }
+            }
+            catch
+            {
+                // If extraction fails for any reason, return null to use fallback defaults
+            }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Extracts the AssemblyName from a csproj file, or uses the file name if AssemblyName is not specified.
+        /// </summary>
+        /// <param name="csprojPath">Path to the csproj file.</param>
+        /// <returns>The assembly name without extension.</returns>
+        private string ExtractAssemblyNameFromCsproj(string csprojPath)
+        {
+            try
+            {
+                string content = File.ReadAllText(csprojPath);
+                
+                // Try to extract <AssemblyName> from the csproj file
+                int assemblyNameStart = content.IndexOf("<AssemblyName>", StringComparison.OrdinalIgnoreCase);
+                if (assemblyNameStart >= 0)
+                {
+                    assemblyNameStart += "<AssemblyName>".Length;
+                    int assemblyNameEnd = content.IndexOf("</AssemblyName>", assemblyNameStart, StringComparison.OrdinalIgnoreCase);
+                    if (assemblyNameEnd > assemblyNameStart)
+                    {
+                        return content.Substring(assemblyNameStart, assemblyNameEnd - assemblyNameStart).Trim();
+                    }
+                }
+                
+                // If AssemblyName is not specified, use the csproj file name (without extension)
+                return Path.GetFileNameWithoutExtension(csprojPath);
+            }
+            catch
+            {
+                // If parsing fails, use the file name as fallback
+                return Path.GetFileNameWithoutExtension(csprojPath);
+            }
+        }
+
+        /// <summary>
         /// Initializes default values specific to Windows platform.
         /// </summary>
-        private void InitializeWindowsDefaults()
+        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
+        private void InitializeWindowsDefaults(string detectedAppName)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
             _installPath = AppDomain.CurrentDomain.BaseDirectory;
             
             // Windows uses backslash as path separator (handled automatically by Path.Combine)
-            // Set Windows-specific executable names
-            _appName = "App.exe";
-            _mainAppName = "App.exe";
+            // Set Windows-specific executable names - prefer detected name from project file
+            string appNameBase = detectedAppName ?? "App";
+            _appName = appNameBase + ".exe";
+            _mainAppName = appNameBase + ".exe";
             
             // Windows typically doesn't need shell scripts for permissions
             _script = string.Empty;
@@ -135,16 +215,18 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Initializes default values specific to Linux platform.
         /// </summary>
-        private void InitializeLinuxDefaults()
+        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
+        private void InitializeLinuxDefaults(string detectedAppName)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
             _installPath = AppDomain.CurrentDomain.BaseDirectory;
             
             // Linux uses forward slash as path separator (handled automatically by Path.Combine)
-            // Linux executables typically don't have .exe extension
-            _appName = "app";
-            _mainAppName = "app";
+            // Linux executables typically don't have .exe extension - prefer detected name from project file
+            string appNameBase = detectedAppName ?? "app";
+            _appName = appNameBase;
+            _mainAppName = appNameBase;
             
             // Default shell script for granting file permissions on Linux
             _script = @"#!/bin/bash
@@ -155,16 +237,18 @@ chmod +x ""$1""
         /// <summary>
         /// Initializes default values specific to macOS platform.
         /// </summary>
-        private void InitializeMacOSDefaults()
+        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
+        private void InitializeMacOSDefaults(string detectedAppName)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
             _installPath = AppDomain.CurrentDomain.BaseDirectory;
             
             // macOS uses forward slash as path separator (handled automatically by Path.Combine)
-            // macOS executables typically don't have .exe extension (similar to Linux)
-            _appName = "app";
-            _mainAppName = "app";
+            // macOS executables typically don't have .exe extension (similar to Linux) - prefer detected name from project file
+            string appNameBase = detectedAppName ?? "app";
+            _appName = appNameBase;
+            _mainAppName = appNameBase;
             
             // Default shell script for granting file permissions on macOS
             _script = @"#!/bin/bash
