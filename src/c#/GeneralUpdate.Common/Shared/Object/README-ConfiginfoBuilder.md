@@ -8,7 +8,9 @@ The `ConfiginfoBuilder` class provides a simple, fluent API for creating `Config
 
 ## Auto-Configuration Features
 
-🔍 **Application Name Detection**: Automatically reads from your `.csproj` file  
+🔍 **Application Name Detection**: Automatically reads `<AssemblyName>` from `.csproj`  
+📊 **Version Extraction**: Reads `<Version>` field for `ClientVersion`  
+🏢 **Publisher Info**: Extracts `<Company>` or `<Authors>` for `ProductId`  
 📂 **Path Extraction**: Uses host program's base directory  
 🖥️ **Platform Detection**: Adapts to Windows, Linux, and macOS  
 
@@ -29,7 +31,7 @@ var config2 = ConfiginfoBuilder
     .Create("https://api.example.com/updates", "your-auth-token", "https")
     .Build();
 
-// That's it! Application name and all defaults are set automatically!
+// That's it! Application name, version, and all defaults are set automatically!
 ```
 
 ## Key Features
@@ -37,10 +39,10 @@ var config2 = ConfiginfoBuilder
 ✅ **Minimal Parameters**: Only 3 required parameters (UpdateUrl, Token, Scheme)  
 ✅ **Cross-Platform**: Automatically detects and adapts to Windows/Linux/macOS  
 ✅ **Smart Defaults**: Platform-appropriate paths, separators, and configurations  
-✅ **Auto-Discovery**: Reads application name from project file (.csproj)  
+✅ **Auto-Discovery**: Reads application name, version, and publisher from project file (.csproj)  
 ✅ **Fluent API**: Clean, readable method chaining  
 ✅ **Type-Safe**: Compile-time parameter validation  
-✅ **Well-Tested**: 36 comprehensive unit tests
+✅ **Well-Tested**: 37 comprehensive unit tests
 
 ## Platform Detection
 

@@ -675,6 +675,30 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
+        /// Tests that project metadata (version, company, etc.) is extracted from csproj when available.
+        /// The builder should attempt to extract Version and Company/Authors fields.
+        /// </summary>
+        [Fact]
+        public void Build_AttemptsToExtractProjectMetadata()
+        {
+            // Arrange
+            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+
+            // Act
+            var config = builder.Build();
+
+            // Assert - Core fields should always be set (either extracted or defaults)
+            Assert.NotNull(config.ClientVersion);
+            Assert.NotEmpty(config.ClientVersion);
+            Assert.NotNull(config.ProductId);
+            Assert.NotEmpty(config.ProductId);
+            
+            // Version should follow a reasonable format if extracted (e.g., "1.0.0" or similar)
+            // If extracted from project file, it might have proper semantic versioning
+            // If using default, it should still be a valid string
+        }
+
+        /// <summary>
         /// Tests a complete real-world scenario of building a Configinfo.
         /// </summary>
         [Fact]

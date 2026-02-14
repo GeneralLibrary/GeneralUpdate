@@ -90,25 +90,25 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         private void InitializePlatformDefaults()
         {
-            // Try to extract application name from project file
-            string detectedAppName = TryExtractApplicationNameFromProject();
+            // Try to extract application metadata from project file
+            var projectMetadata = TryExtractProjectMetadata();
             
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                InitializeWindowsDefaults(detectedAppName);
+                InitializeWindowsDefaults(projectMetadata);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                InitializeLinuxDefaults(detectedAppName);
+                InitializeLinuxDefaults(projectMetadata);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                InitializeMacOSDefaults(detectedAppName);
+                InitializeMacOSDefaults(projectMetadata);
             }
             else
             {
                 // Fallback to Linux-style defaults for other Unix-like platforms
-                InitializeLinuxDefaults(detectedAppName);
+                InitializeLinuxDefaults(projectMetadata);
             }
             
             // Initialize common defaults
@@ -118,12 +118,25 @@ namespace GeneralUpdate.Common.Shared.Object
         }
 
         /// <summary>
-        /// Attempts to extract the application name from the project file (csproj).
+        /// Represents metadata extracted from a project file.
+        /// </summary>
+        private class ProjectMetadata
+        {
+            public string AppName { get; set; }
+            public string Version { get; set; }
+            public string Company { get; set; }
+            public string Authors { get; set; }
+        }
+
+        /// <summary>
+        /// Attempts to extract application metadata from the project file (csproj).
         /// This implements zero-configuration by reading from the host program's project metadata.
         /// </summary>
-        /// <returns>The extracted application name, or null if not found.</returns>
-        private string TryExtractApplicationNameFromProject()
+        /// <returns>ProjectMetadata with extracted values, or default values if extraction fails.</returns>
+        private ProjectMetadata TryExtractProjectMetadata()
         {
+            var metadata = new ProjectMetadata();
+            
             try
             {
                 // Start from the application's base directory
@@ -143,7 +156,8 @@ namespace GeneralUpdate.Common.Shared.Object
                     {
                         // Use the first csproj file found
                         string csprojPath = csprojFiles[0];
-                        return ExtractAssemblyNameFromCsproj(csprojPath);
+                        ExtractMetadataFromCsproj(csprojPath, metadata);
+                        return metadata;
                     }
                     
                     // Move up one directory
@@ -153,50 +167,81 @@ namespace GeneralUpdate.Common.Shared.Object
             }
             catch
             {
-                // If extraction fails for any reason, return null to use fallback defaults
+                // If extraction fails for any reason, return empty metadata
+            }
+            
+            return metadata;
+        }
+
+        /// <summary>
+        /// Extracts metadata fields from a csproj file.
+        /// </summary>
+        /// <param name="csprojPath">Path to the csproj file.</param>
+        /// <param name="metadata">ProjectMetadata object to populate.</param>
+        private void ExtractMetadataFromCsproj(string csprojPath, ProjectMetadata metadata)
+        {
+            try
+            {
+                string content = File.ReadAllText(csprojPath);
+                
+                // Extract <AssemblyName>
+                metadata.AppName = ExtractXmlElement(content, "AssemblyName");
+                
+                // If AssemblyName is not specified, use the csproj file name (without extension)
+                if (string.IsNullOrEmpty(metadata.AppName))
+                {
+                    metadata.AppName = Path.GetFileNameWithoutExtension(csprojPath);
+                }
+                
+                // Extract <Version>
+                metadata.Version = ExtractXmlElement(content, "Version");
+                
+                // Extract <Company>
+                metadata.Company = ExtractXmlElement(content, "Company");
+                
+                // Extract <Authors>
+                metadata.Authors = ExtractXmlElement(content, "Authors");
+            }
+            catch
+            {
+                // If parsing fails, use the file name as fallback for app name
+                if (string.IsNullOrEmpty(metadata.AppName))
+                {
+                    metadata.AppName = Path.GetFileNameWithoutExtension(csprojPath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Extracts the content of an XML element from a string.
+        /// </summary>
+        /// <param name="content">The XML/csproj content.</param>
+        /// <param name="elementName">The name of the XML element to extract.</param>
+        /// <returns>The element content, or null if not found.</returns>
+        private string ExtractXmlElement(string content, string elementName)
+        {
+            string openTag = $"<{elementName}>";
+            string closeTag = $"</{elementName}>";
+            
+            int startIndex = content.IndexOf(openTag, StringComparison.OrdinalIgnoreCase);
+            if (startIndex >= 0)
+            {
+                startIndex += openTag.Length;
+                int endIndex = content.IndexOf(closeTag, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (endIndex > startIndex)
+                {
+                    return content.Substring(startIndex, endIndex - startIndex).Trim();
+                }
             }
             
             return null;
         }
 
         /// <summary>
-        /// Extracts the AssemblyName from a csproj file, or uses the file name if AssemblyName is not specified.
-        /// </summary>
-        /// <param name="csprojPath">Path to the csproj file.</param>
-        /// <returns>The assembly name without extension.</returns>
-        private string ExtractAssemblyNameFromCsproj(string csprojPath)
-        {
-            try
-            {
-                string content = File.ReadAllText(csprojPath);
-                
-                // Try to extract <AssemblyName> from the csproj file
-                int assemblyNameStart = content.IndexOf("<AssemblyName>", StringComparison.OrdinalIgnoreCase);
-                if (assemblyNameStart >= 0)
-                {
-                    assemblyNameStart += "<AssemblyName>".Length;
-                    int assemblyNameEnd = content.IndexOf("</AssemblyName>", assemblyNameStart, StringComparison.OrdinalIgnoreCase);
-                    if (assemblyNameEnd > assemblyNameStart)
-                    {
-                        return content.Substring(assemblyNameStart, assemblyNameEnd - assemblyNameStart).Trim();
-                    }
-                }
-                
-                // If AssemblyName is not specified, use the csproj file name (without extension)
-                return Path.GetFileNameWithoutExtension(csprojPath);
-            }
-            catch
-            {
-                // If parsing fails, use the file name as fallback
-                return Path.GetFileNameWithoutExtension(csprojPath);
-            }
-        }
-
-        /// <summary>
         /// Initializes default values specific to Windows platform.
         /// </summary>
-        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
-        private void InitializeWindowsDefaults(string detectedAppName)
+        /// <param name="metadata">The project metadata extracted from csproj file.</param>
+        private void InitializeWindowsDefaults(ProjectMetadata metadata)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
@@ -204,9 +249,26 @@ namespace GeneralUpdate.Common.Shared.Object
             
             // Windows uses backslash as path separator (handled automatically by Path.Combine)
             // Set Windows-specific executable names - prefer detected name from project file
-            string appNameBase = detectedAppName ?? "App";
+            string appNameBase = metadata?.AppName ?? "App";
             _appName = appNameBase + ".exe";
             _mainAppName = appNameBase + ".exe";
+            
+            // Set version if available from project metadata
+            if (!string.IsNullOrEmpty(metadata?.Version))
+            {
+                _clientVersion = metadata.Version;
+                _upgradeClientVersion = metadata.Version;
+            }
+            
+            // Set product ID from company/authors if available
+            if (!string.IsNullOrEmpty(metadata?.Company))
+            {
+                _productId = metadata.Company;
+            }
+            else if (!string.IsNullOrEmpty(metadata?.Authors))
+            {
+                _productId = metadata.Authors;
+            }
             
             // Windows typically doesn't need shell scripts for permissions
             _script = string.Empty;
@@ -215,8 +277,8 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Initializes default values specific to Linux platform.
         /// </summary>
-        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
-        private void InitializeLinuxDefaults(string detectedAppName)
+        /// <param name="metadata">The project metadata extracted from csproj file.</param>
+        private void InitializeLinuxDefaults(ProjectMetadata metadata)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
@@ -224,9 +286,26 @@ namespace GeneralUpdate.Common.Shared.Object
             
             // Linux uses forward slash as path separator (handled automatically by Path.Combine)
             // Linux executables typically don't have .exe extension - prefer detected name from project file
-            string appNameBase = detectedAppName ?? "app";
+            string appNameBase = metadata?.AppName ?? "app";
             _appName = appNameBase;
             _mainAppName = appNameBase;
+            
+            // Set version if available from project metadata
+            if (!string.IsNullOrEmpty(metadata?.Version))
+            {
+                _clientVersion = metadata.Version;
+                _upgradeClientVersion = metadata.Version;
+            }
+            
+            // Set product ID from company/authors if available
+            if (!string.IsNullOrEmpty(metadata?.Company))
+            {
+                _productId = metadata.Company;
+            }
+            else if (!string.IsNullOrEmpty(metadata?.Authors))
+            {
+                _productId = metadata.Authors;
+            }
             
             // Default shell script for granting file permissions on Linux
             _script = @"#!/bin/bash
@@ -237,8 +316,8 @@ chmod +x ""$1""
         /// <summary>
         /// Initializes default values specific to macOS platform.
         /// </summary>
-        /// <param name="detectedAppName">The application name detected from project file, or null for fallback.</param>
-        private void InitializeMacOSDefaults(string detectedAppName)
+        /// <param name="metadata">The project metadata extracted from csproj file.</param>
+        private void InitializeMacOSDefaults(ProjectMetadata metadata)
         {
             // Use the current application's base directory (no admin privileges required)
             // This extracts the path from the host program's runtime location
@@ -246,9 +325,26 @@ chmod +x ""$1""
             
             // macOS uses forward slash as path separator (handled automatically by Path.Combine)
             // macOS executables typically don't have .exe extension (similar to Linux) - prefer detected name from project file
-            string appNameBase = detectedAppName ?? "app";
+            string appNameBase = metadata?.AppName ?? "app";
             _appName = appNameBase;
             _mainAppName = appNameBase;
+            
+            // Set version if available from project metadata
+            if (!string.IsNullOrEmpty(metadata?.Version))
+            {
+                _clientVersion = metadata.Version;
+                _upgradeClientVersion = metadata.Version;
+            }
+            
+            // Set product ID from company/authors if available
+            if (!string.IsNullOrEmpty(metadata?.Company))
+            {
+                _productId = metadata.Company;
+            }
+            else if (!string.IsNullOrEmpty(metadata?.Authors))
+            {
+                _productId = metadata.Authors;
+            }
             
             // Default shell script for granting file permissions on macOS
             _script = @"#!/bin/bash

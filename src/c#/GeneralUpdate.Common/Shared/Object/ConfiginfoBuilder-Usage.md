@@ -8,14 +8,23 @@ The `ConfiginfoBuilder` class provides a simple and convenient way to create `Co
 
 The ConfiginfoBuilder implements intelligent zero-configuration by automatically extracting information from your project:
 
-### Application Name Auto-Detection
+### Comprehensive Project Metadata Extraction
 
-The builder automatically attempts to read the application name from your project file (`.csproj`):
+The builder automatically attempts to read multiple fields from your project file (`.csproj`):
 
-1. **Searches** for csproj files in the application's directory and up to 3 parent directories
-2. **Extracts** the `<AssemblyName>` property if specified
-3. **Falls back** to the csproj file name if `AssemblyName` is not defined
-4. **Applies** platform-specific extensions (`.exe` on Windows, none on Linux/macOS)
+1. **Application Name** (maps to `AppName`, `MainAppName`)
+   - **Extracts** the `<AssemblyName>` property if specified
+   - **Falls back** to the csproj file name if `AssemblyName` is not defined
+   - **Applies** platform-specific extensions (`.exe` on Windows, none on Linux/macOS)
+
+2. **Version Number** (maps to `ClientVersion`, `UpgradeClientVersion`)
+   - **Reads** the `<Version>` property from csproj
+   - **Falls back** to default "1.0.0" if not specified
+
+3. **Publisher Information** (maps to `ProductId`)
+   - **Prioritizes** the `<Company>` property
+   - **Falls back** to `<Authors>` property if Company not specified
+   - **Uses** default value if neither is available
 
 **Example:**
 ```xml
@@ -23,11 +32,19 @@ The builder automatically attempts to read the application name from your projec
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>MyApplication</AssemblyName>
+    <Version>2.1.5</Version>
+    <Company>MyCompany</Company>
+    <Authors>Development Team</Authors>
   </PropertyGroup>
 </Project>
 ```
 
-When the builder runs, it will automatically use `MyApplication.exe` on Windows or `MyApplication` on Linux/macOS, without any manual configuration needed!
+When the builder runs, it will automatically extract:
+- **App Name**: `MyApplication.exe` (Windows) or `MyApplication` (Linux/macOS)
+- **Version**: `2.1.5`
+- **Product ID**: `MyCompany`
+
+All automatic with zero configuration needed!
 
 ## Basic Usage
 
