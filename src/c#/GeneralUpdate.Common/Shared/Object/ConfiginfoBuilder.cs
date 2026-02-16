@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
@@ -16,14 +14,14 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Default blacklisted file format extensions that are automatically excluded from updates.
         /// </summary>
-        public static readonly string[] DefaultBlackFormats = { ".log", ".tmp" };
+        public static readonly string[] DefaultBlackFormats;
 
         private readonly string _updateUrl;
         private readonly string _token;
         private readonly string _scheme;
         
         // Configurable default values
-        private string _appName = "App.exe";
+        private string _appName = "Update.exe";
         private string _mainAppName = "App.exe";
         private string _clientVersion = "1.0.0";
         private string _upgradeClientVersion = "1.0.0";
@@ -90,266 +88,10 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         private void InitializePlatformDefaults()
         {
-            // Try to extract application metadata from project file
-            var projectMetadata = TryExtractProjectMetadata();
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                InitializeWindowsDefaults(projectMetadata);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                InitializeLinuxDefaults(projectMetadata);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                InitializeMacOSDefaults(projectMetadata);
-            }
-            else
-            {
-                // Fallback to Linux-style defaults for other Unix-like platforms
-                InitializeLinuxDefaults(projectMetadata);
-            }
-            
             // Initialize common defaults
             _blackFiles = new List<string>();
             _blackFormats = new List<string>(DefaultBlackFormats);
             _skipDirectorys = new List<string>();
-        }
-
-        /// <summary>
-        /// Represents metadata extracted from a project file.
-        /// </summary>
-        private class ProjectMetadata
-        {
-            public string AppName { get; set; }
-            public string Version { get; set; }
-            public string Company { get; set; }
-            public string Authors { get; set; }
-        }
-
-        /// <summary>
-        /// Attempts to extract application metadata from the project file (csproj).
-        /// This implements zero-configuration by reading from the host program's project metadata.
-        /// </summary>
-        /// <returns>ProjectMetadata with extracted values, or default values if extraction fails.</returns>
-        private ProjectMetadata TryExtractProjectMetadata()
-        {
-            var metadata = new ProjectMetadata();
-            
-            try
-            {
-                // Start from the application's base directory
-                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                string currentDirectory = baseDirectory;
-                
-                // Search up to 3 levels up for a csproj file
-                for (int i = 0; i < 3; i++)
-                {
-                    if (string.IsNullOrEmpty(currentDirectory))
-                        break;
-                    
-                    // Look for csproj files in the current directory
-                    string[] csprojFiles = Directory.GetFiles(currentDirectory, "*.csproj", SearchOption.TopDirectoryOnly);
-                    
-                    if (csprojFiles.Length > 0)
-                    {
-                        // Use the first csproj file found
-                        string csprojPath = csprojFiles[0];
-                        ExtractMetadataFromCsproj(csprojPath, metadata);
-                        return metadata;
-                    }
-                    
-                    // Move up one directory
-                    DirectoryInfo parentDir = Directory.GetParent(currentDirectory);
-                    currentDirectory = parentDir?.FullName;
-                }
-            }
-            catch
-            {
-                // If extraction fails for any reason, return empty metadata
-            }
-            
-            return metadata;
-        }
-
-        /// <summary>
-        /// Extracts metadata fields from a csproj file.
-        /// </summary>
-        /// <param name="csprojPath">Path to the csproj file.</param>
-        /// <param name="metadata">ProjectMetadata object to populate.</param>
-        private void ExtractMetadataFromCsproj(string csprojPath, ProjectMetadata metadata)
-        {
-            try
-            {
-                string content = File.ReadAllText(csprojPath);
-                
-                // Extract <AssemblyName>
-                metadata.AppName = ExtractXmlElement(content, "AssemblyName");
-                
-                // If AssemblyName is not specified, use the csproj file name (without extension)
-                if (string.IsNullOrEmpty(metadata.AppName))
-                {
-                    metadata.AppName = Path.GetFileNameWithoutExtension(csprojPath);
-                }
-                
-                // Extract <Version>
-                metadata.Version = ExtractXmlElement(content, "Version");
-                
-                // Extract <Company>
-                metadata.Company = ExtractXmlElement(content, "Company");
-                
-                // Extract <Authors>
-                metadata.Authors = ExtractXmlElement(content, "Authors");
-            }
-            catch
-            {
-                // If parsing fails, use the file name as fallback for app name
-                if (string.IsNullOrEmpty(metadata.AppName))
-                {
-                    metadata.AppName = Path.GetFileNameWithoutExtension(csprojPath);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Extracts the content of an XML element from a string.
-        /// </summary>
-        /// <param name="content">The XML/csproj content.</param>
-        /// <param name="elementName">The name of the XML element to extract.</param>
-        /// <returns>The element content, or null if not found.</returns>
-        private string ExtractXmlElement(string content, string elementName)
-        {
-            string openTag = $"<{elementName}>";
-            string closeTag = $"</{elementName}>";
-            
-            int startIndex = content.IndexOf(openTag, StringComparison.OrdinalIgnoreCase);
-            if (startIndex >= 0)
-            {
-                startIndex += openTag.Length;
-                int endIndex = content.IndexOf(closeTag, startIndex, StringComparison.OrdinalIgnoreCase);
-                if (endIndex > startIndex)
-                {
-                    return content.Substring(startIndex, endIndex - startIndex).Trim();
-                }
-            }
-            
-            return null;
-        }
-
-        /// <summary>
-        /// Initializes default values specific to Windows platform.
-        /// </summary>
-        /// <param name="metadata">The project metadata extracted from csproj file.</param>
-        private void InitializeWindowsDefaults(ProjectMetadata metadata)
-        {
-            // Use the current application's base directory (no admin privileges required)
-            // This extracts the path from the host program's runtime location
-            _installPath = AppDomain.CurrentDomain.BaseDirectory;
-            
-            // Windows uses backslash as path separator (handled automatically by Path.Combine)
-            // Set Windows-specific executable names - prefer detected name from project file
-            string appNameBase = metadata?.AppName ?? "App";
-            _appName = appNameBase + ".exe";
-            _mainAppName = appNameBase + ".exe";
-            
-            // Set version if available from project metadata
-            if (!string.IsNullOrEmpty(metadata?.Version))
-            {
-                _clientVersion = metadata.Version;
-                _upgradeClientVersion = metadata.Version;
-            }
-            
-            // Set product ID from company/authors if available
-            if (!string.IsNullOrEmpty(metadata?.Company))
-            {
-                _productId = metadata.Company;
-            }
-            else if (!string.IsNullOrEmpty(metadata?.Authors))
-            {
-                _productId = metadata.Authors;
-            }
-            
-            // Windows typically doesn't need shell scripts for permissions
-            _script = string.Empty;
-        }
-
-        /// <summary>
-        /// Initializes default values specific to Linux platform.
-        /// </summary>
-        /// <param name="metadata">The project metadata extracted from csproj file.</param>
-        private void InitializeLinuxDefaults(ProjectMetadata metadata)
-        {
-            // Use the current application's base directory (no admin privileges required)
-            // This extracts the path from the host program's runtime location
-            _installPath = AppDomain.CurrentDomain.BaseDirectory;
-            
-            // Linux uses forward slash as path separator (handled automatically by Path.Combine)
-            // Linux executables typically don't have .exe extension - prefer detected name from project file
-            string appNameBase = metadata?.AppName ?? "app";
-            _appName = appNameBase;
-            _mainAppName = appNameBase;
-            
-            // Set version if available from project metadata
-            if (!string.IsNullOrEmpty(metadata?.Version))
-            {
-                _clientVersion = metadata.Version;
-                _upgradeClientVersion = metadata.Version;
-            }
-            
-            // Set product ID from company/authors if available
-            if (!string.IsNullOrEmpty(metadata?.Company))
-            {
-                _productId = metadata.Company;
-            }
-            else if (!string.IsNullOrEmpty(metadata?.Authors))
-            {
-                _productId = metadata.Authors;
-            }
-            
-            // Default shell script for granting file permissions on Linux
-            _script = @"#!/bin/bash
-chmod +x ""$1""
-";
-        }
-
-        /// <summary>
-        /// Initializes default values specific to macOS platform.
-        /// </summary>
-        /// <param name="metadata">The project metadata extracted from csproj file.</param>
-        private void InitializeMacOSDefaults(ProjectMetadata metadata)
-        {
-            // Use the current application's base directory (no admin privileges required)
-            // This extracts the path from the host program's runtime location
-            _installPath = AppDomain.CurrentDomain.BaseDirectory;
-            
-            // macOS uses forward slash as path separator (handled automatically by Path.Combine)
-            // macOS executables typically don't have .exe extension (similar to Linux) - prefer detected name from project file
-            string appNameBase = metadata?.AppName ?? "app";
-            _appName = appNameBase;
-            _mainAppName = appNameBase;
-            
-            // Set version if available from project metadata
-            if (!string.IsNullOrEmpty(metadata?.Version))
-            {
-                _clientVersion = metadata.Version;
-                _upgradeClientVersion = metadata.Version;
-            }
-            
-            // Set product ID from company/authors if available
-            if (!string.IsNullOrEmpty(metadata?.Company))
-            {
-                _productId = metadata.Company;
-            }
-            else if (!string.IsNullOrEmpty(metadata?.Authors))
-            {
-                _productId = metadata.Authors;
-            }
-            
-            // Default shell script for granting file permissions on macOS
-            _script = @"#!/bin/bash
-chmod +x ""$1""
-";
         }
 
         /// <summary>
