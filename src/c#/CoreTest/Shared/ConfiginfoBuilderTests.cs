@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using GeneralUpdate.Common.Shared.Object;
 using Xunit;
@@ -702,6 +703,122 @@ namespace CoreTest.Shared
             
             // Should pass validation
             config.Validate();
+        }
+
+        #endregion
+
+        #region JSON Configuration File Tests
+
+        /// <summary>
+        /// Tests that ConfiginfoBuilder loads configuration from update_config.json file if present.
+        /// </summary>
+        [Fact]
+        public void Create_WithConfigFile_LoadsFromFile()
+        {
+            // Arrange - Create a test config file
+            var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            var testConfig = new
+            {
+                UpdateUrl = "https://config-file.example.com/updates",
+                Token = "config-file-token",
+                Scheme = "https",
+                AppName = "ConfigFileApp.exe",
+                MainAppName = "ConfigFileMain.exe",
+                ClientVersion = "9.9.9",
+                InstallPath = "/config/file/path"
+            };
+            
+            try
+            {
+                // Write test config file
+                File.WriteAllText(configFilePath, System.Text.Json.JsonSerializer.Serialize(testConfig));
+
+                // Act - Create should load from file instead of using parameters
+                var config = ConfiginfoBuilder.Create(
+                    "https://should-be-ignored.com/updates", 
+                    "should-be-ignored-token", 
+                    "http"
+                ).Build();
+
+                // Assert - Values should come from config file, not parameters
+                Assert.Equal("https://config-file.example.com/updates", config.UpdateUrl);
+                Assert.Equal("config-file-token", config.Token);
+                Assert.Equal("https", config.Scheme);
+                Assert.Equal("ConfigFileApp.exe", config.AppName);
+                Assert.Equal("ConfigFileMain.exe", config.MainAppName);
+                Assert.Equal("9.9.9", config.ClientVersion);
+                Assert.Equal("/config/file/path", config.InstallPath);
+            }
+            finally
+            {
+                // Cleanup - Delete test config file
+                if (File.Exists(configFilePath))
+                {
+                    File.Delete(configFilePath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tests that ConfiginfoBuilder uses parameters when no config file exists.
+        /// </summary>
+        [Fact]
+        public void Create_WithoutConfigFile_UsesParameters()
+        {
+            // Arrange - Ensure no config file exists
+            var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            if (File.Exists(configFilePath))
+            {
+                File.Delete(configFilePath);
+            }
+
+            try
+            {
+                // Act - Create should use parameters
+                var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+
+                // Assert - Values should come from parameters and defaults
+                Assert.Equal(TestUpdateUrl, config.UpdateUrl);
+                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(TestScheme, config.Scheme);
+                Assert.Equal("Update.exe", config.AppName); // Default value
+            }
+            finally
+            {
+                // No cleanup needed since we're ensuring file doesn't exist
+            }
+        }
+
+        /// <summary>
+        /// Tests that ConfiginfoBuilder handles invalid JSON gracefully.
+        /// </summary>
+        [Fact]
+        public void Create_WithInvalidConfigFile_FallsBackToParameters()
+        {
+            // Arrange - Create an invalid config file
+            var configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            
+            try
+            {
+                // Write invalid JSON
+                File.WriteAllText(configFilePath, "{ invalid json content !!!");
+
+                // Act - Create should fall back to parameters
+                var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+
+                // Assert - Values should come from parameters (fallback)
+                Assert.Equal(TestUpdateUrl, config.UpdateUrl);
+                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(TestScheme, config.Scheme);
+            }
+            finally
+            {
+                // Cleanup - Delete test config file
+                if (File.Exists(configFilePath))
+                {
+                    File.Delete(configFilePath);
+                }
+            }
         }
 
         #endregion
