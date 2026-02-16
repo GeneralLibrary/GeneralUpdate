@@ -135,9 +135,24 @@ namespace GeneralUpdate.Common.Shared.Object
 
                 return builder;
             }
+            catch (System.Text.Json.JsonException)
+            {
+                // Invalid JSON format, fall back to parameters
+                return null;
+            }
+            catch (IOException)
+            {
+                // File read error, fall back to parameters
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Permission denied, fall back to parameters
+                return null;
+            }
             catch
             {
-                // If there's any error reading or parsing the file, return null
+                // Any other unexpected error, fall back to parameters
                 return null;
             }
         }
@@ -184,6 +199,8 @@ namespace GeneralUpdate.Common.Shared.Object
             _skipDirectorys = new List<string>();
             
             // Set default InstallPath to current program running directory
+            // This is set here to ensure the builder has a consistent default
+            // even though BaseConfigInfo also has this default via property initializer
             _installPath = AppDomain.CurrentDomain.BaseDirectory;
         }
 
