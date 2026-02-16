@@ -49,7 +49,7 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// Creates a new ConfiginfoBuilder instance by loading configuration from update_config.json file.
         /// The configuration file must exist in the running directory and contain all required settings.
-        /// This method has the highest priority - configuration file settings override any code-based settings.
+        /// Configuration file has the highest priority - all settings must be specified in the JSON file.
         /// </summary>
         /// <returns>A new ConfiginfoBuilder instance with settings loaded from the configuration file.</returns>
         /// <exception cref="FileNotFoundException">Thrown when update_config.json is not found.</exception>
@@ -66,21 +66,6 @@ namespace GeneralUpdate.Common.Shared.Object
             
             // If no config file exists, throw an exception
             throw new FileNotFoundException("Configuration file 'update_config.json' not found in the running directory. Please create this file with the required settings.");
-        }
-
-        /// <summary>
-        /// Creates a new ConfiginfoBuilder instance using the specified update URL, authentication token, and scheme.
-        /// This method is provided for programmatic configuration when not using a JSON configuration file.
-        /// Note: If update_config.json exists, use the parameterless Create() method instead as it has higher priority.
-        /// </summary>
-        /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
-        /// <param name="token">The authentication token used for API requests.</param>
-        /// <param name="scheme">The URL scheme used for update requests (e.g., "http" or "https").</param>
-        /// <returns>A new ConfiginfoBuilder instance with all defaults initialized.</returns>
-        /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
-        public static ConfiginfoBuilder Create(string updateUrl, string token, string scheme)
-        {
-            return new ConfiginfoBuilder(updateUrl, token, scheme);
         }
 
         /// <summary>

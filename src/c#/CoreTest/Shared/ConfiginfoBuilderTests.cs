@@ -18,30 +18,70 @@ namespace CoreTest.Shared
         private const string TestScheme = "https";
 
         /// <summary>
+        /// Helper method to create a test config file with all required fields.
+        /// </summary>
+        private void CreateTestConfigFile()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            var testConfig = new
+            {
+                UpdateUrl = TestUpdateUrl,
+                Token = TestToken,
+                Scheme = TestScheme,
+                AppName = "Update.exe",
+                MainAppName = "TestApp.exe",
+                ClientVersion = "1.0.0",
+                AppSecretKey = "test-secret-key",
+                InstallPath = AppDomain.CurrentDomain.BaseDirectory
+            };
+            File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(testConfig));
+        }
+
+        /// <summary>
+        /// Helper method to clean up test config file.
+        /// </summary>
+        private void CleanupTestConfigFile()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
+        }
+
+        /// <summary>
         /// Helper method to create a builder with all required fields set for testing.
-        /// Since defaults were removed per requirements, tests must explicitly set required fields.
+        /// Creates a config file, loads it, and returns the builder.
         /// </summary>
         private ConfiginfoBuilder CreateBuilderWithRequiredFields()
         {
-            return ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
-                .SetMainAppName("TestApp.exe")
-                .SetClientVersion("1.0.0")
-                .SetAppSecretKey("test-secret-key");
+            CreateTestConfigFile();
+            return ConfiginfoBuilder.Create();
         }
 
         #region Constructor Tests
 
         /// <summary>
-        /// Tests that the Create factory method properly initializes with valid parameters.
+        /// Tests that the Create factory method properly initializes from config file.
         /// </summary>
         [Fact]
-        public void Create_WithValidParameters_CreatesInstance()
+        public void Create_WithValidConfigFile_CreatesInstance()
         {
-            // Act
-            var builder = CreateBuilderWithRequiredFields();
+            try
+            {
+                // Arrange
+                CreateTestConfigFile();
 
-            // Assert
-            Assert.NotNull(builder);
+                // Act
+                var builder = ConfiginfoBuilder.Create();
+
+                // Assert
+                Assert.NotNull(builder);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         /// <summary>
@@ -50,81 +90,94 @@ namespace CoreTest.Shared
         [Fact]
         public void Create_ProducesConsistentResults()
         {
-            // Act
-            var config1 = CreateBuilderWithRequiredFields().Build();
-            var config2 = CreateBuilderWithRequiredFields().Build();
+            try
+            {
+                // Arrange
+                CreateTestConfigFile();
 
-            // Assert
-            Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
-            Assert.Equal(config1.Token, config2.Token);
-            Assert.Equal(config1.Scheme, config2.Scheme);
-            Assert.Equal(config1.AppName, config2.AppName);
+                // Act
+                var config1 = ConfiginfoBuilder.Create().Build();
+                var config2 = ConfiginfoBuilder.Create().Build();
+
+                // Assert
+                Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
+                Assert.Equal(config1.Token, config2.Token);
+                Assert.Equal(config1.Scheme, config2.Scheme);
+                Assert.Equal(config1.AppName, config2.AppName);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         /// <summary>
-        /// Tests that the Create method throws ArgumentException when UpdateUrl is null.
+        /// Tests that the Create method throws FileNotFoundException when config file is missing.
         /// </summary>
         [Fact]
-        public void Create_WithNullUpdateUrl_ThrowsArgumentException()
+        public void Create_WithoutConfigFile_ThrowsFileNotFoundException()
         {
+            // Arrange - ensure no config file exists
+            CleanupTestConfigFile();
+
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
-                ConfiginfoBuilder.Create(null, TestToken, TestScheme));
+            var exception = Assert.Throws<FileNotFoundException>(() => 
+                ConfiginfoBuilder.Create());
             
-            Assert.Contains("UpdateUrl", exception.Message);
+            Assert.Contains("update_config.json", exception.Message);
         }
 
         /// <summary>
-        /// Tests that the Create method throws ArgumentException when UpdateUrl is empty.
+        /// Tests that the Create method handles invalid JSON gracefully.
         /// </summary>
         [Fact]
-        public void Create_WithEmptyUpdateUrl_ThrowsArgumentException()
+        public void Create_WithInvalidJson_ThrowsFileNotFoundException()
         {
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
-                ConfiginfoBuilder.Create("", TestToken, TestScheme));
-            
-            Assert.Contains("UpdateUrl", exception.Message);
+            try
+            {
+                // Arrange - create invalid JSON file
+                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+                File.WriteAllText(configPath, "{ invalid json content");
+
+                // Act & Assert
+                var exception = Assert.Throws<FileNotFoundException>(() => 
+                    ConfiginfoBuilder.Create());
+                
+                Assert.Contains("update_config.json", exception.Message);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         /// <summary>
-        /// Tests that the Create method throws ArgumentException when UpdateUrl is not a valid URI.
+        /// Tests that the Create method validates required fields from config file.
         /// </summary>
         [Fact]
-        public void Create_WithInvalidUpdateUrl_ThrowsArgumentException()
+        public void Create_WithIncompleteConfig_ThrowsOnBuild()
         {
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
-                ConfiginfoBuilder.Create("not-a-valid-url", TestToken, TestScheme));
-            
-            Assert.Contains("UpdateUrl", exception.Message);
-            Assert.Contains("valid absolute URI", exception.Message);
-        }
+            try
+            {
+                // Arrange - create config with missing required fields
+                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+                var incompleteConfig = new
+                {
+                    UpdateUrl = TestUpdateUrl,
+                    Token = TestToken,
+                    Scheme = TestScheme
+                    // Missing MainAppName, ClientVersion, AppSecretKey
+                };
+                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(incompleteConfig));
 
-        /// <summary>
-        /// Tests that the Create method throws ArgumentException when Token is null.
-        /// </summary>
-        [Fact]
-        public void Create_WithNullToken_ThrowsArgumentException()
-        {
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
-                ConfiginfoBuilder.Create(TestUpdateUrl, null, TestScheme));
-            
-            Assert.Contains("Token", exception.Message);
-        }
-
-        /// <summary>
-        /// Tests that the Create method throws ArgumentException when Scheme is null.
-        /// </summary>
-        [Fact]
-        public void Create_WithNullScheme_ThrowsArgumentException()
-        {
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
-                ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, null));
-            
-            Assert.Contains("Scheme", exception.Message);
+                // Act & Assert
+                var builder = ConfiginfoBuilder.Create();
+                Assert.Throws<InvalidOperationException>(() => builder.Build());
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         #endregion
@@ -137,25 +190,30 @@ namespace CoreTest.Shared
         [Fact]
         public void Build_WithMinimalParameters_ReturnsValidConfiginfo()
         {
-            // Arrange - Now that defaults are removed, we must set all required fields
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
-                .SetMainAppName("TestApp.exe")
-                .SetClientVersion("1.0.0")
-                .SetAppSecretKey("test-secret-key");
+            try
+            {
+                // Arrange - Now that defaults are removed, we must set all required fields via config file
+                CreateTestConfigFile();
+                var builder = ConfiginfoBuilder.Create();
 
-            // Act
-            var config = builder.Build();
+                // Act
+                var config = builder.Build();
 
-            // Assert
-            Assert.NotNull(config);
-            Assert.Equal(TestUpdateUrl, config.UpdateUrl);
-            Assert.Equal(TestToken, config.Token);
-            Assert.Equal(TestScheme, config.Scheme);
-            Assert.NotNull(config.AppName);
-            Assert.NotNull(config.MainAppName);
-            Assert.NotNull(config.ClientVersion);
-            Assert.NotNull(config.InstallPath);
-            Assert.NotNull(config.AppSecretKey);
+                // Assert
+                Assert.NotNull(config);
+                Assert.Equal(TestUpdateUrl, config.UpdateUrl);
+                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(TestScheme, config.Scheme);
+                Assert.NotNull(config.AppName);
+                Assert.NotNull(config.MainAppName);
+                Assert.NotNull(config.ClientVersion);
+                Assert.NotNull(config.InstallPath);
+                Assert.NotNull(config.AppSecretKey);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         /// <summary>
@@ -164,20 +222,27 @@ namespace CoreTest.Shared
         [Fact]
         public void Build_GeneratesPlatformSpecificDefaults()
         {
-            // Arrange
-            var builder = CreateBuilderWithRequiredFields();
+            try
+            {
+                // Arrange
+                var builder = CreateBuilderWithRequiredFields();
 
-            // Act
-            var config = builder.Build();
+                // Act
+                var config = builder.Build();
 
-            // Assert
-            Assert.NotNull(config.InstallPath);
-            
-            // InstallPath should be the current application's base directory
-            Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
-            
-            // According to requirements, AppName default is "Update.exe" regardless of platform
-            Assert.Equal("Update.exe", config.AppName);
+                // Assert
+                Assert.NotNull(config.InstallPath);
+                
+                // InstallPath should be the current application's base directory
+                Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
+                
+                // According to requirements, AppName default is "Update.exe" regardless of platform
+                Assert.Equal("Update.exe", config.AppName);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         /// <summary>
@@ -186,18 +251,25 @@ namespace CoreTest.Shared
         [Fact]
         public void Build_InitializesCollectionProperties()
         {
-            // Arrange
-            var builder = CreateBuilderWithRequiredFields();
+            try
+            {
+                // Arrange
+                var builder = CreateBuilderWithRequiredFields();
 
-            // Act
-            var config = builder.Build();
+                // Act
+                var config = builder.Build();
 
-            // Assert
-            Assert.NotNull(config.BlackFiles);
-            Assert.NotNull(config.BlackFormats);
-            Assert.NotNull(config.SkipDirectorys);
-            // DefaultBlackFormats is now empty per requirements
-            Assert.Empty(config.BlackFormats);
+                // Assert
+                Assert.NotNull(config.BlackFiles);
+                Assert.NotNull(config.BlackFormats);
+                Assert.NotNull(config.SkipDirectorys);
+                // DefaultBlackFormats is now empty per requirements
+                Assert.Empty(config.BlackFormats);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         #endregion
@@ -515,21 +587,29 @@ namespace CoreTest.Shared
         [Fact]
         public void BuilderPattern_SupportsMethodChaining()
         {
-            // Arrange & Act
-            var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
-                .SetAppName("CustomApp.exe")
-                .SetMainAppName("MainCustomApp.exe")
-                .SetClientVersion("2.0.0")
-                .SetInstallPath("/custom/path")
-                .SetAppSecretKey("custom-secret")
-                .Build();
+            try
+            {
+                // Arrange & Act
+                CreateTestConfigFile();
+                var config = ConfiginfoBuilder.Create()
+                    .SetAppName("CustomApp.exe")
+                    .SetMainAppName("MainCustomApp.exe")
+                    .SetClientVersion("2.0.0")
+                    .SetInstallPath("/custom/path")
+                    .SetAppSecretKey("custom-secret")
+                    .Build();
 
-            // Assert
-            Assert.Equal("CustomApp.exe", config.AppName);
-            Assert.Equal("MainCustomApp.exe", config.MainAppName);
-            Assert.Equal("2.0.0", config.ClientVersion);
-            Assert.Equal("/custom/path", config.InstallPath);
-            Assert.Equal("custom-secret", config.AppSecretKey);
+                // Assert
+                Assert.Equal("CustomApp.exe", config.AppName);
+                Assert.Equal("MainCustomApp.exe", config.MainAppName);
+                Assert.Equal("2.0.0", config.ClientVersion);
+                Assert.Equal("/custom/path", config.InstallPath);
+                Assert.Equal("custom-secret", config.AppSecretKey);
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         #endregion
@@ -686,36 +766,48 @@ namespace CoreTest.Shared
         [Fact]
         public void CompleteScenario_BuildsValidConfiginfo()
         {
-            // Arrange
-            var updateUrl = "https://api.example.com/updates";
-            var token = "Bearer abc123xyz";
-            var scheme = "https";
+            try
+            {
+                // Arrange
+                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+                var completeConfig = new
+                {
+                    UpdateUrl = "https://api.example.com/updates",
+                    Token = "Bearer abc123xyz",
+                    Scheme = "https",
+                    AppName = "MyApplication.exe",
+                    MainAppName = "MyApplication.exe",
+                    ClientVersion = "1.5.2",
+                    UpgradeClientVersion = "1.0.0",
+                    AppSecretKey = "super-secret-key-456",
+                    ProductId = "my-product-001",
+                    InstallPath = "/opt/myapp",
+                    UpdateLogUrl = "https://example.com/changelog",
+                    ReportUrl = "https://api.example.com/report",
+                    BlackFormats = new[] { ".log", ".tmp", ".cache" }
+                };
+                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(completeConfig));
 
-            // Act
-            var config = ConfiginfoBuilder.Create(updateUrl, token, scheme)
-                .SetAppName("MyApplication.exe")
-                .SetMainAppName("MyApplication.exe")
-                .SetClientVersion("1.5.2")
-                .SetUpgradeClientVersion("1.0.0")
-                .SetAppSecretKey("super-secret-key-456")
-                .SetProductId("my-product-001")
-                .SetInstallPath("/opt/myapp")
-                .SetUpdateLogUrl("https://example.com/changelog")
-                .SetReportUrl("https://api.example.com/report")
-                .SetBlackFormats(new List<string> { ".log", ".tmp", ".cache" })
-                .Build();
+                // Act
+                var config = ConfiginfoBuilder.Create()
+                    .Build();
 
-            // Assert
-            Assert.NotNull(config);
-            Assert.Equal(updateUrl, config.UpdateUrl);
-            Assert.Equal(token, config.Token);
-            Assert.Equal(scheme, config.Scheme);
-            Assert.Equal("MyApplication.exe", config.AppName);
-            Assert.Equal("1.5.2", config.ClientVersion);
-            Assert.Equal("/opt/myapp", config.InstallPath);
-            
-            // Should pass validation
-            config.Validate();
+                // Assert
+                Assert.NotNull(config);
+                Assert.Equal("https://api.example.com/updates", config.UpdateUrl);
+                Assert.Equal("Bearer abc123xyz", config.Token);
+                Assert.Equal("https", config.Scheme);
+                Assert.Equal("MyApplication.exe", config.AppName);
+                Assert.Equal("1.5.2", config.ClientVersion);
+                Assert.Equal("/opt/myapp", config.InstallPath);
+                
+                // Should pass validation
+                config.Validate();
+            }
+            finally
+            {
+                CleanupTestConfigFile();
+            }
         }
 
         #endregion
