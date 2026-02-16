@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
 
 namespace GeneralUpdate.Common.Shared.Object
 {
@@ -16,17 +18,24 @@ namespace GeneralUpdate.Common.Shared.Object
         /// </summary>
         public static readonly string[] DefaultBlackFormats;
 
+        static ConfiginfoBuilder()
+        {
+            DefaultBlackFormats = new string[0];
+        }
+
         private readonly string _updateUrl;
         private readonly string _token;
         private readonly string _scheme;
         
         // Configurable default values
+        // Note: AppName and InstallPath defaults are set in Configinfo class itself
+        // These are ConfiginfoBuilder-specific defaults to support the builder pattern
         private string _appName = "Update.exe";
-        private string _mainAppName = "App.exe";
-        private string _clientVersion = "1.0.0";
-        private string _upgradeClientVersion = "1.0.0";
-        private string _appSecretKey = "default-secret-key";
-        private string _productId = "default-product-id";
+        private string _mainAppName;
+        private string _clientVersion;
+        private string _upgradeClientVersion;
+        private string _appSecretKey;
+        private string _productId;
         private string _installPath;
         private string _updateLogUrl;
         private string _reportUrl;
@@ -38,29 +47,123 @@ namespace GeneralUpdate.Common.Shared.Object
         private List<string> _skipDirectorys;
 
         /// <summary>
-        /// Creates a new ConfiginfoBuilder instance using the specified update URL, authentication token, and scheme.
-        /// This is the primary factory method for creating a builder with zero-configuration defaults.
-        /// All other configuration properties will be automatically initialized with platform-appropriate defaults.
+        /// Creates a new ConfiginfoBuilder instance by loading configuration from update_config.json file.
+        /// The configuration file must exist in the running directory and contain all required settings.
+        /// Configuration file has the highest priority - all settings must be specified in the JSON file.
         /// </summary>
-        /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
-        /// <param name="token">The authentication token used for API requests.</param>
-        /// <param name="scheme">The URL scheme used for update requests (e.g., "http" or "https").</param>
-        /// <returns>A new ConfiginfoBuilder instance with all defaults initialized.</returns>
-        /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
-        public static ConfiginfoBuilder Create(string updateUrl, string token, string scheme)
+        /// <returns>A new ConfiginfoBuilder instance with settings loaded from the configuration file.</returns>
+        /// <exception cref="FileNotFoundException">Thrown when update_config.json is not found.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the configuration file is invalid or cannot be loaded.</exception>
+        public static ConfiginfoBuilder Create()
         {
-            return new ConfiginfoBuilder(updateUrl, token, scheme);
+            // Try to load from configuration file
+            var configFromFile = LoadFromConfigFile();
+            if (configFromFile != null)
+            {
+                // Configuration file loaded successfully
+                return configFromFile;
+            }
+            
+            // If no config file exists, throw an exception
+            throw new FileNotFoundException("Configuration file 'update_config.json' not found in the running directory. Please create this file with the required settings.");
+        }
+
+        /// <summary>
+        /// Loads configuration from update_config.json file in the running directory.
+        /// </summary>
+        /// <returns>ConfiginfoBuilder with settings from file, or null if file doesn't exist or is invalid.</returns>
+        private static ConfiginfoBuilder LoadFromConfigFile()
+        {
+            try
+            {
+                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+                if (!File.Exists(configPath))
+                {
+                    return null;
+                }
+
+                var json = File.ReadAllText(configPath);
+                var config = JsonSerializer.Deserialize<Configinfo>(json, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+
+                if (config == null)
+                {
+                    return null;
+                }
+
+                // Create a builder with the loaded configuration
+                var builder = new ConfiginfoBuilder(
+                    config.UpdateUrl ?? string.Empty, 
+                    config.Token ?? string.Empty, 
+                    config.Scheme ?? string.Empty);
+
+                // Apply all loaded settings
+                if (!string.IsNullOrWhiteSpace(config.AppName))
+                    builder.SetAppName(config.AppName);
+                if (!string.IsNullOrWhiteSpace(config.MainAppName))
+                    builder.SetMainAppName(config.MainAppName);
+                if (!string.IsNullOrWhiteSpace(config.ClientVersion))
+                    builder.SetClientVersion(config.ClientVersion);
+                if (!string.IsNullOrWhiteSpace(config.UpgradeClientVersion))
+                    builder.SetUpgradeClientVersion(config.UpgradeClientVersion);
+                if (!string.IsNullOrWhiteSpace(config.AppSecretKey))
+                    builder.SetAppSecretKey(config.AppSecretKey);
+                if (!string.IsNullOrWhiteSpace(config.ProductId))
+                    builder.SetProductId(config.ProductId);
+                if (!string.IsNullOrWhiteSpace(config.InstallPath))
+                    builder.SetInstallPath(config.InstallPath);
+                if (!string.IsNullOrWhiteSpace(config.UpdateLogUrl))
+                    builder.SetUpdateLogUrl(config.UpdateLogUrl);
+                if (!string.IsNullOrWhiteSpace(config.ReportUrl))
+                    builder.SetReportUrl(config.ReportUrl);
+                if (!string.IsNullOrWhiteSpace(config.Bowl))
+                    builder.SetBowl(config.Bowl);
+                if (!string.IsNullOrWhiteSpace(config.Script))
+                    builder.SetScript(config.Script);
+                if (!string.IsNullOrWhiteSpace(config.DriverDirectory))
+                    builder.SetDriverDirectory(config.DriverDirectory);
+                if (config.BlackFiles != null)
+                    builder.SetBlackFiles(config.BlackFiles);
+                if (config.BlackFormats != null)
+                    builder.SetBlackFormats(config.BlackFormats);
+                if (config.SkipDirectorys != null)
+                    builder.SetSkipDirectorys(config.SkipDirectorys);
+
+                return builder;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Invalid JSON format, fall back to parameters
+                return null;
+            }
+            catch (IOException)
+            {
+                // File read error, fall back to parameters
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Permission denied, fall back to parameters
+                return null;
+            }
+            catch
+            {
+                // Any other unexpected error, fall back to parameters
+                return null;
+            }
         }
 
         /// <summary>
         /// Initializes a new instance of the ConfiginfoBuilder with required parameters.
-        /// Consider using <see cref="Create(string, string, string)"/> for a more fluent API.
+        /// This constructor is private. Use <see cref="Create(string, string, string)"/> for creating instances.
         /// </summary>
         /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
         /// <param name="token">The authentication token used for API requests.</param>
         /// <param name="scheme">The URL scheme used for update requests (e.g., "http" or "https").</param>
         /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
-        public ConfiginfoBuilder(string updateUrl, string token, string scheme)
+        private ConfiginfoBuilder(string updateUrl, string token, string scheme)
         {
             // Validate required parameters
             if (string.IsNullOrWhiteSpace(updateUrl))
@@ -92,6 +195,11 @@ namespace GeneralUpdate.Common.Shared.Object
             _blackFiles = new List<string>();
             _blackFormats = new List<string>(DefaultBlackFormats);
             _skipDirectorys = new List<string>();
+            
+            // Set default InstallPath to current program running directory
+            // This is set here to ensure the builder has a consistent default
+            // even though BaseConfigInfo also has this default via property initializer
+            _installPath = AppDomain.CurrentDomain.BaseDirectory;
         }
 
         /// <summary>

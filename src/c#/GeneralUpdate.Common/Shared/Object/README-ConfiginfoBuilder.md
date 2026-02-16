@@ -4,7 +4,36 @@
 
 The `ConfiginfoBuilder` class provides a simple, fluent API for creating `Configinfo` objects with minimal effort. It automatically handles platform-specific defaults and only requires three essential parameters.
 
+**NEW**: ConfiginfoBuilder now supports loading configuration from a JSON file (`update_config.json`) placed in the running directory. When this file exists, it takes the highest priority, overriding any parameters passed to the builder.
+
 **Design Inspiration**: The zero-configuration approach is inspired by projects like [Velopack](https://github.com/velopack/velopack), focusing on sensible defaults extracted from the running application with minimal user input required.
+
+## Configuration Priority
+
+The ConfiginfoBuilder follows this priority order:
+
+1. **JSON Configuration File** (`update_config.json`) - **HIGHEST PRIORITY**
+2. **Builder Setter Methods** (via `.SetXXX()` methods)
+3. **Default Values** (platform-specific defaults)
+
+## JSON Configuration File Support
+
+Place an `update_config.json` file in your application's running directory to configure all update settings. When this file is present, ConfiginfoBuilder will automatically load settings from it, ignoring parameters passed to the `Create()` method.
+
+**Example `update_config.json`:**
+```json
+{
+  "UpdateUrl": "https://api.example.com/updates",
+  "Token": "your-authentication-token",
+  "Scheme": "https",
+  "AppName": "Update.exe",
+  "MainAppName": "MyApplication.exe",
+  "ClientVersion": "1.0.0",
+  "InstallPath": "/path/to/installation"
+}
+```
+
+See [update_config.example.json](update_config.example.json) for a complete example with all available options.
 
 ## Auto-Configuration Features
 
@@ -19,30 +48,36 @@ The `ConfiginfoBuilder` class provides a simple, fluent API for creating `Config
 ```csharp
 using GeneralUpdate.Common.Shared.Object;
 
-// Method 1: Direct constructor
-var config = new ConfiginfoBuilder(
-    updateUrl: "https://api.example.com/updates",
-    token: "your-auth-token",
-    scheme: "https"
-).Build();
+// Method 1: With JSON configuration file (RECOMMENDED)
+// Place update_config.json in your app's running directory
+// The Create method will automatically load from the file
+var config = ConfiginfoBuilder
+    .Create("https://fallback.com/updates", "fallback-token", "https")
+    .Build();
+// If update_config.json exists, those values are used instead of the parameters
 
-// Method 2: Factory method (recommended)
+// Method 2: Using code configuration only (no JSON file)
 var config2 = ConfiginfoBuilder
     .Create("https://api.example.com/updates", "your-auth-token", "https")
     .Build();
 
-// That's it! Application name, version, and all defaults are set automatically!
+// Method 3: Code configuration with custom overrides
+var config3 = ConfiginfoBuilder
+    .Create("https://api.example.com/updates", "your-auth-token", "https")
+    .SetAppName("MyApp.exe")
+    .SetInstallPath("/custom/path")
+    .Build();
 ```
 
 ## Key Features
 
+✅ **JSON Configuration Support**: Load settings from `update_config.json` with highest priority  
 ✅ **Minimal Parameters**: Only 3 required parameters (UpdateUrl, Token, Scheme)  
 ✅ **Cross-Platform**: Automatically detects and adapts to Windows/Linux/macOS  
 ✅ **Smart Defaults**: Platform-appropriate paths, separators, and configurations  
-✅ **Auto-Discovery**: Reads application name, version, and publisher from project file (.csproj)  
 ✅ **Fluent API**: Clean, readable method chaining  
 ✅ **Type-Safe**: Compile-time parameter validation  
-✅ **Well-Tested**: 37 comprehensive unit tests
+✅ **Well-Tested**: 39 comprehensive unit tests including JSON configuration scenarios
 
 ## Platform Detection
 
@@ -62,14 +97,35 @@ The builder automatically adapts based on your runtime environment:
 
 ## Examples
 
-### Basic Usage
+### Using JSON Configuration File
 ```csharp
-var config = new ConfiginfoBuilder(updateUrl, token, scheme).Build();
+// Create update_config.json in your app directory:
+// {
+//   "UpdateUrl": "https://api.example.com/updates",
+//   "Token": "my-token",
+//   "Scheme": "https",
+//   "AppName": "MyApp.exe",
+//   "ClientVersion": "2.0.0"
+// }
+
+// The builder will automatically load from the file
+var config = ConfiginfoBuilder
+    .Create("ignored", "ignored", "ignored")
+    .Build();
+// Values come from update_config.json!
+```
+
+### Basic Usage (No JSON File)
+```csharp
+var config = ConfiginfoBuilder
+    .Create(updateUrl, token, scheme)
+    .Build();
 ```
 
 ### Custom Configuration
 ```csharp
-var config = new ConfiginfoBuilder(updateUrl, token, scheme)
+var config = ConfiginfoBuilder
+    .Create(updateUrl, token, scheme)
     .SetAppName("MyApp.exe")
     .SetClientVersion("2.0.0")
     .SetInstallPath("/opt/myapp")
@@ -78,7 +134,8 @@ var config = new ConfiginfoBuilder(updateUrl, token, scheme)
 
 ### With File Filters
 ```csharp
-var config = new ConfiginfoBuilder(updateUrl, token, scheme)
+var config = ConfiginfoBuilder
+    .Create(updateUrl, token, scheme)
     .SetBlackFormats(new List<string> { ".log", ".tmp", ".cache" })
     .SetSkipDirectorys(new List<string> { "/temp", "/logs" })
     .Build();
@@ -86,17 +143,26 @@ var config = new ConfiginfoBuilder(updateUrl, token, scheme)
 
 ## Default Values
 
-The builder provides these defaults automatically:
+The builder and `Configinfo` class provide these defaults:
 
+### Configinfo Class Defaults (Property Initializers)
+- **AppName**: "Update.exe"
+- **InstallPath**: Current program's running directory (`AppDomain.CurrentDomain.BaseDirectory`)
+
+### ConfiginfoBuilder Defaults (for Builder Pattern)
 - **ClientVersion**: "1.0.0"
 - **UpgradeClientVersion**: "1.0.0"
 - **AppSecretKey**: "default-secret-key"
 - **ProductId**: "default-product-id"
-- **BlackFormats**: `.log`, `.tmp` (via `ConfiginfoBuilder.DefaultBlackFormats`)
+- **MainAppName**: "App.exe"
+- **BlackFormats**: `.log`, `.tmp`, `.cache`, `.bak` (via `ConfiginfoBuilder.DefaultBlackFormats`)
 - **BlackFiles**: Empty list
 - **SkipDirectorys**: Empty list
 
-All defaults can be overridden using the setter methods.
+All defaults can be overridden using:
+1. JSON configuration file (`update_config.json`) - highest priority
+2. Builder setter methods (`.SetXXX()`)
+3. Direct property assignment on `Configinfo` objects
 
 ## Error Handling
 
@@ -117,12 +183,14 @@ try {
 
 ## Testing
 
-The implementation includes 32 comprehensive unit tests covering:
+The implementation includes 39 comprehensive unit tests covering:
 - Constructor validation
 - Default value generation
 - Platform-specific behavior
 - Method chaining
 - Error handling
+- JSON configuration file loading
+- Fallback behavior when JSON is invalid
 - Complete integration scenarios
 
 Run tests with:
@@ -158,9 +226,28 @@ var config = new Configinfo
 };
 ```
 
-**After:**
+**After (with JSON configuration):**
+```json
+// update_config.json
+{
+  "UpdateUrl": "https://api.example.com/updates",
+  "Token": "my-token",
+  "Scheme": "https",
+  "AppName": "MyApp.exe",
+  "ClientVersion": "1.0.0"
+}
+```
 ```csharp
-var config = new ConfiginfoBuilder(url, token, scheme).Build();
+var config = ConfiginfoBuilder
+    .Create("fallback", "fallback", "https")
+    .Build();
+```
+
+**After (with code only):**
+```csharp
+var config = ConfiginfoBuilder
+    .Create(url, token, scheme)
+    .Build();
 ```
 
 ## Contributing

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace GeneralUpdate.Common.Shared.Object
@@ -12,8 +13,9 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// The name of the application that needs to be started after update.
         /// This is the executable name without extension (e.g., "MyApp" for MyApp.exe).
+        /// Default value is "Update.exe".
         /// </summary>
-        public string AppName { get; set; }
+        public string AppName { get; set; } = "Update.exe";
 
         /// <summary>
         /// The name of the main application without file extension.
@@ -24,8 +26,9 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <summary>
         /// The installation path where application files are located.
         /// This is the root directory used for update file operations.
+        /// Default value is the current program's running directory.
         /// </summary>
-        public string InstallPath { get; set; }
+        public string InstallPath { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
 
         /// <summary>
         /// The URL address for the update log webpage.
