@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using GeneralUpdate.Common.Shared.Object;
 
 namespace ConfiginfoBuilderExample
 {
     /// <summary>
-    /// Example demonstrating the ConfiginfoBuilder usage
+    /// Example demonstrating the ConfiginfoBuilder usage with JSON configuration
     /// </summary>
     class Program
     {
@@ -13,134 +14,105 @@ namespace ConfiginfoBuilderExample
         {
             Console.WriteLine("=== ConfiginfoBuilder Usage Examples ===\n");
 
-            // Example 1: Minimal configuration (recommended for most cases)
-            Console.WriteLine("Example 1: Minimal Configuration - Using Factory Method");
-            var minimalConfig = ConfiginfoBuilder
-                .Create("https://api.example.com/updates", "your-auth-token", "https")
-                .Build();
+            // Example 1: Load configuration from JSON file (recommended)
+            Console.WriteLine("Example 1: Loading from update_config.json file");
+            Console.WriteLine("This example requires an update_config.json file in the running directory.");
+            Console.WriteLine("The configuration file has the highest priority and must contain all required settings.\n");
             
-            Console.WriteLine($"  UpdateUrl: {minimalConfig.UpdateUrl}");
-            Console.WriteLine($"  Token: {minimalConfig.Token}");
-            Console.WriteLine($"  Scheme: {minimalConfig.Scheme}");
-            Console.WriteLine($"  InstallPath: {minimalConfig.InstallPath}");
-            Console.WriteLine($"  AppName: {minimalConfig.AppName}");
-            Console.WriteLine($"  Default Black Formats: {string.Join(", ", ConfiginfoBuilder.DefaultBlackFormats)}");
-            Console.WriteLine();
-
-            // Example 2: Custom configuration with method chaining
-            Console.WriteLine("Example 2: Custom Configuration - Using Create Method");
-            var customConfig = ConfiginfoBuilder.Create(
-                "https://api.example.com/updates",
-                "Bearer abc123xyz",
-                "https"
-            )
-            .SetAppName("MyApplication.exe")
-            .SetMainAppName("MyApplication.exe")
-            .SetClientVersion("2.1.0")
-            .SetInstallPath("/opt/myapp")
-            .SetAppSecretKey("super-secret-key-789")
-            .Build();
-            
-            Console.WriteLine($"  AppName: {customConfig.AppName}");
-            Console.WriteLine($"  ClientVersion: {customConfig.ClientVersion}");
-            Console.WriteLine($"  InstallPath: {customConfig.InstallPath}");
-            Console.WriteLine($"  AppSecretKey: {customConfig.AppSecretKey}");
-            Console.WriteLine();
-
-            // Example 3: Configuration with file filters
-            Console.WriteLine("Example 3: With File Filters");
-            var filteredConfig = ConfiginfoBuilder.Create(
-                "https://api.example.com/updates",
-                "token123",
-                "https"
-            )
-            .SetBlackFiles(new List<string> { "config.json", "user.dat" })
-            .SetBlackFormats(new List<string> { ".log", ".tmp", ".cache", ".bak" })
-            .SetSkipDirectorys(new List<string> { "/temp", "/logs" })
-            .Build();
-            
-            Console.WriteLine($"  Black Files: {string.Join(", ", filteredConfig.BlackFiles)}");
-            Console.WriteLine($"  Black Formats: {string.Join(", ", filteredConfig.BlackFormats)}");
-            Console.WriteLine($"  Skip Directories: {string.Join(", ", filteredConfig.SkipDirectorys)}");
-            Console.WriteLine();
-
-            // Example 4: Complete configuration
-            Console.WriteLine("Example 4: Complete Configuration");
-            var completeConfig = ConfiginfoBuilder.Create(
-                updateUrl: "https://api.example.com/updates",
-                token: "Bearer xyz789",
-                scheme: "https"
-            )
-            .SetAppName("MyApp.exe")
-            .SetMainAppName("MyApp.exe")
-            .SetClientVersion("3.0.0")
-            .SetUpgradeClientVersion("1.5.0")
-            .SetProductId("myapp-001")
-            .SetAppSecretKey("secret-key-456")
-            .SetInstallPath("/opt/myapp")
-            .SetUpdateLogUrl("https://myapp.example.com/changelog")
-            .SetReportUrl("https://api.example.com/report")
-            .SetBowl("Bowl.exe")
-            .SetDriverDirectory("/opt/myapp/drivers")
-            .Build();
-            
-            Console.WriteLine($"  ProductId: {completeConfig.ProductId}");
-            Console.WriteLine($"  UpdateLogUrl: {completeConfig.UpdateLogUrl}");
-            Console.WriteLine($"  ReportUrl: {completeConfig.ReportUrl}");
-            Console.WriteLine($"  Bowl: {completeConfig.Bowl}");
-            Console.WriteLine();
-
-            // Example 5: Error handling
-            Console.WriteLine("Example 5: Error Handling");
             try
             {
-                // Note: Create method loads from config file if available
-                // For demonstration, we'll show that invalid params would fail
-                // if no config file exists
-                var invalidConfig = ConfiginfoBuilder.Create(
-                    null, // Invalid: null URL
-                    "token",
-                    "https"
-                );
+                // Create update_config.json for demonstration
+                CreateExampleConfigFile();
+                
+                // Simply call Create() with no parameters - it loads from update_config.json
+                var config = ConfiginfoBuilder.Create().Build();
+                
+                Console.WriteLine($"  UpdateUrl: {config.UpdateUrl}");
+                Console.WriteLine($"  Token: {config.Token}");
+                Console.WriteLine($"  Scheme: {config.Scheme}");
+                Console.WriteLine($"  InstallPath: {config.InstallPath}");
+                Console.WriteLine($"  AppName: {config.AppName}");
+                Console.WriteLine($"  ClientVersion: {config.ClientVersion}");
+                Console.WriteLine();
             }
-            catch (ArgumentException ex)
+            catch (FileNotFoundException ex)
+            {
+                Console.WriteLine($"  Error: {ex.Message}");
+                Console.WriteLine("  Please create update_config.json in the running directory.");
+                Console.WriteLine();
+            }
+            finally
+            {
+                CleanupExampleConfigFile();
+            }
+
+            // Example 2: Customizing configuration after loading from file
+            Console.WriteLine("Example 2: Loading from JSON and customizing with method chaining");
+            try
+            {
+                CreateExampleConfigFile();
+                
+                var customConfig = ConfiginfoBuilder.Create()
+                    .SetAppName("CustomApp.exe")
+                    .SetInstallPath("/custom/path")
+                    .Build();
+                
+                Console.WriteLine($"  AppName: {customConfig.AppName}");
+                Console.WriteLine($"  InstallPath: {customConfig.InstallPath}");
+                Console.WriteLine();
+            }
+            catch (FileNotFoundException ex)
+            {
+                Console.WriteLine($"  Error: {ex.Message}");
+                Console.WriteLine();
+            }
+            finally
+            {
+                CleanupExampleConfigFile();
+            }
+
+            // Example 3: Error handling when config file is missing
+            Console.WriteLine("Example 3: Error Handling - Missing Configuration File");
+            try
+            {
+                var config = ConfiginfoBuilder.Create().Build();
+            }
+            catch (FileNotFoundException ex)
             {
                 Console.WriteLine($"  Caught expected error: {ex.Message}");
-            }
-
-            try
-            {
-                var invalidConfig2 = ConfiginfoBuilder.Create(
-                    "not-a-url", // Invalid: malformed URL
-                    "token",
-                    "https"
-                );
-            }
-            catch (ArgumentException ex)
-            {
-                Console.WriteLine($"  Caught expected error: {ex.Message}");
+                Console.WriteLine("  This is expected when update_config.json doesn't exist.");
             }
             Console.WriteLine();
 
-            // Example 6: Validate configuration
-            Console.WriteLine("Example 6: Configuration Validation");
-            var validConfig = ConfiginfoBuilder.Create(
-                "https://api.example.com/updates",
-                "token",
-                "https"
-            ).Build();
-            
-            try
-            {
-                validConfig.Validate();
-                Console.WriteLine("  Configuration is valid!");
-            }
-            catch (ArgumentException ex)
-            {
-                Console.WriteLine($"  Validation failed: {ex.Message}");
-            }
+            Console.WriteLine("\n=== All Examples Completed! ===");
+            Console.WriteLine("\nNote: ConfiginfoBuilder now requires update_config.json file.");
+            Console.WriteLine("See update_config.example.json for a complete example.");
+        }
 
-            Console.WriteLine("\n=== All Examples Completed Successfully! ===");
+        private static void CreateExampleConfigFile()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            var exampleConfig = @"{
+  ""UpdateUrl"": ""https://api.example.com/updates"",
+  ""Token"": ""example-auth-token"",
+  ""Scheme"": ""https"",
+  ""AppName"": ""Update.exe"",
+  ""MainAppName"": ""MyApplication.exe"",
+  ""ClientVersion"": ""1.0.0"",
+  ""UpgradeClientVersion"": ""1.0.0"",
+  ""AppSecretKey"": ""example-secret-key"",
+  ""ProductId"": ""example-product-id""
+}";
+            File.WriteAllText(configPath, exampleConfig);
+        }
+
+        private static void CleanupExampleConfigFile()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
+            if (File.Exists(configPath))
+            {
+                File.Delete(configPath);
+            }
         }
     }
 }

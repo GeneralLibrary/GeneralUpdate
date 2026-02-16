@@ -17,6 +17,18 @@ namespace CoreTest.Shared
         private const string TestToken = "test-token-12345";
         private const string TestScheme = "https";
 
+        /// <summary>
+        /// Helper method to create a builder with all required fields set for testing.
+        /// Since defaults were removed per requirements, tests must explicitly set required fields.
+        /// </summary>
+        private ConfiginfoBuilder CreateBuilderWithRequiredFields()
+        {
+            return ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
+                .SetMainAppName("TestApp.exe")
+                .SetClientVersion("1.0.0")
+                .SetAppSecretKey("test-secret-key");
+        }
+
         #region Constructor Tests
 
         /// <summary>
@@ -26,7 +38,7 @@ namespace CoreTest.Shared
         public void Create_WithValidParameters_CreatesInstance()
         {
             // Act
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Assert
             Assert.NotNull(builder);
@@ -39,8 +51,8 @@ namespace CoreTest.Shared
         public void Create_ProducesConsistentResults()
         {
             // Act
-            var config1 = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
-            var config2 = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+            var config1 = CreateBuilderWithRequiredFields().Build();
+            var config2 = CreateBuilderWithRequiredFields().Build();
 
             // Assert
             Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
@@ -120,13 +132,16 @@ namespace CoreTest.Shared
         #region Build Method Tests
 
         /// <summary>
-        /// Tests that Build() creates a valid Configinfo object with default values.
+        /// Tests that Build() creates a valid Configinfo object when all required fields are set.
         /// </summary>
         [Fact]
         public void Build_WithMinimalParameters_ReturnsValidConfiginfo()
         {
-            // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            // Arrange - Now that defaults are removed, we must set all required fields
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
+                .SetMainAppName("TestApp.exe")
+                .SetClientVersion("1.0.0")
+                .SetAppSecretKey("test-secret-key");
 
             // Act
             var config = builder.Build();
@@ -150,7 +165,7 @@ namespace CoreTest.Shared
         public void Build_GeneratesPlatformSpecificDefaults()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -172,7 +187,7 @@ namespace CoreTest.Shared
         public void Build_InitializesCollectionProperties()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -181,8 +196,8 @@ namespace CoreTest.Shared
             Assert.NotNull(config.BlackFiles);
             Assert.NotNull(config.BlackFormats);
             Assert.NotNull(config.SkipDirectorys);
-            Assert.Contains(".log", config.BlackFormats);
-            Assert.Contains(".tmp", config.BlackFormats);
+            // DefaultBlackFormats is now empty per requirements
+            Assert.Empty(config.BlackFormats);
         }
 
         #endregion
@@ -196,7 +211,7 @@ namespace CoreTest.Shared
         public void SetAppName_WithValidValue_SetsAppName()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customAppName = "CustomApp.exe";
 
             // Act
@@ -213,7 +228,7 @@ namespace CoreTest.Shared
         public void SetAppName_ReturnsBuilder_ForMethodChaining()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var result = builder.SetAppName("Test.exe");
@@ -229,7 +244,7 @@ namespace CoreTest.Shared
         public void SetAppName_WithNullValue_ThrowsArgumentException()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => builder.SetAppName(null));
@@ -243,7 +258,7 @@ namespace CoreTest.Shared
         public void SetMainAppName_WithValidValue_SetsMainAppName()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customMainAppName = "MainApp.exe";
 
             // Act
@@ -260,7 +275,7 @@ namespace CoreTest.Shared
         public void SetClientVersion_WithValidValue_SetsClientVersion()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customVersion = "2.5.1";
 
             // Act
@@ -277,7 +292,7 @@ namespace CoreTest.Shared
         public void SetUpgradeClientVersion_WithValidValue_SetsUpgradeClientVersion()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customVersion = "3.0.0";
 
             // Act
@@ -294,7 +309,7 @@ namespace CoreTest.Shared
         public void SetAppSecretKey_WithValidValue_SetsAppSecretKey()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customSecretKey = "my-secret-key-123";
 
             // Act
@@ -311,7 +326,7 @@ namespace CoreTest.Shared
         public void SetProductId_WithValidValue_SetsProductId()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customProductId = "product-xyz-789";
 
             // Act
@@ -328,7 +343,7 @@ namespace CoreTest.Shared
         public void SetInstallPath_WithValidValue_SetsInstallPath()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customPath = "/custom/install/path";
 
             // Act
@@ -345,7 +360,7 @@ namespace CoreTest.Shared
         public void SetUpdateLogUrl_WithValidUrl_SetsUpdateLogUrl()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var logUrl = "https://example.com/changelog";
 
             // Act
@@ -362,7 +377,7 @@ namespace CoreTest.Shared
         public void SetUpdateLogUrl_WithInvalidUrl_ThrowsArgumentException()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
@@ -378,7 +393,7 @@ namespace CoreTest.Shared
         public void SetReportUrl_WithValidUrl_SetsReportUrl()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var reportUrl = "https://example.com/report";
 
             // Act
@@ -395,7 +410,7 @@ namespace CoreTest.Shared
         public void SetBowl_WithValidValue_SetsBowl()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var bowlProcess = "Bowl.exe";
 
             // Act
@@ -412,7 +427,7 @@ namespace CoreTest.Shared
         public void SetScript_WithValidValue_SetsScript()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var customScript = "#!/bin/bash\necho 'Hello'";
 
             // Act
@@ -429,7 +444,7 @@ namespace CoreTest.Shared
         public void SetDriverDirectory_WithValidValue_SetsDriverDirectory()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var driverDir = "/path/to/drivers";
 
             // Act
@@ -446,7 +461,7 @@ namespace CoreTest.Shared
         public void SetBlackFiles_WithValidList_SetsBlackFiles()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var blackFiles = new List<string> { "file1.txt", "file2.dat" };
 
             // Act
@@ -463,7 +478,7 @@ namespace CoreTest.Shared
         public void SetBlackFormats_WithValidList_SetsBlackFormats()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var blackFormats = new List<string> { ".bak", ".old" };
 
             // Act
@@ -480,7 +495,7 @@ namespace CoreTest.Shared
         public void SetSkipDirectorys_WithValidList_SetsSkipDirectorys()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
             var skipDirs = new List<string> { "/temp", "/cache" };
 
             // Act
@@ -534,7 +549,7 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -559,7 +574,7 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -584,7 +599,7 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -607,7 +622,7 @@ namespace CoreTest.Shared
         public void Build_ReturnsConfiginfoThatPassesValidation()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -625,7 +640,7 @@ namespace CoreTest.Shared
         public void Build_AttemptsToExtractAppNameFromProject()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields();
 
             // Act
             var config = builder.Build();
@@ -644,27 +659,25 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
-        /// Tests that project metadata (version, company, etc.) is extracted from csproj when available.
-        /// The builder should attempt to extract Version and Company/Authors fields.
+        /// Tests that project metadata fields can be set and retrieved.
+        /// Since defaults were removed per requirements, fields are null unless explicitly set.
         /// </summary>
         [Fact]
         public void Build_AttemptsToExtractProjectMetadata()
         {
             // Arrange
-            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
+            var builder = CreateBuilderWithRequiredFields()
+                .SetProductId("test-product-id");
 
             // Act
             var config = builder.Build();
 
-            // Assert - Core fields should always be set (either extracted or defaults)
+            // Assert - Core fields should be set if explicitly provided
             Assert.NotNull(config.ClientVersion);
             Assert.NotEmpty(config.ClientVersion);
             Assert.NotNull(config.ProductId);
             Assert.NotEmpty(config.ProductId);
-            
-            // Version should follow a reasonable format if extracted (e.g., "1.0.0" or similar)
-            // If extracted from project file, it might have proper semantic versioning
-            // If using default, it should still be a valid string
+            Assert.Equal("test-product-id", config.ProductId);
         }
 
         /// <summary>
@@ -725,6 +738,7 @@ namespace CoreTest.Shared
                 AppName = "ConfigFileApp.exe",
                 MainAppName = "ConfigFileMain.exe",
                 ClientVersion = "9.9.9",
+                AppSecretKey = "config-file-secret",
                 InstallPath = "/config/file/path"
             };
             
@@ -733,14 +747,10 @@ namespace CoreTest.Shared
                 // Write test config file
                 File.WriteAllText(configFilePath, System.Text.Json.JsonSerializer.Serialize(testConfig));
 
-                // Act - Create should load from file instead of using parameters
-                var config = ConfiginfoBuilder.Create(
-                    "https://should-be-ignored.com/updates", 
-                    "should-be-ignored-token", 
-                    "http"
-                ).Build();
+                // Act - Use parameterless Create() to load from file
+                var config = ConfiginfoBuilder.Create().Build();
 
-                // Assert - Values should come from config file, not parameters
+                // Assert - Values should come from config file
                 Assert.Equal("https://config-file.example.com/updates", config.UpdateUrl);
                 Assert.Equal("config-file-token", config.Token);
                 Assert.Equal("https", config.Scheme);
@@ -775,7 +785,7 @@ namespace CoreTest.Shared
             try
             {
                 // Act - Create should use parameters
-                var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+                var config = CreateBuilderWithRequiredFields().Build();
 
                 // Assert - Values should come from parameters and defaults
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
@@ -804,7 +814,7 @@ namespace CoreTest.Shared
                 File.WriteAllText(configFilePath, "{ invalid json content !!!");
 
                 // Act - Create should fall back to parameters
-                var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
+                var config = CreateBuilderWithRequiredFields().Build();
 
                 // Assert - Values should come from parameters (fallback)
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);

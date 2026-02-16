@@ -20,7 +20,7 @@ namespace GeneralUpdate.Common.Shared.Object
 
         static ConfiginfoBuilder()
         {
-            DefaultBlackFormats = new[] { ".log", ".tmp", ".cache", ".bak" };
+            DefaultBlackFormats = new string[0];
         }
 
         private readonly string _updateUrl;
@@ -31,11 +31,11 @@ namespace GeneralUpdate.Common.Shared.Object
         // Note: AppName and InstallPath defaults are set in Configinfo class itself
         // These are ConfiginfoBuilder-specific defaults to support the builder pattern
         private string _appName = "Update.exe";
-        private string _mainAppName = "App.exe";
-        private string _clientVersion = "1.0.0";
-        private string _upgradeClientVersion = "1.0.0";
-        private string _appSecretKey = "default-secret-key";
-        private string _productId = "default-product-id";
+        private string _mainAppName;
+        private string _clientVersion;
+        private string _upgradeClientVersion;
+        private string _appSecretKey;
+        private string _productId;
         private string _installPath;
         private string _updateLogUrl;
         private string _reportUrl;
@@ -47,10 +47,31 @@ namespace GeneralUpdate.Common.Shared.Object
         private List<string> _skipDirectorys;
 
         /// <summary>
+        /// Creates a new ConfiginfoBuilder instance by loading configuration from update_config.json file.
+        /// The configuration file must exist in the running directory and contain all required settings.
+        /// This method has the highest priority - configuration file settings override any code-based settings.
+        /// </summary>
+        /// <returns>A new ConfiginfoBuilder instance with settings loaded from the configuration file.</returns>
+        /// <exception cref="FileNotFoundException">Thrown when update_config.json is not found.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the configuration file is invalid or cannot be loaded.</exception>
+        public static ConfiginfoBuilder Create()
+        {
+            // Try to load from configuration file
+            var configFromFile = LoadFromConfigFile();
+            if (configFromFile != null)
+            {
+                // Configuration file loaded successfully
+                return configFromFile;
+            }
+            
+            // If no config file exists, throw an exception
+            throw new FileNotFoundException("Configuration file 'update_config.json' not found in the running directory. Please create this file with the required settings.");
+        }
+
+        /// <summary>
         /// Creates a new ConfiginfoBuilder instance using the specified update URL, authentication token, and scheme.
-        /// This is the primary factory method for creating a builder with zero-configuration defaults.
-        /// If update_config.json exists in the running directory, it will be loaded with highest priority.
-        /// All other configuration properties will be automatically initialized with platform-appropriate defaults.
+        /// This method is provided for programmatic configuration when not using a JSON configuration file.
+        /// Note: If update_config.json exists, use the parameterless Create() method instead as it has higher priority.
         /// </summary>
         /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
         /// <param name="token">The authentication token used for API requests.</param>
@@ -59,14 +80,6 @@ namespace GeneralUpdate.Common.Shared.Object
         /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
         public static ConfiginfoBuilder Create(string updateUrl, string token, string scheme)
         {
-            // Try to load from configuration file first
-            var configFromFile = LoadFromConfigFile();
-            if (configFromFile != null)
-            {
-                // Configuration file has highest priority, return directly
-                return configFromFile;
-            }
-            
             return new ConfiginfoBuilder(updateUrl, token, scheme);
         }
 
