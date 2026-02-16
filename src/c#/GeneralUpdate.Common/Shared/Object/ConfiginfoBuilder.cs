@@ -13,16 +13,6 @@ namespace GeneralUpdate.Common.Shared.Object
     /// </summary>
     public class ConfiginfoBuilder
     {
-        /// <summary>
-        /// Default blacklisted file format extensions that are automatically excluded from updates.
-        /// </summary>
-        public static readonly string[] DefaultBlackFormats;
-
-        static ConfiginfoBuilder()
-        {
-            DefaultBlackFormats = new string[0];
-        }
-
         private readonly string _updateUrl;
         private readonly string _token;
         private readonly string _scheme;
@@ -193,7 +183,7 @@ namespace GeneralUpdate.Common.Shared.Object
         {
             // Initialize common defaults
             _blackFiles = new List<string>();
-            _blackFormats = new List<string>(DefaultBlackFormats);
+            _blackFormats = new List<string>();
             _skipDirectorys = new List<string>();
             
             // Set default InstallPath to current program running directory
