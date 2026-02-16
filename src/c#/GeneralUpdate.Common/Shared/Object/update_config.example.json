@@ -1,0 +1,31 @@
+{
+  "UpdateUrl": "https://api.example.com/updates",
+  "Token": "your-authentication-token-here",
+  "Scheme": "https",
+  "AppName": "Update.exe",
+  "MainAppName": "MyApplication.exe",
+  "ClientVersion": "1.0.0",
+  "UpgradeClientVersion": "1.0.0",
+  "AppSecretKey": "your-secret-key-here",
+  "ProductId": "your-product-id",
+  "InstallPath": "/path/to/installation",
+  "UpdateLogUrl": "https://example.com/changelog",
+  "ReportUrl": "https://api.example.com/report",
+  "Bowl": "Bowl.exe",
+  "Script": "#!/bin/bash\nchmod +x *",
+  "DriverDirectory": "/path/to/drivers",
+  "BlackFiles": [
+    "config.json",
+    "user.dat"
+  ],
+  "BlackFormats": [
+    ".log",
+    ".tmp",
+    ".cache",
+    ".bak"
+  ],
+  "SkipDirectorys": [
+    "/temp",
+    "/logs"
+  ]
+}

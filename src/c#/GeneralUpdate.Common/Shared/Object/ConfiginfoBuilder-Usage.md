@@ -1,8 +1,47 @@
 # ConfiginfoBuilder Usage Guide
 
-The `ConfiginfoBuilder` class provides a simple and convenient way to create `Configinfo` objects for the GeneralUpdate system. It only requires three essential parameters while automatically generating platform-appropriate defaults for all other configuration items.
+The `ConfiginfoBuilder` class provides a simple and convenient way to create `Configinfo` objects for the GeneralUpdate system. It supports both JSON-based configuration and programmatic configuration.
 
 **Design Philosophy**: Inspired by zero-configuration patterns from projects like [Velopack](https://github.com/velopack/velopack), this builder minimizes required configuration while maintaining flexibility through optional fluent setters.
+
+## Configuration Methods
+
+There are two main ways to configure the update system:
+
+### 1. JSON Configuration File (Recommended)
+
+Place an `update_config.json` file in your application's running directory. When this file exists, ConfiginfoBuilder automatically loads all settings from it, giving the configuration file the highest priority.
+
+**Example `update_config.json`:**
+```json
+{
+  "UpdateUrl": "https://api.example.com/updates",
+  "Token": "your-authentication-token",
+  "Scheme": "https",
+  "AppName": "Update.exe",
+  "MainAppName": "MyApplication.exe",
+  "ClientVersion": "1.0.0",
+  "InstallPath": "/path/to/installation",
+  "BlackFormats": [".log", ".tmp", ".cache"],
+  "SkipDirectorys": ["/temp", "/logs"]
+}
+```
+
+See [update_config.example.json](update_config.example.json) for a complete example with all available options.
+
+**Usage:**
+```csharp
+// The Create method will automatically load from update_config.json if it exists
+var config = ConfiginfoBuilder
+    .Create("fallback-url", "fallback-token", "https")
+    .Build();
+// If update_config.json exists, all values come from the file
+// Parameters are only used as fallback if file doesn't exist
+```
+
+### 2. Programmatic Configuration
+
+Configure the update system entirely through code using the fluent API:
 
 ## Automatic Configuration Detection
 
