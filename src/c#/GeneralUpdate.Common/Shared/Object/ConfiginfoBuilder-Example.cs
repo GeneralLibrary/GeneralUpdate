@@ -28,8 +28,8 @@ namespace ConfiginfoBuilderExample
             Console.WriteLine();
 
             // Example 2: Custom configuration with method chaining
-            Console.WriteLine("Example 2: Custom Configuration - Using Constructor");
-            var customConfig = new ConfiginfoBuilder(
+            Console.WriteLine("Example 2: Custom Configuration - Using Create Method");
+            var customConfig = ConfiginfoBuilder.Create(
                 "https://api.example.com/updates",
                 "Bearer abc123xyz",
                 "https"
@@ -49,7 +49,7 @@ namespace ConfiginfoBuilderExample
 
             // Example 3: Configuration with file filters
             Console.WriteLine("Example 3: With File Filters");
-            var filteredConfig = new ConfiginfoBuilder(
+            var filteredConfig = ConfiginfoBuilder.Create(
                 "https://api.example.com/updates",
                 "token123",
                 "https"
@@ -66,7 +66,7 @@ namespace ConfiginfoBuilderExample
 
             // Example 4: Complete configuration
             Console.WriteLine("Example 4: Complete Configuration");
-            var completeConfig = new ConfiginfoBuilder(
+            var completeConfig = ConfiginfoBuilder.Create(
                 updateUrl: "https://api.example.com/updates",
                 token: "Bearer xyz789",
                 scheme: "https"
@@ -94,7 +94,10 @@ namespace ConfiginfoBuilderExample
             Console.WriteLine("Example 5: Error Handling");
             try
             {
-                var invalidConfig = new ConfiginfoBuilder(
+                // Note: Create method loads from config file if available
+                // For demonstration, we'll show that invalid params would fail
+                // if no config file exists
+                var invalidConfig = ConfiginfoBuilder.Create(
                     null, // Invalid: null URL
                     "token",
                     "https"
@@ -107,7 +110,7 @@ namespace ConfiginfoBuilderExample
 
             try
             {
-                var invalidConfig2 = new ConfiginfoBuilder(
+                var invalidConfig2 = ConfiginfoBuilder.Create(
                     "not-a-url", // Invalid: malformed URL
                     "token",
                     "https"
@@ -121,7 +124,7 @@ namespace ConfiginfoBuilderExample
 
             // Example 6: Validate configuration
             Console.WriteLine("Example 6: Configuration Validation");
-            var validConfig = new ConfiginfoBuilder(
+            var validConfig = ConfiginfoBuilder.Create(
                 "https://api.example.com/updates",
                 "token",
                 "https"

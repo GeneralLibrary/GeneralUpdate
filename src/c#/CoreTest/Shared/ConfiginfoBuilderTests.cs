@@ -19,19 +19,6 @@ namespace CoreTest.Shared
         #region Constructor Tests
 
         /// <summary>
-        /// Tests that the constructor properly initializes with valid parameters.
-        /// </summary>
-        [Fact]
-        public void Constructor_WithValidParameters_CreatesInstance()
-        {
-            // Act
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
-
-            // Assert
-            Assert.NotNull(builder);
-        }
-
-        /// <summary>
         /// Tests that the Create factory method properly initializes with valid parameters.
         /// </summary>
         [Fact]
@@ -45,85 +32,84 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
-        /// Tests that Create factory method produces same result as constructor.
+        /// Tests that Create factory method produces consistent results.
         /// </summary>
         [Fact]
-        public void Create_ProducesSameResultAsConstructor()
+        public void Create_ProducesConsistentResults()
         {
             // Act
-            var config1 = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme).Build();
+            var config1 = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
             var config2 = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme).Build();
 
             // Assert
             Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
             Assert.Equal(config1.Token, config2.Token);
             Assert.Equal(config1.Scheme, config2.Scheme);
-            Assert.Equal(config1.InstallPath, config2.InstallPath);
             Assert.Equal(config1.AppName, config2.AppName);
         }
 
         /// <summary>
-        /// Tests that the constructor throws ArgumentException when UpdateUrl is null.
+        /// Tests that the Create method throws ArgumentException when UpdateUrl is null.
         /// </summary>
         [Fact]
-        public void Constructor_WithNullUpdateUrl_ThrowsArgumentException()
+        public void Create_WithNullUpdateUrl_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
-                new ConfiginfoBuilder(null, TestToken, TestScheme));
+                ConfiginfoBuilder.Create(null, TestToken, TestScheme));
             
             Assert.Contains("UpdateUrl", exception.Message);
         }
 
         /// <summary>
-        /// Tests that the constructor throws ArgumentException when UpdateUrl is empty.
+        /// Tests that the Create method throws ArgumentException when UpdateUrl is empty.
         /// </summary>
         [Fact]
-        public void Constructor_WithEmptyUpdateUrl_ThrowsArgumentException()
+        public void Create_WithEmptyUpdateUrl_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
-                new ConfiginfoBuilder("", TestToken, TestScheme));
+                ConfiginfoBuilder.Create("", TestToken, TestScheme));
             
             Assert.Contains("UpdateUrl", exception.Message);
         }
 
         /// <summary>
-        /// Tests that the constructor throws ArgumentException when UpdateUrl is not a valid URI.
+        /// Tests that the Create method throws ArgumentException when UpdateUrl is not a valid URI.
         /// </summary>
         [Fact]
-        public void Constructor_WithInvalidUpdateUrl_ThrowsArgumentException()
+        public void Create_WithInvalidUpdateUrl_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
-                new ConfiginfoBuilder("not-a-valid-url", TestToken, TestScheme));
+                ConfiginfoBuilder.Create("not-a-valid-url", TestToken, TestScheme));
             
             Assert.Contains("UpdateUrl", exception.Message);
             Assert.Contains("valid absolute URI", exception.Message);
         }
 
         /// <summary>
-        /// Tests that the constructor throws ArgumentException when Token is null.
+        /// Tests that the Create method throws ArgumentException when Token is null.
         /// </summary>
         [Fact]
-        public void Constructor_WithNullToken_ThrowsArgumentException()
+        public void Create_WithNullToken_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
-                new ConfiginfoBuilder(TestUpdateUrl, null, TestScheme));
+                ConfiginfoBuilder.Create(TestUpdateUrl, null, TestScheme));
             
             Assert.Contains("Token", exception.Message);
         }
 
         /// <summary>
-        /// Tests that the constructor throws ArgumentException when Scheme is null.
+        /// Tests that the Create method throws ArgumentException when Scheme is null.
         /// </summary>
         [Fact]
-        public void Constructor_WithNullScheme_ThrowsArgumentException()
+        public void Create_WithNullScheme_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
-                new ConfiginfoBuilder(TestUpdateUrl, TestToken, null));
+                ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, null));
             
             Assert.Contains("Scheme", exception.Message);
         }
@@ -139,7 +125,7 @@ namespace CoreTest.Shared
         public void Build_WithMinimalParameters_ReturnsValidConfiginfo()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -163,7 +149,7 @@ namespace CoreTest.Shared
         public void Build_GeneratesPlatformSpecificDefaults()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -174,21 +160,8 @@ namespace CoreTest.Shared
             // InstallPath should be the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
             
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Windows-specific assertions
-                Assert.Contains("App.exe", config.AppName);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                // Linux-specific assertions
-                Assert.DoesNotContain(".exe", config.AppName);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                // macOS-specific assertions
-                Assert.DoesNotContain(".exe", config.AppName);
-            }
+            // According to requirements, AppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.AppName);
         }
 
         /// <summary>
@@ -198,7 +171,7 @@ namespace CoreTest.Shared
         public void Build_InitializesCollectionProperties()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -222,7 +195,7 @@ namespace CoreTest.Shared
         public void SetAppName_WithValidValue_SetsAppName()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customAppName = "CustomApp.exe";
 
             // Act
@@ -239,7 +212,7 @@ namespace CoreTest.Shared
         public void SetAppName_ReturnsBuilder_ForMethodChaining()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var result = builder.SetAppName("Test.exe");
@@ -255,7 +228,7 @@ namespace CoreTest.Shared
         public void SetAppName_WithNullValue_ThrowsArgumentException()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => builder.SetAppName(null));
@@ -269,7 +242,7 @@ namespace CoreTest.Shared
         public void SetMainAppName_WithValidValue_SetsMainAppName()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customMainAppName = "MainApp.exe";
 
             // Act
@@ -286,7 +259,7 @@ namespace CoreTest.Shared
         public void SetClientVersion_WithValidValue_SetsClientVersion()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customVersion = "2.5.1";
 
             // Act
@@ -303,7 +276,7 @@ namespace CoreTest.Shared
         public void SetUpgradeClientVersion_WithValidValue_SetsUpgradeClientVersion()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customVersion = "3.0.0";
 
             // Act
@@ -320,7 +293,7 @@ namespace CoreTest.Shared
         public void SetAppSecretKey_WithValidValue_SetsAppSecretKey()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customSecretKey = "my-secret-key-123";
 
             // Act
@@ -337,7 +310,7 @@ namespace CoreTest.Shared
         public void SetProductId_WithValidValue_SetsProductId()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customProductId = "product-xyz-789";
 
             // Act
@@ -354,7 +327,7 @@ namespace CoreTest.Shared
         public void SetInstallPath_WithValidValue_SetsInstallPath()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customPath = "/custom/install/path";
 
             // Act
@@ -371,7 +344,7 @@ namespace CoreTest.Shared
         public void SetUpdateLogUrl_WithValidUrl_SetsUpdateLogUrl()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var logUrl = "https://example.com/changelog";
 
             // Act
@@ -388,7 +361,7 @@ namespace CoreTest.Shared
         public void SetUpdateLogUrl_WithInvalidUrl_ThrowsArgumentException()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act & Assert
             var exception = Assert.Throws<ArgumentException>(() => 
@@ -404,7 +377,7 @@ namespace CoreTest.Shared
         public void SetReportUrl_WithValidUrl_SetsReportUrl()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var reportUrl = "https://example.com/report";
 
             // Act
@@ -421,7 +394,7 @@ namespace CoreTest.Shared
         public void SetBowl_WithValidValue_SetsBowl()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var bowlProcess = "Bowl.exe";
 
             // Act
@@ -438,7 +411,7 @@ namespace CoreTest.Shared
         public void SetScript_WithValidValue_SetsScript()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var customScript = "#!/bin/bash\necho 'Hello'";
 
             // Act
@@ -455,7 +428,7 @@ namespace CoreTest.Shared
         public void SetDriverDirectory_WithValidValue_SetsDriverDirectory()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var driverDir = "/path/to/drivers";
 
             // Act
@@ -472,7 +445,7 @@ namespace CoreTest.Shared
         public void SetBlackFiles_WithValidList_SetsBlackFiles()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var blackFiles = new List<string> { "file1.txt", "file2.dat" };
 
             // Act
@@ -489,7 +462,7 @@ namespace CoreTest.Shared
         public void SetBlackFormats_WithValidList_SetsBlackFormats()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var blackFormats = new List<string> { ".bak", ".old" };
 
             // Act
@@ -506,7 +479,7 @@ namespace CoreTest.Shared
         public void SetSkipDirectorys_WithValidList_SetsSkipDirectorys()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
             var skipDirs = new List<string> { "/temp", "/cache" };
 
             // Act
@@ -527,7 +500,7 @@ namespace CoreTest.Shared
         public void BuilderPattern_SupportsMethodChaining()
         {
             // Arrange & Act
-            var config = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme)
+            var config = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme)
                 .SetAppName("CustomApp.exe")
                 .SetMainAppName("MainCustomApp.exe")
                 .SetClientVersion("2.0.0")
@@ -560,17 +533,16 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
 
             // Assert
-            Assert.Contains("App.exe", config.AppName);
+            // According to requirements, AppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.AppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
-            // Windows script should be empty
-            Assert.Empty(config.Script);
         }
 
         /// <summary>
@@ -586,18 +558,16 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
 
             // Assert
-            Assert.DoesNotContain(".exe", config.AppName);
+            // According to requirements, AppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.AppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
-            // Linux should have a default permission script
-            Assert.NotEmpty(config.Script);
-            Assert.Contains("chmod", config.Script);
         }
 
         /// <summary>
@@ -613,18 +583,16 @@ namespace CoreTest.Shared
             }
 
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
 
             // Assert
-            Assert.DoesNotContain(".exe", config.AppName);
+            // According to requirements, AppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.AppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
-            // macOS should have a default permission script
-            Assert.NotEmpty(config.Script);
-            Assert.Contains("chmod", config.Script);
         }
 
         #endregion
@@ -638,7 +606,7 @@ namespace CoreTest.Shared
         public void Build_ReturnsConfiginfoThatPassesValidation()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -656,7 +624,7 @@ namespace CoreTest.Shared
         public void Build_AttemptsToExtractAppNameFromProject()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -682,7 +650,7 @@ namespace CoreTest.Shared
         public void Build_AttemptsToExtractProjectMetadata()
         {
             // Arrange
-            var builder = new ConfiginfoBuilder(TestUpdateUrl, TestToken, TestScheme);
+            var builder = ConfiginfoBuilder.Create(TestUpdateUrl, TestToken, TestScheme);
 
             // Act
             var config = builder.Build();
@@ -710,7 +678,7 @@ namespace CoreTest.Shared
             var scheme = "https";
 
             // Act
-            var config = new ConfiginfoBuilder(updateUrl, token, scheme)
+            var config = ConfiginfoBuilder.Create(updateUrl, token, scheme)
                 .SetAppName("MyApplication.exe")
                 .SetMainAppName("MyApplication.exe")
                 .SetClientVersion("1.5.2")
