@@ -13,13 +13,12 @@ namespace GeneralUpdate.Common.Shared.Object
     /// </summary>
     public class ConfiginfoBuilder
     {
-        private readonly string _updateUrl;
-        private readonly string _token;
-        private readonly string _scheme;
-        
         // Configurable default values
         // Note: AppName and InstallPath defaults are set in Configinfo class itself
         // These are ConfiginfoBuilder-specific defaults to support the builder pattern
+        private string _updateUrl;
+        private string _token;
+        private string _scheme;
         private string _appName = "Update.exe";
         private string _mainAppName;
         private string _clientVersion;
@@ -84,12 +83,15 @@ namespace GeneralUpdate.Common.Shared.Object
                 }
 
                 // Create a builder with the loaded configuration
-                var builder = new ConfiginfoBuilder(
-                    config.UpdateUrl ?? string.Empty, 
-                    config.Token ?? string.Empty, 
-                    config.Scheme ?? string.Empty);
-
+                var builder = new ConfiginfoBuilder();
+                
                 // Apply all loaded settings
+                if (!string.IsNullOrWhiteSpace(config.UpdateUrl))
+                   builder.SetUpdateUrl(config.UpdateUrl);
+                if (!string.IsNullOrWhiteSpace(config.Token))
+                   builder.SetToken(config.Token);
+                if (!string.IsNullOrWhiteSpace(config.Scheme))
+                   builder.SetScheme(config.Scheme);
                 if (!string.IsNullOrWhiteSpace(config.AppName))
                     builder.SetAppName(config.AppName);
                 if (!string.IsNullOrWhiteSpace(config.MainAppName))
@@ -121,6 +123,7 @@ namespace GeneralUpdate.Common.Shared.Object
                 if (config.SkipDirectorys != null)
                     builder.SetSkipDirectorys(config.SkipDirectorys);
 
+                builder.SetInstallPath(string.IsNullOrWhiteSpace(config.InstallPath) ? AppDomain.CurrentDomain.BaseDirectory : config.InstallPath);
                 return builder;
             }
             catch (System.Text.Json.JsonException)
@@ -145,51 +148,31 @@ namespace GeneralUpdate.Common.Shared.Object
             }
         }
 
-        /// <summary>
-        /// Initializes a new instance of the ConfiginfoBuilder with required parameters.
-        /// This constructor is private. Use <see cref="Create(string, string, string)"/> for creating instances.
-        /// </summary>
-        /// <param name="updateUrl">The API endpoint URL for checking available updates. Must be a valid absolute URI.</param>
-        /// <param name="token">The authentication token used for API requests.</param>
-        /// <param name="scheme">The URL scheme used for update requests (e.g., "http" or "https").</param>
-        /// <exception cref="ArgumentException">Thrown when any required parameter is null, empty, or invalid.</exception>
-        private ConfiginfoBuilder(string updateUrl, string token, string scheme)
+        public ConfiginfoBuilder SetUpdateUrl(string updateUrl)
         {
-            // Validate required parameters
             if (string.IsNullOrWhiteSpace(updateUrl))
-                throw new ArgumentException("UpdateUrl cannot be null or empty.", nameof(updateUrl));
-            
-            if (!Uri.IsWellFormedUriString(updateUrl, UriKind.Absolute))
-                throw new ArgumentException("UpdateUrl must be a valid absolute URI.", nameof(updateUrl));
-            
-            if (string.IsNullOrWhiteSpace(token))
-                throw new ArgumentException("Token cannot be null or empty.", nameof(token));
-            
-            if (string.IsNullOrWhiteSpace(scheme))
-                throw new ArgumentException("Scheme cannot be null or empty.", nameof(scheme));
+                throw new ArgumentException("updateUrl cannot be null or empty.", nameof(updateUrl));
             
             _updateUrl = updateUrl;
-            _token = token;
-            _scheme = scheme;
-            
-            // Initialize platform-specific defaults
-            InitializePlatformDefaults();
+            return this;
         }
-
-        /// <summary>
-        /// Initializes platform-specific default values based on the current operating system.
-        /// </summary>
-        private void InitializePlatformDefaults()
+        
+        public ConfiginfoBuilder SetToken(string token)
         {
-            // Initialize common defaults
-            _blackFiles = new List<string>();
-            _blackFormats = new List<string>();
-            _skipDirectorys = new List<string>();
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("token cannot be null or empty.", nameof(token));
             
-            // Set default InstallPath to current program running directory
-            // This is set here to ensure the builder has a consistent default
-            // even though BaseConfigInfo also has this default via property initializer
-            _installPath = AppDomain.CurrentDomain.BaseDirectory;
+            _token = token;
+            return this;
+        }
+        
+        public ConfiginfoBuilder SetScheme(string scheme)
+        {
+            if (string.IsNullOrWhiteSpace(scheme))
+                throw new ArgumentException("scheme cannot be null or empty.", nameof(scheme));
+            
+            _scheme = scheme;
+            return this;
         }
 
         /// <summary>
