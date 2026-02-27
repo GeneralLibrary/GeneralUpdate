@@ -1,4 +1,5 @@
 ﻿using GeneralUpdate.Differential.Binary;
+using GeneralUpdate.Differential.Matchers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,20 +34,18 @@ namespace GeneralUpdate.Differential
             }
         }
 
-        public async Task Clean(string sourcePath, string targetPath, string patchPath)
+        public async Task Clean(string sourcePath, string targetPath, string patchPath, ICleanMatcher? matcher = null)
         {
+            matcher ??= new DefaultCleanMatcher();
             var fileManager = new StorageManager();
             var comparisonResult = fileManager.Compare(sourcePath, targetPath);
             foreach (var file in comparisonResult.DifferentNodes)
             {
                 var tempDir = GetTempDirectory(file, targetPath, patchPath);
-                var oldFile = comparisonResult.LeftNodes.FirstOrDefault(i => i.Name.Equals(file.Name));
+                var oldFile = matcher.Match(file, comparisonResult.LeftNodes);
                 var newFile = file;
 
-                if (oldFile is not null
-                    && File.Exists(oldFile.FullName) 
-                    && File.Exists(newFile.FullName) 
-                    && string.Equals(oldFile.RelativePath, newFile.RelativePath))
+                if (oldFile is not null)
                 {
                     if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
                     {
@@ -69,10 +68,11 @@ namespace GeneralUpdate.Differential
             }
         }
         
-        public async Task Dirty(string appPath, string patchPath)
+        public async Task Dirty(string appPath, string patchPath, IDirtyMatcher? matcher = null)
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
+            matcher ??= new DefaultDirtyMatcher();
             var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
             var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
             var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
@@ -81,10 +81,8 @@ namespace GeneralUpdate.Differential
             oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
             foreach (var oldFile in oldFiles)
             {
-                var findFile = patchFiles.FirstOrDefault(f =>
-                    Path.GetFileNameWithoutExtension(f.Name).Replace(PATCH_FORMAT, "").Equals(oldFile.Name));
-
-                if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PATCH_FORMAT))
+                var findFile = matcher.Match(oldFile, patchFiles);
+                if (findFile != null)
                 {
                     await DirtyPatch(oldFile.FullName, findFile.FullName);
                 }
