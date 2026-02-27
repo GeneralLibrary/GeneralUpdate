@@ -5,11 +5,26 @@ using GeneralUpdate.Common.FileBasic;
 namespace GeneralUpdate.Differential.Matchers
 {
     /// <summary>
-    /// Defines the matching logic used during the Clean (diff-generation) phase to
-    /// find the corresponding old file for a given new file.
+    /// Defines the complete matching strategy used during the Clean (diff-generation) phase.
+    /// Implementations are responsible for directory comparison, identifying deleted files,
+    /// and matching individual new files to their corresponding old files.
     /// </summary>
     public interface ICleanMatcher
     {
+        /// <summary>
+        /// Compares the source and target directories and returns the set of changed files.
+        /// </summary>
+        /// <param name="sourcePath">The source (old-version) directory.</param>
+        /// <param name="targetPath">The target (new-version) directory.</param>
+        ComparisonResult Compare(string sourcePath, string targetPath);
+
+        /// <summary>
+        /// Returns the files that exist only in the source directory (i.e. files to be deleted).
+        /// </summary>
+        /// <param name="sourcePath">The source (old-version) directory.</param>
+        /// <param name="targetPath">The target (new-version) directory.</param>
+        IEnumerable<FileNode>? Except(string sourcePath, string targetPath);
+
         /// <summary>
         /// Attempts to find the corresponding old file node for <paramref name="newFile"/>
         /// from the left-side (source) node collection.

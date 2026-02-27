@@ -32,6 +32,53 @@ namespace DifferentialTest.Matchers
             }
         }
 
+        #region DefaultCleanMatcher – Compare and Except
+
+        [Fact]
+        public void DefaultCleanMatcher_Compare_ReturnsDifferentNodes_WhenFilesChange()
+        {
+            // Arrange
+            var sourceDir = Path.Combine(_testDirectory, "cmp_source");
+            var targetDir = Path.Combine(_testDirectory, "cmp_target");
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(targetDir);
+
+            File.WriteAllText(Path.Combine(sourceDir, "a.txt"), "old");
+            File.WriteAllText(Path.Combine(targetDir, "a.txt"), "new");
+
+            var matcher = new DefaultCleanMatcher();
+
+            // Act
+            var result = matcher.Compare(sourceDir, targetDir);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.DifferentNodes);
+        }
+
+        [Fact]
+        public void DefaultCleanMatcher_Except_ReturnsDeletedFiles()
+        {
+            // Arrange
+            var sourceDir = Path.Combine(_testDirectory, "exc_source");
+            var targetDir = Path.Combine(_testDirectory, "exc_target");
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(targetDir);
+
+            File.WriteAllText(Path.Combine(sourceDir, "deleted.txt"), "gone");
+
+            var matcher = new DefaultCleanMatcher();
+
+            // Act
+            var result = matcher.Except(sourceDir, targetDir);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Contains(result!, f => f.Name == "deleted.txt");
+        }
+
+        #endregion
+
         #region DefaultCleanMatcher
 
         [Fact]
@@ -283,9 +330,20 @@ namespace DifferentialTest.Matchers
 
         #region Helper custom matchers
 
-        /// <summary>Custom <see cref="ICleanMatcher"/> that always returns null (every file is "new").</summary>
+        /// <summary>
+        /// Custom <see cref="ICleanMatcher"/> that uses the default directory comparison logic
+        /// but always returns <c>null</c> from <see cref="Match"/> so every file is treated as new.
+        /// </summary>
         private sealed class AlwaysNewFileMatcher : ICleanMatcher
         {
+            private readonly DefaultCleanMatcher _inner = new DefaultCleanMatcher();
+
+            public ComparisonResult Compare(string sourcePath, string targetPath)
+                => _inner.Compare(sourcePath, targetPath);
+
+            public IEnumerable<FileNode>? Except(string sourcePath, string targetPath)
+                => _inner.Except(sourcePath, targetPath);
+
             public FileNode? Match(FileNode newFile, IEnumerable<FileNode> leftNodes) => null;
         }
 

@@ -37,8 +37,7 @@ namespace GeneralUpdate.Differential
         public async Task Clean(string sourcePath, string targetPath, string patchPath, ICleanMatcher? matcher = null)
         {
             matcher ??= new DefaultCleanMatcher();
-            var fileManager = new StorageManager();
-            var comparisonResult = fileManager.Compare(sourcePath, targetPath);
+            var comparisonResult = matcher.Compare(sourcePath, targetPath);
             foreach (var file in comparisonResult.DifferentNodes)
             {
                 var tempDir = GetTempDirectory(file, targetPath, patchPath);
@@ -59,7 +58,7 @@ namespace GeneralUpdate.Differential
                 }
             }
 
-            var exceptFiles = fileManager.Except(sourcePath, targetPath);
+            var exceptFiles = matcher.Except(sourcePath, targetPath);
             if (exceptFiles is not null
                 && exceptFiles.Any())
             {
