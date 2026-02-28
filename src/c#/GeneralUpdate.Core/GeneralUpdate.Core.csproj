@@ -93,6 +93,14 @@
     <Compile Include="..\GeneralUpdate.Differential\Binary\IChecksum.cs" Link="Common\IChecksum.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
     <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultCleanMatcher.cs" Link="Common\DefaultCleanMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultCleanStrategy.cs" Link="Common\DefaultCleanStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultDirtyMatcher.cs" Link="Common\DefaultDirtyMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultDirtyStrategy.cs" Link="Common\DefaultDirtyStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanMatcher.cs" Link="Common\ICleanMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanStrategy.cs" Link="Common\ICleanStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyMatcher.cs" Link="Common\IDirtyMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyStrategy.cs" Link="Common\IDirtyStrategy.cs" />
   </ItemGroup>
   <!-- Link Drivelution files for net10.0 target only -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
@@ -127,6 +135,21 @@
     <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsDriverBackup.cs" Link="Common\WindowsDriverBackup.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsDriverValidator.cs" Link="Common\WindowsDriverValidator.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Windows\Implementation\WindowsGeneralDrivelution.cs" Link="Common\WindowsGeneralDrivelution.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\BinaryHandler.cs" Link="Common\BinaryHandler.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2Constants.cs" Link="Common\BZip2Constants.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2InputStream.cs" Link="Common\BZip2InputStream.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\BZip2OutputStream.cs" Link="Common\BZip2OutputStream.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\IChecksum.cs" Link="Common\IChecksum.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Binary\StrangeCRC.cs" Link="Common\StrangeCRC.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\DifferentialCore.cs" Link="Common\DifferentialCore.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultCleanMatcher.cs" Link="Common\DefaultCleanMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultCleanStrategy.cs" Link="Common\DefaultCleanStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultDirtyMatcher.cs" Link="Common\DefaultDirtyMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\DefaultDirtyStrategy.cs" Link="Common\DefaultDirtyStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanMatcher.cs" Link="Common\ICleanMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanStrategy.cs" Link="Common\ICleanStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyMatcher.cs" Link="Common\IDirtyMatcher.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyStrategy.cs" Link="Common\IDirtyStrategy.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Common\" />
