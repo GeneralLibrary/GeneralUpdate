@@ -13,7 +13,7 @@ namespace DifferentialTest
 {
     /// <summary>
     /// Contains test cases for the DifferentialCore class.
-    /// Tests the singleton pattern, Clean method (patch generation), and Dirty method (patch application).
+    /// Tests the Clean method (patch generation) and Dirty method (patch application).
     /// </summary>
     public class DifferentialCoreTests : IDisposable
     {
@@ -53,67 +53,6 @@ namespace DifferentialTest
             }
         }
 
-        #region Singleton Pattern Tests
-
-        /// <summary>
-        /// Tests that DifferentialCore.Instance returns a non-null instance.
-        /// </summary>
-        [Fact]
-        public void Instance_ReturnsNonNullInstance()
-        {
-            // Act
-            var instance = DifferentialCore.Instance;
-
-            // Assert
-            Assert.NotNull(instance);
-        }
-
-        /// <summary>
-        /// Tests that DifferentialCore.Instance always returns the same instance (singleton).
-        /// </summary>
-        [Fact]
-        public void Instance_ReturnsSameInstanceOnMultipleCalls()
-        {
-            // Act
-            var instance1 = DifferentialCore.Instance;
-            var instance2 = DifferentialCore.Instance;
-
-            // Assert
-            Assert.Same(instance1, instance2);
-        }
-
-        /// <summary>
-        /// Tests that DifferentialCore.Instance is thread-safe.
-        /// </summary>
-        [Fact]
-        public void Instance_IsThreadSafe()
-        {
-            // Arrange
-            var instances = new DifferentialCore[10];
-            var tasks = new Task[10];
-
-            // Act
-            for (int i = 0; i < 10; i++)
-            {
-                var index = i;
-                tasks[i] = Task.Run(() =>
-                {
-                    instances[index] = DifferentialCore.Instance;
-                });
-            }
-
-            Task.WaitAll(tasks);
-
-            // Assert
-            var firstInstance = instances[0];
-            foreach (var instance in instances)
-            {
-                Assert.Same(firstInstance, instance);
-            }
-        }
-
-        #endregion
-
         #region Clean Method Tests
 
         /// <summary>
@@ -130,7 +69,7 @@ namespace DifferentialTest
             File.WriteAllText(targetFile, "Modified content");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var patchFile = Path.Combine(_patchDirectory, "test.txt.patch");
@@ -148,7 +87,7 @@ namespace DifferentialTest
             File.WriteAllText(targetFile, "New file content");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var copiedFile = Path.Combine(_patchDirectory, "newfile.txt");
@@ -167,7 +106,7 @@ namespace DifferentialTest
             File.WriteAllText(sourceFile, "File to be deleted");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var deleteListFile = Path.Combine(_patchDirectory, "generalupdate_delete_files.json");
@@ -196,7 +135,7 @@ namespace DifferentialTest
             File.WriteAllText(targetFile, "Content in subdirectory");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var copiedFile = Path.Combine(_patchDirectory, "subfolder", "test.txt");
@@ -217,7 +156,7 @@ namespace DifferentialTest
             File.WriteAllText(targetFile, "Identical content");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var patchFile = Path.Combine(_patchDirectory, "same.txt.patch");
@@ -238,7 +177,7 @@ namespace DifferentialTest
             File.WriteAllText(targetFile2, "File 2 content");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             Assert.True(File.Exists(Path.Combine(_patchDirectory, "file1.txt")));
@@ -259,7 +198,7 @@ namespace DifferentialTest
             File.WriteAllText(sourceFile2, "File 2 content");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var deleteListFile = Path.Combine(_patchDirectory, "generalupdate_delete_files.json");
@@ -295,7 +234,7 @@ namespace DifferentialTest
             File.WriteAllText(Path.Combine(_targetDirectory, "unchanged.txt"), "Same");
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             // Check patch file for modified
@@ -333,7 +272,7 @@ namespace DifferentialTest
             File.WriteAllBytes(targetFile, new byte[] { 0x00, 0x01, 0x03 });
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Assert
             var patchFile = Path.Combine(_patchDirectory, "binary.bin.patch");
@@ -354,7 +293,7 @@ namespace DifferentialTest
             var nonExistentPath = Path.Combine(_testDirectory, "nonexistent");
 
             // Act & Assert (should not throw)
-            await DifferentialCore.Instance.Dirty(nonExistentPath, _patchDirectory);
+            await DifferentialCore.Dirty(nonExistentPath, _patchDirectory);
         }
 
         /// <summary>
@@ -367,7 +306,7 @@ namespace DifferentialTest
             var nonExistentPath = Path.Combine(_testDirectory, "nonexistent");
 
             // Act & Assert (should not throw)
-            await DifferentialCore.Instance.Dirty(_appDirectory, nonExistentPath);
+            await DifferentialCore.Dirty(_appDirectory, nonExistentPath);
         }
 
         /// <summary>
@@ -385,13 +324,13 @@ namespace DifferentialTest
             File.WriteAllText(targetFile, "Modified content");
 
             // Generate patch
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Copy source to app directory to simulate the application
             File.Copy(sourceFile, appFile);
 
             // Act - Apply patch
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             var appliedContent = File.ReadAllText(appFile);
@@ -409,7 +348,7 @@ namespace DifferentialTest
             File.WriteAllText(patchFile, "New file content");
 
             // Act
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             var appFile = Path.Combine(_appDirectory, "newfile.txt");
@@ -443,7 +382,7 @@ namespace DifferentialTest
             File.WriteAllText(deleteListFile, JsonSerializer.Serialize(deleteList, FileNodesJsonContext.Default.ListFileNode));
 
             // Act
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             Assert.False(File.Exists(appFile), "File should be deleted");
@@ -463,7 +402,7 @@ namespace DifferentialTest
             File.WriteAllText(patchFile, "Content in subdirectory");
 
             // Act
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             var appFile = Path.Combine(_appDirectory, "subfolder", "test.txt");
@@ -482,7 +421,7 @@ namespace DifferentialTest
             File.WriteAllText(patchFile, "Test content");
 
             // Act
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             Assert.False(Directory.Exists(_patchDirectory), "Patch directory should be removed after applying");
@@ -506,13 +445,13 @@ namespace DifferentialTest
             File.WriteAllBytes(targetFile, targetBytes);
 
             // Generate patch
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Copy source to app directory
             File.Copy(sourceFile, appFile);
 
             // Act
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             var appliedBytes = File.ReadAllBytes(appFile);
@@ -547,10 +486,10 @@ namespace DifferentialTest
             }
 
             // Act - Generate patches
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
 
             // Apply patches
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             // Modified file should be updated
@@ -589,8 +528,8 @@ namespace DifferentialTest
             File.Copy(Path.Combine(sourceSubDir, "nested.txt"), Path.Combine(appSubDir, "nested.txt"));
 
             // Act
-            await DifferentialCore.Instance.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
-            await DifferentialCore.Instance.Dirty(_appDirectory, _patchDirectory);
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
 
             // Assert
             Assert.Equal("Modified nested", File.ReadAllText(Path.Combine(appSubDir, "nested.txt")));

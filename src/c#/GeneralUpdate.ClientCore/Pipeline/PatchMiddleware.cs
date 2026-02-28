@@ -10,6 +10,6 @@ public class PatchMiddleware : IMiddleware
     {
         var sourcePath = context.Get<string>("SourcePath");
         var targetPath = context.Get<string>("PatchPath");
-        await DifferentialCore.Instance.Dirty(sourcePath, targetPath);
+        await DifferentialCore.Dirty(sourcePath, targetPath);
     }
 }
