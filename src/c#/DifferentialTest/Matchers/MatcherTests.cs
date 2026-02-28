@@ -277,10 +277,10 @@ namespace DifferentialTest.Matchers
 
         #endregion
 
-        #region Custom Matcher Injection
+        #region Custom Strategy Injection
 
         [Fact]
-        public async Task Clean_WithCustomMatcher_UsesCustomMatchingLogic()
+        public async Task Clean_WithCustomStrategy_UsesCustomMatchingLogic()
         {
             // Arrange
             var sourceDir = Path.Combine(_testDirectory, "source");
@@ -293,11 +293,12 @@ namespace DifferentialTest.Matchers
             File.WriteAllText(Path.Combine(sourceDir, "file.txt"), "old");
             File.WriteAllText(Path.Combine(targetDir, "file.txt"), "new");
 
-            // Custom matcher that never matches (always returns null → every file is treated as new)
-            var customMatcher = new AlwaysNewFileMatcher();
+            // Inject a DefaultCleanStrategy that wraps a matcher which always treats every
+            // file as new (Match always returns null → file is copied directly, not patched).
+            var strategy = new DefaultCleanStrategy(new AlwaysNewFileMatcher());
 
             // Act
-            await DifferentialCore.Clean(sourceDir, targetDir, patchDir, customMatcher);
+            await DifferentialCore.Clean(sourceDir, targetDir, patchDir, strategy);
 
             // Assert: file should be copied directly (not patched) because the custom matcher returns null
             Assert.True(File.Exists(Path.Combine(patchDir, "file.txt")));
@@ -305,7 +306,7 @@ namespace DifferentialTest.Matchers
         }
 
         [Fact]
-        public async Task Dirty_WithCustomMatcher_UsesCustomMatchingLogic()
+        public async Task Dirty_WithCustomStrategy_UsesCustomMatchingLogic()
         {
             // Arrange
             var appDir = Path.Combine(_testDirectory, "app");
@@ -316,23 +317,62 @@ namespace DifferentialTest.Matchers
             File.WriteAllText(Path.Combine(appDir, "app.exe"), "original");
             File.WriteAllText(Path.Combine(patchDir, "app.exe.patch"), "patch-data");
 
-            // Custom matcher that never finds a patch file
-            var customMatcher = new NeverMatchDirtyMatcher();
+            // Inject a DefaultDirtyStrategy that wraps a matcher which never finds a patch file.
+            var strategy = new DefaultDirtyStrategy(new NeverMatchDirtyMatcher());
 
             // Act – should not throw even though a patch file exists, because the custom matcher skips it
-            await DifferentialCore.Dirty(appDir, patchDir, customMatcher);
+            await DifferentialCore.Dirty(appDir, patchDir, strategy);
 
             // Assert: original file is unchanged
             Assert.Equal("original", File.ReadAllText(Path.Combine(appDir, "app.exe")));
         }
 
+        [Fact]
+        public async Task Clean_WithFullyCustomStrategy_ExecutesCustomLogic()
+        {
+            // Arrange
+            var sourceDir = Path.Combine(_testDirectory, "src_custom");
+            var targetDir = Path.Combine(_testDirectory, "tgt_custom");
+            var patchDir = Path.Combine(_testDirectory, "patch_custom");
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(targetDir);
+            Directory.CreateDirectory(patchDir);
+
+            var strategy = new RecordingCleanStrategy();
+
+            // Act
+            await DifferentialCore.Clean(sourceDir, targetDir, patchDir, strategy);
+
+            // Assert: our custom strategy was called
+            Assert.True(strategy.WasCalled);
+        }
+
+        [Fact]
+        public async Task Dirty_WithFullyCustomStrategy_ExecutesCustomLogic()
+        {
+            // Arrange
+            var appDir = Path.Combine(_testDirectory, "app_custom");
+            var patchDir = Path.Combine(_testDirectory, "patch_custom2");
+            Directory.CreateDirectory(appDir);
+            Directory.CreateDirectory(patchDir);
+
+            var strategy = new RecordingDirtyStrategy();
+
+            // Act
+            await DifferentialCore.Dirty(appDir, patchDir, strategy);
+
+            // Assert: our custom strategy was called
+            Assert.True(strategy.WasCalled);
+        }
+
         #endregion
 
-        #region Helper custom matchers
+        #region Helper types
 
         /// <summary>
         /// Custom <see cref="ICleanMatcher"/> that uses the default directory comparison logic
-        /// but always returns <c>null</c> from <see cref="Match"/> so every file is treated as new.
+        /// but always returns <c>null</c> from <see cref="ICleanMatcher.Match"/> so every file
+        /// is treated as new.
         /// </summary>
         private sealed class AlwaysNewFileMatcher : ICleanMatcher
         {
@@ -351,6 +391,30 @@ namespace DifferentialTest.Matchers
         private sealed class NeverMatchDirtyMatcher : IDirtyMatcher
         {
             public FileInfo? Match(FileInfo oldFile, IEnumerable<FileInfo> patchFiles) => null;
+        }
+
+        /// <summary>Fully custom <see cref="ICleanStrategy"/> that records whether it was invoked.</summary>
+        private sealed class RecordingCleanStrategy : ICleanStrategy
+        {
+            public bool WasCalled { get; private set; }
+
+            public Task ExecuteAsync(string sourcePath, string targetPath, string patchPath)
+            {
+                WasCalled = true;
+                return Task.CompletedTask;
+            }
+        }
+
+        /// <summary>Fully custom <see cref="IDirtyStrategy"/> that records whether it was invoked.</summary>
+        private sealed class RecordingDirtyStrategy : IDirtyStrategy
+        {
+            public bool WasCalled { get; private set; }
+
+            public Task ExecuteAsync(string appPath, string patchPath)
+            {
+                WasCalled = true;
+                return Task.CompletedTask;
+            }
         }
 
         #endregion
