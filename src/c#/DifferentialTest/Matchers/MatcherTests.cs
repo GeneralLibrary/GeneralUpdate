@@ -297,7 +297,7 @@ namespace DifferentialTest.Matchers
             var customMatcher = new AlwaysNewFileMatcher();
 
             // Act
-            await DifferentialCore.Instance.Clean(sourceDir, targetDir, patchDir, customMatcher);
+            await DifferentialCore.Clean(sourceDir, targetDir, patchDir, customMatcher);
 
             // Assert: file should be copied directly (not patched) because the custom matcher returns null
             Assert.True(File.Exists(Path.Combine(patchDir, "file.txt")));
@@ -320,7 +320,7 @@ namespace DifferentialTest.Matchers
             var customMatcher = new NeverMatchDirtyMatcher();
 
             // Act – should not throw even though a patch file exists, because the custom matcher skips it
-            await DifferentialCore.Instance.Dirty(appDir, patchDir, customMatcher);
+            await DifferentialCore.Dirty(appDir, patchDir, customMatcher);
 
             // Assert: original file is unchanged
             Assert.Equal("original", File.ReadAllText(Path.Combine(appDir, "app.exe")));

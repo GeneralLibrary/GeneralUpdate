@@ -86,8 +86,8 @@ namespace GeneralUpdate.Client
                var target = @"D:\packet\release";
                var patch = @"D:\packet\patch";
 
-               await DifferentialCore.Instance?.Clean(source, target, patch);
-               await DifferentialCore.Instance?.Dirty(source, patch);
+               await DifferentialCore.Clean(source, target, patch);
+               await DifferentialCore.Dirty(source, patch);
            });*/
 
             while (true)

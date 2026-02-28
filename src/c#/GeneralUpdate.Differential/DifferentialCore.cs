@@ -12,29 +12,12 @@ using GeneralUpdate.Common.Internal.JsonContext;
 
 namespace GeneralUpdate.Differential
 {
-    public sealed class DifferentialCore
+    public static class DifferentialCore
     {
-        private static readonly object _lockObj = new ();
-        private static DifferentialCore? _instance;
         private const string PATCH_FORMAT = ".patch";
         private const string DELETE_FILES_NAME = "generalupdate_delete_files.json";
 
-        public static DifferentialCore Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    lock (_lockObj)
-                    {
-                        _instance ??= new DifferentialCore();
-                    }
-                }
-                return _instance;
-            }
-        }
-
-        public async Task Clean(string sourcePath, string targetPath, string patchPath, ICleanMatcher? matcher = null)
+        public static async Task Clean(string sourcePath, string targetPath, string patchPath, ICleanMatcher? matcher = null)
         {
             matcher ??= new DefaultCleanMatcher();
             var comparisonResult = matcher.Compare(sourcePath, targetPath);
@@ -67,7 +50,7 @@ namespace GeneralUpdate.Differential
             }
         }
         
-        public async Task Dirty(string appPath, string patchPath, IDirtyMatcher? matcher = null)
+        public static async Task Dirty(string appPath, string patchPath, IDirtyMatcher? matcher = null)
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
@@ -100,7 +83,7 @@ namespace GeneralUpdate.Differential
             return tempDir;
         }
         
-        private void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
+        private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
         {
             var json = patchFiles.FirstOrDefault(i => i.Name.Equals(DELETE_FILES_NAME));
             if (json == null)
@@ -123,7 +106,7 @@ namespace GeneralUpdate.Differential
             }
         }
 
-        private async Task DirtyPatch(string appPath, string patchPath)
+        private static async Task DirtyPatch(string appPath, string patchPath)
         {
             if (!File.Exists(appPath) || !File.Exists(patchPath))
                 return;
@@ -132,7 +115,7 @@ namespace GeneralUpdate.Differential
             await new BinaryHandler().Dirty(appPath, newPath, patchPath);
         }
 
-        private async Task DirtyUnknow(string appPath, string patchPath)
+        private static async Task DirtyUnknow(string appPath, string patchPath)
         {
             await Task.Run(() =>
             {
