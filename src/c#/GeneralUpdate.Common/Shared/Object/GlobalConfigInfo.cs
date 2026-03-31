@@ -113,6 +113,12 @@ public class GlobalConfigInfo : BaseConfigInfo
     public bool? PatchEnabled { get; set; }
 
     /// <summary>
+    /// Indicates whether silent update flow is enabled.
+    /// Computed from UpdateOption.EnableSilentUpdate or defaults to false.
+    /// </summary>
+    public bool EnableSilentUpdate { get; set; }
+
+    /// <summary>
     /// Directory path where the current version files are backed up before update.
     /// Computed by combining InstallPath with a versioned directory name.
     /// </summary>

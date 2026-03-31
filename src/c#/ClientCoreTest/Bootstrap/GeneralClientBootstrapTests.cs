@@ -4,6 +4,7 @@ using System.Linq;
 using GeneralUpdate.ClientCore;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
 using Xunit;
 
@@ -280,11 +281,19 @@ namespace ClientCoreTest.Bootstrap
             var result = bootstrap
                 .SetConfig(config)
                 .SetCustomSkipOption(() => false)
+                .Option(UpdateOption.EnableSilentUpdate, true)
                 .AddListenerException((s, e) => { });
 
             // Assert
             Assert.NotNull(result);
             Assert.Same(bootstrap, result);
+        }
+
+        [Fact]
+        public void EnableSilentUpdateOption_HasDefaultFalseWhenNotConfigured()
+        {
+            var config = new GlobalConfigInfo();
+            Assert.False(config.EnableSilentUpdate);
         }
 
         /// <summary>

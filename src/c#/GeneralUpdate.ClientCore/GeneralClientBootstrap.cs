@@ -34,6 +34,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private IStrategy? _strategy;
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
+    private bool _launchSilentUpdaterOnExit;
+    private bool _silentUpdaterLaunched;
+    private readonly object _silentUpdateLock = new();
 
     #region Public Methods
 
@@ -152,7 +155,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
-            if (CanSkip(isForcibly)) return;
+            if (CanSkip(isForcibly, GetOption(UpdateOption.EnableSilentUpdate) ?? false)) return;
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -164,6 +167,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60;
             _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
             _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
+            _configInfo.EnableSilentUpdate = GetOption(UpdateOption.EnableSilentUpdate) ?? false;
             _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
             _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
                 $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
@@ -213,7 +217,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     break;
                 case false when _configInfo.IsMainUpdate:
                     //Main program update.
-                    _strategy?.StartApp();
+                    if (_configInfo.EnableSilentUpdate)
+                    {
+                        ScheduleSilentMainUpdate();
+                    }
+                    else
+                    {
+                        _strategy?.StartApp();
+                    }
                     break;
             }
         }
@@ -318,10 +329,61 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// User decides if update is required.
     /// </summary>
     /// <returns>is false to continue execution.</returns>
-    private bool CanSkip(bool isForcibly)
+    private bool CanSkip(bool isForcibly, bool enableSilentUpdate)
     {
+        if (enableSilentUpdate) return false;
         if (isForcibly) return false;
         return _customSkipOption?.Invoke() == true;
+    }
+
+    private void ScheduleSilentMainUpdate()
+    {
+        if (_launchSilentUpdaterOnExit)
+        {
+            return;
+        }
+
+        _launchSilentUpdaterOnExit = true;
+        AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainProcessExit;
+        GeneralTracer.Info("Silent update enabled, updater launch is scheduled for process exit.");
+    }
+
+    private void OnCurrentDomainProcessExit(object? sender, EventArgs e)
+    {
+        lock (_silentUpdateLock)
+        {
+            if (!_launchSilentUpdaterOnExit || _silentUpdaterLaunched || _configInfo == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var appPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+                if (!File.Exists(appPath))
+                {
+                    GeneralTracer.Error($"Silent update failed because updater was not found: {appPath}.");
+                    return;
+                }
+
+                Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo);
+                Process.Start(new ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    FileName = appPath
+                });
+                _silentUpdaterLaunched = true;
+            }
+            catch (Exception exception)
+            {
+                GeneralTracer.Error("Failed to launch updater in silent update mode.", exception);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.ProcessExit -= OnCurrentDomainProcessExit;
+            }
+        }
     }
 
     private void CallSmallBowlHome(string processName)

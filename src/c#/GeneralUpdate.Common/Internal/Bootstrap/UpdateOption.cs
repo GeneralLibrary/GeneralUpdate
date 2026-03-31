@@ -52,6 +52,11 @@ namespace GeneralUpdate.Common.Internal.Bootstrap
         /// Specifies the update execution mode.
         /// </summary>
         public static readonly UpdateOption<UpdateMode?> Mode = ValueOf<UpdateMode?>("MODE");
+
+        /// <summary>
+        /// Whether to enable silent update flow.
+        /// </summary>
+        public static readonly UpdateOption<bool?> EnableSilentUpdate = ValueOf<bool?>("ENABLESILENTUPDATE");
         
         internal UpdateOption(int id, string name)
           : base(id, name) { }
