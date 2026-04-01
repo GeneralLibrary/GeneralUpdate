@@ -155,7 +155,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
-            if (CanSkip(isForcibly, GetOption(UpdateOption.EnableSilentUpdate) ?? false)) return;
+            if (CanSkip(isForcibly)) return;
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -329,9 +329,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// User decides if update is required.
     /// </summary>
     /// <returns>is false to continue execution.</returns>
-    private bool CanSkip(bool isForcibly, bool enableSilentUpdate)
+    private bool CanSkip(bool isForcibly)
     {
-        if (enableSilentUpdate) return false;
         if (isForcibly) return false;
         return _customSkipOption?.Invoke() == true;
     }
