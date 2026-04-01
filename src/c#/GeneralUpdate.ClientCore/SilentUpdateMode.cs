@@ -23,6 +23,7 @@ namespace GeneralUpdate.ClientCore;
 
 internal sealed class SilentUpdateMode
 {
+    private const string ProcessInfoEnvironmentKey = "ProcessInfo";
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(20);
     private readonly GlobalConfigInfo _configInfo;
     private readonly Encoding _encoding;
@@ -30,6 +31,7 @@ internal sealed class SilentUpdateMode
     private readonly int _downloadTimeOut;
     private readonly bool _patchEnabled;
     private readonly bool _backupEnabled;
+    private Task? _pollingTask;
     private int _prepared;
     private int _updaterStarted;
 
@@ -46,7 +48,14 @@ internal sealed class SilentUpdateMode
     public Task StartAsync()
     {
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-        _ = Task.Run(PollLoopAsync);
+        _pollingTask = Task.Run(PollLoopAsync);
+        _pollingTask.ContinueWith(task =>
+        {
+            if (task.Exception != null)
+            {
+                GeneralTracer.Error("The StartAsync method in SilentUpdateMode captured a polling exception.", task.Exception);
+            }
+        }, TaskContinuationOptions.OnlyOnFaulted);
         return Task.CompletedTask;
     }
 
@@ -85,8 +94,8 @@ internal sealed class SilentUpdateMode
             return;
 
         var versions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
-        var lastVersion = versions.Last().Version;
-        if (CheckFail(lastVersion))
+        var latestVersion = versions.Last().Version;
+        if (CheckFail(latestVersion))
             return;
 
         BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -98,7 +107,7 @@ internal sealed class SilentUpdateMode
         _configInfo.DownloadTimeOut = _downloadTimeOut;
         _configInfo.PatchEnabled = _patchEnabled;
         _configInfo.IsMainUpdate = true;
-        _configInfo.LastVersion = lastVersion;
+        _configInfo.LastVersion = latestVersion;
         _configInfo.UpdateVersions = versions;
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
@@ -137,14 +146,14 @@ internal sealed class SilentUpdateMode
 
         try
         {
-            Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo);
-            var appPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
-            if (File.Exists(appPath))
+            Environments.SetEnvironmentVariable(ProcessInfoEnvironmentKey, _configInfo.ProcessInfo);
+            var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+            if (File.Exists(updaterPath))
             {
                 Process.Start(new ProcessStartInfo
                 {
                     UseShellExecute = true,
-                    FileName = appPath
+                    FileName = updaterPath
                 });
             }
         }
@@ -179,7 +188,7 @@ internal sealed class SilentUpdateMode
             return false;
 
         var failVersion = new Version(fail);
-        var lastVersion = new Version(version);
-        return failVersion >= lastVersion;
+        var latestVersion = new Version(version);
+        return failVersion >= latestVersion;
     }
 }
