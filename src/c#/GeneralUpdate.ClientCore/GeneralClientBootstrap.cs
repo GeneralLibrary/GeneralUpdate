@@ -233,6 +233,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     //Main program update.
                     if (_configInfo.EnableSilentUpdate)
                     {
+                        await Download();
                         ScheduleSilentMainUpdate();
                     }
                     else
