@@ -4,6 +4,7 @@ using System.Linq;
 using GeneralUpdate.ClientCore;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
+using GeneralUpdate.Common.Internal.Bootstrap;
 using GeneralUpdate.Common.Shared.Object;
 using Xunit;
 
@@ -281,6 +282,23 @@ namespace ClientCoreTest.Bootstrap
                 .SetConfig(config)
                 .SetCustomSkipOption(() => false)
                 .AddListenerException((s, e) => { });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
+        /// Tests that silent update option can be configured through the fluent option API.
+        /// </summary>
+        [Fact]
+        public void Option_EnableSilentUpdate_ReturnsBootstrap()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+
+            // Act
+            var result = bootstrap.Option(UpdateOption.EnableSilentUpdate, true);
 
             // Assert
             Assert.NotNull(result);
