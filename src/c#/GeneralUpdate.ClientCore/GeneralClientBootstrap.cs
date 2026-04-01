@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Strategys;
 using GeneralUpdate.Common.FileBasic;
@@ -34,9 +35,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private IStrategy? _strategy;
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
-    private bool _launchSilentUpdaterOnExit;
+    private volatile bool _launchSilentUpdaterOnExit;
     private bool _silentUpdaterLaunched;
+    private bool _silentVersionPollingStarted;
+    private CancellationTokenSource? _silentVersionPollingCts;
+    private int _workflowExecuting;
+    private readonly object _versionPollingLock = new();
     private readonly object _silentUpdateLock = new();
+    private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(5);
 
     #region Public Methods
 
@@ -51,7 +57,11 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             GeneralTracer.Debug("GeneralClientBootstrap Launch.");
             CallSmallBowlHome(_configInfo.Bowl);
             ExecuteCustomOptions();
-            await ExecuteWorkflowAsync();
+            await ExecuteWorkflowWithReentryGuardAsync();
+            if (_configInfo?.EnableSilentUpdate == true)
+            {
+                StartSilentVersionPolling();
+            }
         }
         catch (Exception exception)
         {
@@ -152,10 +162,16 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
+            _configInfo.EnableSilentUpdate = GetOption(UpdateOption.EnableSilentUpdate) ?? false;
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
             if (CanSkip(isForcibly)) return;
+
+            if (!_configInfo.IsUpgradeUpdate && !_configInfo.IsMainUpdate)
+            {
+                return;
+            }
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -167,7 +183,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60;
             _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
             _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
-            _configInfo.EnableSilentUpdate = GetOption(UpdateOption.EnableSilentUpdate) ?? false;
             _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
             _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
                 $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
@@ -232,6 +247,24 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         {
             GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+        }
+    }
+
+    private async Task ExecuteWorkflowWithReentryGuardAsync()
+    {
+        if (Interlocked.CompareExchange(ref _workflowExecuting, 1, 0) != 0)
+        {
+            GeneralTracer.Debug("Skip workflow execution because previous execution is still running.");
+            return;
+        }
+
+        try
+        {
+            await ExecuteWorkflowAsync();
+        }
+        finally
+        {
+            Volatile.Write(ref _workflowExecuting, 0);
         }
     }
 
@@ -343,8 +376,66 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
 
         _launchSilentUpdaterOnExit = true;
+        StopSilentVersionPolling();
         AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainProcessExit;
         GeneralTracer.Info("Silent update enabled, updater launch is scheduled for process exit.");
+    }
+
+    private void StartSilentVersionPolling()
+    {
+        lock (_versionPollingLock)
+        {
+            if (_silentVersionPollingStarted || _launchSilentUpdaterOnExit || _configInfo == null)
+            {
+                return;
+            }
+
+            _silentVersionPollingStarted = true;
+            _silentVersionPollingCts = new CancellationTokenSource();
+        }
+
+        _ = Task.Run(async () =>
+        {
+            CancellationToken cancellationToken;
+            lock (_versionPollingLock)
+            {
+                cancellationToken = _silentVersionPollingCts?.Token ?? CancellationToken.None;
+            }
+            try
+            {
+                while (!_launchSilentUpdaterOnExit && !cancellationToken.IsCancellationRequested)
+                {
+                    await Task.Delay(SilentVersionPollingInterval, cancellationToken);
+                    await ExecuteWorkflowWithReentryGuardAsync();
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // expected when polling is stopped
+            }
+            catch (Exception exception)
+            {
+                GeneralTracer.Error("Silent update polling loop failed.", exception);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+            }
+            finally
+            {
+                lock (_versionPollingLock)
+                {
+                    _silentVersionPollingStarted = false;
+                    _silentVersionPollingCts?.Dispose();
+                    _silentVersionPollingCts = null;
+                }
+            }
+        });
+    }
+
+    private void StopSilentVersionPolling()
+    {
+        lock (_versionPollingLock)
+        {
+            _silentVersionPollingCts?.Cancel();
+        }
     }
 
     private void OnCurrentDomainProcessExit(object? sender, EventArgs e)
