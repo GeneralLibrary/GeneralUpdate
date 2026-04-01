@@ -37,7 +37,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private readonly List<Func<bool>> _customOptions = new();
     private volatile bool _launchSilentUpdaterOnExit;
     private bool _silentUpdaterLaunched;
-    private SilentVersionPollingTimer? _silentVersionPollingTimer;
+    private CancellationTokenSource? _silentVersionPollingCts;
+    private Task? _silentVersionPollingTask;
     private int _pollingExitHookRegistered;
     private int _workflowExecuting;
     private readonly object _silentUpdateLock = new();
@@ -383,30 +384,24 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private void StartSilentVersionPolling()
     {
-        if (_silentVersionPollingTimer != null || _launchSilentUpdaterOnExit || _configInfo == null)
+        if (_silentVersionPollingTask != null || _launchSilentUpdaterOnExit || _configInfo == null)
         {
             return;
         }
 
-        _silentVersionPollingTimer = new SilentVersionPollingTimer(
-            async () => await ExecuteWorkflowWithReentryGuardAsync(),
-            SilentVersionPollingInterval,
-            exception =>
-            {
-                GeneralTracer.Error("Silent update polling loop failed.", exception);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            });
+        _silentVersionPollingCts = new CancellationTokenSource();
+        _silentVersionPollingTask = RunSilentVersionPollingLoopAsync(_silentVersionPollingCts.Token);
         if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 1, 0) == 0)
         {
             AppDomain.CurrentDomain.ProcessExit += OnPollingProcessExit;
         }
-        _silentVersionPollingTimer.Start();
     }
 
     private void StopSilentVersionPolling()
     {
-        var timer = Interlocked.Exchange(ref _silentVersionPollingTimer, null);
-        timer?.Dispose();
+        var cts = Interlocked.Exchange(ref _silentVersionPollingCts, null);
+        cts?.Cancel();
+        cts?.Dispose();
         if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 0, 1) == 1)
         {
             AppDomain.CurrentDomain.ProcessExit -= OnPollingProcessExit;
@@ -414,6 +409,36 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
 
     private void OnPollingProcessExit(object? sender, EventArgs e) => StopSilentVersionPolling();
+
+    private async Task RunSilentVersionPollingLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && !_launchSilentUpdaterOnExit)
+            {
+                await Task.Delay(SilentVersionPollingInterval, cancellationToken);
+                if (_launchSilentUpdaterOnExit)
+                {
+                    break;
+                }
+
+                await ExecuteWorkflowWithReentryGuardAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
+        catch (Exception exception)
+        {
+            GeneralTracer.Error("Silent update polling loop failed.", exception);
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _silentVersionPollingTask, null);
+        }
+    }
 
     private void OnCurrentDomainProcessExit(object? sender, EventArgs e)
     {
