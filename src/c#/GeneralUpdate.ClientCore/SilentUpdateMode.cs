@@ -133,8 +133,8 @@ internal sealed class SilentUpdateMode : IDisposable
         {
             while (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _isPrepared) == 0)
             {
-                await Task.Delay(_pollingInterval, cancellationToken);
                 await _pollingAction();
+                await Task.Delay(_pollingInterval, cancellationToken);
             }
         }
         catch (OperationCanceledException)

@@ -58,7 +58,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            GeneralTracer.Error("The LaunchAsync method in the GeneralClientBootstrap class throws an exception." , exception);
+            GeneralTracer.Error("The LaunchAsync method in the GeneralClientBootstrap class throws an exception.", exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
         return this;
@@ -145,7 +145,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
+            GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception.", exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -235,13 +235,19 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 case true when _configInfo.IsMainUpdate:
                     //Both upgrade and main program update.
                     await Download();
-                    await _strategy?.ExecuteAsync()!;
+                    if (_strategy != null)
+                    {
+                        await _strategy.ExecuteAsync();
+                    }
                     _strategy?.StartApp();
                     break;
                 case true when !_configInfo.IsMainUpdate:
                     //Upgrade program update.
                     await Download();
-                    await _strategy?.ExecuteAsync()!;
+                    if (_strategy != null)
+                    {
+                        await _strategy.ExecuteAsync();
+                    }
                     break;
                 case false when _configInfo.IsMainUpdate:
                     //Main program update.
@@ -251,7 +257,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
         catch (Exception exception)
         {
-            GeneralTracer.Error("The ExecuteInteractiveWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
+            GeneralTracer.Error("The ExecuteInteractiveWorkflowAsync method in the GeneralClientBootstrap class throws an exception.", exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -405,7 +411,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             return false;
         }
 
-        _configInfo.LastVersion = mainResp.Body.OrderBy(x => x.ReleaseDate).Last().Version;
+        var orderedMainVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
+        if (!orderedMainVersions.Any())
+        {
+            return false;
+        }
+
+        _configInfo.LastVersion = orderedMainVersions.Last().Version;
         if (CheckFail(_configInfo.LastVersion))
         {
             return false;
@@ -423,11 +435,11 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
             $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
-        _configInfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
+        _configInfo.UpdateVersions = orderedMainVersions;
 
         var processInfo = ConfigurationMapper.MapToProcessInfo(
             _configInfo,
-            mainResp.Body,
+            orderedMainVersions,
             BlackListManager.Instance.BlackFileFormats.ToList(),
             BlackListManager.Instance.BlackFiles.ToList(),
             BlackListManager.Instance.SkipDirectorys.ToList());
@@ -448,7 +460,10 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
         StrategyFactory();
         await Download();
-        await _strategy?.ExecuteAsync()!;
+        if (_strategy != null)
+        {
+            await _strategy.ExecuteAsync();
+        }
         GeneralTracer.Info("Silent update package prepared; updater launch deferred until process exit.");
     }
 
@@ -475,6 +490,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 FileName = appPath
             });
             _silentUpdaterLaunched = true;
+            _silentUpdateMode?.Dispose();
         }
     }
 
