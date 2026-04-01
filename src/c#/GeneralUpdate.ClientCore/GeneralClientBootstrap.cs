@@ -128,6 +128,17 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         try
         {
             Debug.Assert(_configInfo != null);
+            if (GetOption(UpdateOption.EnableSilentUpdate))
+            {
+                await new SilentUpdateMode(
+                    _configInfo,
+                    GetOption(UpdateOption.Encoding) ?? Encoding.Default,
+                    GetOption(UpdateOption.Format) ?? Format.ZIP,
+                    GetOption(UpdateOption.DownloadTimeOut) ?? 60,
+                    GetOption(UpdateOption.Patch) ?? true,
+                    GetOption(UpdateOption.BackUp) ?? true).StartAsync();
+                return;
+            }
             //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
             var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
                 , _configInfo.ClientVersion
