@@ -41,7 +41,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private int _pollingExitHookRegistered;
     private int _workflowExecuting;
     private readonly object _silentUpdateLock = new();
-    private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(20);
 
     #region Public Methods
 
