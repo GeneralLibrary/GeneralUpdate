@@ -35,11 +35,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private IStrategy? _strategy;
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
-    private volatile bool _launchSilentUpdaterOnExit;
+    private SilentUpdateMode? _silentUpdateMode;
     private bool _silentUpdaterLaunched;
-    private CancellationTokenSource? _silentVersionPollingCts;
-    private Task? _silentVersionPollingTask;
-    private int _pollingExitHookRegistered;
     private int _workflowExecuting;
     private readonly object _silentUpdateLock = new();
     private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(20);
@@ -57,11 +54,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             GeneralTracer.Debug("GeneralClientBootstrap Launch.");
             CallSmallBowlHome(_configInfo.Bowl);
             ExecuteCustomOptions();
-            await ExecuteWorkflowWithReentryGuardAsync();
-            if (_configInfo?.EnableSilentUpdate == true)
-            {
-                StartSilentVersionPolling();
-            }
+            await ExecuteWorkflowAsync();
         }
         catch (Exception exception)
         {
@@ -141,6 +134,27 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         try
         {
             Debug.Assert(_configInfo != null);
+            _configInfo.EnableSilentUpdate = GetOption(UpdateOption.EnableSilentUpdate) ?? false;
+            if (_configInfo.EnableSilentUpdate)
+            {
+                await EnterSilentUpdateModeAsync();
+                return;
+            }
+
+            await ExecuteInteractiveWorkflowAsync();
+        }
+        catch (Exception exception)
+        {
+            GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
+        }
+    }
+
+    private async Task ExecuteInteractiveWorkflowAsync()
+    {
+        try
+        {
+            Debug.Assert(_configInfo != null);
             //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
             var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
                 , _configInfo.ClientVersion
@@ -162,7 +176,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
-            _configInfo.EnableSilentUpdate = GetOption(UpdateOption.EnableSilentUpdate) ?? false;
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
@@ -232,21 +245,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                     break;
                 case false when _configInfo.IsMainUpdate:
                     //Main program update.
-                    if (_configInfo.EnableSilentUpdate)
-                    {
-                        await Download();
-                        ScheduleSilentMainUpdate();
-                    }
-                    else
-                    {
-                        _strategy?.StartApp();
-                    }
+                    _strategy?.StartApp();
                     break;
             }
         }
         catch (Exception exception)
         {
-            GeneralTracer.Error("The ExecuteWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
+            GeneralTracer.Error("The ExecuteInteractiveWorkflowAsync method in the GeneralClientBootstrap class throws an exception." , exception);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
         }
     }
@@ -369,113 +374,114 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         return _customSkipOption?.Invoke() == true;
     }
 
-    private void ScheduleSilentMainUpdate()
+    private async Task EnterSilentUpdateModeAsync()
     {
-        if (_launchSilentUpdaterOnExit)
-        {
-            return;
-        }
+        Debug.Assert(_configInfo != null);
+        _silentUpdateMode ??= new SilentUpdateMode(
+            SilentVersionPollingInterval,
+            ExecuteWorkflowWithReentryGuardAsync,
+            PrepareSilentMainUpdateAsync,
+            LaunchSilentUpdater,
+            HandleSilentUpdateException);
 
-        _launchSilentUpdaterOnExit = true;
-        StopSilentVersionPolling();
-        AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainProcessExit;
-        GeneralTracer.Info("Silent update enabled, updater launch is scheduled for process exit.");
+        await _silentUpdateMode.EnterAsync(await DetectSilentMainUpdateAsync());
     }
 
-    private void StartSilentVersionPolling()
+    private async Task<bool> DetectSilentMainUpdateAsync()
     {
-        if (_silentVersionPollingTask != null || _launchSilentUpdaterOnExit || _configInfo == null)
+        Debug.Assert(_configInfo != null);
+        var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
+            , _configInfo.ClientVersion
+            , AppType.ClientApp
+            , _configInfo.AppSecretKey
+            , GetPlatform()
+            , _configInfo.ProductId
+            , _configInfo.Scheme
+            , _configInfo.Token);
+
+        _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
+        if (!_configInfo.IsMainUpdate)
         {
-            return;
+            return false;
         }
 
-        _silentVersionPollingCts = new CancellationTokenSource();
-        _silentVersionPollingTask = RunSilentVersionPollingLoopAsync(_silentVersionPollingCts.Token);
-        if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 1, 0) == 0)
+        _configInfo.LastVersion = mainResp.Body.OrderBy(x => x.ReleaseDate).Last().Version;
+        if (CheckFail(_configInfo.LastVersion))
         {
-            AppDomain.CurrentDomain.ProcessExit += OnPollingProcessExit;
+            return false;
         }
+
+        //black list initialization.
+        BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
+        BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
+        BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
+        _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
+        _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
+        _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60;
+        _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
+        _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
+        _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
+        _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
+            $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
+        _configInfo.UpdateVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
+
+        var processInfo = ConfigurationMapper.MapToProcessInfo(
+            _configInfo,
+            mainResp.Body,
+            BlackListManager.Instance.BlackFileFormats.ToList(),
+            BlackListManager.Instance.BlackFiles.ToList(),
+            BlackListManager.Instance.SkipDirectorys.ToList());
+        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
+
+        return true;
     }
 
-    private void StopSilentVersionPolling()
+    private async Task PrepareSilentMainUpdateAsync()
     {
-        var cts = Interlocked.Exchange(ref _silentVersionPollingCts, null);
-        cts?.Cancel();
-        cts?.Dispose();
-        if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 0, 1) == 1)
+        Debug.Assert(_configInfo != null);
+        if (GetOption(UpdateOption.BackUp) ?? true)
         {
-            AppDomain.CurrentDomain.ProcessExit -= OnPollingProcessExit;
+            StorageManager.Backup(_configInfo.InstallPath
+                , _configInfo.BackupDirectory
+                , BlackListManager.Instance.SkipDirectorys);
         }
+
+        StrategyFactory();
+        await Download();
+        await _strategy?.ExecuteAsync()!;
+        GeneralTracer.Info("Silent update package prepared; updater launch deferred until process exit.");
     }
 
-    private void OnPollingProcessExit(object? sender, EventArgs e) => StopSilentVersionPolling();
-
-    private async Task RunSilentVersionPollingLoopAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested && !_launchSilentUpdaterOnExit)
-            {
-                await Task.Delay(SilentVersionPollingInterval, cancellationToken);
-                if (_launchSilentUpdaterOnExit)
-                {
-                    break;
-                }
-
-                await ExecuteWorkflowWithReentryGuardAsync();
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation.
-        }
-        catch (Exception exception)
-        {
-            GeneralTracer.Error("Silent update polling loop failed.", exception);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _silentVersionPollingTask, null);
-        }
-    }
-
-    private void OnCurrentDomainProcessExit(object? sender, EventArgs e)
+    private void LaunchSilentUpdater()
     {
         lock (_silentUpdateLock)
         {
-            if (!_launchSilentUpdaterOnExit || _silentUpdaterLaunched || _configInfo == null)
+            if (_silentUpdaterLaunched || _configInfo == null)
             {
                 return;
             }
 
-            try
+            var appPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+            if (!File.Exists(appPath))
             {
-                var appPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
-                if (!File.Exists(appPath))
-                {
-                    GeneralTracer.Error($"Silent update failed because updater was not found: {appPath}.");
-                    return;
-                }
+                GeneralTracer.Error($"Silent update failed because updater was not found: {appPath}.");
+                return;
+            }
 
-                Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo);
-                Process.Start(new ProcessStartInfo
-                {
-                    UseShellExecute = true,
-                    FileName = appPath
-                });
-                _silentUpdaterLaunched = true;
-            }
-            catch (Exception exception)
+            Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo);
+            Process.Start(new ProcessStartInfo
             {
-                GeneralTracer.Error("Failed to launch updater in silent update mode.", exception);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            }
-            finally
-            {
-                AppDomain.CurrentDomain.ProcessExit -= OnCurrentDomainProcessExit;
-            }
+                UseShellExecute = true,
+                FileName = appPath
+            });
+            _silentUpdaterLaunched = true;
         }
+    }
+
+    private void HandleSilentUpdateException(Exception exception)
+    {
+        GeneralTracer.Error("Failed during silent update mode.", exception);
+        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
     }
 
     private void CallSmallBowlHome(string processName)
