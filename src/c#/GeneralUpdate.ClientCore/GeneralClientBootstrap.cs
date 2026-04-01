@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -36,9 +36,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private Func<bool>? _customSkipOption;
     private readonly List<Func<bool>> _customOptions = new();
     private SilentUpdateMode? _silentUpdateMode;
-    private bool _silentUpdaterLaunched;
-    private int _workflowExecuting;
-    private readonly object _silentUpdateLock = new();
     private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(20);
 
     #region Public Methods
@@ -262,24 +259,6 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
         }
     }
 
-    private async Task ExecuteWorkflowWithReentryGuardAsync()
-    {
-        if (Interlocked.CompareExchange(ref _workflowExecuting, 1, 0) != 0)
-        {
-            GeneralTracer.Debug("Skip workflow execution because previous execution is still running.");
-            return;
-        }
-
-        try
-        {
-            await ExecuteWorkflowAsync();
-        }
-        finally
-        {
-            Volatile.Write(ref _workflowExecuting, 0);
-        }
-    }
-
     private async Task Download()
     {
         var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
@@ -384,114 +363,20 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     {
         Debug.Assert(_configInfo != null);
         _silentUpdateMode ??= new SilentUpdateMode(
+            _configInfo,
+            new SilentUpdateOptions
+            {
+                FileEncoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default,
+                Format = GetOption(UpdateOption.Format) ?? Format.ZIP,
+                DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60,
+                DriveEnabled = GetOption(UpdateOption.Drive) ?? false,
+                PatchEnabled = GetOption(UpdateOption.Patch) ?? true,
+                BackUpEnabled = GetOption(UpdateOption.BackUp) ?? true
+            },
             SilentVersionPollingInterval,
-            ExecuteWorkflowWithReentryGuardAsync,
-            PrepareSilentMainUpdateAsync,
-            LaunchSilentUpdater,
             HandleSilentUpdateException);
 
-        await _silentUpdateMode.EnterAsync(await DetectSilentMainUpdateAsync());
-    }
-
-    private async Task<bool> DetectSilentMainUpdateAsync()
-    {
-        Debug.Assert(_configInfo != null);
-        var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
-            , _configInfo.ClientVersion
-            , AppType.ClientApp
-            , _configInfo.AppSecretKey
-            , GetPlatform()
-            , _configInfo.ProductId
-            , _configInfo.Scheme
-            , _configInfo.Token);
-
-        _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
-        if (!_configInfo.IsMainUpdate)
-        {
-            return false;
-        }
-
-        var orderedMainVersions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
-        if (!orderedMainVersions.Any())
-        {
-            return false;
-        }
-
-        _configInfo.LastVersion = orderedMainVersions.Last().Version;
-        if (CheckFail(_configInfo.LastVersion))
-        {
-            return false;
-        }
-
-        //black list initialization.
-        BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
-        BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
-        BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
-        _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
-        _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
-        _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60;
-        _configInfo.DriveEnabled = GetOption(UpdateOption.Drive) ?? false;
-        _configInfo.PatchEnabled = GetOption(UpdateOption.Patch) ?? true;
-        _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
-        _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
-            $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
-        _configInfo.UpdateVersions = orderedMainVersions;
-
-        var processInfo = ConfigurationMapper.MapToProcessInfo(
-            _configInfo,
-            orderedMainVersions,
-            BlackListManager.Instance.BlackFileFormats.ToList(),
-            BlackListManager.Instance.BlackFiles.ToList(),
-            BlackListManager.Instance.SkipDirectorys.ToList());
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-
-        return true;
-    }
-
-    private async Task PrepareSilentMainUpdateAsync()
-    {
-        Debug.Assert(_configInfo != null);
-        if (GetOption(UpdateOption.BackUp) ?? true)
-        {
-            StorageManager.Backup(_configInfo.InstallPath
-                , _configInfo.BackupDirectory
-                , BlackListManager.Instance.SkipDirectorys);
-        }
-
-        StrategyFactory();
-        await Download();
-        if (_strategy != null)
-        {
-            await _strategy.ExecuteAsync();
-        }
-        GeneralTracer.Info("Silent update package prepared; updater launch deferred until process exit.");
-    }
-
-    private void LaunchSilentUpdater()
-    {
-        lock (_silentUpdateLock)
-        {
-            if (_silentUpdaterLaunched || _configInfo == null)
-            {
-                return;
-            }
-
-            var appPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
-            if (!File.Exists(appPath))
-            {
-                GeneralTracer.Error($"Silent update failed because updater was not found: {appPath}.");
-                return;
-            }
-
-            Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo);
-            Process.Start(new ProcessStartInfo
-            {
-                UseShellExecute = true,
-                FileName = appPath
-            });
-            _silentUpdaterLaunched = true;
-            _silentUpdateMode?.Dispose();
-        }
+        await _silentUpdateMode.EnterAsync();
     }
 
     private void HandleSilentUpdateException(Exception exception)
