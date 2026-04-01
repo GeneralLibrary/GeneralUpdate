@@ -37,10 +37,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     private readonly List<Func<bool>> _customOptions = new();
     private volatile bool _launchSilentUpdaterOnExit;
     private bool _silentUpdaterLaunched;
-    private bool _silentVersionPollingStarted;
-    private CancellationTokenSource? _silentVersionPollingCts;
+    private SilentVersionPollingTimer? _silentVersionPollingTimer;
+    private int _pollingExitHookRegistered;
     private int _workflowExecuting;
-    private readonly object _versionPollingLock = new();
     private readonly object _silentUpdateLock = new();
     private static readonly TimeSpan SilentVersionPollingInterval = TimeSpan.FromMinutes(5);
 
@@ -383,60 +382,37 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
     private void StartSilentVersionPolling()
     {
-        lock (_versionPollingLock)
+        if (_silentVersionPollingTimer != null || _launchSilentUpdaterOnExit || _configInfo == null)
         {
-            if (_silentVersionPollingStarted || _launchSilentUpdaterOnExit || _configInfo == null)
-            {
-                return;
-            }
-
-            _silentVersionPollingStarted = true;
-            _silentVersionPollingCts = new CancellationTokenSource();
+            return;
         }
 
-        _ = Task.Run(async () =>
-        {
-            CancellationToken cancellationToken;
-            lock (_versionPollingLock)
-            {
-                cancellationToken = _silentVersionPollingCts?.Token ?? CancellationToken.None;
-            }
-            try
-            {
-                while (!_launchSilentUpdaterOnExit && !cancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(SilentVersionPollingInterval, cancellationToken);
-                    await ExecuteWorkflowWithReentryGuardAsync();
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                // expected when polling is stopped
-            }
-            catch (Exception exception)
+        _silentVersionPollingTimer = new SilentVersionPollingTimer(
+            async () => await ExecuteWorkflowWithReentryGuardAsync(),
+            SilentVersionPollingInterval,
+            exception =>
             {
                 GeneralTracer.Error("Silent update polling loop failed.", exception);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(exception, exception.Message));
-            }
-            finally
-            {
-                lock (_versionPollingLock)
-                {
-                    _silentVersionPollingStarted = false;
-                    _silentVersionPollingCts?.Dispose();
-                    _silentVersionPollingCts = null;
-                }
-            }
-        });
+            });
+        if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 1, 0) == 0)
+        {
+            AppDomain.CurrentDomain.ProcessExit += OnPollingProcessExit;
+        }
+        _silentVersionPollingTimer.Start();
     }
 
     private void StopSilentVersionPolling()
     {
-        lock (_versionPollingLock)
+        var timer = Interlocked.Exchange(ref _silentVersionPollingTimer, null);
+        timer?.Dispose();
+        if (Interlocked.CompareExchange(ref _pollingExitHookRegistered, 0, 1) == 1)
         {
-            _silentVersionPollingCts?.Cancel();
+            AppDomain.CurrentDomain.ProcessExit -= OnPollingProcessExit;
         }
     }
+
+    private void OnPollingProcessExit(object? sender, EventArgs e) => StopSilentVersionPolling();
 
     private void OnCurrentDomainProcessExit(object? sender, EventArgs e)
     {
