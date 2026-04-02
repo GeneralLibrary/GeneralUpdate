@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal.Event;
@@ -51,11 +49,6 @@ namespace GeneralUpdate.Common.Internal.Strategy
                             , _configinfo.Scheme
                             , _configinfo.Token);
                     }
-                }
-
-                if (!string.IsNullOrEmpty(_configinfo.UpdateLogUrl))
-                {
-                    OpenBrowser(_configinfo.UpdateLogUrl);
                 }
 
                 Clear(patchPath);
@@ -129,23 +122,6 @@ namespace GeneralUpdate.Common.Internal.Strategy
             return File.Exists(tempPath) ? tempPath : string.Empty;
         }
 
-        private static void OpenBrowser(string url)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
-                return;
-            }
-            
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                Process.Start("xdg-open", url);
-                return;
-            }
-            
-            throw new PlatformNotSupportedException("Unsupported OS platform");
-        }
-        
         private static void Clear(string path)
         {
             if (Directory.Exists(path))

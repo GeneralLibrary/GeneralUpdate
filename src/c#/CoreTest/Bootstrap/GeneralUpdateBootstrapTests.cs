@@ -151,6 +151,23 @@ namespace CoreTest.Bootstrap
         }
 
         /// <summary>
+        /// Tests that AddListenerUpdateInfo returns the bootstrap instance for chaining.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdateInfo_ReturnsBootstrapInstance()
+        {
+            // Arrange
+            var bootstrap = new GeneralUpdateBootstrap();
+            Action<object, UpdateInfoEventArgs> callback = (sender, e) => { };
+
+            // Act
+            var result = bootstrap.AddListenerUpdateInfo(callback);
+
+            // Assert
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
         /// Tests that null callback throws ArgumentNullException.
         /// </summary>
         [Fact]
