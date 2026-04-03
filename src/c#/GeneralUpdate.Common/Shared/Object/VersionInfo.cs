@@ -52,4 +52,10 @@ public class VersionInfo
     /// </summary>
     [JsonPropertyName("authToken")]
     public string? AuthToken { get; set; }
+
+    /// <summary>
+    /// Update log or release notes for this version.
+    /// </summary>
+    [JsonPropertyName("updateLog")]
+    public string? UpdateLog { get; set; }
 }

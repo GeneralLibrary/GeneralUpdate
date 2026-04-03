@@ -37,6 +37,7 @@
     <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadCompletedEventArgs.cs" Link="Common\MutiDownloadCompletedEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadErrorEventArgs.cs" Link="Common\MutiDownloadErrorEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\MutiDownloadStatisticsEventArgs.cs" Link="Common\MutiDownloadStatisticsEventArgs.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Download\MultiEventArgs\UpdateInfoEventArgs.cs" Link="Common\UpdateInfoEventArgs.cs" />
     <Compile Include="..\GeneralUpdate.Common\FileBasic\BlackListManager.cs" Link="Common\BlackListManager.cs" />
     <Compile Include="..\GeneralUpdate.Common\FileBasic\ComparisonResult.cs" Link="Common\ComparisonResult.cs" />
     <Compile Include="..\GeneralUpdate.Common\FileBasic\FileNode.cs" Link="Common\FileNode.cs" />

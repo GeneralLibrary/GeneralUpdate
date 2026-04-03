@@ -111,6 +111,8 @@ namespace GeneralUpdate.Core
 
                 _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
 
+                EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
+
                 if (CanSkip(CheckForcibly(mainResp.Body)))
                     return;
 
@@ -304,6 +306,9 @@ namespace GeneralUpdate.Core
 
         public GeneralUpdateBootstrap AddListenerException(
             Action<object, ExceptionEventArgs> cb) => AddListener(cb);
+
+        public GeneralUpdateBootstrap AddListenerUpdateInfo(
+            Action<object, UpdateInfoEventArgs> cb) => AddListener(cb);
 
         private void OnMultiDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
         {

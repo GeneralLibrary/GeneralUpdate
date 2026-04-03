@@ -119,6 +119,9 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     public GeneralClientBootstrap AddListenerException(Action<object, ExceptionEventArgs> callbackAction)
         => AddListener(callbackAction);
 
+    public GeneralClientBootstrap AddListenerUpdateInfo(Action<object, UpdateInfoEventArgs> callbackAction)
+        => AddListener(callbackAction);
+
     #endregion Public Methods
 
     #region Private Methods
@@ -160,6 +163,8 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
+
+            EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);

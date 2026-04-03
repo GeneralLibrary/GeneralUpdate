@@ -237,6 +237,24 @@ namespace ClientCoreTest.Bootstrap
         }
 
         /// <summary>
+        /// Tests that AddListenerUpdateInfo returns the bootstrap instance for chaining.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdateInfo_WithCallback_ReturnsBootstrap()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            Action<object, UpdateInfoEventArgs> callback = (sender, args) => { };
+
+            // Act
+            var result = bootstrap.AddListenerUpdateInfo(callback);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
         /// Tests that multiple event listeners can be chained.
         /// </summary>
         [Fact]
@@ -251,7 +269,8 @@ namespace ClientCoreTest.Bootstrap
                 .AddListenerMultiDownloadCompleted((s, e) => { })
                 .AddListenerMultiDownloadError((s, e) => { })
                 .AddListenerMultiDownloadStatistics((s, e) => { })
-                .AddListenerException((s, e) => { });
+                .AddListenerException((s, e) => { })
+                .AddListenerUpdateInfo((s, e) => { });
 
             // Assert
             Assert.NotNull(result);
