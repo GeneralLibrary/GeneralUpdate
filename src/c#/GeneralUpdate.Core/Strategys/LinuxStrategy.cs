@@ -16,12 +16,14 @@ public class LinuxStrategy : AbstractStrategy
 {
     protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
     {
+        GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}, driveEnabled={_configinfo.DriveEnabled}");
         var context = base.CreatePipelineContext(version, patchPath);
         
         // Driver middleware (Linux-specific)
         if (_configinfo.DriveEnabled == true)
         {
             context.Add("DriverDirectory", _configinfo.DriverDirectory);
+            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.CreatePipelineContext: driver update enabled, DriverDirectory={_configinfo.DriverDirectory}");
         }
         
         return context;
@@ -29,6 +31,7 @@ public class LinuxStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
+        GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}, DriveEnabled={_configinfo.DriveEnabled}");
         var builder = new PipelineBuilder(context)
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
@@ -46,6 +49,7 @@ public class LinuxStrategy : AbstractStrategy
 
     protected override void OnExecuteComplete()
     {
+        GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.OnExecuteComplete: all versions processed, starting application.");
         StartApp();
     }
 
@@ -57,8 +61,10 @@ public class LinuxStrategy : AbstractStrategy
             if (string.IsNullOrEmpty(mainAppPath))
                 throw new Exception($"Can't find the app {mainAppPath}!");
 
+            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: executing startup script then launching main app={mainAppPath}");
             ExecuteScript();
             Process.Start(mainAppPath);
+            GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: main app launched successfully.");
         }
         catch (Exception e)
         {
@@ -68,6 +74,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         finally
         {
+            GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: releasing tracer and terminating updater process.");
             GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }

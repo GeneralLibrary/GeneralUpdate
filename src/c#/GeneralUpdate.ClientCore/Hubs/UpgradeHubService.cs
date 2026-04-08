@@ -57,7 +57,9 @@ public class UpgradeHubService : IUpgradeHubService
     {
         try
         {
+            GeneralTracer.Info($"UpgradeHubService.StartAsync: connecting to SignalR hub. State={_connection?.State}");
             await _connection!.StartAsync();
+            GeneralTracer.Info($"UpgradeHubService.StartAsync: SignalR hub connection established. State={_connection?.State}");
         }
         catch (Exception e)
         {
@@ -69,7 +71,9 @@ public class UpgradeHubService : IUpgradeHubService
     {
         try
         {
+            GeneralTracer.Info($"UpgradeHubService.StopAsync: stopping SignalR hub connection. State={_connection?.State}");
             await _connection!.StopAsync();
+            GeneralTracer.Info("UpgradeHubService.StopAsync: SignalR hub connection stopped.");
         }
         catch (Exception e)
         {
@@ -81,7 +85,9 @@ public class UpgradeHubService : IUpgradeHubService
     {
         try
         {
+            GeneralTracer.Info("UpgradeHubService.DisposeAsync: disposing SignalR hub connection and releasing resources.");
             await _connection!.DisposeAsync();
+            GeneralTracer.Info("UpgradeHubService.DisposeAsync: SignalR hub connection disposed.");
         }
         catch (Exception e)
         {

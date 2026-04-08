@@ -1,3 +1,4 @@
+using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Models;
@@ -44,6 +45,7 @@ public static class GeneralDrivelution
         DriverInfo driverInfo, 
         CancellationToken cancellationToken = default)
     {
+        GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync: starting quick driver update. Driver={driverInfo.Name}, Version={driverInfo.Version}");
         var updater = Create();
         var strategy = new UpdateStrategy
         {
@@ -52,7 +54,9 @@ public static class GeneralDrivelution
             RetryIntervalSeconds = 5
         };
         
-        return await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        var result = await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync: quick driver update completed. Success={result.Success}, Status={result.Status}, DurationMs={result.DurationMs}");
+        return result;
     }
 
     /// <summary>
@@ -67,8 +71,11 @@ public static class GeneralDrivelution
         UpdateStrategy strategy,
         CancellationToken cancellationToken = default)
     {
+        GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync(strategy): starting driver update with custom strategy. Driver={driverInfo.Name}, Version={driverInfo.Version}, RequireBackup={strategy.RequireBackup}, RetryCount={strategy.RetryCount}");
         var updater = Create();
-        return await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        var result = await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync(strategy): driver update completed. Success={result.Success}, Status={result.Status}, DurationMs={result.DurationMs}");
+        return result;
     }
 
     /// <summary>
@@ -81,8 +88,11 @@ public static class GeneralDrivelution
         DriverInfo driverInfo,
         CancellationToken cancellationToken = default)
     {
+        GeneralTracer.Info($"GeneralDrivelution.ValidateAsync: validating driver file. Driver={driverInfo.Name}, FilePath={driverInfo.FilePath}");
         var updater = Create();
-        return await updater.ValidateAsync(driverInfo, cancellationToken);
+        var result = await updater.ValidateAsync(driverInfo, cancellationToken);
+        GeneralTracer.Info($"GeneralDrivelution.ValidateAsync: driver validation completed. Driver={driverInfo.Name}, IsValid={result}");
+        return result;
     }
 
     /// <summary>
@@ -91,7 +101,8 @@ public static class GeneralDrivelution
     /// <returns>Platform information</returns>
     public static PlatformInfo GetPlatformInfo()
     {
-        return new PlatformInfo
+        GeneralTracer.Info("GeneralDrivelution.GetPlatformInfo: retrieving platform information.");
+        var info = new PlatformInfo
         {
             Platform = Core.DrivelutionFactory.GetCurrentPlatform(),
             IsSupported = Core.DrivelutionFactory.IsPlatformSupported(),
@@ -99,6 +110,8 @@ public static class GeneralDrivelution
             Architecture = CompatibilityChecker.GetCurrentArchitecture(),
             SystemVersion = CompatibilityChecker.GetSystemVersion()
         };
+        GeneralTracer.Info($"GeneralDrivelution.GetPlatformInfo: Platform={info.Platform}, OS={info.OperatingSystem}, Arch={info.Architecture}, Version={info.SystemVersion}, Supported={info.IsSupported}");
+        return info;
     }
 
     /// <summary>
@@ -113,8 +126,11 @@ public static class GeneralDrivelution
         string? searchPattern = null,
         CancellationToken cancellationToken = default)
     {
+        GeneralTracer.Info($"GeneralDrivelution.GetDriversFromDirectoryAsync: scanning directory for drivers. Path={directoryPath}, SearchPattern={searchPattern ?? "(default)"}");
         var updater = Create();
-        return await updater.GetDriversFromDirectoryAsync(directoryPath, searchPattern, cancellationToken);
+        var drivers = await updater.GetDriversFromDirectoryAsync(directoryPath, searchPattern, cancellationToken);
+        GeneralTracer.Info($"GeneralDrivelution.GetDriversFromDirectoryAsync: found {drivers?.Count ?? 0} driver(s) in directory={directoryPath}");
+        return drivers;
     }
 }
 

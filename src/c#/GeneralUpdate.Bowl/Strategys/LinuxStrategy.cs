@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using GeneralUpdate.Bowl.Internal;
+using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
@@ -24,15 +25,34 @@ internal class LinuxStrategy : AbstractStrategy
     
     public override void Launch()
     {
-        Install();
-        base.Launch();
+        GeneralTracer.Info("LinuxStrategy.Launch: starting Linux surveillance launch.");
+        try
+        {
+            Install();
+            GeneralTracer.Info("LinuxStrategy.Launch: procdump installation completed, invoking base launch.");
+            base.Launch();
+            GeneralTracer.Info("LinuxStrategy.Launch: launch lifecycle completed.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("LinuxStrategy.Launch: exception occurred during Linux surveillance launch.", ex);
+            throw;
+        }
     }
 
     private void Install()
     {
+        GeneralTracer.Info("LinuxStrategy.Install: determining procdump package and running install script.");
         string scriptPath = "./install.sh";
         string packageFile = GetPacketName();
-        
+
+        if (string.IsNullOrEmpty(packageFile))
+        {
+            GeneralTracer.Warn("LinuxStrategy.Install: no matching procdump package found for the current Linux distribution.");
+            return;
+        }
+
+        GeneralTracer.Info($"LinuxStrategy.Install: executing install.sh with package={packageFile}.");
         ProcessStartInfo processStartInfo = new ProcessStartInfo()
         {
             FileName = "/bin/bash",
@@ -50,25 +70,33 @@ internal class LinuxStrategy : AbstractStrategy
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            Console.WriteLine("Output:");
-            Console.WriteLine(output);
+            if (!string.IsNullOrEmpty(output))
+                GeneralTracer.Info($"LinuxStrategy.Install output: {output}");
 
             if (!string.IsNullOrEmpty(error))
+                GeneralTracer.Warn($"LinuxStrategy.Install error output: {error}");
+
+            if (process.ExitCode != 0)
             {
-                Console.WriteLine("Error:");
-                Console.WriteLine(error);
+                GeneralTracer.Error($"LinuxStrategy.Install: install script exited with code {process.ExitCode}.");
+            }
+            else
+            {
+                GeneralTracer.Info("LinuxStrategy.Install: procdump installation succeeded.");
             }
         }
         catch (Exception e)
         {
-            Console.WriteLine($"An error occurred: {e.Message}");
+            GeneralTracer.Error("LinuxStrategy.Install: exception occurred while running install script.", e);
         }
     }
 
     private string GetPacketName()
     {
+        GeneralTracer.Info("LinuxStrategy.GetPacketName: detecting Linux distribution.");
         var packageFileName = string.Empty;
         var system = GetSystem();
+        GeneralTracer.Info($"LinuxStrategy.GetPacketName: detected distribution={system.Name}, version={system.Version}.");
         if (_rocdumpAmd64.Contains(system.Name))
         {
             packageFileName = $"procdump_3.3.0_amd64.deb";
@@ -82,11 +110,17 @@ internal class LinuxStrategy : AbstractStrategy
             packageFileName = $"procdump-3.3.0-0.cm2.x86_64.rpm";
         }
 
+        if (string.IsNullOrEmpty(packageFileName))
+            GeneralTracer.Warn($"LinuxStrategy.GetPacketName: no matching package for distribution={system.Name}.");
+        else
+            GeneralTracer.Info($"LinuxStrategy.GetPacketName: resolved package={packageFileName}.");
+
         return packageFileName;
     }
 
     private LinuxSystem GetSystem()
     {
+        GeneralTracer.Info("LinuxStrategy.GetSystem: reading /etc/os-release.");
         string osReleaseFile = "/etc/os-release";
         if (File.Exists(osReleaseFile))
         {
@@ -106,9 +140,11 @@ internal class LinuxStrategy : AbstractStrategy
                 }
             }
             
+            GeneralTracer.Info($"LinuxStrategy.GetSystem: distro={distro}, version={version}.");
             return new LinuxSystem(distro, version);
         }
-        
+
+        GeneralTracer.Fatal("LinuxStrategy.GetSystem: /etc/os-release not found, cannot determine Linux distribution.");
         throw new FileNotFoundException("Cannot determine the Linux distribution. The /etc/os-release file does not exist.");
     }
 }

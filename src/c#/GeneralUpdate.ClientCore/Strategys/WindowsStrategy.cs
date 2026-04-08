@@ -19,6 +19,7 @@ public class WindowsStrategy : AbstractStrategy
 {
     protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
     {
+        GeneralTracer.Info($"GeneralUpdate.ClientCore.WindowsStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");
         var context = base.CreatePipelineContext(version, patchPath);
         
         // Add ClientCore-specific context items (blacklists are not needed for Windows in Core)
@@ -29,6 +30,7 @@ public class WindowsStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
+        GeneralTracer.Info($"GeneralUpdate.ClientCore.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
         return new PipelineBuilder(context)
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
@@ -39,6 +41,7 @@ public class WindowsStrategy : AbstractStrategy
     {
         try
         {
+            GeneralTracer.Info($"GeneralUpdate.ClientCore.WindowsStrategy.StartApp: setting ProcessInfo environment variable and launching updater app={_configinfo.AppName}");
             Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
@@ -48,6 +51,11 @@ public class WindowsStrategy : AbstractStrategy
                     UseShellExecute = true,
                     FileName = appPath
                 });
+                GeneralTracer.Info($"GeneralUpdate.ClientCore.WindowsStrategy.StartApp: updater process launched successfully. Path={appPath}");
+            }
+            else
+            {
+                GeneralTracer.Warn($"GeneralUpdate.ClientCore.WindowsStrategy.StartApp: updater app not found at path={appPath}, skipping launch.");
             }
         }
         catch (Exception e)
@@ -57,6 +65,7 @@ public class WindowsStrategy : AbstractStrategy
         }
         finally
         {
+            GeneralTracer.Info("GeneralUpdate.ClientCore.WindowsStrategy.StartApp: releasing tracer and terminating client process.");
             GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }

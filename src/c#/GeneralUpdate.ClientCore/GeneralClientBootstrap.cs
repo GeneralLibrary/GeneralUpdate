@@ -137,6 +137,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             Debug.Assert(_configInfo != null);
             if (GetOption(UpdateOption.EnableSilentUpdate))
             {
+                GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: silent update mode enabled, delegating to SilentUpdateMode.");
                 await new SilentUpdateMode(
                     _configInfo,
                     GetOption(UpdateOption.Encoding) ?? Encoding.Default,
@@ -147,6 +148,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 return;
             }
             //Request the upgrade information needed by the client and upgrade end, and determine if an upgrade is necessary.
+            GeneralTracer.Info($"GeneralClientBootstrap.ExecuteWorkflowAsync: validating client version={_configInfo.ClientVersion} and upgrade version={_configInfo.UpgradeClientVersion}");
             var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
                 , _configInfo.ClientVersion
                 , AppType.ClientApp
@@ -167,13 +169,18 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
+            GeneralTracer.Info($"GeneralClientBootstrap.ExecuteWorkflowAsync: version validation completed. IsMainUpdate={_configInfo.IsMainUpdate}, IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}");
 
             var updateInfoArgs = new UpdateInfoEventArgs(mainResp);
             EventManager.Instance.Dispatch(this, updateInfoArgs);
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
-            if (CanSkip(isForcibly, updateInfoArgs)) return;
+            if (CanSkip(isForcibly, updateInfoArgs))
+            {
+                GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: update skipped by precheck callback.");
+                return;
+            }
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -194,9 +201,14 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             if (_configInfo.IsMainUpdate)
             {
                 _configInfo.LastVersion = mainResp.Body.OrderBy(x => x.ReleaseDate).Last().Version;
+                GeneralTracer.Info($"GeneralClientBootstrap.ExecuteWorkflowAsync: main update required, LastVersion={_configInfo.LastVersion}");
 
                 var failed = CheckFail(_configInfo.LastVersion);
-                if (failed) return;
+                if (failed)
+                {
+                    GeneralTracer.Warn($"GeneralClientBootstrap.ExecuteWorkflowAsync: version {_configInfo.LastVersion} matches or precedes a known failed upgrade, aborting.");
+                    return;
+                }
 
                 // Use ConfigurationMapper to create ProcessInfo instead of manual parameter passing
                 // This centralizes the complex parameter mapping logic and reduces errors
@@ -213,27 +225,33 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             if (GetOption(UpdateOption.BackUp) ?? true)
             {
+                GeneralTracer.Info($"GeneralClientBootstrap.ExecuteWorkflowAsync: backing up from {_configInfo.InstallPath} to {_configInfo.BackupDirectory}");
                 StorageManager.Backup(_configInfo.InstallPath
                     , _configInfo.BackupDirectory
                     , BlackListManager.Instance.SkipDirectorys);
+                GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: backup completed.");
             }
             
             StrategyFactory();
+            GeneralTracer.Info($"GeneralClientBootstrap.ExecuteWorkflowAsync: executing update scenario. IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}, IsMainUpdate={_configInfo.IsMainUpdate}");
             switch (_configInfo.IsUpgradeUpdate)
             {
                 case true when _configInfo.IsMainUpdate:
                     //Both upgrade and main program update.
+                    GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: both upgrade and main update required - downloading and executing.");
                     await Download();
                     await _strategy?.ExecuteAsync()!;
                     _strategy?.StartApp();
                     break;
                 case true when !_configInfo.IsMainUpdate:
                     //Upgrade program update.
+                    GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: upgrade-only update - downloading and executing.");
                     await Download();
                     await _strategy?.ExecuteAsync()!;
                     break;
                 case false when _configInfo.IsMainUpdate:
                     //Main program update.
+                    GeneralTracer.Info("GeneralClientBootstrap.ExecuteWorkflowAsync: main update only - starting application (updater will handle it).");
                     _strategy?.StartApp();
                     break;
             }

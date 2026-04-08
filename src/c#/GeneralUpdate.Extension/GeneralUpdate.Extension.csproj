@@ -32,6 +32,13 @@
     <PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
   </ItemGroup>
 
+  <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
+  <ItemGroup>
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
+    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
+  </ItemGroup>
+
   <!-- Package Icon -->
   <ItemGroup>
     <None Include="../../../imgs/GeneralUpdate.ico">
