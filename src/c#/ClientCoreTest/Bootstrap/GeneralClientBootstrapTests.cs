@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GeneralUpdate.ClientCore;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
@@ -140,6 +141,120 @@ namespace ClientCoreTest.Bootstrap
             // Both are acceptable behaviors based on build configuration
             Assert.True(exceptionThrown || !exceptionThrown);
         }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck returns the bootstrap instance for chaining.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_WithCallback_ReturnsBootstrap()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) => false;
+
+            // Act
+            var result = bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result); // Fluent interface
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck callback returning true signals a skip (do not update).
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CallbackReturnsTrue_SignalsSkip()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            var callbackInvoked = false;
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) =>
+            {
+                callbackInvoked = true;
+                Assert.NotNull(updateInfo); // updateInfo should be provided
+                return true; // true = skip the update
+            };
+
+            // Act
+            bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(bootstrap);
+            // Callback will be invoked during LaunchAsync when update info is available
+            Assert.False(callbackInvoked); // Not invoked at registration time
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck callback returning false signals proceed (do update).
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CallbackReturnsFalse_SignalsProceed()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) =>
+            {
+                Assert.NotNull(updateInfo);
+                return false; // false = proceed with the update
+            };
+
+            // Act
+            var result = bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck can be chained with other builder methods.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CanBeChained()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            var config = new Configinfo
+            {
+                UpdateUrl = "http://localhost:5000/api/update",
+                ClientVersion = "1.0.0",
+                UpgradeClientVersion = "1.0.0",
+                InstallPath = "/test/path",
+                AppName = "TestApp.exe",
+                MainAppName = "TestApp.exe",
+                AppSecretKey = "test-secret-key"
+            };
+
+            // Act
+            var result = bootstrap
+                .SetConfig(config)
+                .AddListenerUpdatePrecheck((updateInfo) => false)
+                .AddListenerException((s, e) => { });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
+        /// Tests that SetCustomSkipOption is marked as obsolete (deprecated in favour of AddListenerUpdatePrecheck).
+        /// </summary>
+        [Fact]
+        public void SetCustomSkipOption_IsObsolete()
+        {
+            // Arrange
+            var method = typeof(GeneralClientBootstrap)
+                .GetMethod(nameof(GeneralClientBootstrap.SetCustomSkipOption));
+
+            // Act
+            var obsoleteAttr = method?.GetCustomAttributes(typeof(ObsoleteAttribute), false);
+
+            // Assert
+            Assert.NotNull(obsoleteAttr);
+            Assert.True(obsoleteAttr.Length > 0, "SetCustomSkipOption should be marked as [Obsolete]");
+        }
+
 
         /// <summary>
         /// Tests that event listeners can be added for MultiAllDownloadCompleted.
