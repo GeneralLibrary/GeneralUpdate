@@ -164,11 +164,12 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
 
-            EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
+            var updateInfoArgs = new UpdateInfoEventArgs(mainResp);
+            EventManager.Instance.Dispatch(this, updateInfoArgs);
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
-            if (CanSkip(isForcibly)) return;
+            if (CanSkip(isForcibly, updateInfoArgs.IsSkip)) return;
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -333,11 +334,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <summary>
     /// User decides if update is required.
     /// </summary>
+    /// <param name="isForcibly">True when at least one version in the update chain is marked as mandatory.</param>
+    /// <param name="isEventSkip">True when the <see cref="UpdateInfoEventArgs"/> subscriber has set <c>IsSkip = true</c>.</param>
     /// <returns>is false to continue execution.</returns>
-    private bool CanSkip(bool isForcibly)
+    private bool CanSkip(bool isForcibly, bool isEventSkip)
     {
         if (isForcibly) return false;
-        return _customSkipOption?.Invoke() == true;
+        return isEventSkip || _customSkipOption?.Invoke() == true;
     }
 
     private void CallSmallBowlHome(string processName)

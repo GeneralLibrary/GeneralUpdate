@@ -368,5 +368,68 @@ namespace ClientCoreTest.Bootstrap
             // Act & Assert
             Assert.Throws<ArgumentException>(() => config.Validate());
         }
+
+        /// <summary>
+        /// Tests that UpdateInfoEventArgs.IsSkip defaults to false.
+        /// </summary>
+        [Fact]
+        public void UpdateInfoEventArgs_IsSkip_DefaultsFalse()
+        {
+            // Arrange
+            var args = new UpdateInfoEventArgs(null!);
+
+            // Act & Assert
+            Assert.False(args.IsSkip);
+        }
+
+        /// <summary>
+        /// Tests that UpdateInfoEventArgs.IsSkip can be set to true by a subscriber.
+        /// </summary>
+        [Fact]
+        public void UpdateInfoEventArgs_IsSkip_CanBeSetToTrue()
+        {
+            // Arrange
+            var args = new UpdateInfoEventArgs(null!);
+
+            // Act
+            args.IsSkip = true;
+
+            // Assert
+            Assert.True(args.IsSkip);
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdateInfo callback can set IsSkip on the received event args.
+        /// Verifies that the merged update-info / skip-decision pattern works end-to-end at the
+        /// listener-registration level (the actual skip evaluation happens in ExecuteWorkflowAsync).
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdateInfo_CallbackCanSetIsSkip()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            bool isSkipSetByCallback = false;
+
+            Action<object, UpdateInfoEventArgs> callback = (sender, args) =>
+            {
+                // Simulate a user deciding to skip based on update info
+                args.IsSkip = true;
+                isSkipSetByCallback = args.IsSkip;
+            };
+
+            // Act — register listener
+            bootstrap.AddListenerUpdateInfo(callback);
+
+            // Simulate dispatching (as ExecuteWorkflowAsync does)
+            var eventArgs = new UpdateInfoEventArgs(null!);
+            GeneralUpdate.Common.Internal.Event.EventManager.Instance.Dispatch(bootstrap, eventArgs);
+
+            // Assert — the listener was able to set IsSkip and the mutation is visible on the args object
+            Assert.True(isSkipSetByCallback);
+            Assert.True(eventArgs.IsSkip);
+
+            // Cleanup
+            GeneralUpdate.Common.Internal.Event.EventManager.Instance.RemoveListener(callback);
+        }
     }
 }
