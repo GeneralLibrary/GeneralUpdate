@@ -30,7 +30,7 @@ namespace GeneralUpdate.Differential.Matchers
         /// <inheritdoc/>
         public FileNode? Match(FileNode newFile, IEnumerable<FileNode> leftNodes)
         {
-            var oldFile = leftNodes.FirstOrDefault(i => i.Name.Equals(newFile.Name));
+            var oldFile = leftNodes.FirstOrDefault(i => i.Name.Equals(newFile.Name) && i.RelativePath.Equals(newFile.RelativePath));
             if (oldFile is null) return null;
             if (!File.Exists(oldFile.FullName)) return null;
             if (!File.Exists(newFile.FullName)) return null;

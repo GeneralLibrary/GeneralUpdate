@@ -183,6 +183,36 @@ namespace DifferentialTest.Matchers
         }
 
         [Fact]
+        public void DefaultCleanMatcher_ReturnsCorrectNode_WhenSameNameFilesExistInDifferentDirectories()
+        {
+            // Arrange – two old files with the same name but different relative paths
+            var fileInRoot = Path.Combine(_testDirectory, "a.txt");
+            var subDir = Path.Combine(_testDirectory, "sub");
+            Directory.CreateDirectory(subDir);
+            var fileInSub = Path.Combine(subDir, "a.txt");
+            File.WriteAllText(fileInRoot, "root");
+            File.WriteAllText(fileInSub, "sub");
+
+            // The new file lives in the sub-directory
+            var newFile = new FileNode { Name = "a.txt", FullName = fileInSub, RelativePath = "sub/a.txt" };
+            var oldFileRoot = new FileNode { Name = "a.txt", FullName = fileInRoot, RelativePath = "a.txt" };
+            var oldFileSub  = new FileNode { Name = "a.txt", FullName = fileInSub,  RelativePath = "sub/a.txt" };
+
+            // oldFileRoot appears first in the list – before the fix FirstOrDefault would
+            // return oldFileRoot, then the RelativePath guard would return null, hiding oldFileSub.
+            var leftNodes = new List<FileNode> { oldFileRoot, oldFileSub };
+
+            var matcher = new DefaultCleanMatcher();
+
+            // Act
+            var result = matcher.Match(newFile, leftNodes);
+
+            // Assert – must find oldFileSub, not be tricked by oldFileRoot
+            Assert.NotNull(result);
+            Assert.Same(oldFileSub, result);
+        }
+
+        [Fact]
         public void DefaultCleanMatcher_ReturnsNull_WhenLeftNodesIsEmpty()
         {
             // Arrange
