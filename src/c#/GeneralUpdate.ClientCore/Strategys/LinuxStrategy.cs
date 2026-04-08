@@ -19,6 +19,7 @@ public class LinuxStrategy : AbstractStrategy
 {
     protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
     {
+        GeneralTracer.Info($"GeneralUpdate.ClientCore.LinuxStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");
         var context = base.CreatePipelineContext(version, patchPath);
         
         // Add ClientCore-specific context items (blacklists for Linux)
@@ -31,6 +32,7 @@ public class LinuxStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
+        GeneralTracer.Info($"GeneralUpdate.ClientCore.LinuxStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
         return new PipelineBuilder(context)
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
@@ -41,6 +43,7 @@ public class LinuxStrategy : AbstractStrategy
     {
         try
         {
+            GeneralTracer.Info($"GeneralUpdate.ClientCore.LinuxStrategy.StartApp: setting ProcessInfo environment variable and launching updater app={_configinfo.AppName}");
             Environments.SetEnvironmentVariable("ProcessInfo", _configinfo.ProcessInfo);
             var appPath = Path.Combine(_configinfo.InstallPath, _configinfo.AppName);
             if (File.Exists(appPath))
@@ -50,6 +53,11 @@ public class LinuxStrategy : AbstractStrategy
                     UseShellExecute = true,
                     FileName = appPath
                 });
+                GeneralTracer.Info($"GeneralUpdate.ClientCore.LinuxStrategy.StartApp: updater process launched successfully. Path={appPath}");
+            }
+            else
+            {
+                GeneralTracer.Warn($"GeneralUpdate.ClientCore.LinuxStrategy.StartApp: updater app not found at path={appPath}, skipping launch.");
             }
         }
         catch (Exception e)
@@ -59,6 +67,7 @@ public class LinuxStrategy : AbstractStrategy
         }
         finally
         {
+            GeneralTracer.Info("GeneralUpdate.ClientCore.LinuxStrategy.StartApp: releasing tracer and terminating client process.");
             GeneralTracer.Dispose();
             Process.GetCurrentProcess().Kill();
         }

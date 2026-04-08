@@ -47,6 +47,7 @@ internal sealed class SilentUpdateMode
 
     public Task StartAsync()
     {
+        GeneralTracer.Info($"SilentUpdateMode.StartAsync: initializing silent update mode. PollingInterval={PollingInterval.TotalMinutes}min, BackupEnabled={_backupEnabled}, PatchEnabled={_patchEnabled}");
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
         _pollingTask = Task.Run(PollLoopAsync);
         _pollingTask.ContinueWith(task =>
@@ -56,15 +57,18 @@ internal sealed class SilentUpdateMode
                 GeneralTracer.Error("The StartAsync method in SilentUpdateMode captured a polling exception.", task.Exception);
             }
         }, TaskContinuationOptions.OnlyOnFaulted);
+        GeneralTracer.Info("SilentUpdateMode.StartAsync: polling loop started, returning to caller.");
         return Task.CompletedTask;
     }
 
     private async Task PollLoopAsync()
     {
+        GeneralTracer.Info("SilentUpdateMode.PollLoopAsync: entering silent update polling loop.");
         while (Volatile.Read(ref _prepared) == 0)
         {
             try
             {
+                GeneralTracer.Info("SilentUpdateMode.PollLoopAsync: polling for available updates.");
                 await PrepareUpdateIfNeededAsync();
             }
             catch (Exception exception)
@@ -73,14 +77,19 @@ internal sealed class SilentUpdateMode
             }
 
             if (Volatile.Read(ref _prepared) == 1)
+            {
+                GeneralTracer.Info("SilentUpdateMode.PollLoopAsync: update preparation completed, exiting poll loop.");
                 break;
+            }
 
+            GeneralTracer.Info($"SilentUpdateMode.PollLoopAsync: no update prepared this cycle, waiting {PollingInterval.TotalMinutes}min before next poll.");
             await Task.Delay(PollingInterval);
         }
     }
 
     private async Task PrepareUpdateIfNeededAsync()
     {
+        GeneralTracer.Info($"SilentUpdateMode.PrepareUpdateIfNeededAsync: validating version. UpdateUrl={_configInfo.UpdateUrl}, ClientVersion={_configInfo.ClientVersion}");
         var mainResp = await VersionService.Validate(_configInfo.UpdateUrl
             , _configInfo.ClientVersion
             , AppType.ClientApp
@@ -91,12 +100,20 @@ internal sealed class SilentUpdateMode
             , _configInfo.Token);
 
         if (mainResp?.Code != 200 || mainResp.Body == null || mainResp.Body.Count == 0)
+        {
+            GeneralTracer.Info($"SilentUpdateMode.PrepareUpdateIfNeededAsync: no update available. ResponseCode={mainResp?.Code}, BodyCount={mainResp?.Body?.Count ?? 0}");
             return;
+        }
 
         var versions = mainResp.Body.OrderBy(x => x.ReleaseDate).ToList();
         var latestVersion = versions.Last().Version;
+        GeneralTracer.Info($"SilentUpdateMode.PrepareUpdateIfNeededAsync: {versions.Count} version(s) available. LatestVersion={latestVersion}");
+
         if (CheckFail(latestVersion))
+        {
+            GeneralTracer.Warn($"SilentUpdateMode.PrepareUpdateIfNeededAsync: latest version {latestVersion} matches or precedes a known failed upgrade, skipping.");
             return;
+        }
 
         BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
         BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
@@ -114,7 +131,9 @@ internal sealed class SilentUpdateMode
 
         if (_backupEnabled)
         {
+            GeneralTracer.Info($"SilentUpdateMode.PrepareUpdateIfNeededAsync: backing up from {_configInfo.InstallPath} to {_configInfo.BackupDirectory}");
             StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory, BlackListManager.Instance.SkipDirectorys);
+            GeneralTracer.Info("SilentUpdateMode.PrepareUpdateIfNeededAsync: backup completed.");
         }
 
         var processInfo = ConfigurationMapper.MapToProcessInfo(
@@ -125,29 +144,38 @@ internal sealed class SilentUpdateMode
             BlackListManager.Instance.SkipDirectorys.ToList());
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
 
+        GeneralTracer.Info($"SilentUpdateMode.PrepareUpdateIfNeededAsync: starting download of {versions.Count} package(s).");
         var manager = new DownloadManager(_configInfo.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
         foreach (var versionInfo in _configInfo.UpdateVersions)
         {
             manager.Add(new DownloadTask(manager, versionInfo));
         }
         await manager.LaunchTasksAsync();
+        GeneralTracer.Info("SilentUpdateMode.PrepareUpdateIfNeededAsync: all packages downloaded.");
 
+        GeneralTracer.Info("SilentUpdateMode.PrepareUpdateIfNeededAsync: executing update strategy.");
         var strategy = CreateStrategy();
         strategy.Create(_configInfo);
         await strategy.ExecuteAsync();
+        GeneralTracer.Info("SilentUpdateMode.PrepareUpdateIfNeededAsync: update strategy executed, marking as prepared.");
 
         Interlocked.Exchange(ref _prepared, 1);
     }
 
     private void OnProcessExit(object? sender, EventArgs e)
     {
+        GeneralTracer.Info($"SilentUpdateMode.OnProcessExit: process exit detected. Prepared={Volatile.Read(ref _prepared)}, UpdaterStarted={Volatile.Read(ref _updaterStarted)}");
         if (Volatile.Read(ref _prepared) != 1 || Interlocked.Exchange(ref _updaterStarted, 1) == 1)
+        {
+            GeneralTracer.Info("SilentUpdateMode.OnProcessExit: silent updater launch skipped (not prepared or already started).");
             return;
+        }
 
         try
         {
             Environments.SetEnvironmentVariable(ProcessInfoEnvironmentKey, _configInfo.ProcessInfo);
             var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+            GeneralTracer.Info($"SilentUpdateMode.OnProcessExit: launching silent updater. Path={updaterPath}");
             if (File.Exists(updaterPath))
             {
                 Process.Start(new ProcessStartInfo
@@ -155,6 +183,11 @@ internal sealed class SilentUpdateMode
                     UseShellExecute = true,
                     FileName = updaterPath
                 });
+                GeneralTracer.Info("SilentUpdateMode.OnProcessExit: silent updater launched successfully.");
+            }
+            else
+            {
+                GeneralTracer.Warn($"SilentUpdateMode.OnProcessExit: updater not found at {updaterPath}, cannot launch.");
             }
         }
         catch (Exception exception)

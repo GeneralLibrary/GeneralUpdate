@@ -1,7 +1,9 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.Compress;
 using GeneralUpdate.Common.Internal.Pipeline;
+using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.ClientCore.Pipeline;
 
@@ -17,8 +19,18 @@ public class CompressMiddleware : IMiddleware
             var encoding = context.Get<Encoding>("Encoding");
             var appPath = context.Get<string>("SourcePath");
             var patchEnabled = context.Get<bool?>("PatchEnabled");
-            
-            CompressProvider.Decompress(format, sourcePath,patchEnabled == false ? appPath : patchPath, encoding);
+            var targetPath = patchEnabled == false ? appPath : patchPath;
+            GeneralTracer.Info($"ClientCore.CompressMiddleware.InvokeAsync: decompressing package. Format={format}, Source={sourcePath}, Target={targetPath}, PatchEnabled={patchEnabled}");
+            try
+            {
+                CompressProvider.Decompress(format, sourcePath, targetPath, encoding);
+                GeneralTracer.Info("ClientCore.CompressMiddleware.InvokeAsync: decompression completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                GeneralTracer.Error("ClientCore.CompressMiddleware.InvokeAsync: decompression failed.", ex);
+                throw;
+            }
         });
     }
 }

@@ -7,6 +7,7 @@ using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Dependencies;
 using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
+using GeneralUpdate.Common.Shared;
 
 using System;
 using System.Collections.Generic;
@@ -42,11 +43,13 @@ public class DownloadQueueManager : IDownloadQueueManager
     {
         _maxConcurrentDownloads = maxConcurrentDownloads;
         _semaphore = new SemaphoreSlim(maxConcurrentDownloads, maxConcurrentDownloads);
+        GeneralTracer.Info($"DownloadQueueManager: initialized. MaxConcurrentDownloads={maxConcurrentDownloads}");
     }
 
     /// <inheritdoc/>
     public void Enqueue(DownloadTask task)
     {
+        GeneralTracer.Info($"DownloadQueueManager.Enqueue: queuing extension download. ExtensionId={task.Extension.Id}, Name={task.Extension.Name}");
         task.Status = ExtensionUpdateStatus.Queued;
         _downloadQueue.Enqueue(task);
         
@@ -56,6 +59,7 @@ public class DownloadQueueManager : IDownloadQueueManager
 
         if (!_isProcessing)
         {
+            GeneralTracer.Info("DownloadQueueManager.Enqueue: starting queue processing.");
             _ = ProcessQueueAsync();
         }
     }
@@ -69,9 +73,15 @@ public class DownloadQueueManager : IDownloadQueueManager
     /// <inheritdoc/>
     public void CancelTask(string extensionId)
     {
+        GeneralTracer.Info($"DownloadQueueManager.CancelTask: cancelling download. ExtensionId={extensionId}");
         if (_activeTasks.TryGetValue(extensionId, out var task))
         {
             task.CancellationTokenSource.Cancel();
+            GeneralTracer.Info($"DownloadQueueManager.CancelTask: cancellation requested. ExtensionId={extensionId}");
+        }
+        else
+        {
+            GeneralTracer.Warn($"DownloadQueueManager.CancelTask: task not found in active tasks. ExtensionId={extensionId}");
         }
     }
 
@@ -84,6 +94,7 @@ public class DownloadQueueManager : IDownloadQueueManager
     private async Task ProcessQueueAsync()
     {
         _isProcessing = true;
+        GeneralTracer.Info("DownloadQueueManager.ProcessQueueAsync: processing download queue.");
 
         try
         {
@@ -91,11 +102,13 @@ public class DownloadQueueManager : IDownloadQueueManager
             {
                 if (!_downloadQueue.TryDequeue(out var task))
                 {
+                    GeneralTracer.Info("DownloadQueueManager.ProcessQueueAsync: queue is empty, stopping processing.");
                     break;
                 }
 
                 if (task != null)
                 {
+                    GeneralTracer.Debug($"DownloadQueueManager.ProcessQueueAsync: dequeued task for ExtensionId={task.Extension.Id}, waiting for semaphore slot.");
                     await _semaphore.WaitAsync();
                     _ = ProcessTaskAsync(task);
                 }
@@ -109,6 +122,7 @@ public class DownloadQueueManager : IDownloadQueueManager
 
     private async Task ProcessTaskAsync(DownloadTask task)
     {
+        GeneralTracer.Info($"DownloadQueueManager.ProcessTaskAsync: starting download task. ExtensionId={task.Extension.Id}, Name={task.Extension.Name}");
         try
         {
             task.Status = ExtensionUpdateStatus.Updating;
@@ -122,18 +136,21 @@ public class DownloadQueueManager : IDownloadQueueManager
             task.Status = ExtensionUpdateStatus.UpdateSuccessful;
             task.Progress = 100;
             OnDownloadStatusChanged(task);
+            GeneralTracer.Info($"DownloadQueueManager.ProcessTaskAsync: download completed. ExtensionId={task.Extension.Id}");
         }
         catch (OperationCanceledException)
         {
             task.Status = ExtensionUpdateStatus.UpdateFailed;
             task.ErrorMessage = "Download cancelled";
             OnDownloadStatusChanged(task);
+            GeneralTracer.Warn($"DownloadQueueManager.ProcessTaskAsync: download cancelled. ExtensionId={task.Extension.Id}");
         }
         catch (Exception ex)
         {
             task.Status = ExtensionUpdateStatus.UpdateFailed;
             task.ErrorMessage = ex.Message;
             OnDownloadStatusChanged(task);
+            GeneralTracer.Error($"DownloadQueueManager.ProcessTaskAsync: download failed. ExtensionId={task.Extension.Id}", ex);
         }
         finally
         {
@@ -150,6 +167,7 @@ public class DownloadQueueManager : IDownloadQueueManager
                         if (!t.IsCanceled)
                         {
                             _activeTasks.TryRemove(task.Extension.Id, out var _);
+                            GeneralTracer.Debug($"DownloadQueueManager: cleaned up completed task. ExtensionId={task.Extension.Id}");
                         }
                     }, TaskScheduler.Default);
             }
@@ -158,6 +176,7 @@ public class DownloadQueueManager : IDownloadQueueManager
 
     private void OnDownloadStatusChanged(DownloadTask task)
     {
+        GeneralTracer.Debug($"DownloadQueueManager.OnDownloadStatusChanged: ExtensionId={task.Extension.Id}, Status={task.Status}, Progress={task.Progress}");
         DownloadStatusChanged?.Invoke(this, new DownloadTaskEventArgs { Task = task });
     }
 
@@ -167,6 +186,7 @@ public class DownloadQueueManager : IDownloadQueueManager
         if (_disposed)
             return;
 
+        GeneralTracer.Info($"DownloadQueueManager.Dispose: disposing. ActiveTasks={_activeTasks.Count}, QueuedTasks={_downloadQueue.Count}");
         _disposed = true;
 
         // Cancel all pending cleanup tasks
@@ -187,5 +207,6 @@ public class DownloadQueueManager : IDownloadQueueManager
 
         _semaphore.Dispose();
         _disposalCts.Dispose();
+        GeneralTracer.Info("DownloadQueueManager.Dispose: all resources released.");
     }
 }

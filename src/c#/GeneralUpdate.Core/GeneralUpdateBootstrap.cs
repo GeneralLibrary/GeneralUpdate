@@ -43,13 +43,16 @@ namespace GeneralUpdate.Core
             switch (GetOption(UpdateOption.Mode) ?? UpdateMode.Default)
             {
                 case UpdateMode.Default:
+                    GeneralTracer.Info("GeneralUpdateBootstrap.LaunchAsync: Default mode - applying runtime options, creating strategy, downloading and executing.");
                     ApplyRuntimeOptions();
                     _strategy!.Create(_configInfo);
                     await DownloadAsync();
                     await _strategy.ExecuteAsync();
+                    GeneralTracer.Info("GeneralUpdateBootstrap.LaunchAsync: Default mode execution completed.");
                     break;
 
                 case UpdateMode.Scripts:
+                    GeneralTracer.Info("GeneralUpdateBootstrap.LaunchAsync: Scripts mode - executing workflow.");
                     await ExecuteWorkflowAsync();
                     break;
 
@@ -99,6 +102,7 @@ namespace GeneralUpdate.Core
         {
             try
             {
+                GeneralTracer.Info($"GeneralUpdateBootstrap.ExecuteWorkflowAsync: validating version against server. UpdateUrl={_configInfo.UpdateUrl}, ClientVersion={_configInfo.ClientVersion}");
                 var mainResp = await VersionService.Validate(
                     _configInfo.UpdateUrl,
                     _configInfo.ClientVersion,
@@ -110,11 +114,15 @@ namespace GeneralUpdate.Core
                     _configInfo.Token);
 
                 _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
+                GeneralTracer.Info($"GeneralUpdateBootstrap.ExecuteWorkflowAsync: version validation completed. IsMainUpdate={_configInfo.IsMainUpdate}, ResponseCode={mainResp?.Code}");
 
                 EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
 
                 if (CanSkip(CheckForcibly(mainResp.Body)))
+                {
+                    GeneralTracer.Info("GeneralUpdateBootstrap.ExecuteWorkflowAsync: update skipped by custom skip option.");
                     return;
+                }
 
                 InitBlackList();
                 ApplyRuntimeOptions();
@@ -128,23 +136,30 @@ namespace GeneralUpdate.Core
                     .OrderBy(x => x.ReleaseDate)
                     .ToList();
 
+                GeneralTracer.Info($"GeneralUpdateBootstrap.ExecuteWorkflowAsync: {_configInfo.UpdateVersions.Count} version(s) queued for update.");
+
                 if (GetOption(UpdateOption.BackUp) ?? true)
                 {
+                    GeneralTracer.Info($"GeneralUpdateBootstrap.ExecuteWorkflowAsync: backing up from {_configInfo.InstallPath} to {_configInfo.BackupDirectory}");
                     StorageManager.Backup(
                         _configInfo.InstallPath,
                         _configInfo.BackupDirectory,
                         BlackListManager.Instance.SkipDirectorys);
+                    GeneralTracer.Info("GeneralUpdateBootstrap.ExecuteWorkflowAsync: backup completed.");
                 }
 
                 _strategy!.Create(_configInfo);
 
                 if (_configInfo.IsMainUpdate)
                 {
+                    GeneralTracer.Info("GeneralUpdateBootstrap.ExecuteWorkflowAsync: main update required, starting download and execution.");
                     await DownloadAsync();
                     await _strategy.ExecuteAsync();
+                    GeneralTracer.Info("GeneralUpdateBootstrap.ExecuteWorkflowAsync: main update execution completed.");
                 }
                 else
                 {
+                    GeneralTracer.Info("GeneralUpdateBootstrap.ExecuteWorkflowAsync: no main update needed, starting application directly.");
                     _strategy.StartApp();
                 }
             }

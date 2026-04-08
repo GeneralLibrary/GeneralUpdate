@@ -7,6 +7,7 @@ using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Dependencies;
 using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
+using GeneralUpdate.Common.Shared;
 using Newtonsoft.Json;
 
 using System;
@@ -82,6 +83,7 @@ public class GeneralExtensionHost : IExtensionHost
 
         // Load installed extensions
         ExtensionCatalog.LoadInstalledExtensions();
+        GeneralTracer.Info($"GeneralExtensionHost: initialized with DI. HostVersion={_hostVersion}, ExtensionsDirectory={_extensionsDirectory}");
     }
 
     /// <summary>
@@ -114,17 +116,31 @@ public class GeneralExtensionHost : IExtensionHost
 
         // Load installed extensions
         ExtensionCatalog.LoadInstalledExtensions();
+        GeneralTracer.Info($"GeneralExtensionHost: initialized (legacy). HostVersion={_hostVersion}, ExtensionsDirectory={_extensionsDirectory}, ServerUrl={options.ServerUrl}");
     }
 
     public async Task<HttpResponseDTO<PagedResultDTO<ExtensionDTO>>> QueryExtensionsAsync(ExtensionQueryDTO query)
     {
-        return await _httpClient.QueryExtensionsAsync(query);
+        GeneralTracer.Info($"GeneralExtensionHost.QueryExtensionsAsync: querying extensions. ExtensionId={query?.Id}");
+        try
+        {
+            var result = await _httpClient.QueryExtensionsAsync(query);
+            GeneralTracer.Info($"GeneralExtensionHost.QueryExtensionsAsync: query completed. Code={result?.Code}, ItemCount={result?.Body?.Items?.Count() ?? 0}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("GeneralExtensionHost.QueryExtensionsAsync: exception occurred during extension query.", ex);
+            throw;
+        }
     }
 
     public async Task<bool> DownloadExtensionAsync(string extensionId, string savePath)
     {
+        GeneralTracer.Info($"GeneralExtensionHost.DownloadExtensionAsync: downloading extension. ExtensionId={extensionId}, SavePath={savePath}");
         var progress = new Progress<int>(p =>
         {
+            GeneralTracer.Debug($"GeneralExtensionHost.DownloadExtensionAsync: progress={p}% for ExtensionId={extensionId}");
             ExtensionUpdateStatusChanged?.Invoke(this, new ExtensionUpdateEventArgs
             {
                 ExtensionId = extensionId,
@@ -133,11 +149,25 @@ public class GeneralExtensionHost : IExtensionHost
             });
         });
 
-        return await _httpClient.DownloadExtensionAsync(extensionId, savePath, progress);
+        try
+        {
+            var success = await _httpClient.DownloadExtensionAsync(extensionId, savePath, progress);
+            if (success)
+                GeneralTracer.Info($"GeneralExtensionHost.DownloadExtensionAsync: extension downloaded successfully. ExtensionId={extensionId}");
+            else
+                GeneralTracer.Warn($"GeneralExtensionHost.DownloadExtensionAsync: extension download returned false. ExtensionId={extensionId}");
+            return success;
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error($"GeneralExtensionHost.DownloadExtensionAsync: exception during download of ExtensionId={extensionId}.", ex);
+            throw;
+        }
     }
 
     public async Task<bool> UpdateExtensionAsync(string extensionId)
     {
+        GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: starting extension update. ExtensionId={extensionId}");
         try
         {
             // Notify queued
@@ -153,30 +183,36 @@ public class GeneralExtensionHost : IExtensionHost
                 Id = extensionId
             };
 
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: querying server for extension metadata. ExtensionId={extensionId}");
             var response = await QueryExtensionsAsync(query);
             if (response.Body?.Items == null)
             {
+                GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: server returned null items for ExtensionId={extensionId}.");
                 throw new InvalidOperationException("Failed to query extension from server");
             }
 
             var serverExtension = response.Body.Items.FirstOrDefault(e => string.Equals(e.Id, extensionId));
             if (serverExtension == null)
             {
+                GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: extension not found on server. ExtensionId={extensionId}");
                 throw new InvalidOperationException($"Extension {extensionId} not found on server");
             }
 
             // Convert DTO to metadata
             var metadata = ToMetadata(serverExtension);
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: metadata resolved. Name={metadata.Name}, Version={metadata.Version}");
 
             // Check compatibility
             if (!IsExtensionCompatible(metadata))
             {
+                GeneralTracer.Warn($"GeneralExtensionHost.UpdateExtensionAsync: extension not compatible with host version={_hostVersion}. ExtensionId={extensionId}");
                 throw new InvalidOperationException($"Extension {extensionId} is not compatible with host version {_hostVersion}");
             }
 
             // Check platform support
             if (!_platformMatcher.IsCurrentPlatformSupported(metadata))
             {
+                GeneralTracer.Warn($"GeneralExtensionHost.UpdateExtensionAsync: extension does not support current platform. ExtensionId={extensionId}");
                 throw new InvalidOperationException($"Extension {extensionId} does not support current platform");
             }
 
@@ -184,14 +220,20 @@ public class GeneralExtensionHost : IExtensionHost
             if (!string.IsNullOrWhiteSpace(metadata.Dependencies))
             {
                 var dependencies = metadata.Dependencies!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: resolving {dependencies.Length} dependency/ies for ExtensionId={extensionId}");
                 foreach (var depId in dependencies)
                 {
                     var dep = depId.Trim();
                     var installedDep = ExtensionCatalog.GetInstalledExtensionById(dep);
                     if (installedDep == null)
                     {
+                        GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: dependency not installed, installing dep={dep}");
                         // Download and install dependency
                         await UpdateExtensionAsync(dep);
+                    }
+                    else
+                    {
+                        GeneralTracer.Debug($"GeneralExtensionHost.UpdateExtensionAsync: dependency already installed. dep={dep}");
                     }
                 }
             }
@@ -200,22 +242,27 @@ public class GeneralExtensionHost : IExtensionHost
             var fileName = $"{metadata.Name}_{metadata.Version}{metadata.Format}";
             var savePath = Path.Combine(_extensionsDirectory, fileName);
 
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: downloading extension package. SavePath={savePath}");
             var downloaded = await DownloadExtensionAsync(extensionId, savePath);
             if (!downloaded)
             {
+                GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: download failed for ExtensionId={extensionId}.");
                 throw new InvalidOperationException("Failed to download extension");
             }
 
             // Install extension
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: installing extension package. Path={savePath}");
             var installSuccess = await InstallExtensionAsync(savePath, rollbackOnFailure: true);
             if (!installSuccess)
             {
+                GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: installation failed for ExtensionId={extensionId}.");
                 throw new InvalidOperationException("Failed to install extension");
             }
 
             // Update catalog with metadata
             metadata.UploadTime = DateTime.UtcNow;
             ExtensionCatalog.AddOrUpdateInstalledExtension(metadata);
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: extension catalog updated. ExtensionId={extensionId}, Version={metadata.Version}");
 
             // Notify success
             ExtensionUpdateStatusChanged?.Invoke(this, new ExtensionUpdateEventArgs
@@ -226,10 +273,12 @@ public class GeneralExtensionHost : IExtensionHost
                 Progress = 100
             });
 
+            GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: extension update completed successfully. ExtensionId={extensionId}");
             return true;
         }
         catch (Exception ex)
         {
+            GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: exception during extension update. ExtensionId={extensionId}", ex);
             // Notify failure
             ExtensionUpdateStatusChanged?.Invoke(this, new ExtensionUpdateEventArgs
             {
@@ -246,18 +295,21 @@ public class GeneralExtensionHost : IExtensionHost
     {
         string? backupPath = null;
         string? extractedExtensionDir = null;
+        GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: starting installation. Path={extensionPath}, RollbackOnFailure={rollbackOnFailure}");
 
         try
         {
             // Validate extension file exists
             if (!File.Exists(extensionPath))
             {
+                GeneralTracer.Error($"GeneralExtensionHost.InstallExtensionAsync: extension file not found. Path={extensionPath}");
                 throw new FileNotFoundException("Extension file not found", extensionPath);
             }
 
             // Validate it's a zip file
             if (!extensionPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
+                GeneralTracer.Error($"GeneralExtensionHost.InstallExtensionAsync: extension file is not a .zip. Path={extensionPath}");
                 throw new InvalidOperationException("Extension file must be a .zip file");
             }
 
@@ -275,6 +327,7 @@ public class GeneralExtensionHost : IExtensionHost
             // Determine target installation directory for this extension
             var targetExtensionDir = Path.Combine(_extensionsDirectory, extensionName);
             extractedExtensionDir = targetExtensionDir;
+            GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: resolved extension name={extensionName}, targetDir={targetExtensionDir}");
 
             // Create backup if extension already exists
             var existingExtension = ExtensionCatalog.GetInstalledExtensions()
@@ -285,18 +338,20 @@ public class GeneralExtensionHost : IExtensionHost
                 if (Directory.Exists(targetExtensionDir))
                 {
                     backupPath = Path.Combine(_backupDirectory, $"{extensionName}_{DateTime.UtcNow:yyyyMMddHHmmss}");
-                    
+                    GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: backing up existing installation to {backupPath}");
                     // Create backup directory structure
                     Directory.CreateDirectory(_backupDirectory);
                     
                     // Copy entire extension directory to backup
                     CopyDirectory(targetExtensionDir, backupPath);
+                    GeneralTracer.Info("GeneralExtensionHost.InstallExtensionAsync: backup created successfully.");
                 }
             }
 
             // Remove existing extension directory if it exists
             if (Directory.Exists(targetExtensionDir))
             {
+                GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: removing existing installation at {targetExtensionDir}");
                 Directory.Delete(targetExtensionDir, true);
             }
 
@@ -304,21 +359,27 @@ public class GeneralExtensionHost : IExtensionHost
             Directory.CreateDirectory(targetExtensionDir);
 
             // Extract the zip file to the installation directory
+            GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: extracting package to {targetExtensionDir}");
             await Task.Run(() => ZipFile.ExtractToDirectory(extensionPath, targetExtensionDir));
+            GeneralTracer.Info("GeneralExtensionHost.InstallExtensionAsync: extraction completed successfully.");
 
             // Delete backup on success
             if (backupPath != null && Directory.Exists(backupPath))
             {
                 Directory.Delete(backupPath, true);
+                GeneralTracer.Debug($"GeneralExtensionHost.InstallExtensionAsync: cleaned up backup at {backupPath}.");
             }
 
+            GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: extension installed successfully. Name={extensionName}");
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            GeneralTracer.Error($"GeneralExtensionHost.InstallExtensionAsync: installation failed for path={extensionPath}.", ex);
             // Rollback on failure
             if (rollbackOnFailure && backupPath != null && Directory.Exists(backupPath))
             {
+                GeneralTracer.Warn("GeneralExtensionHost.InstallExtensionAsync: attempting rollback from backup.");
                 try
                 {
                     // Remove failed installation
@@ -335,10 +396,11 @@ public class GeneralExtensionHost : IExtensionHost
 
                     // Delete backup
                     Directory.Delete(backupPath, true);
+                    GeneralTracer.Info("GeneralExtensionHost.InstallExtensionAsync: rollback completed successfully.");
                 }
-                catch
+                catch (Exception rollbackEx)
                 {
-                    // Rollback failed
+                    GeneralTracer.Error("GeneralExtensionHost.InstallExtensionAsync: rollback also failed.", rollbackEx);
                 }
             }
 
