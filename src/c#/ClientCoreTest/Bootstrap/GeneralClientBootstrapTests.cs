@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using GeneralUpdate.ClientCore;
 using GeneralUpdate.Common.Download;
 using GeneralUpdate.Common.Internal;
@@ -71,24 +70,6 @@ namespace ClientCoreTest.Bootstrap
             // This test documents that null config should not be passed to SetConfig
             // Users should always provide a valid Configinfo object
             Assert.NotNull(bootstrap); // Bootstrap instance is valid for testing
-        }
-
-        /// <summary>
-        /// Tests that SetCustomSkipOption properly sets the skip function.
-        /// </summary>
-        [Fact]
-        public void SetCustomSkipOption_WithValidFunc_ReturnsBootstrap()
-        {
-            // Arrange
-            var bootstrap = new GeneralClientBootstrap();
-            Func<bool> skipFunc = () => false;
-
-            // Act
-            var result = bootstrap.SetCustomSkipOption(skipFunc);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Same(bootstrap, result); // Fluent interface
         }
 
         /// <summary>
@@ -236,25 +217,6 @@ namespace ClientCoreTest.Bootstrap
             Assert.NotNull(result);
             Assert.Same(bootstrap, result);
         }
-
-        /// <summary>
-        /// Tests that SetCustomSkipOption is marked as obsolete (deprecated in favour of AddListenerUpdatePrecheck).
-        /// </summary>
-        [Fact]
-        public void SetCustomSkipOption_IsObsolete()
-        {
-            // Arrange
-            var method = typeof(GeneralClientBootstrap)
-                .GetMethod(nameof(GeneralClientBootstrap.SetCustomSkipOption));
-
-            // Act
-            var obsoleteAttr = method?.GetCustomAttributes(typeof(ObsoleteAttribute), false);
-
-            // Assert
-            Assert.NotNull(obsoleteAttr);
-            Assert.True(obsoleteAttr.Length > 0, "SetCustomSkipOption should be marked as [Obsolete]");
-        }
-
 
         /// <summary>
         /// Tests that event listeners can be added for MultiAllDownloadCompleted.
@@ -414,7 +376,7 @@ namespace ClientCoreTest.Bootstrap
             // Act
             var result = bootstrap
                 .SetConfig(config)
-                .SetCustomSkipOption(() => false)
+                .AddListenerUpdatePrecheck((updateInfo) => false)
                 .AddListenerException((s, e) => { });
 
             // Assert
