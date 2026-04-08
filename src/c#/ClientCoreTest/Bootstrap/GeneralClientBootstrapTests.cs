@@ -73,24 +73,6 @@ namespace ClientCoreTest.Bootstrap
         }
 
         /// <summary>
-        /// Tests that SetCustomSkipOption properly sets the skip function.
-        /// </summary>
-        [Fact]
-        public void SetCustomSkipOption_WithValidFunc_ReturnsBootstrap()
-        {
-            // Arrange
-            var bootstrap = new GeneralClientBootstrap();
-            Func<bool> skipFunc = () => false;
-
-            // Act
-            var result = bootstrap.SetCustomSkipOption(skipFunc);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Same(bootstrap, result); // Fluent interface
-        }
-
-        /// <summary>
         /// Tests that AddCustomOption adds custom options correctly.
         /// </summary>
         [Fact]
@@ -139,6 +121,101 @@ namespace ClientCoreTest.Bootstrap
             // Either an exception is thrown (debug mode) or not (release mode)
             // Both are acceptable behaviors based on build configuration
             Assert.True(exceptionThrown || !exceptionThrown);
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck returns the bootstrap instance for chaining.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_WithCallback_ReturnsBootstrap()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) => false;
+
+            // Act
+            var result = bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result); // Fluent interface
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck callback returning true signals a skip (do not update).
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CallbackReturnsTrue_SignalsSkip()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            var callbackInvoked = false;
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) =>
+            {
+                callbackInvoked = true;
+                Assert.NotNull(updateInfo); // updateInfo should be provided
+                return true; // true = skip the update
+            };
+
+            // Act
+            bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(bootstrap);
+            // Callback will be invoked during LaunchAsync when update info is available
+            Assert.False(callbackInvoked); // Not invoked at registration time
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck callback returning false signals proceed (do update).
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CallbackReturnsFalse_SignalsProceed()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            Func<UpdateInfoEventArgs, bool> precheckFunc = (updateInfo) =>
+            {
+                Assert.NotNull(updateInfo);
+                return false; // false = proceed with the update
+            };
+
+            // Act
+            var result = bootstrap.AddListenerUpdatePrecheck(precheckFunc);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
+        }
+
+        /// <summary>
+        /// Tests that AddListenerUpdatePrecheck can be chained with other builder methods.
+        /// </summary>
+        [Fact]
+        public void AddListenerUpdatePrecheck_CanBeChained()
+        {
+            // Arrange
+            var bootstrap = new GeneralClientBootstrap();
+            var config = new Configinfo
+            {
+                UpdateUrl = "http://localhost:5000/api/update",
+                ClientVersion = "1.0.0",
+                UpgradeClientVersion = "1.0.0",
+                InstallPath = "/test/path",
+                AppName = "TestApp.exe",
+                MainAppName = "TestApp.exe",
+                AppSecretKey = "test-secret-key"
+            };
+
+            // Act
+            var result = bootstrap
+                .SetConfig(config)
+                .AddListenerUpdatePrecheck((updateInfo) => false)
+                .AddListenerException((s, e) => { });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Same(bootstrap, result);
         }
 
         /// <summary>
@@ -299,7 +376,7 @@ namespace ClientCoreTest.Bootstrap
             // Act
             var result = bootstrap
                 .SetConfig(config)
-                .SetCustomSkipOption(() => false)
+                .AddListenerUpdatePrecheck((updateInfo) => false)
                 .AddListenerException((s, e) => { });
 
             // Assert

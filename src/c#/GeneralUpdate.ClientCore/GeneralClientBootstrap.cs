@@ -32,7 +32,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// </summary>
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _strategy;
-    private Func<bool>? _customSkipOption;
+    private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private readonly List<Func<bool>> _customOptions = new();
 
     #region Public Methods
@@ -74,17 +74,21 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     }
 
     /// <summary>
-    ///     Let the user decide whether to update in the state of non-mandatory update.
+    ///     Registers a callback that is invoked when update information is available.
+    ///     The callback receives the full <see cref="UpdateInfoEventArgs"/> and returns
+    ///     <c>true</c> to skip the update or <c>false</c> to proceed with the automatic upgrade.
+    ///     Built-in forced-update protection is still applied; if any version is marked as
+    ///     forcibly required the callback return value is ignored and the update proceeds.
     /// </summary>
     /// <param name="func">
-    ///     Custom function ,Custom actions to let users decide whether to update. true update false do not
-    ///     update .
+    ///     A function that receives <see cref="UpdateInfoEventArgs"/> containing complete update
+    ///     details and returns <c>true</c> to skip, or <c>false</c> to proceed with the update.
     /// </param>
-    /// <returns></returns>
-    public GeneralClientBootstrap SetCustomSkipOption(Func<bool> func)
+    /// <returns>The current bootstrap instance for fluent method chaining.</returns>
+    public GeneralClientBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
-        Debug.Assert(func != null);
-        _customSkipOption = func;
+        if (func == null) throw new ArgumentNullException(nameof(func));
+        _updatePrecheck = func;
         return this;
     }
 
@@ -164,11 +168,12 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
             _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
             _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
 
-            EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
+            var updateInfoArgs = new UpdateInfoEventArgs(mainResp);
+            EventManager.Instance.Dispatch(this, updateInfoArgs);
 
             //If the main program needs to be forced to update, the skip will not take effect.
             var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
-            if (CanSkip(isForcibly)) return;
+            if (CanSkip(isForcibly, updateInfoArgs)) return;
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
@@ -333,11 +338,13 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
     /// <summary>
     /// User decides if update is required.
     /// </summary>
-    /// <returns>is false to continue execution.</returns>
-    private bool CanSkip(bool isForcibly)
+    /// <param name="isForcibly">Whether the update is forcibly required; if true, skip is never allowed.</param>
+    /// <param name="updateInfo">Update information passed to the precheck callback.</param>
+    /// <returns>true to skip (abort) the update; false to continue execution.</returns>
+    private bool CanSkip(bool isForcibly, UpdateInfoEventArgs updateInfo)
     {
         if (isForcibly) return false;
-        return _customSkipOption?.Invoke() == true;
+        return _updatePrecheck?.Invoke(updateInfo) == true;
     }
 
     private void CallSmallBowlHome(string processName)
