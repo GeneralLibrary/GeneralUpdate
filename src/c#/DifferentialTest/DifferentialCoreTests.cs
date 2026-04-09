@@ -458,6 +458,35 @@ namespace DifferentialTest
             Assert.Equal(targetBytes, appliedBytes);
         }
 
+        /// <summary>
+        /// Tests that Dirty does not leave temporary files in the application directory after applying patches.
+        /// Regression test for the bug where a randomly-named temp file was created during patch
+        /// application but never deleted, causing errors on subsequent update runs.
+        /// </summary>
+        [Fact]
+        public async Task Dirty_WithPatchFiles_DoesNotLeaveTemporaryFiles()
+        {
+            // Arrange
+            var sourceFile = Path.Combine(_sourceDirectory, "test.txt");
+            var targetFile = Path.Combine(_targetDirectory, "test.txt");
+            var appFile = Path.Combine(_appDirectory, "test.txt");
+
+            File.WriteAllText(sourceFile, "Original content");
+            File.WriteAllText(targetFile, "Modified content");
+            File.Copy(sourceFile, appFile);
+
+            await DifferentialCore.Clean(_sourceDirectory, _targetDirectory, _patchDirectory);
+
+            // Act
+            await DifferentialCore.Dirty(_appDirectory, _patchDirectory);
+
+            // Assert - only the patched file should exist; no leftover temp files
+            var filesInApp = Directory.GetFiles(_appDirectory);
+            Assert.Single(filesInApp);
+            Assert.Equal(appFile, filesInApp[0]);
+            Assert.Equal("Modified content", File.ReadAllText(appFile));
+        }
+
         #endregion
 
         #region Integration Tests
