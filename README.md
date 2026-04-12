@@ -50,6 +50,8 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 ## GeneralSpacestation Product Introduction
 
+Automatic Upgrade Management Solution helps you achieve efficient upgrade management and low resource consumption across multiple UI framework technologies and cross-platform client applications.
+
 https://mp.weixin.qq.com/s/DDWrNfII6RtihFrR-UaBTw
 
 
