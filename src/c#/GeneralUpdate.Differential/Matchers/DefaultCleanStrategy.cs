@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Differential.Binary;
 
 namespace GeneralUpdate.Differential.Matchers
@@ -56,11 +57,11 @@ namespace GeneralUpdate.Differential.Matchers
                 }
             }
 
-            var exceptFiles = _matcher.Except(sourcePath, targetPath);
+            var exceptFiles = _matcher.Except(sourcePath, targetPath)?.ToList();
             if (exceptFiles is not null && exceptFiles.Any())
             {
                 var path = Path.Combine(patchPath, DeleteFilesName);
-                StorageManager.CreateJson(path, exceptFiles);
+                StorageManager.CreateJson(path, exceptFiles, FileNodesJsonContext.Default.ListFileNode);
             }
         }
 
