@@ -1,9 +1,4 @@
 <Solution>
-  <Configurations>
-    <Platform Name="Any CPU" />
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
   <Folder Name="/src/">
     <Project Path="GeneralUpdate.Bowl/GeneralUpdate.Bowl.csproj" />
     <Project Path="GeneralUpdate.ClientCore/GeneralUpdate.ClientCore.csproj" />
