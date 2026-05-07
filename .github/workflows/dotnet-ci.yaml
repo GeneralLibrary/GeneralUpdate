@@ -13,18 +13,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装.NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'  # 支持GeneralUpdate.Drivelution的.NET 10目标框架
 
       - name: 恢复依赖
-        run: dotnet restore ./src/c#/GeneralUpdate.sln  # 使用解决方案统一恢复
+        run: dotnet restore ./src/c#/GeneralUpdate.slnx  # 使用解决方案统一恢复
 
       - name: 构建项目（确保生成DLL）
-        run: dotnet build ./src/c#/GeneralUpdate.sln -c Release --no-restore  # 显式构建，避免重复恢复
+        run: dotnet build ./src/c#/GeneralUpdate.slnx -c Release --no-restore  # 显式构建，避免重复恢复
 
       - name: 打包NuGet包
         run: |
@@ -49,7 +49,7 @@ jobs:
         shell: pwsh
 
       - name: 创建GitHub Release并上传NuGet包
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Release v${{ github.event.inputs.version }}
