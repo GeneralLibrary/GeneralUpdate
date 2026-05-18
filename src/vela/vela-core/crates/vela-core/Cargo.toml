@@ -17,6 +17,8 @@ vela-slotmgr = { path = "../vela-slotmgr" }
 vela-attestation = { path = "../vela-attestation" }
 vela-pulse = { path = "../vela-pulse" }
 vela-crypto = { path = "../vela-crypto" }
+vela-hub = { path = "../vela-hub" }
+vela-watchdog = { path = "../vela-watchdog" }
 
 [dev-dependencies]
 tempfile.workspace = true
