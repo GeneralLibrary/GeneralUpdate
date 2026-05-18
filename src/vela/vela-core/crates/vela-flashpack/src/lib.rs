@@ -1,9 +1,29 @@
 #![forbid(unsafe_code)]
-#![doc = "FlashPack (.fpk) update bundle format parsing, building, and validation."]
+#![doc = "FlashPack (.fpk) update bundle format: parsing, building, validation, and signing."]
+#![doc = ""]
+#![doc = "## Architecture"]
+#![doc = "- `header` — Bundle metadata (`FpkHeader`, `SemVer`, `PayloadType`)"]
+#![doc = "- `reader` — Parsing and inspecting .fpk tar archives"]
+#![doc = "- `builder` — Constructing .fpk files from payloads"]
+#![doc = "- `validator` — Full validation pipeline (checksums + signature + version chain)"]
 
 use thiserror::Error;
-use tracing::instrument;
+
+pub mod builder;
+pub mod header;
+pub mod reader;
+pub mod validator;
+
+// Re-exports for convenience.
+pub use builder::{BuilderConfig, FlashPackBuilder};
+pub use header::{FpkHeader, PayloadType, SemVer};
+pub use reader::{BundleHash, Checksums, FlashPackReader};
+pub use validator::{sign_bundle, BundleValidator};
+
 use vela_crypto::CryptoError;
+
+/// Current reader SemVer constraint, used for `is_reader_compatible` checks.
+pub(crate) const REQ_SIZE: &str = "1.0.0";
 
 /// Errors specific to FlashPack operations.
 #[derive(Error, Debug)]
@@ -35,54 +55,3 @@ pub enum FlashPackError {
 
 /// Result type alias for FlashPack operations.
 pub type FpkResult<T> = Result<T, FlashPackError>;
-
-/// Payload type classification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PayloadType {
-    FullImage,
-    Delta,
-    Application,
-}
-
-/// FlashPack bundle header metadata.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FpkHeader {
-    pub format_version: String,
-    pub min_reader_version: String,
-    pub bundle_name: String,
-    pub bundle_version: String,
-    pub compatible_slots: Vec<String>,
-    pub payload_type: PayloadType,
-    pub payload_size: u64,
-    pub requires_version: String,
-    pub created_at: String,
-    pub builder_id: String,
-    pub compat_flags: Vec<String>,
-}
-
-/// Parsed FlashPack bundle ready for validation.
-#[derive(Debug)]
-pub struct FlashPackReader {
-    pub header: FpkHeader,
-    pub checksums: Vec<u8>,
-    pub signature: Vec<u8>,
-    pub payload_path: String,
-}
-
-/// Result of bundle validation.
-#[derive(Debug, Clone)]
-pub struct BundleHash {
-    pub sha256: [u8; 32],
-}
-
-impl FlashPackReader {
-    /// Open and parse a .fpk file.
-    #[instrument(fields(path = %path))]
-    pub fn open(path: &str) -> FpkResult<Self> {
-        tracing::trace!("Opening FlashPack file");
-        Err(FlashPackError::InvalidFormat(
-            "FlashPackReader::open not yet implemented".into(),
-        ))
-    }
-}
