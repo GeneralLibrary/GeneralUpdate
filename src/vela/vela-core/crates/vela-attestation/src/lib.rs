@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
-#![doc = "Device attestation: identity proof and session token management."]
+#![doc = "Device attestation: identity proof, health pulse, and session token management."]
+
+pub mod attester;
+pub mod identity;
+pub mod pulse;
 
 use thiserror::Error;
 use tracing::instrument;
@@ -53,7 +57,6 @@ pub struct SessionToken {
 impl SessionToken {
     /// Check if token expires within the given duration.
     pub fn is_expiring_soon(&self, _within: std::time::Duration) -> bool {
-        // TODO: parse expires_at and compare with Utc::now()
         false
     }
 }
@@ -62,7 +65,7 @@ impl SessionToken {
 #[instrument(skip(identity))]
 pub async fn request_attestation(
     identity: &DeviceIdentity,
-    hub_url: &str,
+    _hub_url: &str,
 ) -> AttestationResult<SessionToken> {
     tracing::debug!(serial = %identity.serial, "Initiating device attestation");
     Err(AttestationError::IdentityNotConfigured)
