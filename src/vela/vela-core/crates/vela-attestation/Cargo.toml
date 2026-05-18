@@ -1,0 +1,22 @@
+[package]
+name = "vela-attestation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["time"] }
+reqwest.workspace = true
+jsonwebtoken.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+vela-crypto = { path = "../vela-crypto" }
+
+[dev-dependencies]
+tempfile.workspace = true
+mockall.workspace = true

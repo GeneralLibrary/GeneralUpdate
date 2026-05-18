@@ -1,0 +1,21 @@
+[package]
+name = "vela-pulse"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["time"] }
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+vela-attestation = { path = "../vela-attestation" }
+
+[dev-dependencies]
+tempfile.workspace = true
+mockall.workspace = true

@@ -1,0 +1,22 @@
+[package]
+name = "vela-lifecycle"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+tokio = { workspace = true, features = ["time", "sync"] }
+serde.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+vela-flashpack = { path = "../vela-flashpack" }
+vela-slotmgr = { path = "../vela-slotmgr" }
+vela-crypto = { path = "../vela-crypto" }
+
+[dev-dependencies]
+tempfile.workspace = true
+mockall.workspace = true
