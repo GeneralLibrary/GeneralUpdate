@@ -1,7 +1,10 @@
 #![forbid(unsafe_code)]
 #![doc = "Vela Core: top-level orchestration crate for the Vela OTA system."]
 #![doc = ""]
-#![doc = "Provides initialization, logging setup, and integration of all sub-crates."]
+#![doc = "Provides initialization, logging setup, the orchestration engine,"]
+#![doc = "and integration of all sub-crates."]
+
+pub mod orchestrator;
 
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -50,6 +53,15 @@ pub enum VelaError {
 
     #[error("Pulse error: {0}")]
     Pulse(#[from] vela_pulse::PulseError),
+
+    #[error("Hub error: {0}")]
+    Hub(#[from] vela_hub::HubError),
+
+    #[error("Watchdog error: {0}")]
+    Watchdog(#[from] vela_watchdog::WatchdogError),
+
+    #[error("Orchestrator error: {0}")]
+    Orchestrator(String),
 }
 
 /// Result type alias for Vela Core operations.
