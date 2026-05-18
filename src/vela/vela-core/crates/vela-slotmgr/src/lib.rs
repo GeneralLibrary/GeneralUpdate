@@ -1,8 +1,20 @@
 #![forbid(unsafe_code)]
 #![doc = "Dual-slot partition management for Vela OTA devices."]
+#![doc = ""]
+#![doc = "Provides A/B slot (Primary/Alternate) detection, boot flag persistence,"]
+#![doc = "slot role swapping, and RAII fallback recovery."]
 
 use thiserror::Error;
-use tracing::instrument;
+
+// Modules
+pub mod guard;
+pub mod linux;
+pub mod mock;
+
+// Re-exports
+pub use guard::SlotRecoveryGuard;
+pub use linux::{LinuxSlotConfig, LinuxSlotProvider};
+pub use mock::MockSlotProvider;
 
 /// Errors during slot management operations.
 #[derive(Error, Debug)]
