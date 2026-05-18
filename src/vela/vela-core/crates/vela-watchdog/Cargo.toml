@@ -1,0 +1,17 @@
+[package]
+name = "vela-watchdog"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+tracing.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["time", "sync", "io-util", "fs"] }
+libc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
