@@ -6,6 +6,7 @@ members = [
     "crates/vela-lifecycle",
     "crates/vela-slotmgr",
     "crates/vela-pulse",
+    "crates/vela-hub",
     "crates/vela-ffi",
     "crates/vela-core",
 ]
