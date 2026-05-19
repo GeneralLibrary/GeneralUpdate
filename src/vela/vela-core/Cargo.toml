@@ -12,6 +12,7 @@ members = [
     "crates/vela-core",
     "crates/vela-e2e",
     "crates/vela-delta",
+    "crates/vela-builder",
 ]
 resolver = "3"
 

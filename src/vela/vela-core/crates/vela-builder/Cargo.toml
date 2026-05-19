@@ -1,0 +1,22 @@
+[package]
+name = "vela-builder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "vela-builder"
+path = "src/main.rs"
+
+[dependencies]
+vela-flashpack = { path = "../vela-flashpack" }
+vela-crypto = { path = "../vela-crypto" }
+vela-delta = { path = "../vela-delta" }
+
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+sha2.workspace = true
+chrono.workspace = true

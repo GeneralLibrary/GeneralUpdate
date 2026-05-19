@@ -7,7 +7,7 @@
 
 use tracing::{debug, info, instrument, trace};
 
-use crate::{hash, DeltaError, DeltaResult, DELTA_MAGIC};
+use crate::{hash, DeltaError, DeltaResult, DELTA_MAGIC, MIN_MATCH_LEN};
 
 /// Instruction in a delta patch.
 #[derive(Debug, Clone, PartialEq, Eq)]
