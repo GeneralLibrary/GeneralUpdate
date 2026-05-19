@@ -28,8 +28,7 @@ impl VelaHubClient {
             .connect_timeout(Duration::from_secs(10))
             .pool_idle_timeout(Duration::from_secs(90))
             .pool_max_idle_per_host(5)
-            .user_agent(format!("vela-ota/{}", env!("CARGO_PKG_VERSION")))
-            .gzip(true);
+            .user_agent(format!("vela-ota/{}", env!("CARGO_PKG_VERSION")));
 
         // mTLS if configured
         if let (Some(cert_path), Some(key_path)) =

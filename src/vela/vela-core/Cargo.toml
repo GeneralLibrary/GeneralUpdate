@@ -10,6 +10,9 @@ members = [
     "crates/vela-watchdog",
     "crates/vela-ffi",
     "crates/vela-core",
+    "crates/vela-e2e",
+    "crates/vela-delta",
+    "crates/vela-builder",
 ]
 resolver = "3"
 
@@ -33,7 +36,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 # Crypto
 ring = "0.17"
-x509-cert = "0.25"
+x509-cert = "0.3.0-rc.4"
+hmac = "0.12"
 # HTTP client
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 # JWT
@@ -57,7 +61,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # Cross-platform syscalls
 libc = "0.2"
 # FFI binding generation (build-dependency)
-csbindgen = "2"
+csbindgen = "1"
 # Testing
 mockall = "0.13"
 tempfile = "3"

@@ -166,9 +166,8 @@ impl Attester {
 
     /// Canonical representation of the payload for signing.
     fn sign_payload(&self, key: &[u8], canonical: &[u8]) -> Vec<u8> {
-        // HMAC-SHA256 for attestation signing (production would use
-        // a proper asymmetric key from vela-crypto).
         use sha2::Digest;
+        use hmac::Mac;
         let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(key)
             .expect("HMAC key length");
         mac.update(canonical);

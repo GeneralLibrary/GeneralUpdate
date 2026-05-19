@@ -1,17 +1,11 @@
 #![forbid(unsafe_code)]
 #![doc = "Vela Core: top-level orchestration crate for the Vela OTA system."]
-#![doc = ""]
-#![doc = "Provides initialization, logging setup, the orchestration engine,"]
-#![doc = "and integration of all sub-crates."]
 
 pub mod orchestrator;
 
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// Initialize structured JSON logging for the Vela OTA system.
-///
-/// When `verbose` is true, sets the log level to `trace` for detailed
-/// diagnostics. Otherwise defaults to `info` level for production use.
 pub fn init_logging(verbose: bool) {
     let filter = if verbose {
         EnvFilter::new("vela=trace")
