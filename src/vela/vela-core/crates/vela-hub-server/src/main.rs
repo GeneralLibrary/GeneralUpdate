@@ -8,6 +8,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
 
+#[cfg(test)]
+mod e2e_tests;
+
 mod routes;
 mod state;
 
