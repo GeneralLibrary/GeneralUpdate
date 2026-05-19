@@ -21,6 +21,7 @@ use tracing::{debug, error, info, instrument, trace, warn};
 use vela_crypto::sha256;
 
 use crate::header::FpkHeader;
+use crate::header::PayloadType;
 use crate::{FlashPackError, FpkResult, REQ_SIZE};
 use sha2::{Digest, Sha256};
 
@@ -93,7 +94,7 @@ impl FlashPackReader {
         let mut signature: Option<Vec<u8>> = None;
         let mut payload_offset: Option<u64> = None;
         let mut payload_entry_size: Option<u64> = None;
-        let mut has_payload_dir = false;
+        let mut _has_payload_dir = false;
         let mut has_payload_data = false;
 
         // First pass: read all entries to locate metadata and record payload offset.
