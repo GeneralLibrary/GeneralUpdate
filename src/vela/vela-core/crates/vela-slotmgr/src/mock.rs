@@ -14,7 +14,7 @@ use crate::{
 
 /// Internal state of the mock provider.
 #[derive(Debug, Clone)]
-struct MockState {
+pub(crate) struct MockState {
     primary_version: String,
     alternate_version: String,
     active_slot: SlotId,
