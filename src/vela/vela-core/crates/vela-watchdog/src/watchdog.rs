@@ -297,6 +297,9 @@ mod tests {
 
     #[test]
     fn test_watchdog_not_available_in_ci() {
+        // On Linux without /dev/watchdog, open() fails.
+        // On platforms with a stub (Windows/macOS), open() always succeeds.
+        #[cfg(unix)]
         if !Watchdog::is_available() {
             assert!(Watchdog::open().is_err());
         }
@@ -315,14 +318,10 @@ mod tests {
     #[test]
     fn test_armed_state_tracking() {
         if Watchdog::is_available() {
-            let result = Watchdog::open();
-            if let Ok(mut wd) = result {
-                assert!(!wd.is_armed());
-                let guard = wd.arm();
-                if let Ok(_g) = guard {
-                    assert!(wd.is_armed());
-                }
-            }
+            let mut wd = Watchdog::open().unwrap();
+            assert!(!wd.is_armed());
+            let _guard = wd.arm().unwrap();
+            // _guard drops here — if it was armed, Drop will disarm
         }
     }
 }
