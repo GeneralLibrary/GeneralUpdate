@@ -23,24 +23,45 @@ fn build_app(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+async fn spawn_test_server(
+    app: Router,
+) -> (
+    String,
+    tokio::sync::oneshot::Sender<()>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+
+    let server = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                let _ = shutdown_rx.await;
+            })
+            .await
+            .unwrap();
+    });
+
+    (format!("http://{addr}"), shutdown_tx, server)
+}
+
 #[tokio::test]
 async fn test_e2e_health_check() {
     let state = Arc::new(AppState::new());
     let app = build_app(state.clone());
+    let (base_url, shutdown_tx, server) = spawn_test_server(app).await;
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    });
-
-    let resp = reqwest::get(format!("http://{addr}/api/v1/health"))
+    let resp = reqwest::get(format!("{base_url}/api/v1/health"))
         .await
         .unwrap();
     assert_eq!(resp.status(), 200);
     let body: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(body["status"], "ok");
     assert_eq!(body["service"], "vela-hub");
+
+    let _ = shutdown_tx.send(());
+    server.await.unwrap();
 }
 
 #[tokio::test]
