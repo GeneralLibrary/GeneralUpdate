@@ -78,11 +78,9 @@ impl LifecycleEngine {
             }
             phase => {
                 let timer = PhaseTimer::begin(phase, ctx);
-                let result = tokio::time::timeout(
-                    self.phase_timeout(phase),
-                    self.handle_phase(phase, ctx),
-                )
-                .await;
+                let result =
+                    tokio::time::timeout(self.phase_timeout(phase), self.handle_phase(phase, ctx))
+                        .await;
 
                 match result {
                     Ok(Ok(next)) => {
@@ -154,10 +152,7 @@ impl LifecycleEngine {
     }
 
     /// Handle fallback recovery — idempotent operations to restore the system.
-    async fn handle_fallback_recovery(
-        &self,
-        ctx: &LifecycleContext,
-    ) -> LifecycleResult<()> {
+    async fn handle_fallback_recovery(&self, ctx: &LifecycleContext) -> LifecycleResult<()> {
         warn!("Executing fallback recovery procedures");
 
         // Fallback steps (all must be idempotent):

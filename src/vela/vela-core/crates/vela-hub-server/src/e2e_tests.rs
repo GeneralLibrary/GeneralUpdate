@@ -1,7 +1,10 @@
 //! Full system E2E integration test: Hub server + device attestation
 //! + rollout creation + FlashPack download pipeline.
 
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use std::sync::Arc;
 
 use crate::routes;
@@ -73,10 +76,7 @@ async fn test_e2e_device_attestation_and_poll() {
     // Step 2: Device polls — no update yet
     let resp = client
         .get(format!("http://{addr}/api/v1/rollout/poll"))
-        .query(&[
-            ("device_id", "device-001"),
-            ("current_version", "1.0.0"),
-        ])
+        .query(&[("device_id", "device-001"), ("current_version", "1.0.0")])
         .send()
         .await
         .unwrap();
@@ -116,17 +116,20 @@ async fn test_e2e_rollout_creation_and_poll() {
     // Pre-register an artifact
     {
         let mut artifacts = state.artifacts.write().await;
-        artifacts.insert("artifact-001".into(), crate::state::ArtifactRecord {
-            artifact_id: "artifact-001".into(),
-            bundle_name: "vela-os".into(),
-            bundle_version: "2.0.0".into(),
-            format_version: "1.0.0".into(),
-            payload_type: "full_image".into(),
-            size_bytes: 1048576,
-            checksum: "sha256:abc123".into(),
-            created_at: "2026-01-01T00:00:00Z".into(),
-            file_path: "/tmp/test.fpk".into(),
-        });
+        artifacts.insert(
+            "artifact-001".into(),
+            crate::state::ArtifactRecord {
+                artifact_id: "artifact-001".into(),
+                bundle_name: "vela-os".into(),
+                bundle_version: "2.0.0".into(),
+                format_version: "1.0.0".into(),
+                payload_type: "full_image".into(),
+                size_bytes: 1048576,
+                checksum: "sha256:abc123".into(),
+                created_at: "2026-01-01T00:00:00Z".into(),
+                file_path: "/tmp/test.fpk".into(),
+            },
+        );
         // Create a small test artifact file
         std::fs::create_dir_all("/tmp").ok();
         std::fs::write("/tmp/test.fpk", b"fake-flashpack-data-vela-ota").unwrap();
@@ -173,10 +176,7 @@ async fn test_e2e_rollout_creation_and_poll() {
     // Device polls — should get update
     let resp = client
         .get(format!("http://{addr}/api/v1/rollout/poll"))
-        .query(&[
-            ("device_id", "device-002"),
-            ("current_version", "1.5.0"),
-        ])
+        .query(&[("device_id", "device-002"), ("current_version", "1.5.0")])
         .send()
         .await
         .unwrap();
@@ -250,7 +250,11 @@ async fn test_e2e_multiple_devices() {
             .unwrap();
     }
 
-    let resp = client.get(format!("http://{addr}/api/v1/devices")).send().await.unwrap();
+    let resp = client
+        .get(format!("http://{addr}/api/v1/devices"))
+        .send()
+        .await
+        .unwrap();
     let devices: Vec<serde_json::Value> = resp.json().await.unwrap();
     assert_eq!(devices.len(), 3);
 }
@@ -269,29 +273,42 @@ async fn test_e2e_device_version_tracking() {
     let client = reqwest::Client::new();
 
     // Attest
-    client.post(format!("http://{addr}/api/v1/attest"))
+    client
+        .post(format!("http://{addr}/api/v1/attest"))
         .json(&serde_json::json!({
             "device_id": "dev-v",
             "model": "test"
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     // Poll with version 1.0
-    client.get(format!("http://{addr}/api/v1/rollout/poll"))
+    client
+        .get(format!("http://{addr}/api/v1/rollout/poll"))
         .query(&[("device_id", "dev-v"), ("current_version", "1.0.0")])
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     // Heartbeat with updated version
-    client.post(format!("http://{addr}/api/v1/heartbeat"))
+    client
+        .post(format!("http://{addr}/api/v1/heartbeat"))
         .json(&serde_json::json!({
             "device_id": "dev-v",
             "current_version": "2.0.0",
             "health_ok": true
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     // Verify version updated
-    let resp = client.get(format!("http://{addr}/api/v1/devices")).send().await.unwrap();
+    let resp = client
+        .get(format!("http://{addr}/api/v1/devices"))
+        .send()
+        .await
+        .unwrap();
     let devices: Vec<serde_json::Value> = resp.json().await.unwrap();
     let dev = devices.iter().find(|d| d["device_id"] == "dev-v").unwrap();
     assert_eq!(dev["current_version"], "2.0.0");

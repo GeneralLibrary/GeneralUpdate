@@ -1,13 +1,11 @@
 //! Authenticated HTTP client for the Vela Hub.
 
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, RANGE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, RANGE};
 use std::time::Duration;
 use tracing::{debug, error, info, instrument, warn};
 
 use crate::retry::RetryStrategy;
-use crate::{
-    HubConfig, HubError, HubResult, PollOutcome, RolloutManifest,
-};
+use crate::{HubConfig, HubError, HubResult, PollOutcome, RolloutManifest};
 
 // ─── client builder ──────────────────────────────────────────────
 
@@ -31,25 +29,22 @@ impl VelaHubClient {
             .user_agent(format!("vela-ota/{}", env!("CARGO_PKG_VERSION")));
 
         // mTLS if configured
-        if let (Some(cert_path), Some(key_path)) =
-            (&config.tls_client_cert, &config.tls_client_key)
+        if let (Some(cert_path), Some(key_path)) = (&config.tls_client_cert, &config.tls_client_key)
         {
             let cert = std::fs::read(cert_path)
                 .map_err(|e| HubError::InvalidUrl(format!("TLS cert: {e}")))?;
             let key = std::fs::read(key_path)
                 .map_err(|e| HubError::InvalidUrl(format!("TLS key: {e}")))?;
-            let identity =
-                reqwest::Identity::from_pem(&[cert, key].concat())
-                    .map_err(|e| HubError::InvalidUrl(format!("Identity PEM: {e}")))?;
+            let identity = reqwest::Identity::from_pem(&[cert, key].concat())
+                .map_err(|e| HubError::InvalidUrl(format!("Identity PEM: {e}")))?;
             builder = builder.identity(identity);
         }
 
         if let Some(ca_path) = &config.tls_ca_cert {
             let ca = std::fs::read(ca_path)
                 .map_err(|e| HubError::InvalidUrl(format!("CA cert: {e}")))?;
-            let cert =
-                reqwest::Certificate::from_pem(&ca)
-                    .map_err(|e| HubError::InvalidUrl(format!("CA PEM: {e}")))?;
+            let cert = reqwest::Certificate::from_pem(&ca)
+                .map_err(|e| HubError::InvalidUrl(format!("CA PEM: {e}")))?;
             builder = builder.add_root_certificate(cert);
         }
 
@@ -86,9 +81,7 @@ impl VelaHubClient {
     }
 
     /// Map an HTTP response to a HubResult, handling error statuses.
-    async fn handle_response(
-        resp: reqwest::Response,
-    ) -> HubResult<reqwest::Response> {
+    async fn handle_response(resp: reqwest::Response) -> HubResult<reqwest::Response> {
         debug!(
             status = %resp.status(),
             url = %resp.url(),
@@ -175,9 +168,7 @@ impl VelaHubClient {
         retry: &RetryStrategy,
     ) -> HubResult<PollOutcome> {
         retry
-            .execute(|| {
-                self.poll_for_update(current_version, device_id)
-            })
+            .execute(|| self.poll_for_update(current_version, device_id))
             .await
     }
 
@@ -185,10 +176,7 @@ impl VelaHubClient {
     ///
     /// POST /api/v1/attest
     #[instrument(skip(self, attestation))]
-    pub async fn submit_attestation<T: serde::Serialize>(
-        &self,
-        attestation: &T,
-    ) -> HubResult<()> {
+    pub async fn submit_attestation<T: serde::Serialize>(&self, attestation: &T) -> HubResult<()> {
         let url = self.config.url("/api/v1/attest");
         let headers = self.headers(None)?;
 
@@ -211,10 +199,7 @@ impl VelaHubClient {
     ///
     /// POST /api/v1/heartbeat
     #[instrument(skip(self, heartbeat))]
-    pub async fn send_heartbeat<T: serde::Serialize>(
-        &self,
-        heartbeat: &T,
-    ) -> HubResult<()> {
+    pub async fn send_heartbeat<T: serde::Serialize>(&self, heartbeat: &T) -> HubResult<()> {
         let url = self.config.url("/api/v1/heartbeat");
         let headers = self.headers(None)?;
 
@@ -268,8 +253,7 @@ mod tests {
 
     #[test]
     fn test_client_builds_with_auth() {
-        let config = HubConfig::new("https://localhost:8443")
-            .with_auth("test-token-abc");
+        let config = HubConfig::new("https://localhost:8443").with_auth("test-token-abc");
         let client = VelaHubClient::new(config).unwrap();
         assert_eq!(client.auth_token().unwrap(), "test-token-abc");
     }

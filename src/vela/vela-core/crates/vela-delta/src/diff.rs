@@ -7,7 +7,7 @@
 
 use tracing::{debug, info, instrument, trace};
 
-use crate::{hash, DeltaError, DeltaResult, DELTA_MAGIC, MIN_MATCH_LEN};
+use crate::{DELTA_MAGIC, DeltaError, DeltaResult, MIN_MATCH_LEN, hash};
 
 /// Instruction in a delta patch.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl Instruction {
     fn serialized_size(&self) -> usize {
         match self {
             Self::Copy { .. } => 13,
-            Self::Insert { length, data } => 5 + *length as usize,
+            Self::Insert { length, .. } => 5 + *length as usize,
         }
     }
 
@@ -67,7 +67,10 @@ impl Instruction {
                 }
                 let ins = data[*pos..*pos + length].to_vec();
                 *pos += length;
-                Ok(Self::Insert { length: length as u32, data: ins })
+                Ok(Self::Insert {
+                    length: length as u32,
+                    data: ins,
+                })
             }
             t => Err(DeltaError::InvalidFormat(format!("unknown tag: {t}"))),
         }
@@ -78,9 +81,14 @@ impl Instruction {
 #[instrument(skip(old, new), fields(old_len = old.len(), new_len = new.len()))]
 pub fn generate_delta(old: &[u8], new: &[u8]) -> DeltaResult<Vec<u8>> {
     let instructions = if old.is_empty() {
-        vec![Instruction::Insert { length: new.len() as u32, data: new.to_vec() }]
+        vec![Instruction::Insert {
+            length: new.len() as u32,
+            data: new.to_vec(),
+        }]
     } else if new.is_empty() {
-        return Err(DeltaError::InvalidFormat("cannot generate delta for empty target".into()));
+        return Err(DeltaError::InvalidFormat(
+            "cannot generate delta for empty target".into(),
+        ));
     } else {
         sliding_window_diff(old, new)
     };
@@ -142,13 +150,21 @@ struct BlockMatch {
 fn find_best_match(old: &[u8], new: &[u8], new_pos: usize) -> BlockMatch {
     let remaining = new.len() - new_pos;
     if remaining < MIN_MATCH_LEN || old.is_empty() {
-        return BlockMatch { old_offset: 0, new_start: new_pos, len: 0 };
+        return BlockMatch {
+            old_offset: 0,
+            new_start: new_pos,
+            len: 0,
+        };
     }
 
     // Use first 4 bytes as fingerprint
     let fp = u32::from_le_bytes(new[new_pos..new_pos + 4].try_into().unwrap());
 
-    let mut best = BlockMatch { old_offset: 0, new_start: new_pos, len: 0 };
+    let mut best = BlockMatch {
+        old_offset: 0,
+        new_start: new_pos,
+        len: 0,
+    };
 
     let mut old_pos = 0;
     while old_pos + 4 <= old.len() {
@@ -156,8 +172,14 @@ fn find_best_match(old: &[u8], new: &[u8], new_pos: usize) -> BlockMatch {
         if old_fp == fp {
             let ml = extend_match(old, old_pos, new, new_pos);
             if ml > best.len {
-                best = BlockMatch { old_offset: old_pos, new_start: new_pos, len: ml };
-                if ml >= remaining { break; }
+                best = BlockMatch {
+                    old_offset: old_pos,
+                    new_start: new_pos,
+                    len: ml,
+                };
+                if ml >= remaining {
+                    break;
+                }
             }
         }
         old_pos += 1;
@@ -172,7 +194,9 @@ fn find_best_match(old: &[u8], new: &[u8], new_pos: usize) -> BlockMatch {
 fn extend_match(old: &[u8], o: usize, new: &[u8], n: usize) -> usize {
     let max = (old.len() - o).min(new.len() - n);
     let mut len = 0;
-    while len < max && old[o + len] == new[n + len] { len += 1; }
+    while len < max && old[o + len] == new[n + len] {
+        len += 1;
+    }
     len
 }
 
@@ -188,11 +212,17 @@ fn encode_delta(old: &[u8], new: &[u8], instructions: &[Instruction]) -> DeltaRe
     buf.extend_from_slice(&base_hash);
     buf.extend_from_slice(&target_hash);
     buf.extend_from_slice(&count.to_le_bytes());
-    for instr in instructions { instr.write_to(&mut buf); }
+    for instr in instructions {
+        instr.write_to(&mut buf);
+    }
 
-    info!(old = old.len(), new = new.len(), delta = buf.len(),
+    info!(
+        old = old.len(),
+        new = new.len(),
+        delta = buf.len(),
         ratio = format!("{:.1}", buf.len() as f64 / new.len() as f64 * 100.0),
-        "Delta generated");
+        "Delta generated"
+    );
 
     Ok(buf)
 }
@@ -247,13 +277,23 @@ mod tests {
     #[test]
     fn test_instruction_roundtrip() {
         let instrs = vec![
-            Instruction::Copy { offset: 100, length: 50 },
-            Instruction::Insert { length: 3, data: vec![1, 2, 3] },
+            Instruction::Copy {
+                offset: 100,
+                length: 50,
+            },
+            Instruction::Insert {
+                length: 3,
+                data: vec![1, 2, 3],
+            },
         ];
         let mut buf = Vec::new();
-        for i in &instrs { i.write_to(&mut buf); }
+        for i in &instrs {
+            i.write_to(&mut buf);
+        }
         let mut pos = 0;
-        let decoded: Vec<_> = (0..2).map(|_| Instruction::read_from(&buf, &mut pos).unwrap()).collect();
+        let decoded: Vec<_> = (0..2)
+            .map(|_| Instruction::read_from(&buf, &mut pos).unwrap())
+            .collect();
         assert_eq!(instrs, decoded);
     }
 }

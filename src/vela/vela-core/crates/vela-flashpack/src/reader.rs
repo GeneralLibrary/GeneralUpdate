@@ -110,18 +110,24 @@ impl FlashPackReader {
             match path_str.as_str() {
                 "fpk-header.json" => {
                     let mut buf = Vec::new();
-                    entry.read_to_end(&mut buf).map_err(FlashPackError::IoError)?;
+                    entry
+                        .read_to_end(&mut buf)
+                        .map_err(FlashPackError::IoError)?;
                     header = Some(FpkHeader::from_json(&buf)?);
                     trace!(bundle = %header.as_ref().unwrap().bundle_name, "Parsed FlashPack header");
                 }
                 "checksums.sha256" => {
                     let mut buf = String::new();
-                    entry.read_to_string(&mut buf).map_err(FlashPackError::IoError)?;
+                    entry
+                        .read_to_string(&mut buf)
+                        .map_err(FlashPackError::IoError)?;
                     checksums = Some(Self::parse_checksums(&buf)?);
                 }
                 "signature.p7s" => {
                     let mut buf = Vec::new();
-                    entry.read_to_end(&mut buf).map_err(FlashPackError::IoError)?;
+                    entry
+                        .read_to_end(&mut buf)
+                        .map_err(FlashPackError::IoError)?;
                     signature = Some(buf);
                 }
                 "payload/" => {
@@ -131,7 +137,11 @@ impl FlashPackReader {
                     has_payload_data = true;
                     payload_offset = Some(entry.raw_file_position());
                     payload_entry_size = Some(entry.size());
-                    trace!(offset = payload_offset, size = payload_entry_size, "Located payload entry");
+                    trace!(
+                        offset = payload_offset,
+                        size = payload_entry_size,
+                        "Located payload entry"
+                    );
                 }
                 other => {
                     debug!(entry = %other, "Ignoring unknown tar entry");
@@ -209,8 +219,7 @@ impl FlashPackReader {
     /// Returns a `BufReader` positioned at the start of `payload/data.gz`.
     /// The caller is responsible for decompressing (gzip) if needed.
     pub fn payload_reader(&self) -> FpkResult<impl Read> {
-        let mut file =
-            File::open(&self.archive_path).map_err(FlashPackError::IoError)?;
+        let mut file = File::open(&self.archive_path).map_err(FlashPackError::IoError)?;
         file.seek(SeekFrom::Start(self.payload_offset))
             .map_err(FlashPackError::IoError)?;
         Ok(BufReader::new(file).take(self.payload_entry_size))
@@ -234,7 +243,9 @@ impl FlashPackReader {
 
             match entry_path.to_string_lossy().as_ref() {
                 "fpk-header.json" => {
-                    entry.read_to_end(&mut header_bytes).map_err(FlashPackError::IoError)?;
+                    entry
+                        .read_to_end(&mut header_bytes)
+                        .map_err(FlashPackError::IoError)?;
                 }
                 "payload/data.gz" => {
                     let mut hasher = Sha256::new();
@@ -292,9 +303,7 @@ impl FlashPackReader {
             hash = %hex::encode(&hash_bytes[..8]),
             "Checksum verification passed"
         );
-        Ok(BundleHash {
-            sha256: hash_bytes,
-        })
+        Ok(BundleHash { sha256: hash_bytes })
     }
 
     /// Parse the `checksums.sha256` text file.
@@ -312,19 +321,19 @@ impl FlashPackReader {
             if line.is_empty() || line.starts_with('#') {
                 continue;
             }
-            let (file_part, hash_part) = line
-                .split_once('=')
-                .ok_or_else(|| FlashPackError::InvalidFormat(format!(
-                    "Invalid checksum line: {line}"
-                )))?;
+            let (file_part, hash_part) = line.split_once('=').ok_or_else(|| {
+                FlashPackError::InvalidFormat(format!("Invalid checksum line: {line}"))
+            })?;
 
             let file_path = file_part
                 .trim()
                 .strip_prefix("SHA256(")
                 .and_then(|s| s.strip_suffix(')'))
-                .ok_or_else(|| FlashPackError::InvalidFormat(format!(
-                    "Invalid checksum file path format: {file_part}"
-                )))?;
+                .ok_or_else(|| {
+                    FlashPackError::InvalidFormat(format!(
+                        "Invalid checksum file path format: {file_part}"
+                    ))
+                })?;
 
             let hash = hash_part.trim().to_string();
 
@@ -374,7 +383,9 @@ mod tests {
         header_entry.set_size(header_json.len() as u64);
         header_entry.set_mode(0o644);
         header_entry.set_cksum();
-        archive.append(&header_entry, header_json.as_slice()).unwrap();
+        archive
+            .append(&header_entry, header_json.as_slice())
+            .unwrap();
 
         // 2. payload/data.gz (just some bytes)
         let payload_data = b"This is test payload data for FlashPack validation";
@@ -384,7 +395,9 @@ mod tests {
         payload_entry.set_size(payload_data.len() as u64);
         payload_entry.set_mode(0o644);
         payload_entry.set_cksum();
-        archive.append(&payload_entry, payload_data.as_slice()).unwrap();
+        archive
+            .append(&payload_entry, payload_data.as_slice())
+            .unwrap();
 
         // 3. checksums.sha256
         let checksums_content = format!(
@@ -458,7 +471,8 @@ mod tests {
 
         let mut reader = FlashPackReader::open(&fpk_path).unwrap();
         // Tamper with the recorded checksum
-        reader.checksums.payload_sha256 = "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+        reader.checksums.payload_sha256 =
+            "0000000000000000000000000000000000000000000000000000000000000000".to_string();
         let result = reader.verify_checksums();
         assert!(result.is_err());
     }

@@ -141,8 +141,7 @@ impl HealthPulse {
             })
             .unwrap_or((0, 0));
 
-        let active_slot =
-            std::env::var("VELA_BOOT_SLOT").unwrap_or_else(|_| "primary".into());
+        let active_slot = std::env::var("VELA_BOOT_SLOT").unwrap_or_else(|_| "primary".into());
 
         HealthMetrics {
             uptime_secs,

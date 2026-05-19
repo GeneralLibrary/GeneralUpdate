@@ -64,7 +64,10 @@ impl Watchdog {
     /// Returns Err if `/dev/watchdog` doesn't exist (non-Linux or container).
     #[instrument]
     pub fn open() -> WatchdogResult<Self> {
-        Self::open_at(std::path::Path::new(DEFAULT_WATCHDOG_DEV), DEFAULT_TIMEOUT_SECS)
+        Self::open_at(
+            std::path::Path::new(DEFAULT_WATCHDOG_DEV),
+            DEFAULT_TIMEOUT_SECS,
+        )
     }
 
     /// Open a specific watchdog device with the given timeout.
@@ -143,10 +146,7 @@ impl Watchdog {
         self.armed_at = Some(Instant::now());
         self.pet_count = 1;
 
-        info!(
-            timeout_secs = self.timeout_secs,
-            "Watchdog armed"
-        );
+        info!(timeout_secs = self.timeout_secs, "Watchdog armed");
 
         Ok(WatchdogGuard {
             watchdog: self,
@@ -267,7 +267,10 @@ pub async fn pet_loop(
     mut cancel: tokio::sync::watch::Receiver<bool>,
 ) -> WatchdogResult<()> {
     let mut guard = watchdog.arm()?;
-    info!(interval_ms = interval.as_millis(), "Watchdog pet loop started");
+    info!(
+        interval_ms = interval.as_millis(),
+        "Watchdog pet loop started"
+    );
 
     loop {
         tokio::select! {

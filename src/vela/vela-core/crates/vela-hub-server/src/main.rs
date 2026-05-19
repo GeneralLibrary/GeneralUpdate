@@ -3,7 +3,10 @@
 //! Provides REST API endpoints for device registration, rollout
 //! deployment, FlashPack artifact distribution, and health monitoring.
 
-use axum::{Router, routing::{get, post}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;

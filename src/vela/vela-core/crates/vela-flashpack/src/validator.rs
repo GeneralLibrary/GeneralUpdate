@@ -62,10 +62,7 @@ impl BundleValidator {
     ///
     /// The signature covers `fpk-header.json` content. We re-read it from the
     /// archive and verify it against the provided public key.
-    fn verify_signature(
-        reader: &FlashPackReader,
-        verifier: &dyn BundleVerifier,
-    ) -> FpkResult<()> {
+    fn verify_signature(reader: &FlashPackReader, verifier: &dyn BundleVerifier) -> FpkResult<()> {
         // For detached signatures, we need the original data that was signed.
         // In our format the signature covers the fpk-header.json content.
         let header_json = reader.header.to_json()?;
@@ -192,7 +189,9 @@ mod tests {
     use super::*;
     use crate::builder::{BuilderConfig, FlashPackBuilder};
     use crate::header::PayloadType;
-    use vela_crypto::{BundleSigner, BundleVerifier, CryptoResult, PublicKey, SignatureAlgorithm, SigningKey};
+    use vela_crypto::{
+        BundleSigner, BundleVerifier, CryptoResult, PublicKey, SignatureAlgorithm, SigningKey,
+    };
 
     /// A mock verifier that always returns true.
     struct AlwaysPassVerifier;

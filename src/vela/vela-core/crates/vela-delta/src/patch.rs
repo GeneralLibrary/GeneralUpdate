@@ -2,7 +2,7 @@
 
 use tracing::{debug, error, info, instrument, trace};
 
-use crate::{hash, DeltaError, DeltaResult, Instruction, DELTA_MAGIC};
+use crate::{DELTA_MAGIC, DeltaError, DeltaResult, Instruction, hash};
 
 /// Apply a delta patch to base data, producing the target.
 ///
@@ -47,9 +47,7 @@ pub fn apply_patch(base: &[u8], delta: &[u8]) -> DeltaResult<Vec<u8>> {
     }
 
     // Read instruction count
-    let count = u32::from_le_bytes([
-        delta[68], delta[69], delta[70], delta[71],
-    ]) as usize;
+    let count = u32::from_le_bytes([delta[68], delta[69], delta[70], delta[71]]) as usize;
 
     debug!(count, "Reading delta instructions");
 
@@ -89,9 +87,8 @@ fn parse_instructions(data: &[u8], count: usize) -> DeltaResult<Vec<Instruction>
     let mut pos = 0;
 
     for i in 0..count {
-        let instr = Instruction::read_from(data, &mut pos).map_err(|e| {
-            DeltaError::InvalidFormat(format!("instruction {i}: {e}"))
-        })?;
+        let instr = Instruction::read_from(data, &mut pos)
+            .map_err(|e| DeltaError::InvalidFormat(format!("instruction {i}: {e}")))?;
         trace!(index = i, ?instr, "Parsed instruction");
         instructions.push(instr);
     }
@@ -222,9 +219,7 @@ mod tests {
 
     #[test]
     fn test_patch_roundtrip_large_binary() {
-        let base: Vec<u8> = (0..4096u16)
-            .flat_map(|i| i.to_le_bytes())
-            .collect();
+        let base: Vec<u8> = (0..4096u16).flat_map(|i| i.to_le_bytes()).collect();
         let mut target = base.clone();
         // Modify middle section
         for i in 1000..1500 {

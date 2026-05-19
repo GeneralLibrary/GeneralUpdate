@@ -75,9 +75,11 @@ pub async fn download_artifact(
 
     if state.downloaded_bytes > 0 {
         let range = format!("bytes={}-", state.downloaded_bytes);
-        headers.insert(RANGE, HeaderValue::from_str(&range).map_err(|e| {
-            HubError::InvalidUrl(format!("Bad range header: {e}"))
-        })?);
+        headers.insert(
+            RANGE,
+            HeaderValue::from_str(&range)
+                .map_err(|e| HubError::InvalidUrl(format!("Bad range header: {e}")))?,
+        );
         debug!(%range, "Sending range request for resume");
     }
 
@@ -173,10 +175,7 @@ async fn load_existing_state(path: &std::path::Path) -> Option<DownloadState> {
     None
 }
 
-async fn verify_checksum(
-    path: &std::path::Path,
-    expected_hex: Option<&str>,
-) -> HubResult<()> {
+async fn verify_checksum(path: &std::path::Path, expected_hex: Option<&str>) -> HubResult<()> {
     let Some(expected) = expected_hex else {
         debug!("No checksum provided — skipping verification");
         return Ok(());

@@ -18,7 +18,7 @@ pub mod validator;
 pub use builder::{BuilderConfig, FlashPackBuilder};
 pub use header::{FpkHeader, PayloadType, SemVer};
 pub use reader::{BundleHash, Checksums, FlashPackReader};
-pub use validator::{sign_bundle, BundleValidator};
+pub use validator::{BundleValidator, sign_bundle};
 
 use vela_crypto::CryptoError;
 

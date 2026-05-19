@@ -5,9 +5,7 @@
 
 use std::path::PathBuf;
 use std::time::Duration;
-use vela_core::orchestrator::{
-    AttestationConfig, OrchestratorConfig, PipelinePhase, PulseConfig,
-};
+use vela_core::orchestrator::{AttestationConfig, OrchestratorConfig, PipelinePhase, PulseConfig};
 use vela_lifecycle::LifecycleConfig;
 
 /// Default orchestrator config is sensible.
@@ -62,17 +60,11 @@ fn test_orchestrator_config_custom() {
     assert_eq!(config.hub_base_url, "https://custom-hub.example.com/api/v1");
     assert_eq!(config.poll_interval, Duration::from_secs(120));
     assert_eq!(config.auth_token, Some("token-abc".into()));
-    assert_eq!(
-        config.download_dir,
-        PathBuf::from("/custom/downloads")
-    );
+    assert_eq!(config.download_dir, PathBuf::from("/custom/downloads"));
     assert_eq!(config.block_device, "/dev/sda");
     assert_eq!(config.identity_key, Some(vec![1, 2, 3, 4]));
     assert!(!config.watchdog_enabled);
-    assert_eq!(
-        config.attestation.device_id,
-        "custom-device-42"
-    );
+    assert_eq!(config.attestation.device_id, "custom-device-42");
     assert_eq!(config.pulse.interval, Duration::from_secs(60));
 }
 
@@ -161,7 +153,10 @@ fn test_vela_error_conversions() {
     use vela_core::VelaError;
 
     // FlashPack error
-    let fp_err = vela_flashpack::FlashPackError::ChecksumMismatch { expected: "abc".into(), actual: "xyz".into() };
+    let fp_err = vela_flashpack::FlashPackError::ChecksumMismatch {
+        expected: "abc".into(),
+        actual: "xyz".into(),
+    };
     let vela_err: VelaError = fp_err.into();
     assert!(matches!(vela_err, VelaError::FlashPack(_)));
 
@@ -185,5 +180,8 @@ fn test_vela_error_conversions() {
 fn test_watchdog_config() {
     assert_eq!(vela_watchdog::watchdog::DEFAULT_TIMEOUT_SECS, 60);
     assert_eq!(vela_watchdog::watchdog::UPDATE_TIMEOUT_SECS, 10);
-    assert!(vela_watchdog::watchdog::UPDATE_TIMEOUT_SECS < vela_watchdog::watchdog::DEFAULT_TIMEOUT_SECS);
+    assert!(
+        vela_watchdog::watchdog::UPDATE_TIMEOUT_SECS
+            < vela_watchdog::watchdog::DEFAULT_TIMEOUT_SECS
+    );
 }

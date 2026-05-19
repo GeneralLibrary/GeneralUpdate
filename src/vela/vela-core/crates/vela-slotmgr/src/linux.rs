@@ -3,15 +3,14 @@
 //! Reads slot configuration from sysfs and partition tables.
 //! Uses U-Boot environment or EFI variables for boot flag persistence.
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::{
-    BootFlag, FileSystemType, PartitionInfo, SlotError, SlotId, SlotInfo, SlotLayout,
-    SlotProvider, SlotResult,
+    BootFlag, FileSystemType, PartitionInfo, SlotError, SlotId, SlotInfo, SlotLayout, SlotProvider,
+    SlotResult,
 };
 
 /// Configuration for the Linux slot provider.
@@ -166,7 +165,9 @@ impl LinuxSlotProvider {
     fn read_partition_size(&self, device_path: &str) -> u64 {
         // Try to read size from /sys/class/block/<dev>/size
         let dev_name = device_path.trim_start_matches("/dev/");
-        let size_path = PathBuf::from("/sys/class/block").join(dev_name).join("size");
+        let size_path = PathBuf::from("/sys/class/block")
+            .join(dev_name)
+            .join("size");
 
         if let Ok(content) = fs::read_to_string(&size_path) {
             if let Ok(sectors) = content.trim().parse::<u64>() {
@@ -221,7 +222,8 @@ impl SlotProvider for LinuxSlotProvider {
         let alternate_version_file = PathBuf::from("/mnt/alternate/etc/vela-version");
 
         let primary = self.build_slot_info(SlotId::Primary, &primary_dev, &primary_version_file);
-        let alternate = self.build_slot_info(SlotId::Alternate, &alternate_dev, &alternate_version_file);
+        let alternate =
+            self.build_slot_info(SlotId::Alternate, &alternate_dev, &alternate_version_file);
 
         // Detect persistent data partition if present
         let persistent_data = if let Some(persist_hint) = &self.config.primary_device_hint {
@@ -322,8 +324,8 @@ impl SlotProvider for LinuxSlotProvider {
         let alternate_version_file = PathBuf::from("/mnt/alternate/etc/vela-version");
 
         if alternate_version_file.exists() {
-            let new_version = fs::read_to_string(&alternate_version_file)
-                .unwrap_or_else(|_| "unknown".into());
+            let new_version =
+                fs::read_to_string(&alternate_version_file).unwrap_or_else(|_| "unknown".into());
             fs::write(&primary_version_file, &new_version).map_err(|e| {
                 error!(path = %primary_version_file.display(), error = %e, "Failed to update primary version file");
                 SlotError::IoError(e)

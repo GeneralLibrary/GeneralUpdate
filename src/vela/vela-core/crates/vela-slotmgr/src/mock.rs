@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex};
 use tracing::{debug, info, instrument};
 
 use crate::{
-    BootFlag, FileSystemType, PartitionInfo, SlotError, SlotId, SlotInfo, SlotLayout,
-    SlotProvider, SlotResult,
+    BootFlag, FileSystemType, PartitionInfo, SlotError, SlotId, SlotInfo, SlotLayout, SlotProvider,
+    SlotResult,
 };
 
 /// Internal state of the mock provider.

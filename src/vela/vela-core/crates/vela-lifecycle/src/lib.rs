@@ -12,7 +12,7 @@ use tracing::instrument;
 
 pub mod engine;
 
-pub use engine::{run_lifecycle, LifecycleEngine};
+pub use engine::{LifecycleEngine, run_lifecycle};
 
 /// Errors during the update lifecycle.
 #[derive(Error, Debug, Clone)]

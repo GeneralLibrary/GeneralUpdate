@@ -5,7 +5,7 @@
 
 use tracing::{debug, instrument};
 
-use crate::{MockSlotProvider, SlotError, SlotResult};
+use crate::{MockSlotProvider, SlotResult};
 
 /// Label for a specific slot partition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
