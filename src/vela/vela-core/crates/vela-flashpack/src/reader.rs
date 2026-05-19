@@ -131,7 +131,7 @@ impl FlashPackReader {
                     signature = Some(buf);
                 }
                 "payload/" => {
-                    has_payload_dir = true;
+                    _has_payload_dir = true;
                 }
                 "payload/data.gz" => {
                     has_payload_data = true;
