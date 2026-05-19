@@ -16,12 +16,11 @@
 
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::path::Path;
 
 use tracing::{debug, error, info, instrument, trace, warn};
 use vela_crypto::sha256;
 
-use crate::header::{FpkHeader, PayloadType};
+use crate::header::FpkHeader;
 use crate::{FlashPackError, FpkResult, REQ_SIZE};
 use sha2::{Digest, Sha256};
 
@@ -88,7 +87,7 @@ impl FlashPackReader {
         let file_size = file.metadata().map(|m| m.len()).unwrap_or(0);
         trace!(file_size, "FlashPack file opened");
 
-        let mut archive = tar::Archive::new(BufReader::new(file));
+        let _archive = tar::Archive::new(BufReader::new(file));
         let mut header: Option<FpkHeader> = None;
         let mut checksums: Option<Checksums> = None;
         let mut signature: Option<Vec<u8>> = None;

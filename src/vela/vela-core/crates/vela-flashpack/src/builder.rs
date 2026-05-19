@@ -4,8 +4,7 @@
 //! tar archive with the required metadata files, and optionally signs it.
 
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::Path;
+use std::io::{BufWriter, Write};
 
 use sha2::{Digest, Sha256};
 use tracing::{debug, error, info, instrument, trace, warn};
