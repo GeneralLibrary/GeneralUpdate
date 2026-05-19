@@ -13,6 +13,7 @@ members = [
     "crates/vela-e2e",
     "crates/vela-delta",
     "crates/vela-builder",
+    "crates/vela-hub-server",
 ]
 resolver = "3"
 
@@ -65,3 +66,5 @@ csbindgen = "1"
 # Testing
 mockall = "0.13"
 tempfile = "3"
+# HTTP framework
+axum = { version = "0.8", features = ["macros"] }
