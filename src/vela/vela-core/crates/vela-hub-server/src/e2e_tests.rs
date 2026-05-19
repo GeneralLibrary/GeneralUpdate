@@ -240,7 +240,7 @@ async fn test_e2e_rollout_with_nonexistent_artifact() {
         .send()
         .await
         .unwrap();
-    assert_eq!(resp.status(), 200);
+    assert_eq!(resp.status(), 404);
     let body: serde_json::Value = resp.json().await.unwrap();
     assert!(body.get("error").is_some());
 }

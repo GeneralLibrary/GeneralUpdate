@@ -3,6 +3,7 @@
 use axum::{
     Json,
     extract::{Path, Query, State},
+    http::StatusCode,
 };
 use std::sync::Arc;
 
@@ -155,14 +156,17 @@ pub struct CreateRolloutRequest {
 pub async fn create_rollout(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateRolloutRequest>,
-) -> Json<serde_json::Value> {
+) -> (StatusCode, Json<serde_json::Value>) {
     // Validate artifact exists
     let artifacts = state.artifacts.read().await;
     if !artifacts.contains_key(&req.artifact_id) {
-        return Json(serde_json::json!({
-            "error": "artifact not found",
-            "artifact_id": req.artifact_id
-        }));
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "artifact not found",
+                "artifact_id": req.artifact_id
+            })),
+        );
     }
 
     let rollout_id = uuid::Uuid::new_v4().to_string();
@@ -182,10 +186,13 @@ pub async fn create_rollout(
         .await
         .insert(rollout_id.clone(), rollout);
 
-    Json(serde_json::json!({
-        "rollout_id": rollout_id,
-        "status": "active"
-    }))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "rollout_id": rollout_id,
+            "status": "active"
+        })),
+    )
 }
 
 /// GET /api/v1/artifacts/:id
