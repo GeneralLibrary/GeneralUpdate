@@ -93,4 +93,4 @@ jobs:
 
       - name: Run clippy
         working-directory: src/vela/vela-core
-        run: cargo clippy --workspace --exclude vela-ffi -- -W clippy::all
+        run: cargo clippy --workspace --exclude vela-ffi -- -D warnings -D clippy::all
