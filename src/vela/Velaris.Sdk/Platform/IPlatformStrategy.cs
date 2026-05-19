@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Velaris.Sdk.SafeHandles;
 
 namespace Velaris.Sdk.Platform;
@@ -31,6 +32,7 @@ public interface IPlatformStrategy
 }
 
 /// <summary>Target platform enumeration.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum VelaPlatform
 {
     Linux,
@@ -40,6 +42,7 @@ public enum VelaPlatform
 }
 
 /// <summary>Update method for different platforms.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum UpdateMethod
 {
     /// <summary>Full image swap (A/B slots).</summary>
