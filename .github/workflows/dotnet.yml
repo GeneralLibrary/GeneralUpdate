@@ -1,0 +1,72 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/vela/Velaris.Sdk/**'
+      - 'src/vela/Velaris.Sdk.Tests/**'
+      - '.github/workflows/dotnet.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/vela/Velaris.Sdk/**'
+      - 'src/vela/Velaris.Sdk.Tests/**'
+      - '.github/workflows/dotnet.yml'
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-test:
+    name: Build + Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore src/vela/Velaris.Sdk/Velaris.Sdk.csproj
+
+      - name: Build SDK
+        run: dotnet build src/vela/Velaris.Sdk/Velaris.Sdk.csproj --configuration Release --no-restore
+
+      - name: Build Tests
+        run: dotnet build src/vela/Velaris.Sdk.Tests/Velaris.Sdk.Tests.csproj --configuration Release
+
+      - name: Run Tests
+        run: dotnet test src/vela/Velaris.Sdk.Tests/Velaris.Sdk.Tests.csproj --configuration Release --no-build --verbosity normal
+
+  pack:
+    name: Pack NuGet
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Pack NuGet
+        run: dotnet pack src/vela/Velaris.Sdk/Velaris.Sdk.csproj --configuration Release --output ./artifacts
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ./artifacts/*.nupkg
