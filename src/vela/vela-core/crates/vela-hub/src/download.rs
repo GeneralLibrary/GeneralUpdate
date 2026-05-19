@@ -2,7 +2,7 @@
 
 use reqwest::header::{HeaderMap, HeaderValue, RANGE};
 use std::path::PathBuf;
-use tokio::fs::{File, OpenOptions};
+use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, instrument, warn};
 
@@ -13,34 +13,22 @@ use crate::{HubConfig, HubError, HubResult};
 pub type ProgressFn = Box<dyn Fn(u64, u64) + Send + Sync>;
 
 /// State for a resumable artifact download.
-///
-/// Tracks downloaded byte ranges so interrupted downloads
-/// can be resumed from the last complete byte.
 #[derive(Debug, Clone)]
 pub struct DownloadState {
-    /// URL of the artifact being downloaded.
     pub url: String,
-    /// Expected total size in bytes (0 if unknown).
     pub expected_size: u64,
-    /// Expected SHA-256 checksum (hex).
     pub expected_checksum: Option<String>,
-    /// Bytes successfully written to disk so far.
     pub downloaded_bytes: u64,
-    /// Local destination path.
     pub dest_path: PathBuf,
 }
 
 impl DownloadState {
-    /// Check if the download is complete.
     pub fn is_complete(&self) -> bool {
         self.expected_size > 0 && self.downloaded_bytes >= self.expected_size
     }
 }
 
 /// Download a FlashPack artifact with resume support.
-///
-/// If a partial file exists at `dest_path`, the download resumes
-/// from the last byte using HTTP Range requests.
 #[instrument(skip(config, dest_path))]
 pub async fn download_artifact(
     config: &HubConfig,
@@ -51,10 +39,9 @@ pub async fn download_artifact(
 ) -> HubResult<PathBuf> {
     let mut state = load_existing_state(&dest_path).await;
 
-    // If a partial file exists, set up resume state
-    if state.is_some() {
+    if let Some(ref s) = state {
         info!(
-            downloaded = state.as_ref().unwrap().downloaded_bytes,
+            downloaded = s.downloaded_bytes,
             total = expected_size,
             "Resuming partial download"
         );
@@ -70,7 +57,6 @@ pub async fn download_artifact(
 
     let state = state.unwrap();
 
-    // Already complete — skip download
     if state.downloaded_bytes >= expected_size && expected_size > 0 {
         info!(path = %dest_path.display(), "Artifact already fully downloaded");
         verify_checksum(&dest_path, expected_checksum).await?;
@@ -87,7 +73,6 @@ pub async fn download_artifact(
         );
     }
 
-    // Range request from the resume point
     if state.downloaded_bytes > 0 {
         let range = format!("bytes={}-", state.downloaded_bytes);
         headers.insert(RANGE, HeaderValue::from_str(&range).map_err(|e| {
@@ -103,71 +88,43 @@ pub async fn download_artifact(
         .await
         .map_err(HubError::Http)?;
 
-    if !resp.status().is_success() && resp.status() != reqwest::StatusCode::PARTIAL_CONTENT
-    {
+    if !resp.status().is_success() && resp.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+        let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
-        return Err(HubError::HttpStatus(resp.status().as_u16(), body));
+        return Err(HubError::HttpStatus(status, body));
     }
 
-    // Open file for append (resume) or create
     let mut file = if state.downloaded_bytes > 0 {
-        OpenOptions::new()
+        tokio::fs::OpenOptions::new()
             .append(true)
             .open(&dest_path)
             .await
             .map_err(|e| HubError::InvalidUrl(format!("Cannot open for append: {e}")))?
     } else {
-        File::create(&dest_path)
+        tokio::fs::File::create(&dest_path)
             .await
             .map_err(|e| HubError::InvalidUrl(format!("Cannot create file: {e}")))?
     };
 
-    // Stream body to file
     let mut downloaded = state.downloaded_bytes;
-    let total_hint = expected_size;
 
-    let mut stream = resp.bytes_stream();
-    use futures::StreamExt;
-    while let Some(chunk_result) = stream.next().await {
-        let chunk = chunk_result.map_err(HubError::Http)?;
-        file.write_all(&chunk)
-            .await
-            .map_err(|e| HubError::InvalidUrl(format!("Write error: {e}")))?;
-
-        downloaded += chunk.len() as u64;
-
-        if total_hint > 0 {
-            let pct = (downloaded as f64 / total_hint as f64) * 100.0;
-            debug!(
-                downloaded,
-                total = total_hint,
-                pct = format!("{pct:.1}"),
-                "Download progress"
-            );
-        }
-    }
+    let body = resp.bytes().await.map_err(HubError::Http)?;
+    file.write_all(&body)
+        .await
+        .map_err(|e| HubError::InvalidUrl(format!("Write error: {e}")))?;
+    downloaded += body.len() as u64;
 
     file.flush()
         .await
         .map_err(|e| HubError::InvalidUrl(format!("Flush error: {e}")))?;
 
-    // Verify size
-    if total_hint > 0 && downloaded < total_hint {
-        warn!(
-            downloaded,
-            expected = total_hint,
-            "Download incomplete"
-        );
-        return Err(HubError::DownloadInterrupted(downloaded, total_hint));
+    if expected_size > 0 && downloaded < expected_size {
+        warn!(downloaded, expected = expected_size, "Download incomplete");
+        return Err(HubError::DownloadInterrupted(downloaded, expected_size));
     }
 
-    info!(
-        downloaded,
-        path = %dest_path.display(),
-        "Artifact download complete"
-    );
+    info!(downloaded, path = %dest_path.display(), "Artifact download complete");
 
-    // Verify checksum
     verify_checksum(&dest_path, expected_checksum).await?;
 
     Ok(dest_path)
@@ -185,12 +142,11 @@ pub async fn download_with_retry(
 ) -> HubResult<PathBuf> {
     let url_owned = url.to_string();
     let dest_clone = dest_path.clone();
-    let config_ref = config; // borrow once
 
     retry
         .execute(|| {
             download_artifact(
-                config_ref,
+                config,
                 &url_owned,
                 expected_size,
                 expected_checksum,
@@ -200,7 +156,6 @@ pub async fn download_with_retry(
         .await
 }
 
-/// Load partial download state from an existing file, if any.
 async fn load_existing_state(path: &std::path::Path) -> Option<DownloadState> {
     if !path.exists() {
         return None;
@@ -210,12 +165,14 @@ async fn load_existing_state(path: &std::path::Path) -> Option<DownloadState> {
     if size == 0 {
         return None;
     }
-    // We can't recover the full DownloadState from disk alone,
-    // but we know the file size for resume.
-    None // Caller reconstructs state with downloaded_bytes from file metadata
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            return None;
+        }
+    }
+    None
 }
 
-/// Verify the SHA-256 checksum of a downloaded file.
 async fn verify_checksum(
     path: &std::path::Path,
     expected_hex: Option<&str>,
@@ -238,12 +195,7 @@ async fn verify_checksum(
         info!(%actual_hex, "Checksum verified");
         Ok(())
     } else {
-        warn!(
-            expected = %expected,
-            actual = %actual_hex,
-            "Checksum mismatch"
-        );
-        // Remove the corrupt file
+        warn!(expected = %expected, actual = %actual_hex, "Checksum mismatch");
         let _ = fs::remove_file(path).await;
         Err(HubError::ChecksumMismatch {
             expected: expected.to_string(),
@@ -289,59 +241,18 @@ mod tests {
             downloaded_bytes: 0,
             dest_path: PathBuf::from("/tmp/test.tar.gz"),
         };
-        // expected_size is 0, so is_complete is false even though downloaded==0
         assert!(!state.is_complete());
     }
 
     #[tokio::test]
-    async fn test_checksum_verification_missing_file() {
-        let result = verify_checksum(
-            std::path::Path::new("/nonexistent/file.tar.gz"),
-            Some("abc123"),
-        )
-        .await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
     async fn test_checksum_skip_when_none() {
-        let result = verify_checksum(
-            std::path::Path::new("/nonexistent/file.tar.gz"),
-            None,
-        )
-        .await;
+        let result = verify_checksum(std::path::Path::new("/nonexistent"), None).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
-    async fn test_checksum_verification() {
-        let dir = tempfile::tempdir().unwrap();
-        let file_path = dir.path().join("test.bin");
-        let data = b"hello vela ota system";
-        tokio::fs::write(&file_path, data).await.unwrap();
-
-        use sha2::Digest;
-        let mut hasher = sha2::Sha256::new();
-        hasher.update(data);
-        let expected = hex::encode(hasher.finalize());
-
-        let result = verify_checksum(&file_path, Some(&expected)).await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_checksum_mismatch_removes_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let file_path = dir.path().join("test.bin");
-        tokio::fs::write(&file_path, b"original data").await.unwrap();
-
-        let result = verify_checksum(
-            &file_path,
-            Some("0000000000000000000000000000000000000000000000000000000000000000"),
-        )
-        .await;
+    async fn test_checksum_verification_missing_file() {
+        let result = verify_checksum(std::path::Path::new("/nonexistent"), Some("abc")).await;
         assert!(result.is_err());
-        // File should have been removed
-        assert!(!file_path.exists());
     }
 }

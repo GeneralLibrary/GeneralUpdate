@@ -4,14 +4,12 @@
 //! update process hangs (crash, deadlock, I/O stall), the watchdog triggers
 //! a hardware reset. On next boot, the bootloader detects the unclean
 //! shutdown and boots the fallback slot.
+//!
+//! On non-Unix platforms (Windows, macOS), the watchdog is a no-op stub
+//! that allows the code to compile and test without hardware.
 
-use std::fs::{File, OpenOptions};
-use std::os::unix::io::AsRawFd;
-use std::os::unix::fs::OpenOptionsExt;
-use std::path::Path;
 use std::time::{Duration, Instant};
-use tokio::time::sleep;
-use tracing::{error, info, instrument, warn};
+use tracing::{info, instrument, warn};
 
 use crate::{WatchdogError, WatchdogResult};
 
@@ -30,7 +28,10 @@ pub const UPDATE_TIMEOUT_SECS: u32 = 10;
 /// byte) within the timeout window. If the pet interval is missed, the
 /// kernel triggers a hardware reset.
 pub struct Watchdog {
-    dev: Option<File>,
+    #[cfg(unix)]
+    dev: Option<std::fs::File>,
+    #[cfg(not(unix))]
+    armed: bool,
     timeout_secs: u32,
     armed_at: Option<Instant>,
     pet_count: u64,
@@ -50,12 +51,9 @@ impl Drop for WatchdogGuard<'_> {
     fn drop(&mut self) {
         if !self.disarmed {
             warn!(
-                "WatchdogGuard dropped without disarm — watchdog will fire \
-                 in {}s",
+                "WatchdogGuard dropped without disarm — watchdog will fire in {}s",
                 self.watchdog.timeout_secs
             );
-            // Do NOT disarm on panic drop — let the watchdog fire.
-            // This ensures a hung update process triggers fallback.
         }
     }
 }
@@ -63,17 +61,18 @@ impl Drop for WatchdogGuard<'_> {
 impl Watchdog {
     /// Open the hardware watchdog device.
     ///
-    /// Returns None if `/dev/watchdog` doesn't exist (non-Linux or container).
+    /// Returns Err if `/dev/watchdog` doesn't exist (non-Linux or container).
     #[instrument]
     pub fn open() -> WatchdogResult<Self> {
-        Self::open_at(DEFAULT_WATCHDOG_DEV, DEFAULT_TIMEOUT_SECS)
+        Self::open_at(std::path::Path::new(DEFAULT_WATCHDOG_DEV), DEFAULT_TIMEOUT_SECS)
     }
 
     /// Open a specific watchdog device with the given timeout.
+    #[cfg(unix)]
     #[instrument(skip(path))]
-    pub fn open_at(path: impl AsRef<Path>, timeout_secs: u32) -> WatchdogResult<Self> {
-        let path = path.as_ref();
-        let dev = OpenOptions::new()
+    pub fn open_at(path: &std::path::Path, timeout_secs: u32) -> WatchdogResult<Self> {
+        use std::os::unix::fs::OpenOptionsExt;
+        let dev = std::fs::OpenOptions::new()
             .write(true)
             .custom_flags(libc::O_CLOEXEC)
             .open(path)
@@ -95,20 +94,44 @@ impl Watchdog {
         Ok(wd)
     }
 
+    /// Stub implementation for non-Unix platforms.
+    #[cfg(not(unix))]
+    #[instrument(skip(_path))]
+    pub fn open_at(_path: &std::path::Path, timeout_secs: u32) -> WatchdogResult<Self> {
+        warn!("Watchdog not available on this platform — using stub");
+        Ok(Self {
+            armed: false,
+            timeout_secs,
+            armed_at: None,
+            pet_count: 0,
+        })
+    }
+
     /// Check if the watchdog device is present on this system.
     pub fn is_available() -> bool {
-        Path::new(DEFAULT_WATCHDOG_DEV).exists()
+        #[cfg(unix)]
+        {
+            std::path::Path::new(DEFAULT_WATCHDOG_DEV).exists()
+        }
+        #[cfg(not(unix))]
+        {
+            false
+        }
     }
 
     /// Whether the watchdog is currently armed.
     pub fn is_armed(&self) -> bool {
-        self.dev.is_some() && self.armed_at.is_some()
+        #[cfg(unix)]
+        {
+            self.dev.is_some() && self.armed_at.is_some()
+        }
+        #[cfg(not(unix))]
+        {
+            self.armed && self.armed_at.is_some()
+        }
     }
 
     /// Arm the watchdog with the configured timeout and return a guard.
-    ///
-    /// The guard must be `disarm()`ed before a controlled reboot,
-    /// otherwise the watchdog will fire and trigger fallback.
     #[instrument(skip(self))]
     pub fn arm(&mut self) -> WatchdogResult<WatchdogGuard<'_>> {
         if self.is_armed() {
@@ -132,26 +155,19 @@ impl Watchdog {
     }
 
     /// Disarm the watchdog before a controlled reboot.
-    ///
-    /// Writes the magic 'V' byte to `/dev/watchdog` which tells the
-    /// kernel driver to stop the timer gracefully.
+    #[cfg(unix)]
     #[instrument(skip(self))]
     pub fn disarm(&mut self) -> WatchdogResult<()> {
         if !self.is_armed() {
             return Err(WatchdogError::NotArmed);
         }
 
-        // Safe disarm: write magic 'V' (0x56) to stop the watchdog timer
-        // Many watchdog drivers support this ("magic close" feature)
         if let Some(dev) = &mut self.dev {
             use std::io::Write;
-            dev.write_all(b"V")
-                .map_err(WatchdogError::PetFailed)?;
-            dev.flush()
-                .map_err(WatchdogError::PetFailed)?;
+            dev.write_all(b"V").map_err(WatchdogError::PetFailed)?;
+            dev.flush().map_err(WatchdogError::PetFailed)?;
         }
 
-        // Close the device to fully disarm
         self.dev = None;
         self.armed_at = None;
 
@@ -159,10 +175,20 @@ impl Watchdog {
         Ok(())
     }
 
+    /// Disarm stub for non-Unix.
+    #[cfg(not(unix))]
+    #[instrument(skip(self))]
+    pub fn disarm(&mut self) -> WatchdogResult<()> {
+        if !self.is_armed() {
+            return Err(WatchdogError::NotArmed);
+        }
+        self.armed = false;
+        self.armed_at = None;
+        info!("Watchdog disarmed (stub)");
+        Ok(())
+    }
+
     /// Pet (keepalive) the watchdog to reset the countdown timer.
-    ///
-    /// Must be called at least once within every `timeout_secs` window.
-    /// Recommended pet interval: timeout_secs / 2.
     #[instrument(skip(self))]
     pub fn pet(&mut self) -> WatchdogResult<()> {
         if !self.is_armed() {
@@ -180,16 +206,22 @@ impl Watchdog {
     }
 
     /// Low-level pet: write a single byte to /dev/watchdog.
+    #[cfg(unix)]
     fn pet_raw(&mut self) -> WatchdogResult<()> {
         let dev = self.dev.as_mut().ok_or(WatchdogError::NotArmed)?;
         use std::io::Write;
-        dev.write_all(&[0])
-            .map_err(WatchdogError::PetFailed)
+        dev.write_all(&[0]).map_err(WatchdogError::PetFailed)
+    }
+
+    #[cfg(not(unix))]
+    fn pet_raw(&mut self) -> WatchdogResult<()> {
+        if !self.armed {
+            return Err(WatchdogError::NotArmed);
+        }
+        Ok(())
     }
 
     /// Change the watchdog timeout.
-    ///
-    /// This affects the next arm — does not change the running timeout.
     pub fn set_timeout(&mut self, secs: u32) {
         self.timeout_secs = secs;
         info!(timeout_secs = secs, "Watchdog timeout set");
@@ -214,9 +246,6 @@ impl Watchdog {
 
 impl<'a> WatchdogGuard<'a> {
     /// Disarm the watchdog safely.
-    ///
-    /// After calling this, the guard is consumed and the watchdog will
-    /// not fire. Must be called before a controlled reboot.
     pub fn disarm(mut self) -> WatchdogResult<()> {
         self.watchdog.disarm()?;
         self.disarmed = true;
@@ -232,18 +261,17 @@ impl<'a> WatchdogGuard<'a> {
 /// Run a background pet loop at the given interval.
 ///
 /// Returns when the cancellation token is triggered.
-/// This keeps the watchdog alive during long-running operations.
 pub async fn pet_loop(
     mut watchdog: Watchdog,
     interval: Duration,
-    cancel: tokio::sync::watch::Receiver<bool>,
+    mut cancel: tokio::sync::watch::Receiver<bool>,
 ) -> WatchdogResult<()> {
     let mut guard = watchdog.arm()?;
     info!(interval_ms = interval.as_millis(), "Watchdog pet loop started");
 
     loop {
         tokio::select! {
-            _ = sleep(interval) => {
+            _ = tokio::time::sleep(interval) => {
                 if let Err(e) = guard.pet() {
                     warn!(%e, "Watchdog pet failed");
                 }
@@ -266,7 +294,6 @@ mod tests {
 
     #[test]
     fn test_watchdog_not_available_in_ci() {
-        // In CI/containers, /dev/watchdog typically doesn't exist
         if !Watchdog::is_available() {
             assert!(Watchdog::open().is_err());
         }
@@ -284,13 +311,14 @@ mod tests {
 
     #[test]
     fn test_armed_state_tracking() {
-        let result = Watchdog::open();
-        if let Ok(mut wd) = result {
-            assert!(!wd.is_armed());
-            let guard = wd.arm();
-            if let Ok(_g) = guard {
-                assert!(wd.is_armed());
-                // Guard drop will disarm (in test context this is safe)
+        if Watchdog::is_available() {
+            let result = Watchdog::open();
+            if let Ok(mut wd) = result {
+                assert!(!wd.is_armed());
+                let guard = wd.arm();
+                if let Ok(_g) = guard {
+                    assert!(wd.is_armed());
+                }
             }
         }
     }
