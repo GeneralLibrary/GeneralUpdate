@@ -18,7 +18,7 @@ struct MockState {
     primary_version: String,
     alternate_version: String,
     active_slot: SlotId,
-    boot_flag: Option<BootFlag>,
+    pub(crate) boot_flag: Option<BootFlag>,
     alternate_free_bytes: u64,
     alternate_total_bytes: u64,
 }

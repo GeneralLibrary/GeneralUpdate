@@ -69,7 +69,7 @@ impl BundleValidator {
 
         let is_valid = verifier
             .verify(&header_json, &reader.signature)
-            .map_err(|e| FlashPackError::Crypto(e))?;
+            .map_err(FlashPackError::Crypto)?;
 
         if !is_valid {
             warn!("Bundle signature verification FAILED");

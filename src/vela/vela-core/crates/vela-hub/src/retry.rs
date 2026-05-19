@@ -202,10 +202,7 @@ mod tests {
                 async move {
                     let n = cnt.fetch_add(1, Ordering::SeqCst);
                     if n < 3 {
-                        Err(HubError::Http(reqwest::Error::from(std::io::Error::new(
-                            std::io::ErrorKind::ConnectionReset,
-                            "mock",
-                        ))))
+                        Err(HubError::RateLimited(Duration::from_secs(1)))
                     } else {
                         Ok("eventually")
                     }
@@ -219,8 +216,8 @@ mod tests {
 
     #[test]
     fn test_is_retryable() {
-        assert!(RetryStrategy::is_retryable(&HubError::Http(
-            reqwest::Error::from(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout",))
+        assert!(RetryStrategy::is_retryable(&HubError::RateLimited(
+            Duration::from_secs(1)
         )));
         assert!(RetryStrategy::is_retryable(&HubError::RateLimited(
             Duration::from_secs(60)
