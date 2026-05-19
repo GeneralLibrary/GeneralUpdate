@@ -8,7 +8,7 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
 use sha2::{Digest, Sha256};
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::header::{FpkHeader, PayloadType};
 use crate::{FlashPackError, FpkResult};
@@ -16,7 +16,7 @@ use crate::{FlashPackError, FpkResult};
 use vela_crypto::{BundleSigner, sha256};
 
 /// Configuration for building a FlashPack bundle.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BuilderConfig {
     /// Path to the payload file (raw, will be gzipped inside the archive).
     pub payload_path: String,
@@ -65,8 +65,7 @@ impl FlashPackBuilder {
         bundle = %self.config.bundle_name,
         version = %self.config.bundle_version
     ))]
-    pub fn build(&self, output_path: impl AsRef<Path>) -> FpkResult<()> {
-        let output_path = output_path.as_ref();
+    pub fn build(&self, output_path: &std::path::Path) -> FpkResult<()> {
         trace!(output = %output_path.display(), "Building FlashPack");
 
         // 1. Read and compress payload

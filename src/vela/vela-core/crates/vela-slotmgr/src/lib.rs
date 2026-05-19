@@ -9,11 +9,13 @@ use thiserror::Error;
 // Modules
 pub mod guard;
 pub mod linux;
+pub mod manager;
 pub mod mock;
 
 // Re-exports
 pub use guard::SlotRecoveryGuard;
 pub use linux::{LinuxSlotConfig, LinuxSlotProvider};
+pub use manager::{SlotLabel, SlotManager};
 pub use mock::MockSlotProvider;
 
 /// Errors during slot management operations.

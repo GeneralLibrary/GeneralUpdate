@@ -76,9 +76,8 @@ impl FlashPackReader {
     /// This reads the tar header entries, extracts `fpk-header.json`,
     /// `checksums.sha256`, and `signature.p7s`, and records the offset
     /// of the payload for later streaming reads.
-    #[instrument(fields(path = %path))]
-    pub fn open(path: impl AsRef<Path>) -> FpkResult<Self> {
-        let path = path.as_ref();
+    #[instrument(fields(path = %path.display()))]
+    pub fn open(path: &std::path::Path) -> FpkResult<Self> {
         trace!("Opening FlashPack file");
 
         let file = File::open(path).map_err(|e| {
