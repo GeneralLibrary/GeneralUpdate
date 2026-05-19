@@ -1,27 +1,11 @@
 //! Full system E2E integration test: Hub server + device attestation
 //! + rollout creation + FlashPack download pipeline.
 
-use axum::{
-    Router,
-    routing::{get, post},
-};
 use std::sync::Arc;
 
-use crate::routes;
-use crate::state::AppState;
+use axum::Router;
 
-/// Build the Hub router with shared state (for in-process testing).
-fn build_app(state: Arc<AppState>) -> Router {
-    Router::new()
-        .route("/api/v1/health", get(routes::health))
-        .route("/api/v1/rollout/poll", get(routes::poll_for_update))
-        .route("/api/v1/attest", post(routes::attest))
-        .route("/api/v1/heartbeat", post(routes::heartbeat))
-        .route("/api/v1/devices", get(routes::list_devices))
-        .route("/api/v1/rollouts", post(routes::create_rollout))
-        .route("/api/v1/artifacts/{id}", get(routes::download_artifact))
-        .with_state(state)
-}
+use crate::state::AppState;
 
 async fn spawn_test_server(
     app: Router,
@@ -49,7 +33,7 @@ async fn spawn_test_server(
 #[tokio::test]
 async fn test_e2e_health_check() {
     let state = Arc::new(AppState::new());
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
     let (base_url, shutdown_tx, server) = spawn_test_server(app).await;
 
     let resp = reqwest::get(format!("{base_url}/api/v1/health"))
@@ -67,7 +51,7 @@ async fn test_e2e_health_check() {
 #[tokio::test]
 async fn test_e2e_device_attestation_and_poll() {
     let state = Arc::new(AppState::new());
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -156,7 +140,7 @@ async fn test_e2e_rollout_creation_and_poll() {
         std::fs::write("/tmp/test.fpk", b"fake-flashpack-data-vela-ota").unwrap();
     }
 
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -221,7 +205,7 @@ async fn test_e2e_rollout_creation_and_poll() {
 #[tokio::test]
 async fn test_e2e_rollout_with_nonexistent_artifact() {
     let state = Arc::new(AppState::new());
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -248,7 +232,7 @@ async fn test_e2e_rollout_with_nonexistent_artifact() {
 #[tokio::test]
 async fn test_e2e_multiple_devices() {
     let state = Arc::new(AppState::new());
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -283,7 +267,7 @@ async fn test_e2e_multiple_devices() {
 #[tokio::test]
 async fn test_e2e_device_version_tracking() {
     let state = Arc::new(AppState::new());
-    let app = build_app(state.clone());
+    let app = crate::build_router(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

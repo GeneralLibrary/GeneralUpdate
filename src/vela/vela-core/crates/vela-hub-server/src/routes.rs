@@ -158,15 +158,17 @@ pub async fn create_rollout(
     Json(req): Json<CreateRolloutRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     // Validate artifact exists
-    let artifacts = state.artifacts.read().await;
-    if !artifacts.contains_key(&req.artifact_id) {
-        return (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({
-                "error": "artifact not found",
-                "artifact_id": req.artifact_id
-            })),
-        );
+    {
+        let artifacts = state.artifacts.read().await;
+        if !artifacts.contains_key(&req.artifact_id) {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "artifact not found",
+                    "artifact_id": req.artifact_id
+                })),
+            );
+        }
     }
 
     let rollout_id = uuid::Uuid::new_v4().to_string();
