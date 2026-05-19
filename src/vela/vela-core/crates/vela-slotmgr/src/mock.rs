@@ -138,8 +138,10 @@ impl SlotProvider for MockSlotProvider {
         let mut state = self.state.lock().unwrap();
         info!("Swapping slots");
 
-        // Swap versions
-        std::mem::swap(&mut state.primary_version, &mut state.alternate_version);
+        // Swap versions using temp to avoid double mutable borrow
+        let tmp = state.primary_version.clone();
+        state.primary_version = state.alternate_version.clone();
+        state.alternate_version = tmp;
 
         // Toggle active slot
         state.active_slot = match state.active_slot {

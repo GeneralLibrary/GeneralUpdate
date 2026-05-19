@@ -58,7 +58,7 @@ pub struct HealthPulseReport {
 }
 
 /// Send a single health pulse to the Hub.
-#[instrument(skip(report), fields(sequence = report.sequence))]
+#[instrument(skip_all)]
 pub async fn send_pulse_single(_report: &HealthPulseReport) -> PulseResult<()> {
     tracing::trace!("Sending health pulse");
     // TODO: HTTP POST to hub

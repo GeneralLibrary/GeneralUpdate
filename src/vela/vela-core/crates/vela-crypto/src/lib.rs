@@ -48,7 +48,7 @@ pub struct SigningKey {
 }
 
 /// Trait for signing FlashPack bundles.
-pub trait BundleSigner: Send + Sync {
+pub trait BundleSigner: Send + Sync + std::fmt::Debug {
     fn algorithm(&self) -> SignatureAlgorithm;
     fn sign(&self, data: &[u8]) -> CryptoResult<Vec<u8>>;
 }
