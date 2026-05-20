@@ -3,7 +3,7 @@
 
 pub mod orchestrator;
 
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 /// Initialize structured JSON logging for the Vela OTA system.
 pub fn init_logging(verbose: bool) {

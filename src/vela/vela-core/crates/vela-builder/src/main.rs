@@ -32,7 +32,10 @@ fn main() {
         "verify" => cmd_verify(&args[2..]),
         "info" => cmd_info(&args[2..]),
         "delta" => cmd_delta(&args[2..]),
-        "--help" | "-h" => { print_usage(&args[0]); Ok(()) }
+        "--help" | "-h" => {
+            print_usage(&args[0]);
+            Ok(())
+        }
         _ => {
             eprintln!("Unknown command: {cmd}");
             print_usage(&args[0]);
@@ -66,7 +69,11 @@ fn cmd_build(args: &[String]) -> Result<(), String> {
     }
 
     let payload = &args[0];
-    let output = if args.len() > 1 { &args[1] } else { return Err("missing output path".into()) };
+    let output = if args.len() > 1 {
+        &args[1]
+    } else {
+        return Err("missing output path".into());
+    };
 
     let mut bundle_name = String::from("vela-update");
     let mut bundle_version = String::from("0.1.0");
@@ -75,9 +82,24 @@ fn cmd_build(args: &[String]) -> Result<(), String> {
     let mut i = 2;
     while i < args.len() {
         match args[i].as_str() {
-            "--name" => { i += 1; if i < args.len() { bundle_name = args[i].clone(); } }
-            "--version" => { i += 1; if i < args.len() { bundle_version = args[i].clone(); } }
-            "--requires" => { i += 1; if i < args.len() { requires_version = args[i].clone(); } }
+            "--name" => {
+                i += 1;
+                if i < args.len() {
+                    bundle_name = args[i].clone();
+                }
+            }
+            "--version" => {
+                i += 1;
+                if i < args.len() {
+                    bundle_version = args[i].clone();
+                }
+            }
+            "--requires" => {
+                i += 1;
+                if i < args.len() {
+                    requires_version = args[i].clone();
+                }
+            }
             _ => return Err(format!("unknown flag: {}", args[i])),
         }
         i += 1;
@@ -98,7 +120,8 @@ fn cmd_build(args: &[String]) -> Result<(), String> {
     };
 
     let builder = vela_flashpack::FlashPackBuilder::new(config);
-    builder.build(PathBuf::from(output).as_path())
+    builder
+        .build(PathBuf::from(output).as_path())
         .map_err(|e| format!("Build failed: {e}"))?;
 
     let size = std::fs::metadata(output).map(|m| m.len()).unwrap_or(0);
@@ -178,7 +201,14 @@ fn cmd_info(args: &[String]) -> Result<(), String> {
             println!("  Created:         {}", h.created_at);
             println!("  Builder:         {}", h.builder_id);
             println!("  Compatible with: {}", h.compatible_slots.join(", "));
-            println!("  Flags:           {}", if h.compat_flags.is_empty() { "(none)".into() } else { h.compat_flags.join(", ") });
+            println!(
+                "  Flags:           {}",
+                if h.compat_flags.is_empty() {
+                    "(none)".into()
+                } else {
+                    h.compat_flags.join(", ")
+                }
+            );
             println!("  File size:       {} bytes", data.len());
 
             // Compute checksums

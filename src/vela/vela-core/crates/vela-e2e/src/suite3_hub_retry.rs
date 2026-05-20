@@ -1,12 +1,12 @@
 //! Suite 3: Hub client + retry + download integration tests.
 
 use sha2::Digest;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
-use vela_hub::*;
 use vela_hub::client::VelaHubClient;
 use vela_hub::retry::RetryStrategy;
+use vela_hub::*;
 
 #[tokio::test]
 async fn test_retry_exhausts_non_retryable() {
@@ -129,9 +129,15 @@ fn test_hub_client_missing_auth_builds() {
 #[test]
 fn test_url_construction() {
     let config = HubConfig::new("https://hub.example.com");
-    assert_eq!(config.url("/api/v1/poll"), "https://hub.example.com/api/v1/poll");
+    assert_eq!(
+        config.url("/api/v1/poll"),
+        "https://hub.example.com/api/v1/poll"
+    );
     let config = HubConfig::new("https://hub.example.com/");
-    assert_eq!(config.url("/api/v1/poll"), "https://hub.example.com/api/v1/poll");
+    assert_eq!(
+        config.url("/api/v1/poll"),
+        "https://hub.example.com/api/v1/poll"
+    );
 }
 
 #[test]

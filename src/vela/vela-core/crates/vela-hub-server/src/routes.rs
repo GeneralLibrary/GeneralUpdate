@@ -1,6 +1,10 @@
 //! Route handlers for Vela Hub REST API.
 
-use axum::{Json, extract::{Path, Query, State}};
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+};
 use std::sync::Arc;
 
 use crate::state::{AppState, DeviceRecord, DeviceStatus};
@@ -79,7 +83,8 @@ pub async fn attest(
     let now = chrono::Utc::now().to_rfc3339();
     let mut devices = state.devices.write().await;
 
-    devices.entry(req.device_id.clone())
+    devices
+        .entry(req.device_id.clone())
         .and_modify(|d| {
             d.last_seen = now.clone();
             d.attested_at = Some(now.clone());
@@ -134,9 +139,7 @@ pub async fn heartbeat(
 }
 
 /// GET /api/v1/devices
-pub async fn list_devices(
-    State(state): State<Arc<AppState>>,
-) -> Json<Vec<DeviceRecord>> {
+pub async fn list_devices(State(state): State<Arc<AppState>>) -> Json<Vec<DeviceRecord>> {
     let devices = state.devices.read().await;
     Json(devices.values().cloned().collect())
 }
@@ -153,14 +156,19 @@ pub struct CreateRolloutRequest {
 pub async fn create_rollout(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateRolloutRequest>,
-) -> Json<serde_json::Value> {
+) -> (StatusCode, Json<serde_json::Value>) {
     // Validate artifact exists
-    let artifacts = state.artifacts.read().await;
-    if !artifacts.contains_key(&req.artifact_id) {
-        return Json(serde_json::json!({
-            "error": "artifact not found",
-            "artifact_id": req.artifact_id
-        }));
+    {
+        let artifacts = state.artifacts.read().await;
+        if !artifacts.contains_key(&req.artifact_id) {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({
+                    "error": "artifact not found",
+                    "artifact_id": req.artifact_id
+                })),
+            );
+        }
     }
 
     let rollout_id = uuid::Uuid::new_v4().to_string();
@@ -174,12 +182,19 @@ pub async fn create_rollout(
         status: crate::state::RolloutStatus::Active,
     };
 
-    state.rollouts.write().await.insert(rollout_id.clone(), rollout);
+    state
+        .rollouts
+        .write()
+        .await
+        .insert(rollout_id.clone(), rollout);
 
-    Json(serde_json::json!({
-        "rollout_id": rollout_id,
-        "status": "active"
-    }))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "rollout_id": rollout_id,
+            "status": "active"
+        })),
+    )
 }
 
 /// GET /api/v1/artifacts/:id

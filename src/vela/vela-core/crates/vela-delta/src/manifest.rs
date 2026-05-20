@@ -81,10 +81,7 @@ impl DeltaManifest {
     }
 
     /// Validate that the device's current version matches the required baseline.
-    pub fn validate_baseline(
-        &self,
-        device_version: &str,
-    ) -> Result<(), String> {
+    pub fn validate_baseline(&self, device_version: &str) -> Result<(), String> {
         if device_version != self.requires_version {
             return Err(format!(
                 "Baseline version mismatch: device has {}, delta requires {}",
@@ -129,8 +126,13 @@ mod tests {
     #[test]
     fn test_validate_baseline_match() {
         let m = DeltaManifest::new(
-            "test".into(), "2.0".into(), "1.0".into(),
-            "a".into(), "b".into(), 100, 50,
+            "test".into(),
+            "2.0".into(),
+            "1.0".into(),
+            "a".into(),
+            "b".into(),
+            100,
+            50,
         );
         assert!(m.validate_baseline("1.0").is_ok());
     }
@@ -138,8 +140,13 @@ mod tests {
     #[test]
     fn test_validate_baseline_mismatch() {
         let m = DeltaManifest::new(
-            "test".into(), "2.0".into(), "1.0".into(),
-            "a".into(), "b".into(), 100, 50,
+            "test".into(),
+            "2.0".into(),
+            "1.0".into(),
+            "a".into(),
+            "b".into(),
+            100,
+            50,
         );
         assert!(m.validate_baseline("0.9").is_err());
     }
@@ -147,14 +154,24 @@ mod tests {
     #[test]
     fn test_efficiency_check() {
         let efficient = DeltaManifest::new(
-            "test".into(), "2.0".into(), "1.0".into(),
-            "a".into(), "b".into(), 10000, 1000,
+            "test".into(),
+            "2.0".into(),
+            "1.0".into(),
+            "a".into(),
+            "b".into(),
+            10000,
+            1000,
         );
         assert!(efficient.is_efficient()); // 10% ratio
 
         let inefficient = DeltaManifest::new(
-            "test".into(), "2.0".into(), "1.0".into(),
-            "a".into(), "b".into(), 1000, 999,
+            "test".into(),
+            "2.0".into(),
+            "1.0".into(),
+            "a".into(),
+            "b".into(),
+            1000,
+            999,
         );
         assert!(!inefficient.is_efficient()); // 99.9% ratio
     }

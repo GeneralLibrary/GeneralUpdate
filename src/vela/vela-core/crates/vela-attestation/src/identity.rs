@@ -59,11 +59,7 @@ impl Default for LinuxIdentityProvider {
 
 impl LinuxIdentityProvider {
     /// Create a provider with custom paths (for testing).
-    pub fn new(
-        machine_id_path: PathBuf,
-        net_sys_path: PathBuf,
-        dmi_sys_path: PathBuf,
-    ) -> Self {
+    pub fn new(machine_id_path: PathBuf, net_sys_path: PathBuf, dmi_sys_path: PathBuf) -> Self {
         Self {
             machine_id_path,
             net_sys_path,

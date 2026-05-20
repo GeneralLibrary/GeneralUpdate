@@ -58,12 +58,7 @@ impl MeasurementProvider for DefaultMeasurementProvider {
         // Check /proc/uptime — system has been up for some time → healthy
         let uptime = std::fs::read_to_string("/proc/uptime")
             .ok()
-            .and_then(|s| {
-                s.split_whitespace()
-                    .next()?
-                    .parse::<f64>()
-                    .ok()
-            })
+            .and_then(|s| s.split_whitespace().next()?.parse::<f64>().ok())
             .unwrap_or(0.0);
 
         let status = if uptime > 5.0 { "healthy" } else { "booting" };
@@ -80,7 +75,10 @@ impl MeasurementProvider for DefaultMeasurementProvider {
         Ok(AttestationClaim {
             claim_type: "fs_integrity".into(),
             measurement: if ok { "ok" } else { "degraded" }.into(),
-            description: format!("Filesystem integrity check: {}", if ok { "passed" } else { "degraded" }),
+            description: format!(
+                "Filesystem integrity check: {}",
+                if ok { "passed" } else { "degraded" }
+            ),
         })
     }
 
@@ -105,10 +103,7 @@ impl Attester {
     }
 
     /// Create with a custom measurement provider (for testing).
-    pub fn with_provider(
-        identity: SystemIdentity,
-        provider: Box<dyn MeasurementProvider>,
-    ) -> Self {
+    pub fn with_provider(identity: SystemIdentity, provider: Box<dyn MeasurementProvider>) -> Self {
         Self {
             identity,
             measurement_provider: provider,
@@ -121,10 +116,7 @@ impl Attester {
         let mut claims = Vec::new();
 
         claims.push(self.measurement_provider.measure_boot_health()?);
-        claims.push(
-            self.measurement_provider
-                .measure_filesystem_integrity()?,
-        );
+        claims.push(self.measurement_provider.measure_filesystem_integrity()?);
         claims.push(self.measurement_provider.measure_slot_status()?);
 
         let timestamp_secs = SystemTime::now()
@@ -166,10 +158,9 @@ impl Attester {
 
     /// Canonical representation of the payload for signing.
     fn sign_payload(&self, key: &[u8], canonical: &[u8]) -> Vec<u8> {
-        use sha2::Digest;
         use hmac::Mac;
-        let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(key)
-            .expect("HMAC key length");
+        use sha2::Digest;
+        let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(key).expect("HMAC key length");
         mac.update(canonical);
         mac.finalize().into_bytes().to_vec()
     }
@@ -211,8 +202,7 @@ impl AttestationPayload {
         };
         let canonical = self.canonical_for_signing();
         use hmac::Mac;
-        let mut mac =
-            hmac::Hmac::<sha2::Sha256>::new_from_slice(key).expect("HMAC key length");
+        let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(key).expect("HMAC key length");
         mac.update(&canonical);
         mac.verify_slice(sig).is_ok()
     }

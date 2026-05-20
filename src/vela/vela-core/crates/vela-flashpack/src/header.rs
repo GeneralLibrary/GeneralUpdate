@@ -87,16 +87,20 @@ impl std::str::FromStr for SemVer {
                 "Invalid SemVer '{s}': expected MAJOR.MINOR.PATCH"
             )));
         }
-        let major = parts[0]
-            .parse::<u32>()
-            .map_err(|_| FlashPackError::InvalidFormat(format!("Invalid major version in '{s}'")))?;
-        let minor = parts[1]
-            .parse::<u32>()
-            .map_err(|_| FlashPackError::InvalidFormat(format!("Invalid minor version in '{s}'")))?;
-        let patch = parts[2]
-            .parse::<u32>()
-            .map_err(|_| FlashPackError::InvalidFormat(format!("Invalid patch version in '{s}'")))?;
-        Ok(Self { major, minor, patch })
+        let major = parts[0].parse::<u32>().map_err(|_| {
+            FlashPackError::InvalidFormat(format!("Invalid major version in '{s}'"))
+        })?;
+        let minor = parts[1].parse::<u32>().map_err(|_| {
+            FlashPackError::InvalidFormat(format!("Invalid minor version in '{s}'"))
+        })?;
+        let patch = parts[2].parse::<u32>().map_err(|_| {
+            FlashPackError::InvalidFormat(format!("Invalid patch version in '{s}'"))
+        })?;
+        Ok(Self {
+            major,
+            minor,
+            patch,
+        })
     }
 }
 

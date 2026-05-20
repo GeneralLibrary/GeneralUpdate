@@ -2,8 +2,8 @@
 
 use std::sync::Mutex;
 use std::time::Duration;
-use vela_hub::*;
 use vela_hub::retry::RetryStrategy;
+use vela_hub::*;
 use vela_lifecycle::{
     LifecycleConfig, LifecycleContext, LifecycleEngine, LifecycleError, LifecycleMetrics,
     UpdatePhase,
@@ -13,7 +13,9 @@ use vela_slotmgr::{MockSlotProvider, SlotError, SlotLabel, SlotManager};
 #[tokio::test]
 async fn test_phase_timeout_configuration() {
     let mut config = LifecycleConfig::default();
-    config.phase_timeouts.insert(UpdatePhase::Polling, Duration::from_nanos(1));
+    config
+        .phase_timeouts
+        .insert(UpdatePhase::Polling, Duration::from_nanos(1));
     let engine = LifecycleEngine::new(config);
     let ctx = LifecycleContext {
         update_id: "timeout-test".into(),
@@ -30,7 +32,10 @@ async fn test_fallback_returns_to_idle() {
         update_id: "fallback-test".into(),
         metrics: Mutex::new(LifecycleMetrics::default()),
     };
-    let result = engine.execute_phase(&ctx, UpdatePhase::FallbackRecovery).await.unwrap();
+    let result = engine
+        .execute_phase(&ctx, UpdatePhase::FallbackRecovery)
+        .await
+        .unwrap();
     assert_eq!(result, UpdatePhase::Idle);
 }
 
@@ -41,7 +46,10 @@ async fn test_error_preserves_idle_state() {
         update_id: "error-test".into(),
         metrics: Mutex::new(LifecycleMetrics::default()),
     };
-    let result = engine.execute_phase(&ctx, UpdatePhase::Polling).await.unwrap();
+    let result = engine
+        .execute_phase(&ctx, UpdatePhase::Polling)
+        .await
+        .unwrap();
     assert_eq!(result, UpdatePhase::Idle);
     let metrics = ctx.metrics.lock().unwrap();
     assert!(metrics.outcome.is_none());
@@ -54,7 +62,12 @@ fn test_insufficient_space_detected() {
     let mut mgr = SlotManager::with_mock(mock);
     let result = mgr.write_slot(SlotLabel::Alternate, &[0u8; 100]);
     assert!(result.is_err());
-    if let Err(SlotError::InsufficientSpace { required, available, .. }) = result {
+    if let Err(SlotError::InsufficientSpace {
+        required,
+        available,
+        ..
+    }) = result
+    {
         assert_eq!(required, 100);
         assert_eq!(available, 50);
     } else {
@@ -80,9 +93,7 @@ async fn test_network_error_retry_exhaustion() {
         jitter: 0.0,
     };
     let result: HubResult<()> = strategy
-        .execute(|| async {
-            Err(HubError::RateLimited(Duration::from_millis(1)))
-        })
+        .execute(|| async { Err(HubError::RateLimited(Duration::from_millis(1))) })
         .await;
     assert!(result.is_err());
 }
@@ -141,7 +152,9 @@ async fn test_checksum_mismatch_fails_immediately() {
 #[test]
 fn test_watchdog_timeout_fallback_path() {
     let bus = vela_watchdog::bus::SystemEventBus::new(32);
-    bus.publish(vela_watchdog::SystemEvent::WatchdogTriggered { last_pet_secs_ago: 20 });
+    bus.publish(vela_watchdog::SystemEvent::WatchdogTriggered {
+        last_pet_secs_ago: 20,
+    });
     bus.publish(vela_watchdog::SystemEvent::FallbackActivated {
         reason: "watchdog timeout during update".into(),
     });

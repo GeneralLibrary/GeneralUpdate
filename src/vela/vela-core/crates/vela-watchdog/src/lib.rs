@@ -71,7 +71,10 @@ pub enum SystemEvent {
     ValidationComplete { rollout_id: String, valid: bool },
 
     /// Installation started.
-    InstallStarted { rollout_id: String, target_slot: String },
+    InstallStarted {
+        rollout_id: String,
+        target_slot: String,
+    },
 
     /// Installation complete.
     InstallComplete { rollout_id: String },
@@ -116,7 +119,12 @@ impl SystemEvent {
 impl std::fmt::Display for SystemEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UpdateAvailable { target_version, flashpack_size, force_install, .. } => {
+            Self::UpdateAvailable {
+                target_version,
+                flashpack_size,
+                force_install,
+                ..
+            } => {
                 write!(
                     f,
                     "Update available: v{target_version} ({flashpack_size} bytes, force={force_install})"
@@ -131,7 +139,11 @@ impl std::fmt::Display for SystemEvent {
             Self::DownloadComplete { .. } => write!(f, "Download complete"),
             Self::ValidationStarted { .. } => write!(f, "Validation started"),
             Self::ValidationComplete { valid, .. } => {
-                write!(f, "Validation complete: {}", if *valid { "PASS" } else { "FAIL" })
+                write!(
+                    f,
+                    "Validation complete: {}",
+                    if *valid { "PASS" } else { "FAIL" }
+                )
             }
             Self::InstallStarted { target_slot, .. } => {
                 write!(f, "Install started → slot: {target_slot}")

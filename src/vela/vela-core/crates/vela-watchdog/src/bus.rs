@@ -34,9 +34,7 @@ impl SystemEventBus {
         let (sender, _) = broadcast::channel(capacity);
         Self {
             sender,
-            history: Arc::new(Mutex::new(
-                circular_buffer::CircularBuffer::new(capacity),
-            )),
+            history: Arc::new(Mutex::new(circular_buffer::CircularBuffer::new(capacity))),
         }
     }
 
@@ -84,7 +82,10 @@ impl SystemEventBus {
             .map(|h| h.iter().cloned().collect())
             .unwrap_or_default();
 
-        info!(history_len = history.len(), "Subscriber joined with history replay");
+        info!(
+            history_len = history.len(),
+            "Subscriber joined with history replay"
+        );
         (history, self.subscribe())
     }
 
@@ -157,11 +158,7 @@ mod circular_buffer {
 
         pub fn iter(&self) -> impl Iterator<Item = &T> {
             let cap = self.buf.len();
-            let start = if self.count < cap {
-                0
-            } else {
-                self.write_pos
-            };
+            let start = if self.count < cap { 0 } else { self.write_pos };
             (0..self.count).filter_map(move |i| {
                 let idx = (start + i) % cap;
                 self.buf[idx].as_ref()
@@ -223,13 +220,10 @@ mod tests {
             rollout_id: "test".into(),
         });
 
-        let event = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            sub.recv(),
-        )
-        .await
-        .unwrap()
-        .unwrap();
+        let event = tokio::time::timeout(std::time::Duration::from_millis(100), sub.recv())
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(event.event_type(), "download_complete");
     }
@@ -258,13 +252,10 @@ mod tests {
             rollout_id: "r1".into(),
         });
 
-        let event = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            sub.recv(),
-        )
-        .await
-        .unwrap()
-        .unwrap();
+        let event = tokio::time::timeout(std::time::Duration::from_millis(100), sub.recv())
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(event.event_type(), "install_complete");
     }

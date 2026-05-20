@@ -3,8 +3,8 @@
 //! Validates that events are emitted correctly during watchdog
 //! lifecycle and that subscribers receive them in order.
 
-use vela_watchdog::bus::SystemEventBus;
 use vela_watchdog::SystemEvent;
+use vela_watchdog::bus::SystemEventBus;
 
 /// Events emitted during arm → pet → disarm cycle are published.
 #[tokio::test]
@@ -30,31 +30,22 @@ async fn test_watchdog_lifecycle_emits_events() {
     });
 
     // Receive and verify
-    let e1 = tokio::time::timeout(
-        std::time::Duration::from_millis(200),
-        sub.recv(),
-    )
-    .await
-    .unwrap()
-    .unwrap();
+    let e1 = tokio::time::timeout(std::time::Duration::from_millis(200), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(e1.event_type(), "update_available");
 
-    let e2 = tokio::time::timeout(
-        std::time::Duration::from_millis(200),
-        sub.recv(),
-    )
-    .await
-    .unwrap()
-    .unwrap();
+    let e2 = tokio::time::timeout(std::time::Duration::from_millis(200), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(e2.event_type(), "download_started");
 
-    let e3 = tokio::time::timeout(
-        std::time::Duration::from_millis(200),
-        sub.recv(),
-    )
-    .await
-    .unwrap()
-    .unwrap();
+    let e3 = tokio::time::timeout(std::time::Duration::from_millis(200), sub.recv())
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(e3.event_type(), "download_complete");
 }
 
@@ -95,11 +86,8 @@ async fn test_background_event_emission() {
     handle.await.unwrap();
 
     let mut count = 0;
-    while let Ok(Ok(event)) = tokio::time::timeout(
-        std::time::Duration::from_millis(50),
-        sub.recv(),
-    )
-    .await
+    while let Ok(Ok(event)) =
+        tokio::time::timeout(std::time::Duration::from_millis(50), sub.recv()).await
     {
         assert_eq!(event.event_type(), "health_pulse_sent");
         count += 1;
@@ -121,13 +109,10 @@ async fn test_multiple_subscribers() {
     });
 
     for sub in [&mut a, &mut b, &mut c] {
-        let ev = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            sub.recv(),
-        )
-        .await
-        .unwrap()
-        .unwrap();
+        let ev = tokio::time::timeout(std::time::Duration::from_millis(100), sub.recv())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(ev.event_type(), "install_complete");
     }
 }
@@ -208,6 +193,10 @@ fn test_all_event_variants_displayable() {
 
     for ev in events {
         let display = ev.to_string();
-        assert!(!display.is_empty(), "Event {} should have display", ev.event_type());
+        assert!(
+            !display.is_empty(),
+            "Event {} should have display",
+            ev.event_type()
+        );
     }
 }

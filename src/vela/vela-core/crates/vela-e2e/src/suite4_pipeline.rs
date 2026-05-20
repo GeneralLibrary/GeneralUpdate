@@ -15,30 +15,12 @@ use vela_slotmgr::SlotLabel;
 #[test]
 fn test_pipeline_phase_order() {
     // Verify phase constants exist and are distinct
-    assert_ne!(
-        PipelinePhase::Idle,
-        PipelinePhase::Polling
-    );
-    assert_ne!(
-        PipelinePhase::Polling,
-        PipelinePhase::UpdateAvailable
-    );
-    assert_ne!(
-        PipelinePhase::UpdateAvailable,
-        PipelinePhase::Downloading
-    );
-    assert_ne!(
-        PipelinePhase::Downloading,
-        PipelinePhase::Validating
-    );
-    assert_ne!(
-        PipelinePhase::Validating,
-        PipelinePhase::Installing
-    );
-    assert_ne!(
-        PipelinePhase::Installing,
-        PipelinePhase::RebootPending
-    );
+    assert_ne!(PipelinePhase::Idle, PipelinePhase::Polling);
+    assert_ne!(PipelinePhase::Polling, PipelinePhase::UpdateAvailable);
+    assert_ne!(PipelinePhase::UpdateAvailable, PipelinePhase::Downloading);
+    assert_ne!(PipelinePhase::Downloading, PipelinePhase::Validating);
+    assert_ne!(PipelinePhase::Validating, PipelinePhase::Installing);
+    assert_ne!(PipelinePhase::Installing, PipelinePhase::RebootPending);
 }
 
 /// Terminal states are correctly identified.
@@ -60,7 +42,10 @@ fn test_terminal_states() {
 fn test_pipeline_phase_display() {
     assert_eq!(PipelinePhase::Idle.to_string(), "Idle");
     assert_eq!(PipelinePhase::Polling.to_string(), "Polling");
-    assert_eq!(PipelinePhase::UpdateAvailable.to_string(), "UpdateAvailable");
+    assert_eq!(
+        PipelinePhase::UpdateAvailable.to_string(),
+        "UpdateAvailable"
+    );
     assert_eq!(PipelinePhase::Downloading.to_string(), "Downloading");
     assert_eq!(PipelinePhase::Validating.to_string(), "Validating");
     assert_eq!(PipelinePhase::Installing.to_string(), "Installing");
@@ -113,7 +98,10 @@ async fn test_full_lifecycle_chain() {
 
     // Verify we visited expected phases
     let phase_names: Vec<String> = phases.iter().map(|p| p.to_string()).collect();
-    assert!(phase_names.contains(&"Idle".to_string()), "Should visit Idle phase");
+    assert!(
+        phase_names.contains(&"Idle".to_string()),
+        "Should visit Idle phase"
+    );
     assert!(
         phase_names.contains(&"Polling".to_string()),
         "Should visit Polling phase"

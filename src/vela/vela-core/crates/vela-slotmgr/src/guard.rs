@@ -6,7 +6,7 @@
 
 use tracing::{error, info, instrument, warn};
 
-use crate::{BootFlag, SlotError, SlotProvider, SlotResult};
+use crate::{BootFlag, SlotProvider, SlotResult};
 
 /// RAII guard that triggers fallback on drop if not explicitly committed.
 ///
@@ -76,7 +76,9 @@ impl<'a> SlotRecoveryGuard<'a> {
     #[instrument(skip(self))]
     pub async fn fallback(self) -> SlotResult<()> {
         warn!("Triggering explicit slot fallback");
-        self.provider.set_boot_flag(BootFlag::FallbackRequested).await?;
+        self.provider
+            .set_boot_flag(BootFlag::FallbackRequested)
+            .await?;
         Ok(())
     }
 }
@@ -123,7 +125,10 @@ mod tests {
         let guard = SlotRecoveryGuard::new(&provider).await.unwrap();
         // Explicit fallback — sets the boot flag
         guard.fallback().await.unwrap();
-        assert_eq!(provider.snapshot().boot_flag, Some(BootFlag::FallbackRequested));
+        assert_eq!(
+            provider.snapshot().boot_flag,
+            Some(BootFlag::FallbackRequested)
+        );
     }
 
     #[tokio::test]

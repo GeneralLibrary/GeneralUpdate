@@ -4,8 +4,7 @@
 //! tar archive with the required metadata files, and optionally signs it.
 
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::Path;
+use std::io::{BufWriter, Write};
 
 use sha2::{Digest, Sha256};
 use tracing::{debug, error, info, instrument, trace, warn};
@@ -102,27 +101,37 @@ impl FlashPackBuilder {
 
         // fpk-header.json
         let mut hdr = tar::Header::new_gnu();
-        hdr.set_path("fpk-header.json").map_err(FlashPackError::IoError)?;
+        hdr.set_path("fpk-header.json")
+            .map_err(FlashPackError::IoError)?;
         hdr.set_size(header_json.len() as u64);
         hdr.set_mode(0o644);
         hdr.set_cksum();
-        archive.append(&hdr, header_json.as_slice()).map_err(FlashPackError::IoError)?;
+        archive
+            .append(&hdr, header_json.as_slice())
+            .map_err(FlashPackError::IoError)?;
         trace!("Appended fpk-header.json ({} bytes)", header_json.len());
 
         // payload/data.gz
         let mut payload_hdr = tar::Header::new_gnu();
-        payload_hdr.set_path("payload/data.gz").map_err(FlashPackError::IoError)?;
+        payload_hdr
+            .set_path("payload/data.gz")
+            .map_err(FlashPackError::IoError)?;
         payload_hdr.set_size(compressed_payload.len() as u64);
         payload_hdr.set_mode(0o644);
         payload_hdr.set_cksum();
         archive
             .append(&payload_hdr, compressed_payload.as_slice())
             .map_err(FlashPackError::IoError)?;
-        info!(size = compressed_payload.len(), "Appended compressed payload");
+        info!(
+            size = compressed_payload.len(),
+            "Appended compressed payload"
+        );
 
         // checksums.sha256
         let mut cs_hdr = tar::Header::new_gnu();
-        cs_hdr.set_path("checksums.sha256").map_err(FlashPackError::IoError)?;
+        cs_hdr
+            .set_path("checksums.sha256")
+            .map_err(FlashPackError::IoError)?;
         cs_hdr.set_size(checksums_content.len() as u64);
         cs_hdr.set_mode(0o644);
         cs_hdr.set_cksum();
@@ -133,18 +142,20 @@ impl FlashPackBuilder {
 
         // signature.p7s
         let mut sig_hdr = tar::Header::new_gnu();
-        sig_hdr.set_path("signature.p7s").map_err(FlashPackError::IoError)?;
+        sig_hdr
+            .set_path("signature.p7s")
+            .map_err(FlashPackError::IoError)?;
         sig_hdr.set_size(signature.len() as u64);
         sig_hdr.set_mode(0o644);
         sig_hdr.set_cksum();
-        archive.append(&sig_hdr, signature.as_slice()).map_err(FlashPackError::IoError)?;
+        archive
+            .append(&sig_hdr, signature.as_slice())
+            .map_err(FlashPackError::IoError)?;
         trace!("Appended signature.p7s ({} bytes)", signature.len());
 
         archive.finish().map_err(FlashPackError::IoError)?;
 
-        let output_size = fs::metadata(output_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let output_size = fs::metadata(output_path).map(|m| m.len()).unwrap_or(0);
         info!(
             output = %output_path.display(),
             size = output_size,
@@ -164,8 +175,8 @@ impl FlashPackBuilder {
 
     /// Compress payload data with gzip.
     fn compress_payload(&self, data: &[u8]) -> FpkResult<Vec<u8>> {
-        use flate2::write::GzEncoder;
         use flate2::Compression;
+        use flate2::write::GzEncoder;
 
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(data).map_err(FlashPackError::IoError)?;

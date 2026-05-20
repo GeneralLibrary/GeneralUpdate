@@ -21,11 +21,11 @@ mod suite5_error_recovery;
 mod suite6_config;
 
 // Ensure workspace crate references compile
-use vela_core as _;
-use vela_watchdog as _;
-use vela_lifecycle as _;
-use vela_slotmgr as _;
-use vela_hub as _;
 use vela_attestation as _;
-use vela_pulse as _;
+use vela_core as _;
 use vela_flashpack as _;
+use vela_hub as _;
+use vela_lifecycle as _;
+use vela_pulse as _;
+use vela_slotmgr as _;
+use vela_watchdog as _;
