@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.ClientCore.Pipeline;
@@ -87,6 +88,55 @@ namespace ClientCoreTest.Pipeline
             {
                 await middleware.InvokeAsync(context);
             });
+        }
+
+        /// <summary>
+        /// Tests that a patch package zip containing root files and nested module files
+        /// is extracted and then applied to the application without requiring an extra
+        /// top-level directory in the archive.
+        /// </summary>
+        [Fact]
+        public async Task InvokeAsync_WithFlatPatchPackageZip_ExtractsAndAppliesExpectedStructure()
+        {
+            // Arrange
+            var compressMiddleware = new CompressMiddleware();
+            var patchMiddleware = new PatchMiddleware();
+            var packagePath = Path.Combine(_testPath, "package");
+            var appPath = Path.Combine(_testPath, "app");
+            var patchPath = Path.Combine(_testPath, "patch");
+            var packageModulePath = Path.Combine(packagePath, "Module");
+            var appModulePath = Path.Combine(appPath, "Module");
+            var zipPath = Path.Combine(_testPath, "patch_1.0.0.0.zip");
+
+            Directory.CreateDirectory(packageModulePath);
+            Directory.CreateDirectory(appModulePath);
+            File.WriteAllText(Path.Combine(packagePath, "ok.txt"), "patch ok");
+            File.WriteAllText(Path.Combine(packageModulePath, "1.dll"), "new dll");
+            File.WriteAllText(Path.Combine(appModulePath, "1.dll"), "old dll");
+            ZipFile.CreateFromDirectory(packagePath, zipPath);
+
+            var context = new PipelineContext();
+            context.Add("Format", "ZIP");
+            context.Add("ZipFilePath", zipPath);
+            context.Add("PatchPath", patchPath);
+            context.Add("Encoding", Encoding.UTF8);
+            context.Add("SourcePath", appPath);
+            context.Add("PatchEnabled", true);
+
+            // Act
+            await compressMiddleware.InvokeAsync(context);
+
+            // Assert extraction layout before patch application
+            Assert.True(File.Exists(Path.Combine(patchPath, "ok.txt")));
+            Assert.True(File.Exists(Path.Combine(patchPath, "Module", "1.dll")));
+            Assert.False(File.Exists(Path.Combine(patchPath, "patch_1.0.0.0", "ok.txt")));
+
+            await patchMiddleware.InvokeAsync(context);
+
+            // Assert patch application result
+            Assert.Equal("patch ok", File.ReadAllText(Path.Combine(appPath, "ok.txt")));
+            Assert.Equal("new dll", File.ReadAllText(Path.Combine(appPath, "Module", "1.dll")));
+            Assert.False(Directory.Exists(patchPath));
         }
 
         /// <summary>
