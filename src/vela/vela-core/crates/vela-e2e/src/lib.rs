@@ -13,11 +13,17 @@
 //! 6. Configuration Validation — default configs, custom configs
 
 // Suite modules
+#[cfg(test)]
 mod suite1_watchdog_bus;
+#[cfg(test)]
 mod suite2_slot_lifecycle;
+#[cfg(test)]
 mod suite3_hub_retry;
+#[cfg(test)]
 mod suite4_pipeline;
+#[cfg(test)]
 mod suite5_error_recovery;
+#[cfg(test)]
 mod suite6_config;
 
 // Ensure workspace crate references compile

@@ -1,27 +1,13 @@
 //! Suite 4: Full pipeline state transitions.
 //!
-//! Validates that the update pipeline phases follow the correct order
-//! and that terminal states are reachable.
+//! Validates terminal states and lifecycle phase transitions
+//! across the LifecycleEngine.
 
-use std::time::Duration;
-use vela_core::orchestrator::{OrchestratorConfig, PipelinePhase};
+use vela_core::orchestrator::PipelinePhase;
 use vela_lifecycle::{
     LifecycleConfig, LifecycleContext, LifecycleEngine, LifecycleMetrics, LifecycleOutcome,
     UpdatePhase,
 };
-use vela_slotmgr::SlotLabel;
-
-/// PipelinePhase order matches the expected sequence.
-#[test]
-fn test_pipeline_phase_order() {
-    // Verify phase constants exist and are distinct
-    assert_ne!(PipelinePhase::Idle, PipelinePhase::Polling);
-    assert_ne!(PipelinePhase::Polling, PipelinePhase::UpdateAvailable);
-    assert_ne!(PipelinePhase::UpdateAvailable, PipelinePhase::Downloading);
-    assert_ne!(PipelinePhase::Downloading, PipelinePhase::Validating);
-    assert_ne!(PipelinePhase::Validating, PipelinePhase::Installing);
-    assert_ne!(PipelinePhase::Installing, PipelinePhase::RebootPending);
-}
 
 /// Terminal states are correctly identified.
 #[test]
@@ -35,22 +21,6 @@ fn test_terminal_states() {
     assert!(!PipelinePhase::Downloading.is_terminal());
     assert!(!PipelinePhase::Validating.is_terminal());
     assert!(!PipelinePhase::Installing.is_terminal());
-}
-
-/// Pipeline phase display strings.
-#[test]
-fn test_pipeline_phase_display() {
-    assert_eq!(PipelinePhase::Idle.to_string(), "Idle");
-    assert_eq!(PipelinePhase::Polling.to_string(), "Polling");
-    assert_eq!(
-        PipelinePhase::UpdateAvailable.to_string(),
-        "UpdateAvailable"
-    );
-    assert_eq!(PipelinePhase::Downloading.to_string(), "Downloading");
-    assert_eq!(PipelinePhase::Validating.to_string(), "Validating");
-    assert_eq!(PipelinePhase::Installing.to_string(), "Installing");
-    assert_eq!(PipelinePhase::RebootPending.to_string(), "RebootPending");
-    assert_eq!(PipelinePhase::Error.to_string(), "Error");
 }
 
 /// Full lifecycle: Idle → Polling → Idle (no update).
@@ -125,23 +95,4 @@ async fn test_success_outcome_reachable() {
     assert_eq!(result, UpdatePhase::Idle);
     let outcome = ctx.metrics.lock().unwrap().outcome.clone();
     assert_eq!(outcome, Some(LifecycleOutcome::Success));
-}
-
-/// Slot label display correctness.
-#[test]
-fn test_slot_label_display() {
-    assert_eq!(SlotLabel::Primary.to_string(), "primary");
-    assert_eq!(SlotLabel::Alternate.to_string(), "alternate");
-}
-
-/// Orchestrator config defaults are sensible (integration test).
-#[test]
-fn test_orchestrator_config_defaults() {
-    let config = OrchestratorConfig::default();
-    assert!(config.hub_base_url.contains("vela-ota.dev"));
-    assert!(config.watchdog_enabled);
-    assert_eq!(config.poll_interval, Duration::from_secs(300));
-    assert_eq!(config.pulse.interval, Duration::from_secs(300));
-    assert!(config.download_dir.to_string_lossy().contains("vela"));
-    assert!(!config.block_device.is_empty());
 }

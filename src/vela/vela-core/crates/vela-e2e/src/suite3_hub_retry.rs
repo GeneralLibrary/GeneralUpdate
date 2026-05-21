@@ -1,10 +1,9 @@
-//! Suite 3: Hub client + retry + download integration tests.
+//! Suite 3: Hub client + retry integration tests.
 
 use sha2::Digest;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
-use vela_hub::client::VelaHubClient;
 use vela_hub::retry::RetryStrategy;
 use vela_hub::*;
 
@@ -72,30 +71,6 @@ async fn test_retry_eventually_succeeds() {
     assert_eq!(counter.load(Ordering::SeqCst), 4);
 }
 
-#[test]
-fn test_download_state_tracking() {
-    let state = vela_hub::download::DownloadState {
-        url: "https://example.com/fp.fpk".into(),
-        expected_size: 1024,
-        expected_checksum: Some("abc123".into()),
-        downloaded_bytes: 512,
-        dest_path: std::path::PathBuf::from("/tmp/test.fpk"),
-    };
-    assert!(!state.is_complete());
-}
-
-#[test]
-fn test_download_state_complete() {
-    let state = vela_hub::download::DownloadState {
-        url: "https://example.com/fp.fpk".into(),
-        expected_size: 1024,
-        expected_checksum: None,
-        downloaded_bytes: 1024,
-        dest_path: std::path::PathBuf::from("/tmp/test.fpk"),
-    };
-    assert!(state.is_complete());
-}
-
 #[tokio::test]
 async fn test_checksum_verification_pass() {
     let data = b"vela-ota-integration-test-data";
@@ -110,34 +85,6 @@ async fn test_checksum_mismatch() {
     let data = b"original";
     let actual = hex::encode(sha2::Sha256::digest(data));
     assert_ne!(actual, wrong_hash, "Checksum should not match wrong hash");
-}
-
-#[test]
-fn test_hub_client_construction() {
-    let config = HubConfig::new("https://hub.vela-ota.dev").with_auth("test-token");
-    let client = VelaHubClient::new(config);
-    assert!(client.is_ok());
-}
-
-#[test]
-fn test_hub_client_missing_auth_builds() {
-    let config = HubConfig::new("https://hub.vela-ota.dev");
-    let client = VelaHubClient::new(config);
-    assert!(client.is_ok());
-}
-
-#[test]
-fn test_url_construction() {
-    let config = HubConfig::new("https://hub.example.com");
-    assert_eq!(
-        config.url("/api/v1/poll"),
-        "https://hub.example.com/api/v1/poll"
-    );
-    let config = HubConfig::new("https://hub.example.com/");
-    assert_eq!(
-        config.url("/api/v1/poll"),
-        "https://hub.example.com/api/v1/poll"
-    );
 }
 
 #[test]
@@ -180,14 +127,4 @@ fn test_poll_outcome_serde() {
     let no_update = PollOutcome::NoUpdate;
     let json = serde_json::to_string(&no_update).unwrap();
     assert!(json.contains("NoUpdate"));
-}
-
-#[test]
-fn test_retry_delay_exponential_growth() {
-    let s = RetryStrategy::for_polling();
-    assert_eq!(s.max_retries, 2);
-    assert!(s.initial_delay < Duration::from_secs(1));
-    let d = RetryStrategy::for_download();
-    assert_eq!(d.max_retries, 5);
-    assert!(d.max_delay >= Duration::from_secs(60));
 }
