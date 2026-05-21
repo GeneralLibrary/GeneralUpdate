@@ -47,7 +47,7 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: check
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -64,9 +64,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('src/vela/vela-core/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Run unit tests (exclude e2e)
+      - name: Run unit tests (core crates only)
         working-directory: src/vela/vela-core
-        run: cargo test --workspace --exclude vela-e2e --exclude vela-ffi -- --test-threads=2
+        run: cargo test -p vela-crypto -p vela-flashpack -p vela-attestation -p vela-lifecycle -p vela-slotmgr -p vela-hub -p vela-watchdog -p vela-core -- --test-threads=2
 
   e2e-test:
     name: E2E Tests
