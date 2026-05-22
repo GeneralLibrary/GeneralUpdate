@@ -445,6 +445,128 @@ namespace GeneralUpdate.Firmware
             }
         }
 
+        // ============================================================
+        // Internal helpers — callback invocation
+        // ============================================================
+
+        /// <summary>
+        /// Fires OnStageChanged on both fluent-registered handlers and config-registered handlers.
+        /// </summary>
+        private void RaiseStageChanged(FirmwareUpdateStage stage, string description)
+        {
+            FirmwareTrace.Info("Stage: {0} — {1}", stage, description);
+
+            SafeInvoke(_onStageChanged, stage, description);
+            SafeInvoke(_config.OnStageChanged, stage, description);
+        }
+
+        /// <summary>
+        /// Fires OnProgress on both fluent-registered handlers and config-registered handlers.
+        /// </summary>
+        private void RaiseProgress(FirmwareProgressInfo info)
+        {
+            SafeInvoke(_onProgress, info);
+            SafeInvoke(_config.OnProgress, info);
+        }
+
+        /// <summary>
+        /// Fires OnWarning on both fluent-registered handlers and config-registered handlers.
+        /// </summary>
+        private void RaiseWarning(string message, string code)
+        {
+            SafeInvoke(_onWarning, message, code);
+            SafeInvoke(_config.OnWarning, message, code);
+        }
+
+        /// <summary>
+        /// Fires the appropriate result callback (OnCompleted or OnFailed) and the final stage.
+        /// </summary>
+        private void RaiseResultCallbacks(FirmwareUpdateResult result)
+        {
+            if (result.Success)
+            {
+                RaiseStageChanged(FirmwareUpdateStage.Completed, string.Format(
+                    "Firmware update completed. Version: {0}, Duration: {1:F1}s",
+                    result.AppliedVersion ?? "(unknown)",
+                    result.Duration.TotalSeconds));
+
+                SafeInvoke(_onCompleted, result);
+                SafeInvoke(_config.OnCompleted, result);
+            }
+            else
+            {
+                RaiseStageChanged(FirmwareUpdateStage.Failed, string.Format(
+                    "[{0}] {1}",
+                    result.ErrorCode ?? "FW_FAILED",
+                    result.Message));
+
+                SafeInvoke(_onFailed, result);
+                SafeInvoke(_config.OnFailed, result);
+            }
+        }
+
+        // ============================================================
+        // Progress helpers — weighted progress across stages
+        // ============================================================
+
+        /// <summary>
+        /// Stage weights for overall progress calculation.
+        /// ValidatingDevice=5%, BackingUp=15%, Downloading=50%, ValidatingFirmware=10%, Flashing=20%.
+        /// </summary>
+        private static FirmwareProgressInfo ValidatingDeviceProgress(float stagePct) => new FirmwareProgressInfo
+        {
+            Stage = FirmwareUpdateStage.ValidatingDevice,
+            StageProgressPercent = stagePct,
+            OverallProgressPercent = stagePct * 0.05f,
+            StatusText = string.Format("Validating device... {0:F0}%", stagePct)
+        };
+
+        private static FirmwareProgressInfo BackingUpProgress(float stagePct) => new FirmwareProgressInfo
+        {
+            Stage = FirmwareUpdateStage.BackingUp,
+            StageProgressPercent = stagePct,
+            OverallProgressPercent = 5f + stagePct * 0.15f,
+            StatusText = string.Format("Backing up firmware... {0:F0}%", stagePct)
+        };
+
+        private static FirmwareProgressInfo ValidatingFirmwareProgress(float stagePct) => new FirmwareProgressInfo
+        {
+            Stage = FirmwareUpdateStage.ValidatingFirmware,
+            StageProgressPercent = stagePct,
+            OverallProgressPercent = 70f + stagePct * 0.10f,
+            StatusText = string.Format("Validating firmware... {0:F0}%", stagePct)
+        };
+
+        private static FirmwareProgressInfo FlashingProgress(float stagePct) => new FirmwareProgressInfo
+        {
+            Stage = FirmwareUpdateStage.Flashing,
+            StageProgressPercent = stagePct,
+            OverallProgressPercent = 80f + stagePct * 0.20f,
+            StatusText = string.Format("Flashing firmware... {0:F0}%", stagePct)
+        };
+
+        // ============================================================
+        // Safe invoke helpers
+        // ============================================================
+
+        private static void SafeInvoke<T1, T2>(Action<T1, T2> callback, T1 arg1, T2 arg2)
+        {
+            if (callback == null) return;
+            try { callback(arg1, arg2); }
+            catch (Exception ex) { FirmwareTrace.Warn("Callback exception (ignored): {0}", ex.Message); }
+        }
+
+        private static void SafeInvoke<T>(Action<T> callback, T arg)
+        {
+            if (callback == null) return;
+            try { callback(arg); }
+            catch (Exception ex) { FirmwareTrace.Warn("Callback exception (ignored): {0}", ex.Message); }
+        }
+
+        // ============================================================
+        // Platform detection and strategy resolution
+        // ============================================================
+
         /// <summary>
         /// Merges fluent-registered callbacks into <see cref="FirmwareConfig"/> so that
         /// strategies and validators can fire them internally without needing separate
