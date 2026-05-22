@@ -2,7 +2,7 @@ namespace GeneralUpdate.Firmware.Strategy
 {
     /// <summary>
     /// Enumerates the supported platforms for firmware update strategies.
-    /// Used by <see cref="FirmwareBootstrap"/> to resolve the appropriate strategy at runtime.
+    /// Used by <see cref="GeneralFirmwareBootstrap"/> to resolve the appropriate strategy at runtime.
     /// </summary>
     public enum FirmwarePlatform
     {

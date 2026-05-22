@@ -6,7 +6,7 @@ namespace GeneralUpdate.Firmware.Models
     /// <summary>
     /// Aggregated configuration object for firmware update operations.
     /// All strategies, OTA parameters, and behavioral options are centralized here.
-    /// Pass an instance of this class to the <see cref="FirmwareBootstrap"/> builder.
+    /// Pass an instance of this class to the <see cref="GeneralFirmwareBootstrap"/> builder.
     /// </summary>
     public class FirmwareConfig
     {

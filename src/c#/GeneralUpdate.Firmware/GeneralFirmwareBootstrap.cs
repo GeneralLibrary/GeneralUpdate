@@ -19,7 +19,7 @@ namespace GeneralUpdate.Firmware
     /// // Initialize trace logging (call once at application startup)
     /// FirmwareTrace.Initialize();
     /// 
-    /// var result = await FirmwareBootstrap.Create(config =>
+    /// var result = await GeneralFirmwareBootstrap.Create(config =>
     /// {
     ///     config.FirmwareUrl = "https://example.com/firmware.bin";
     ///     config.DevicePath = "/dev/mmcblk0";
@@ -28,35 +28,35 @@ namespace GeneralUpdate.Firmware
     /// .ExecuteAsync();
     /// </code>
     /// </summary>
-    public class FirmwareBootstrap
+    public class GeneralFirmwareBootstrap
     {
         private FirmwareConfig _config;
         private IFirmwareStrategy _strategy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FirmwareBootstrap"/> class.
+        /// Initializes a new instance of the <see cref="GeneralFirmwareBootstrap"/> class.
         /// Use the static <see cref="Create"/> method instead of calling the constructor directly.
         /// </summary>
         /// <param name="config">The firmware update configuration.</param>
-        private FirmwareBootstrap(FirmwareConfig config)
+        private GeneralFirmwareBootstrap(FirmwareConfig config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            FirmwareTrace.Info("FirmwareBootstrap instance created with config: {0}", config);
+            FirmwareTrace.Info("GeneralFirmwareBootstrap instance created with config: {0}", config);
         }
 
         /// <summary>
-        /// Creates a new <see cref="FirmwareBootstrap"/> instance with the provided configuration.
+        /// Creates a new <see cref="GeneralFirmwareBootstrap"/> instance with the provided configuration.
         /// This is the recommended way to start a firmware update flow.
         /// </summary>
         /// <param name="configure">A delegate to populate the <see cref="FirmwareConfig"/>.</param>
-        /// <returns>A configured <see cref="FirmwareBootstrap"/> instance.</returns>
-        public static FirmwareBootstrap Create(Action<FirmwareConfig> configure)
+        /// <returns>A configured <see cref="GeneralFirmwareBootstrap"/> instance.</returns>
+        public static GeneralFirmwareBootstrap Create(Action<FirmwareConfig> configure)
         {
-            FirmwareTrace.Info("FirmwareBootstrap.Create called");
+            FirmwareTrace.Info("GeneralFirmwareBootstrap.Create called");
 
             if (configure == null)
             {
-                FirmwareTrace.Error("FirmwareBootstrap.Create failed: configure delegate is null");
+                FirmwareTrace.Error("GeneralFirmwareBootstrap.Create failed: configure delegate is null");
                 throw new ArgumentNullException(nameof(configure));
             }
 
@@ -71,7 +71,7 @@ namespace GeneralUpdate.Firmware
             }
 
             FirmwareTrace.Info("FirmwareConfig validated successfully");
-            return new FirmwareBootstrap(config);
+            return new GeneralFirmwareBootstrap(config);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace GeneralUpdate.Firmware
         /// <exception cref="PlatformNotSupportedException">
         /// Thrown when the current platform is not supported.
         /// </exception>
-        public FirmwareBootstrap UseDefaultStrategy()
+        public GeneralFirmwareBootstrap UseDefaultStrategy()
         {
             FirmwareTrace.Info("Selecting default strategy (auto-detect platform)");
 
@@ -107,7 +107,7 @@ namespace GeneralUpdate.Firmware
         /// </summary>
         /// <param name="platform">The target platform.</param>
         /// <returns>This instance for fluent chaining.</returns>
-        public FirmwareBootstrap UsePlatform(FirmwarePlatform platform)
+        public GeneralFirmwareBootstrap UsePlatform(FirmwarePlatform platform)
         {
             FirmwareTrace.Info("Using specified platform strategy: {0}", platform);
             _strategy = ResolveStrategy(platform);
@@ -120,7 +120,7 @@ namespace GeneralUpdate.Firmware
         /// </summary>
         /// <param name="strategy">A custom strategy implementation.</param>
         /// <returns>This instance for fluent chaining.</returns>
-        public FirmwareBootstrap UseStrategy(IFirmwareStrategy strategy)
+        public GeneralFirmwareBootstrap UseStrategy(IFirmwareStrategy strategy)
         {
             if (strategy == null)
             {
