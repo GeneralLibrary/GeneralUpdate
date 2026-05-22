@@ -7,6 +7,7 @@
     <Project Path="GeneralUpdate.Differential/GeneralUpdate.Differential.csproj" />
     <Project Path="GeneralUpdate.Drivelution/GeneralUpdate.Drivelution.csproj" />
     <Project Path="GeneralUpdate.Extension/GeneralUpdate.Extension.csproj" />
+    <Project Path="GeneralUpdate.Firmware/GeneralUpdate.Firmware.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="BowlTest/BowlTest.csproj" />
