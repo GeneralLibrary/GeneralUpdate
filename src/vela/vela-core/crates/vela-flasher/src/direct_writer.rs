@@ -98,11 +98,8 @@ impl BlockDeviceWriter {
 
     /// Return the SHA-256 hex string of all data written so far.
     ///
-    /// Returns `None` if no data has been written yet.
+    /// Returns the SHA-256 of the empty string if no data has been written yet.
     pub fn sha256_checksum(&self) -> Option<String> {
-        if self.bytes_written == 0 {
-            return None;
-        }
         let hash = self.hasher.clone().finalize();
         Some(hex::encode(hash))
     }
@@ -262,13 +259,14 @@ mod tests {
         let mut writer = writer_for_temp(&tmp);
 
         let payload = vec![0xAAu8; 5000];
-        let mut callback_calls: Vec<(u64, u64)> = Vec::new();
+        let callback_calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<(u64, u64)>::new()));
+        let calls_ref = callback_calls.clone();
         let cb: ProgressCallback = Box::new(move |written, total| {
-            callback_calls.push((written, total));
+            calls_ref.lock().unwrap().push((written, total));
         });
 
         writer.write_image(&payload, Some(&cb)).unwrap();
-        assert!(!callback_calls.is_empty(), "Progress callback was never called");
+        assert!(!callback_calls.lock().unwrap().is_empty(), "Progress callback was never called");
     }
 
     #[test]
@@ -327,11 +325,14 @@ mod tests {
     }
 
     #[test]
-    fn test_sha256_none_before_write() {
+    fn test_sha256_returns_empty_hash_before_write() {
         let tmp = NamedTempFile::new().unwrap();
         let writer = writer_for_temp(&tmp);
-        assert!(writer.sha256_checksum().is_none());
-        assert!(!writer.verify_checksum("anything")); // no data yet
+        // sha256_checksum() returns the hash of empty input when no data written
+        let checksum = writer.sha256_checksum().expect("should return a checksum even for empty input");
+        // SHA-256 of empty string
+        assert_eq!(checksum, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        assert!(!writer.verify_checksum("anything"));
     }
 
     #[test]

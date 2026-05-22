@@ -268,7 +268,7 @@ mod tests {
         let dev_path = tmp.path().to_string_lossy().to_string();
 
         let mut mgr = SlotManager::default();
-        mgr.set_device_override(Some(dev_path));
+        mgr.set_device_override(Some(dev_path.clone()));
 
         let config = FlashConfig::new(&dev_path)
             .chunk_size(128)

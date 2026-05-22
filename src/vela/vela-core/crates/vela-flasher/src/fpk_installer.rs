@@ -146,7 +146,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let fpk_path = dir.path().join("test.fpk");
 
-        let file = File::create(&fpk_path).unwrap();
+        let file = std::fs::File::create(&fpk_path).unwrap();
         let mut archive = tar::Builder::new(file);
 
         // 1. Compress the payload
@@ -256,9 +256,10 @@ mod tests {
         let writer = writer_for_temp(device_file.path());
         let mut installer = FpkInstaller::new(fpk_path.to_string_lossy().as_ref(), writer);
 
-        let mut calls = Vec::new();
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<(u64, u64)>::new()));
+        let calls_ref = calls.clone();
         let cb: ProgressCallback = Box::new(move |w, t| {
-            calls.push((w, t));
+            calls_ref.lock().unwrap().push((w, t));
         });
 
         let bytes = installer.install(Some(&cb)).unwrap();

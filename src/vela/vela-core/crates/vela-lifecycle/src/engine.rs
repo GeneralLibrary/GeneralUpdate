@@ -292,7 +292,6 @@ mod tests {
     use super::*;
     use crate::LifecycleConfig;
     use std::io::Write;
-    use std::sync::Mutex;
     use tempfile::NamedTempFile;
     use vela_flashpack::header::{FpkHeader, PayloadType};
     use sha2::{Digest, Sha256};
