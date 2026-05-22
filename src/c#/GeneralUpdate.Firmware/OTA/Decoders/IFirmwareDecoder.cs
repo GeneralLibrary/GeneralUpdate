@@ -5,7 +5,7 @@ using GeneralUpdate.Firmware.Models;
 namespace GeneralUpdate.Firmware.OTA.Decoders
 {
     /// <summary>
-    /// Internal interface for firmware format decoders.
+    /// Interface for firmware format decoders.
     /// Each implementation parses a specific firmware file format
     /// and returns the unified raw byte stream ready for flashing.
     /// 
@@ -19,7 +19,7 @@ namespace GeneralUpdate.Firmware.OTA.Decoders
     ///   <item><description><c>AndroidSparseDecoder</c> — .sparse, chunk-based sparse image</description></item>
     /// </list>
     /// </summary>
-    internal interface IFirmwareDecoder
+    public interface IFirmwareDecoder
     {
         /// <summary>
         /// Gets the firmware format that this decoder handles.

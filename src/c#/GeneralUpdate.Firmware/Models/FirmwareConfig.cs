@@ -37,6 +37,20 @@ namespace GeneralUpdate.Firmware.Models
         public FirmwareFormat Format { get; set; } = FirmwareFormat.Auto;
 
         /// <summary>
+        /// Gets or sets a custom firmware format decoder instance.
+        /// When set, this overrides both auto-detection and the <see cref="Format"/> property.
+        /// Use this for proprietary or non-standard firmware formats.
+        /// </summary>
+        public OTA.Decoders.IFirmwareDecoder CustomDecoder { get; set; }
+
+        /// <summary>
+        /// Gets or sets pre-decoded raw firmware data.
+        /// When set, the entire format decoding step (Step 3) is skipped
+        /// and this byte array is written directly to the device.
+        /// </summary>
+        public byte[] PreDecodedData { get; set; }
+
+        /// <summary>
         /// Gets or sets the device path or identifier to which the firmware should be written
         /// (e.g., "/dev/mmcblk0" on Linux, "\\.\PhysicalDrive0" on Windows).
         /// This is a convenience property that delegates to <see cref="DeviceConnection.DevicePath"/>.
