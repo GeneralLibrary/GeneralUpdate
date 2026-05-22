@@ -2,6 +2,7 @@
 members = [
     "crates/vela-crypto",
     "crates/vela-flashpack",
+    "crates/vela-flasher",
     "crates/vela-attestation",
     "crates/vela-lifecycle",
     "crates/vela-slotmgr",

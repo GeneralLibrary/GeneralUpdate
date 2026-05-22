@@ -1,5 +1,5 @@
 [package]
-name = "vela-slotmgr"
+name = "vela-flasher"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,12 +8,15 @@ license.workspace = true
 [dependencies]
 tracing.workspace = true
 thiserror.workspace = true
-async-trait.workspace = true
 serde.workspace = true
-libc.workspace = true
+serde_json.workspace = true
 tokio = { workspace = true, features = ["fs", "io-util", "rt"] }
-vela-flasher = { path = "../vela-flasher" }
+sha2.workspace = true
+hex.workspace = true
+flate2.workspace = true
+tar.workspace = true
+vela-flashpack = { path = "../vela-flashpack" }
+vela-crypto = { path = "../vela-crypto" }
 
 [dev-dependencies]
 tempfile.workspace = true
-mockall.workspace = true
