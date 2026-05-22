@@ -126,7 +126,7 @@ namespace GeneralUpdate.Common.FileBasic
                     }
 
                     if (!shouldSkip)
-                        files.AddRange(GetAllfiles(dic.FullName));
+                        files.AddRange(GetAllFiles(dic.FullName, skipDirectorys));
                 }
 
                 return files;
@@ -134,26 +134,6 @@ namespace GeneralUpdate.Common.FileBasic
             catch
             {
                 return new List<FileInfo>();
-            }
-        }
-
-        private static List<FileInfo> GetAllfiles(string path)
-        {
-            try
-            {
-                var files = new List<FileInfo>();
-                files.AddRange(new DirectoryInfo(path).GetFiles());
-                var tmpDir = new DirectoryInfo(path).GetDirectories();
-                foreach (var dic in tmpDir)
-                {
-                    files.AddRange(GetAllfiles(dic.FullName));
-                }
-
-                return files;
-            }
-            catch (Exception)
-            {
-                return null;
             }
         }
 
