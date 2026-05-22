@@ -37,4 +37,9 @@
     </None>
   </ItemGroup>
 
+  <!-- System.IO.Ports for serial (XMODEM/YMODEM) firmware transfer -->
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="4.5.0" />
+  </ItemGroup>
+
 </Project>

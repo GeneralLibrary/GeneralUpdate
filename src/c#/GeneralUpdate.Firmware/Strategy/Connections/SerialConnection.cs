@@ -1,25 +1,26 @@
 using System;
+using System.IO;
+using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
+using GeneralUpdate.Firmware.Strategy.Connections.Protocol;
 using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware.Strategy.Connections
 {
     /// <summary>
     /// Connection implementation for serial firmware transfer (UART/RS232).
-    /// Supports XMODEM and YMODEM protocols with automatic negotiation.
+    /// Uses the full XMODEM/YMODEM protocol implementations with automatic negotiation.
     /// 
     /// <para>
-    /// Requires the System.IO.Ports NuGet package for SerialPort support.
-    /// This implementation provides the protocol framework with a fallback
-    /// warning when SerialPort is not available.
+    /// Requires the System.IO.Ports NuGet package (v4.5+) for SerialPort support.
     /// </para>
     /// </summary>
     internal class SerialConnection : IConnection
     {
         private readonly DeviceConnection _config;
-        private bool _opened;
+        private SerialPort _serialPort;
 
         public SerialConnection(DeviceConnection config)
         {
@@ -29,128 +30,118 @@ namespace GeneralUpdate.Firmware.Strategy.Connections
         public Task OpenAsync(CancellationToken cancellationToken)
         {
             FirmwareTrace.Info(
-                "Opening serial connection: {0} @ {1} baud (protocol: {2})",
+                "Opening serial port: {0} @ {1} baud (protocol: {2})",
                 _config.SerialPort,
                 _config.BaudRate,
                 _config.SerialProtocol);
 
-            // SerialPort is not available in netstandard2.0 without a NuGet package.
-            // When the System.IO.Ports package is referenced by the host application,
-            // the runtime will resolve System.IO.Ports.SerialPort.
-            // For now, provide a clear diagnostic.
-            FirmwareTrace.Warn(
-                "SerialPort support requires the System.IO.Ports NuGet package. " +
-                "If serial firmware updates are needed, add a PackageReference to System.IO.Ports v4.5+.");
+            _serialPort = new SerialPort(
+                _config.SerialPort,
+                _config.BaudRate,
+                Parity.None, 8, StopBits.One)
+            {
+                ReadTimeout = StreamHelpers.DefaultTimeoutMs,
+                WriteTimeout = StreamHelpers.DefaultTimeoutMs,
+                DtrEnable = true,
+                RtsEnable = true
+            };
 
-            _opened = true;
+            _serialPort.Open();
+            FirmwareTrace.Info("Serial port opened: {0}", _config.SerialPort);
             return Task.CompletedTask;
         }
 
         public async Task WriteAsync(byte[] data, CancellationToken cancellationToken)
         {
-            if (!_opened)
-                throw new InvalidOperationException("Connection is not open. Call OpenAsync first.");
+            if (_serialPort == null || !_serialPort.IsOpen)
+                throw new InvalidOperationException("Serial port is not open. Call OpenAsync first.");
 
             FirmwareTrace.Info(
-                "Starting serial firmware transfer: {0} bytes via {1}",
-                data.Length,
-                _config.SerialProtocol);
+                "Serial transfer: {0} bytes via {1}", data.Length, _config.SerialProtocol);
 
-            SerialProtocol protocol = ResolveProtocol();
+            Stream stream = _serialPort.BaseStream;
+            SerialProtocol protocol = _config.SerialProtocol;
 
-            await Task.Run(() => SendViaProtocol(data, protocol), cancellationToken)
-                .ConfigureAwait(false);
+            // Auto-negotiate if needed
+            if (protocol == SerialProtocol.Auto)
+            {
+                protocol = await NegotiateAsync(stream, cancellationToken)
+                    .ConfigureAwait(false);
+                FirmwareTrace.Info("Negotiated protocol: {0}", protocol);
+            }
+
+            switch (protocol)
+            {
+                case SerialProtocol.XModem:
+                    await XModemProtocol.SendAsync(stream, data, 128, useCrc: false, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+
+                case SerialProtocol.XModemCRC:
+                    await XModemProtocol.SendAsync(stream, data, 128, useCrc: true, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+
+                case SerialProtocol.XModem1K:
+                    await XModemProtocol.SendAsync(stream, data, 1024, useCrc: true, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+
+                case SerialProtocol.YModem:
+                    await YModemProtocol.SendAsync(stream, data, "firmware.bin", cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+
+                default:
+                    throw new NotSupportedException(string.Format(
+                        "Protocol {0} not supported.", protocol));
+            }
         }
 
         public Task CloseAsync()
         {
-            _opened = false;
-            FirmwareTrace.Debug("Serial connection closed.");
+            if (_serialPort != null)
+            {
+                try { if (_serialPort.IsOpen) _serialPort.Close(); }
+                catch { /* ignore close errors */ }
+                _serialPort.Dispose();
+                _serialPort = null;
+                FirmwareTrace.Debug("Serial port closed.");
+            }
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Resolves the actual serial protocol to use, starting from the configured protocol.
-        /// Auto mode attempts YMODEM first, then falls back through XMODEM variants.
+        /// Auto-negotiates protocol by reading the receiver's init character.
+        /// 'C' (0x43) = CRC-capable → YMODEM.
+        /// NAK (0x15) = checksum-only → XMODEM.
+        /// Default = XMODEM-CRC.
         /// </summary>
-        private SerialProtocol ResolveProtocol()
+        private static async Task<SerialProtocol> NegotiateAsync(
+            Stream stream, CancellationToken cancellationToken)
         {
-            if (_config.SerialProtocol != SerialProtocol.Auto)
+            await StreamHelpers.DrainAsync(stream, cancellationToken).ConfigureAwait(false);
+
+            try
             {
-                return _config.SerialProtocol;
+                int initChar = await StreamHelpers.ReadByteWithTimeoutAsync(
+                    stream, StreamHelpers.DefaultTimeoutMs, cancellationToken).ConfigureAwait(false);
+
+                if (initChar == StreamHelpers.C)
+                {
+                    FirmwareTrace.Debug("Receiver requested CRC. Using YMODEM.");
+                    return SerialProtocol.YModem;
+                }
+                if (initChar == StreamHelpers.NAK)
+                {
+                    FirmwareTrace.Debug("Receiver sent NAK. Using XMODEM checksum.");
+                    return SerialProtocol.XModem;
+                }
             }
+            catch (TimeoutException) { }
 
-            // Auto-negotiation: in a real implementation, we would send
-            // the YMODEM/C initialization character ('C') and wait for the
-            // bootloader to respond. Based on the response, select the protocol.
-            //
-            // Negotiation order:
-            //   1. Send 'C' (CRC-16 request) → YMODEM if ACK
-            //   2. Send 'C' (CRC-8 request)  → XMODEM-CRC if ACK
-            //   3. Send NAK                    → XMODEM if NAK received
-            //   4. Timeout                    → error
-
-            FirmwareTrace.Info("Auto-negotiating serial protocol...");
-            return SerialProtocol.YModem; // prefer YMODEM with CRC-16
-        }
-
-        /// <summary>
-        /// Sends firmware data using the specified protocol.
-        /// This is a stub for the actual XMODEM/YMODEM implementation.
-        /// </summary>
-        private void SendViaProtocol(byte[] data, SerialProtocol protocol)
-        {
-            switch (protocol)
-            {
-                case SerialProtocol.XModem:
-                    SendXModem(data, packetSize: 128, useCrc: false);
-                    break;
-                case SerialProtocol.XModemCRC:
-                    SendXModem(data, packetSize: 128, useCrc: true);
-                    break;
-                case SerialProtocol.XModem1K:
-                    SendXModem(data, packetSize: 1024, useCrc: true);
-                    break;
-                case SerialProtocol.YModem:
-                    SendYModem(data);
-                    break;
-                default:
-                    throw new NotSupportedException(string.Format(
-                        "Serial protocol {0} is not supported.", protocol));
-            }
-        }
-
-        private void SendXModem(byte[] data, int packetSize, bool useCrc)
-        {
-            // XMODEM protocol implementation:
-            // 1. Wait for receiver to send 'C' (CRC) or NAK (checksum)
-            // 2. Send packets: SOH + seq + ~seq + data[128] + CRC/checksum
-            // 3. Wait for ACK, retry on NAK up to 10 times
-            // 4. Send EOT to end transfer
-            //
-            // This is a framework stub. Full implementation requires SerialPort access.
-            throw new NotImplementedException(
-                string.Format(
-                    "XMODEM-{0} ({1}) serial transfer is a framework stub. " +
-                    "Full serial protocol implementation requires the System.IO.Ports NuGet package " +
-                    "and will be provided in a follow-up PR.",
-                    packetSize,
-                    useCrc ? "CRC-8" : "Checksum"));
-        }
-
-        private void SendYModem(byte[] data)
-        {
-            // YMODEM protocol implementation:
-            // 1. Wait for receiver to send 'C' (CRC-16 request)
-            // 2. Send block 0: STX + 00 + FF + filename\0 + size\0 + ... + CRC-16
-            // 3. Wait for ACK, then send data blocks: STX + seq + ~seq + data[1024] + CRC-16
-            // 4. Send EOT to end transfer
-            //
-            // This is a framework stub. Full implementation requires SerialPort access.
-            throw new NotImplementedException(
-                "YMODEM serial transfer is a framework stub. " +
-                "Full serial protocol implementation requires the System.IO.Ports NuGet package " +
-                "and will be provided in a follow-up PR.");
+            FirmwareTrace.Debug("Defaulting to XMODEM-CRC.");
+            return SerialProtocol.XModemCRC;
         }
     }
 }
