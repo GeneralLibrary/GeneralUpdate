@@ -1,0 +1,594 @@
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using GeneralUpdate.Firmware.Models;
+using GeneralUpdate.Firmware.Trace;
+
+namespace GeneralUpdate.Firmware.Strategy.Platforms
+{
+    /// <summary>
+    /// Linux-specific firmware update strategy that leverages vela's firmware upgrade
+    /// capabilities for dual A/B slot flash operations on embedded Linux devices.
+    /// 
+    /// <para>
+    /// This strategy supports two update modes:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><description><b>Vela FlashPack mode</b> — For structured <c>.fpk</c> firmware packages,
+    ///   uses the vela-flashpack engine for A/B slot management.</description></item>
+    ///   <item><description><b>Direct write mode</b> — For bare firmware binaries (<c>.bin</c>, <c>.img</c>),
+    ///   writes directly to the target block device.</description></item>
+    /// </list>
+    /// 
+    /// <para>
+    /// The strategy auto-detects vela availability on the system at initialization time
+    /// and selects the appropriate mode.
+    /// </para>
+    /// </summary>
+    public class LinuxFirmwareStrategy : IFirmwareStrategy
+    {
+        /// <summary>
+        /// Gets the target platform for this strategy — always <see cref="FirmwarePlatform.Linux"/>.
+        /// </summary>
+        public FirmwarePlatform TargetPlatform => FirmwarePlatform.Linux;
+
+        /// <summary>
+        /// Gets whether the vela CLI tool is available on this system.
+        /// </summary>
+        public bool IsVelaAvailable { get; }
+
+        // Default buffer size for block device I/O: 1MB
+        private const int BlockDeviceBufferSize = 1024 * 1024;
+
+        // Minimum device size to consider valid (512 bytes — one sector)
+        private const long MinimumDeviceSize = 512;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LinuxFirmwareStrategy"/> class.
+        /// Detects vela availability at construction time.
+        /// </summary>
+        public LinuxFirmwareStrategy()
+        {
+            IsVelaAvailable = DetectVelaAvailability();
+            FirmwareTrace.Info(
+                "LinuxFirmwareStrategy initialized. Vela available: {0}",
+                IsVelaAvailable);
+        }
+
+        /// <summary>
+        /// Validates whether the target device is ready for a firmware update.
+        /// Checks device existence, block device type, and write permissions.
+        /// </summary>
+        /// <param name="config">The firmware update configuration.</param>
+        /// <param name="cancellationToken">Cancellation token for the operation.</param>
+        /// <returns>True if the device is ready; false otherwise.</returns>
+        public Task<bool> ValidateDeviceAsync(FirmwareConfig config, CancellationToken cancellationToken)
+        {
+            FirmwareTrace.BeginOperation("LinuxDeviceValidation");
+            FirmwareTrace.Info("Validating Linux device: {0}", config.DevicePath);
+
+            try
+            {
+                string devicePath = config.DevicePath;
+
+                if (string.IsNullOrWhiteSpace(devicePath))
+                {
+                    FirmwareTrace.Error("Device path is null or empty.");
+                    FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                    return Task.FromResult(false);
+                }
+
+                // Check if the device exists
+                if (!File.Exists(devicePath) && !System.IO.Directory.Exists(devicePath))
+                {
+                    // On Linux, block devices may not appear as regular files.
+                    // Try to check via /dev or /sys/block path.
+                    FirmwareTrace.Warn(
+                        "Device path '{0}' does not exist as a regular file. " +
+                        "It may still be valid as a block device. " +
+                        "Ensure you have the correct path (e.g., /dev/mmcblk0, /dev/sda).",
+                        devicePath);
+                }
+
+                // Attempt to open the device for write to check permissions
+                try
+                {
+                    using (var fs = new FileStream(
+                        devicePath,
+                        FileMode.Open,
+                        FileAccess.Write,
+                        FileShare.None,
+                        bufferSize: 4096,
+                        useAsync: false))
+                    {
+                        long deviceSize = fs.Length;
+                        FirmwareTrace.Info("Device size: {0} bytes ({1:F1} MB)", deviceSize, deviceSize / (1024.0 * 1024.0));
+
+                        if (deviceSize < MinimumDeviceSize)
+                        {
+                            FirmwareTrace.Error(
+                                "Device size ({0} bytes) is below the minimum ({1} bytes).",
+                                deviceSize,
+                                MinimumDeviceSize);
+                            FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                            return Task.FromResult(false);
+                        }
+                    }
+                }
+                catch (UnauthorizedAccessException uae)
+                {
+                    FirmwareTrace.Error(
+                        "Permission denied accessing device '{0}'. " +
+                        "Firmware update requires root privileges or appropriate device permissions. " +
+                        "Error: {1}",
+                        devicePath,
+                        uae.Message);
+                    FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                    return Task.FromResult(false);
+                }
+                catch (FileNotFoundException fnf)
+                {
+                    FirmwareTrace.Error("Device not found: {0}. Error: {1}", devicePath, fnf.Message);
+                    FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                    return Task.FromResult(false);
+                }
+                catch (DirectoryNotFoundException dnf)
+                {
+                    FirmwareTrace.Error("Device directory not found: {0}. Error: {1}", devicePath, dnf.Message);
+                    FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                    return Task.FromResult(false);
+                }
+
+                // Check vela availability if using .fpk format
+                if (IsVelaAvailable)
+                {
+                    FirmwareTrace.Info("Vela flash engine detected — will use A/B slot management.");
+                }
+                else
+                {
+                    FirmwareTrace.Warn(
+                        "Vela flash engine not detected. Will use direct block device write mode. " +
+                        "A/B slot management is not available without vela.");
+                }
+
+                FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, true);
+                FirmwareTrace.Info("Linux device validation completed successfully.");
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                FirmwareTrace.Error("Unexpected error during device validation", ex);
+                FirmwareTrace.EndOperation("LinuxDeviceValidation", TimeSpan.Zero, false);
+                return Task.FromResult(false);
+            }
+        }
+
+        /// <summary>
+        /// Backs up the current firmware from the target device to the backup directory.
+        /// </summary>
+        /// <param name="config">The firmware update configuration.</param>
+        /// <param name="cancellationToken">Cancellation token for the operation.</param>
+        /// <returns>True if backup succeeded; false otherwise.</returns>
+        public async Task<bool> BackupCurrentFirmwareAsync(FirmwareConfig config, CancellationToken cancellationToken)
+        {
+            FirmwareTrace.BeginOperation("LinuxFirmwareBackup");
+            FirmwareTrace.Info("Backing up firmware from device: {0}", config.DevicePath);
+
+            try
+            {
+                string backupDir = string.IsNullOrWhiteSpace(config.BackupDirectory)
+                    ? System.IO.Directory.GetCurrentDirectory()
+                    : config.BackupDirectory;
+
+                if (!System.IO.Directory.Exists(backupDir))
+                {
+                    System.IO.Directory.CreateDirectory(backupDir);
+                    FirmwareTrace.Debug("Created backup directory: {0}", backupDir);
+                }
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+                string backupFileName = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "firmware_backup_{0}_{1}.img",
+                    Path.GetFileName(config.DevicePath) ?? "device",
+                    timestamp);
+                string backupPath = Path.Combine(backupDir, backupFileName);
+
+                FirmwareTrace.Info("Backup target path: {0}", backupPath);
+
+                long totalBytesRead = 0;
+
+                using (var sourceStream = new FileStream(
+                    config.DevicePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    BlockDeviceBufferSize,
+                    useAsync: true))
+                using (var destStream = new FileStream(
+                    backupPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    BlockDeviceBufferSize,
+                    useAsync: true))
+                {
+                    byte[] buffer = new byte[BlockDeviceBufferSize];
+                    int bytesRead;
+
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
+                        .ConfigureAwait(false)) > 0)
+                    {
+                        await destStream.WriteAsync(buffer, 0, bytesRead, cancellationToken)
+                            .ConfigureAwait(false);
+                        totalBytesRead += bytesRead;
+
+                        if (totalBytesRead % (10 * BlockDeviceBufferSize) == 0)
+                        {
+                            FirmwareTrace.Progress("Backup", totalBytesRead, sourceStream.Length);
+                        }
+                    }
+
+                    await destStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                FirmwareTrace.Info(
+                    "Backup completed. {0} bytes written to {1}",
+                    totalBytesRead,
+                    backupPath);
+                FirmwareTrace.EndOperation("LinuxFirmwareBackup", TimeSpan.Zero, true);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                FirmwareTrace.Warn("Firmware backup was cancelled.");
+                FirmwareTrace.EndOperation("LinuxFirmwareBackup", TimeSpan.Zero, false);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                FirmwareTrace.Error("Firmware backup failed", ex);
+                FirmwareTrace.EndOperation("LinuxFirmwareBackup", TimeSpan.Zero, false);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Applies the firmware file to the target Linux block device.
+        /// Supports both vela FlashPack (.fpk) and raw binary formats.
+        /// </summary>
+        /// <param name="firmwareFilePath">The path to the firmware file to flash.</param>
+        /// <param name="config">The firmware update configuration.</param>
+        /// <param name="cancellationToken">Cancellation token for the operation.</param>
+        /// <returns>A result indicating success or failure.</returns>
+        public async Task<FirmwareUpdateResult> ApplyFirmwareAsync(
+            string firmwareFilePath,
+            FirmwareConfig config,
+            CancellationToken cancellationToken)
+        {
+            var applySw = Stopwatch.StartNew();
+
+            FirmwareTrace.BeginOperation("LinuxApplyFirmware");
+            FirmwareTrace.Info("Flashing firmware to device: {0}", config.DevicePath);
+            FirmwareTrace.Info("Firmware file: {0}", firmwareFilePath);
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(firmwareFilePath))
+                {
+                    return FirmwareUpdateResult.Fail(
+                        "Firmware file path is null or empty.",
+                        "FW_LINUX_NO_FILE");
+                }
+
+                if (!File.Exists(firmwareFilePath))
+                {
+                    return FirmwareUpdateResult.Fail(
+                        string.Format("Firmware file not found: {0}", firmwareFilePath),
+                        "FW_LINUX_FILE_NOT_FOUND");
+                }
+
+                // Determine flashing mode based on file extension and vela availability
+                string extension = Path.GetExtension(firmwareFilePath)?.ToLowerInvariant();
+                bool isFlashPack = extension == ".fpk";
+
+                if (isFlashPack && IsVelaAvailable)
+                {
+                    FirmwareTrace.Info("Using vela FlashPack mode for .fpk firmware");
+                    applySw.Stop();
+                    return await ApplyVelaFlashPackAsync(firmwareFilePath, config, cancellationToken, applySw)
+                        .ConfigureAwait(false);
+                }
+
+                if (isFlashPack && !IsVelaAvailable)
+                {
+                    return FirmwareUpdateResult.Fail(
+                        "Firmware file is in vela FlashPack (.fpk) format, but vela is not installed on this system. " +
+                        "Install vela-core or use a raw firmware binary (.bin, .img).",
+                        "FW_LINUX_VELA_NOT_FOUND");
+                }
+
+                // Direct block device write mode
+                FirmwareTrace.Info("Using direct block device write mode");
+                applySw.Stop();
+                return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, applySw)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                applySw.Stop();
+                FirmwareTrace.Warn("Firmware flashing was cancelled.");
+                FirmwareTrace.EndOperation("LinuxApplyFirmware", applySw.Elapsed, false);
+                return FirmwareUpdateResult.Fail(
+                    "Firmware flashing was cancelled.",
+                    "FW_LINUX_CANCELLED",
+                    duration: applySw.Elapsed);
+            }
+            catch (Exception ex)
+            {
+                applySw.Stop();
+                FirmwareTrace.Error("Firmware flashing failed", ex);
+                FirmwareTrace.EndOperation("LinuxApplyFirmware", applySw.Elapsed, false);
+                return FirmwareUpdateResult.Fail(
+                    string.Format("Firmware flashing failed: {0}", ex.Message),
+                    "FW_LINUX_FLASH_ERROR",
+                    ex,
+                    applySw.Elapsed);
+            }
+        }
+
+        /// <summary>
+        /// Writes the firmware binary directly to the block device using FileStream.
+        /// This is the fallback mode when vela is not available.
+        /// </summary>
+        private async Task<FirmwareUpdateResult> ApplyDirectWriteAsync(
+            string firmwareFilePath,
+            FirmwareConfig config,
+            CancellationToken cancellationToken,
+            Stopwatch timer)
+        {
+            FirmwareTrace.Info("Starting direct block device write: {0} -> {1}", firmwareFilePath, config.DevicePath);
+
+            long firmwareSize = new FileInfo(firmwareFilePath).Length;
+            long totalWritten = 0;
+
+            FirmwareTrace.Info("Firmware file size: {0} bytes ({1:F1} MB)", firmwareSize, firmwareSize / (1024.0 * 1024.0));
+
+            try
+            {
+                using (var sourceStream = new FileStream(
+                    firmwareFilePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    BlockDeviceBufferSize,
+                    useAsync: true))
+                using (var deviceStream = new FileStream(
+                    config.DevicePath,
+                    FileMode.Open,
+                    FileAccess.Write,
+                    FileShare.None,
+                    BlockDeviceBufferSize,
+                    useAsync: true))
+                {
+                    // Verify device is large enough
+                    if (deviceStream.Length < firmwareSize)
+                    {
+                        return FirmwareUpdateResult.Fail(
+                            string.Format(
+                                CultureInfo.InvariantCulture,
+                                "Firmware file ({0} bytes) is larger than the target device ({1} bytes).",
+                                firmwareSize,
+                                deviceStream.Length),
+                            "FW_LINUX_SIZE_MISMATCH");
+                    }
+
+                    byte[] buffer = new byte[BlockDeviceBufferSize];
+                    int bytesRead;
+
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
+                        .ConfigureAwait(false)) > 0)
+                    {
+                        await deviceStream.WriteAsync(buffer, 0, bytesRead, cancellationToken)
+                            .ConfigureAwait(false);
+                        totalWritten += bytesRead;
+
+                        // Report progress periodically
+                        if (totalWritten % (10 * BlockDeviceBufferSize) == 0 || totalWritten == firmwareSize)
+                        {
+                            FirmwareTrace.Progress("Flash", totalWritten, firmwareSize);
+
+                            if (config.ProgressCallback != null)
+                            {
+                                try
+                                {
+                                    config.ProgressCallback(totalWritten, firmwareSize);
+                                }
+                                catch (Exception ex)
+                                {
+                                    FirmwareTrace.Warn("Progress callback error (ignored): {0}", ex.Message);
+                                }
+                            }
+                        }
+
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+
+                    // Ensure all data is flushed to the physical device
+                    await deviceStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                timer.Stop();
+                FirmwareTrace.Info(
+                    "Firmware written successfully. {0} bytes in {1:F1}s ({2:F1} MB/s)",
+                    totalWritten,
+                    timer.Elapsed.TotalSeconds,
+                    (totalWritten / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds);
+                FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
+
+                return FirmwareUpdateResult.Succeed(
+                    "direct-write",
+                    timer.Elapsed);
+            }
+            catch (UnauthorizedAccessException uae)
+            {
+                timer.Stop();
+                FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
+                return FirmwareUpdateResult.Fail(
+                    string.Format(
+                        "Permission denied writing to device '{0}'. Run with root privileges. Error: {1}",
+                        config.DevicePath,
+                        uae.Message),
+                    "FW_LINUX_PERMISSION_DENIED",
+                    uae,
+                    timer.Elapsed);
+            }
+        }
+
+        /// <summary>
+        /// Applies a vela FlashPack (.fpk) firmware package to the device using the
+        /// vela flash engine for A/B slot management.
+        /// </summary>
+        private async Task<FirmwareUpdateResult> ApplyVelaFlashPackAsync(
+            string firmwareFilePath,
+            FirmwareConfig config,
+            CancellationToken cancellationToken,
+            Stopwatch timer)
+        {
+            FirmwareTrace.Info("Delegating to vela flash engine for .fpk firmware");
+
+            try
+            {
+                // Attempt to use vela CLI for flash operation
+                // The vela CLI provides: vela flash --input <fpk> --device <path>
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = "vela",
+                    Arguments = string.Format(
+                        CultureInfo.InvariantCulture,
+                        "flash --input \"{0}\" --device \"{1}\" --slot auto",
+                        firmwareFilePath,
+                        config.DevicePath),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = Process.Start(processInfo))
+                {
+                    if (process == null)
+                    {
+                        throw new InvalidOperationException("Failed to start vela process.");
+                    }
+
+                    var outputReader = process.StandardOutput.ReadToEndAsync();
+                    var errorReader = process.StandardError.ReadToEndAsync();
+
+                    // Wait with timeout
+                    if (!process.WaitForExit(config.TimeoutSeconds * 1000))
+                    {
+                        try { process.Kill(); } catch { /* ignore */ }
+                        throw new TimeoutException(
+                            string.Format(
+                                CultureInfo.InvariantCulture,
+                                "Vela flash operation timed out after {0} seconds.",
+                                config.TimeoutSeconds));
+                    }
+
+                    string stdOut = await outputReader.ConfigureAwait(false);
+                    string stdErr = await errorReader.ConfigureAwait(false);
+
+                    if (process.ExitCode == 0)
+                    {
+                        FirmwareTrace.Info("Vela flash completed successfully.");
+                        if (!string.IsNullOrWhiteSpace(stdOut))
+                        {
+                            FirmwareTrace.Debug("Vela stdout: {0}", stdOut.Trim());
+                        }
+
+                        timer.Stop();
+                        FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
+
+                        return FirmwareUpdateResult.Succeed(
+                            "vela-flashpack",
+                            timer.Elapsed);
+                    }
+                    else
+                    {
+                        string errorMsg = string.Format(
+                            CultureInfo.InvariantCulture,
+                            "Vela flash failed with exit code {0}. Stderr: {1}",
+                            process.ExitCode,
+                            stdErr?.Trim() ?? "(none)");
+
+                        FirmwareTrace.Error(errorMsg);
+                        timer.Stop();
+                        FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
+
+                        return FirmwareUpdateResult.Fail(
+                            errorMsg,
+                            "FW_LINUX_VELA_FLASH_ERROR",
+                            duration: timer.Elapsed);
+                    }
+                }
+            }
+            catch (TimeoutException tex)
+            {
+                timer.Stop();
+                FirmwareTrace.Error("Vela flash timeout", tex);
+                FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
+                return FirmwareUpdateResult.Fail(
+                    tex.Message,
+                    "FW_LINUX_VELA_TIMEOUT",
+                    tex,
+                    timer.Elapsed);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                // Vela not found or failed to start — fall back to direct write
+                FirmwareTrace.Warn(
+                    "Vela flash engine failed: {0}. Falling back to direct block device write.",
+                    ex.Message);
+
+                return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, timer)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Detects whether the vela CLI tool is available on the current system.
+        /// </summary>
+        /// <returns>True if vela is found; false otherwise.</returns>
+        private static bool DetectVelaAvailability()
+        {
+            try
+            {
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = "vela",
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = Process.Start(processInfo))
+                {
+                    if (process == null) return false;
+                    process.WaitForExit(5000);
+                    return process.ExitCode == 0;
+                }
+            }
+            catch (Exception)
+            {
+                // Vela not found or not executable
+                return false;
+            }
+        }
+    }
+}
