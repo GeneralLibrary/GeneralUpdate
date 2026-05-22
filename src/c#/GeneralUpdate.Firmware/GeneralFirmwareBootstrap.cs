@@ -1,11 +1,9 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
 using GeneralUpdate.Firmware.Strategy;
-using GeneralUpdate.Firmware.Strategy.Platforms;
 using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware
@@ -139,50 +137,6 @@ namespace GeneralUpdate.Firmware
         public GeneralFirmwareBootstrap OnWarning(Action<string, string> handler)
         { _onWarning += handler; return this; }
 
-        // ============================================================
-        // Strategy configuration methods
-        // ============================================================
-
-        /// <summary>
-        /// Uses the default platform strategy based on auto-detection of the current OS.
-        /// On Linux, this selects the vela-based strategy.
-        /// On Windows, this selects the OS firmware command strategy.
-        /// </summary>
-        /// <returns>This instance for fluent chaining.</returns>
-        /// <exception cref="PlatformNotSupportedException">
-        /// Thrown when the current platform is not supported.
-        /// </exception>
-        public GeneralFirmwareBootstrap UseDefaultStrategy()
-        {
-            FirmwareTrace.Info("Selecting default strategy (auto-detect platform)");
-
-            // Use explicit platform override if set
-            if (_config.Platform.HasValue)
-            {
-                FirmwareTrace.Info("Using explicit platform override: {0}", _config.Platform.Value);
-                _strategy = ResolveStrategy(_config.Platform.Value);
-                return this;
-            }
-
-            // Auto-detect platform
-            var platform = DetectPlatform();
-            FirmwareTrace.Info("Auto-detected platform: {0} (OS: {1})", platform, RuntimeInformation.OSDescription);
-            _strategy = ResolveStrategy(platform);
-            return this;
-        }
-
-        /// <summary>
-        /// Uses an explicitly specified platform strategy.
-        /// </summary>
-        /// <param name="platform">The target platform.</param>
-        /// <returns>This instance for fluent chaining.</returns>
-        public GeneralFirmwareBootstrap UsePlatform(FirmwarePlatform platform)
-        {
-            FirmwareTrace.Info("Using specified platform strategy: {0}", platform);
-            _strategy = ResolveStrategy(platform);
-            return this;
-        }
-
         /// <summary>
         /// Uses a custom <see cref="IFirmwareStrategy"/> implementation.
         /// Useful for testing or when extending with custom platform support.
@@ -196,10 +150,6 @@ namespace GeneralUpdate.Firmware
                 FirmwareTrace.Error("UseStrategy called with null strategy");
                 throw new ArgumentNullException(nameof(strategy));
             }
-
-            FirmwareTrace.Info("Using custom strategy: {0} (Platform: {1})",
-                strategy.GetType().Name,
-                strategy.TargetPlatform);
             _strategy = strategy;
             return this;
         }
@@ -391,12 +341,6 @@ namespace GeneralUpdate.Firmware
                 FirmwareTrace.BeginOperation("ApplyFirmware");
                 var applySw = Stopwatch.StartNew();
 
-                FirmwareTrace.Info("Applying firmware to device: {0} | File: {1}",
-                    _config.DevicePath,
-                    localPath);
-                FirmwareTrace.Info("Strategy: {0} (Platform: {1})",
-                    _strategy.GetType().Name,
-                    _strategy.TargetPlatform);
 
                 FirmwareUpdateResult result = await _strategy.ApplyFirmwareAsync(localPath, _config, cancellationToken)
                     .ConfigureAwait(false);
@@ -701,68 +645,6 @@ namespace GeneralUpdate.Firmware
             if (callback == null) return;
             try { callback(arg); }
             catch (Exception ex) { FirmwareTrace.Warn("Callback exception (ignored): {0}", ex.Message); }
-        }
-
-        // ============================================================
-        // Platform detection and strategy resolution
-        // ============================================================
-
-        /// <summary>
-        /// Auto-detects the current runtime platform.
-        /// </summary>
-        /// <returns>The detected firmware platform.</returns>
-        /// <exception cref="PlatformNotSupportedException">
-        /// Thrown when the current OS is not supported.
-        /// </exception>
-        internal static FirmwarePlatform DetectPlatform()
-        {
-            FirmwareTrace.Debug("Detecting current runtime platform...");
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                FirmwareTrace.Debug("Platform detected: Linux");
-                return FirmwarePlatform.Linux;
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                FirmwareTrace.Debug("Platform detected: Windows");
-                return FirmwarePlatform.Windows;
-            }
-
-            var error = string.Format(
-                "The current platform '{0}' is not supported by GeneralUpdate.Firmware. Supported platforms: Linux, Windows.",
-                RuntimeInformation.OSDescription);
-            FirmwareTrace.Error(error);
-            throw new PlatformNotSupportedException(error);
-        }
-
-        /// <summary>
-        /// Resolves a platform enum to a concrete strategy instance.
-        /// </summary>
-        /// <param name="platform">The target firmware platform.</param>
-        /// <returns>An instance of <see cref="IFirmwareStrategy"/> for the platform.</returns>
-        /// <exception cref="PlatformNotSupportedException">
-        /// Thrown when the platform strategy is not yet implemented.
-        /// </exception>
-        internal static IFirmwareStrategy ResolveStrategy(FirmwarePlatform platform)
-        {
-            FirmwareTrace.Debug("Resolving strategy for platform: {0}", platform);
-
-            switch (platform)
-            {
-                case FirmwarePlatform.Linux:
-                    FirmwareTrace.Info("Resolving Linux firmware strategy (vela-based)");
-                    return new LinuxFirmwareStrategy();
-
-                case FirmwarePlatform.Windows:
-                    FirmwareTrace.Info("Resolving Windows firmware strategy (OS firmware commands)");
-                    return new WindowsFirmwareStrategy();
-
-                default:
-                    FirmwareTrace.Error("Unknown firmware platform: {0}", platform);
-                    throw new ArgumentOutOfRangeException(nameof(platform), platform, "Unknown firmware platform.");
-            }
         }
     }
 }

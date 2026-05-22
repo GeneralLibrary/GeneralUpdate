@@ -13,11 +13,6 @@ namespace GeneralUpdate.Firmware.Strategy
     public interface IFirmwareStrategy
     {
         /// <summary>
-        /// Gets the platform that this strategy targets.
-        /// </summary>
-        FirmwarePlatform TargetPlatform { get; }
-
-        /// <summary>
         /// Applies the firmware file at the given local path to the target device.
         /// This is the core operation: write the firmware binary to the device,
         /// handle pre/post flashing steps, and verify the write.
