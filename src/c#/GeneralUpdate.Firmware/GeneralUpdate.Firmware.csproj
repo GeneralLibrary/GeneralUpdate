@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- NuGet Package Metadata -->
+    <Version>1.0.0</Version>
+    <Authors>JusterZhu</Authors>
+    <Company>juster.zhu</Company>
+    <Title>GeneralUpdate.Firmware</Title>
+    <Description>A cross-platform firmware update component for the open-source community. Provides unified OTA firmware download, platform-adaptive update strategies (Linux/Windows), and built-in trace logging. Not an SDK — a ready-to-use component for developers.</Description>
+    <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
+    <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
+    <PackageIcon>GeneralUpdate.png</PackageIcon>
+    <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
+    <RepositoryType>public</RepositoryType>
+    <PackageTags>firmware,update,ota,upgrade,cross-platform,linux,windows,embedded,iot</PackageTags>
+    <PackageReleaseNotes>Initial release: core abstractions for cross-platform firmware updates with OTA download, platform-adaptive strategies, and built-in trace logging.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <!-- Package Icon -->
+  <ItemGroup>
+    <None Include="../../../imgs/GeneralUpdate.ico">
+      <Pack>True</Pack>
+      <Link>%(Filename)%(Extension)</Link>
+      <PackagePath>./</PackagePath>
+    </None>
+    <None Include="../../../imgs/GeneralUpdate.png">
+      <Pack>True</Pack>
+      <Link>%(Filename)%(Extension)</Link>
+      <PackagePath>./</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
