@@ -23,10 +23,33 @@ namespace GeneralUpdate.Firmware.Models
         public string LocalFilePath { get; set; }
 
         /// <summary>
+        /// Gets or sets the hardware connection configuration.
+        /// Determines how the firmware is physically transferred to the target device.
+        /// Default is <see cref="ConnectionType.BlockDevice"/>.
+        /// </summary>
+        public DeviceConnection Connection { get; set; } = new DeviceConnection();
+
+        /// <summary>
+        /// Gets or sets the expected firmware file format.
+        /// Set to <see cref="FirmwareFormat.Auto"/> (default) for automatic detection
+        /// based on file extension and magic bytes.
+        /// </summary>
+        public FirmwareFormat Format { get; set; } = FirmwareFormat.Auto;
+
+        /// <summary>
         /// Gets or sets the device path or identifier to which the firmware should be written
         /// (e.g., "/dev/mmcblk0" on Linux, "\\.\PhysicalDrive0" on Windows).
+        /// This is a convenience property that delegates to <see cref="DeviceConnection.DevicePath"/>.
         /// </summary>
-        public string DevicePath { get; set; }
+        public string DevicePath
+        {
+            get => Connection?.DevicePath;
+            set
+            {
+                if (Connection == null) Connection = new DeviceConnection();
+                Connection.DevicePath = value;
+            }
+        }
 
         /// <summary>
         /// Gets or sets the expected SHA256 hash of the firmware for integrity validation.
@@ -94,7 +117,7 @@ namespace GeneralUpdate.Firmware.Models
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(DevicePath))
+            if (Connection == null || !Connection.Validate())
             {
                 return false;
             }
@@ -113,13 +136,12 @@ namespace GeneralUpdate.Firmware.Models
         public override string ToString()
         {
             return string.Format(
-                "FirmwareConfig[Url={0}, Device={1}, Platform={2}, Timeout={3}s, Retry={4}, Backup={5}]",
+                "FirmwareConfig[Url={0}, Connection={1}, Format={2}, Platform={3}, Timeout={4}s]",
                 FirmwareUrl ?? "(local file)",
-                DevicePath ?? "(not set)",
+                Connection?.ToString() ?? "(not set)",
+                Format,
                 Platform?.ToString() ?? "auto-detect",
-                TimeoutSeconds,
-                RetryCount,
-                BackupEnabled);
+                TimeoutSeconds);
         }
     }
 }
