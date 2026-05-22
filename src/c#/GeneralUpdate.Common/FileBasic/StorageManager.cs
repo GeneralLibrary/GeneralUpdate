@@ -118,7 +118,7 @@ namespace GeneralUpdate.Common.FileBasic
                     bool shouldSkip = false;
                     foreach (var notBackup in skipDirectorys)
                     {
-                        if (dic.FullName.Contains(notBackup))
+                        if (dic.Name.Contains(notBackup))
                         {
                             shouldSkip = true;
                             break;

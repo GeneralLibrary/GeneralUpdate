@@ -133,6 +133,7 @@ public class BlackListManager
 
     public bool IsSkipDirectory(string directory)
     {
-        return _skipDirectorys.Any(directory.Contains);
+        var dirName = Path.GetFileName(directory);
+        return _skipDirectorys.Any(dirName.Contains);
     }
 }
