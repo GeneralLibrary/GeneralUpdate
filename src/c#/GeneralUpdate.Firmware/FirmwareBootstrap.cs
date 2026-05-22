@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
 using GeneralUpdate.Firmware.Strategy;
+using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware
 {
@@ -13,6 +15,9 @@ namespace GeneralUpdate.Firmware
     /// 
     /// <para>Usage example:</para>
     /// <code>
+    /// // Initialize trace logging (call once at application startup)
+    /// FirmwareTrace.Initialize();
+    /// 
     /// var result = await FirmwareBootstrap.Create(config =>
     /// {
     ///     config.FirmwareUrl = "https://example.com/firmware.bin";
@@ -35,6 +40,7 @@ namespace GeneralUpdate.Firmware
         private FirmwareBootstrap(FirmwareConfig config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            FirmwareTrace.Info("FirmwareBootstrap instance created with config: {0}", config);
         }
 
         /// <summary>
@@ -45,8 +51,11 @@ namespace GeneralUpdate.Firmware
         /// <returns>A configured <see cref="FirmwareBootstrap"/> instance.</returns>
         public static FirmwareBootstrap Create(Action<FirmwareConfig> configure)
         {
+            FirmwareTrace.Info("FirmwareBootstrap.Create called");
+
             if (configure == null)
             {
+                FirmwareTrace.Error("FirmwareBootstrap.Create failed: configure delegate is null");
                 throw new ArgumentNullException(nameof(configure));
             }
 
@@ -55,10 +64,12 @@ namespace GeneralUpdate.Firmware
 
             if (!config.Validate())
             {
-                throw new InvalidOperationException(
-                    "FirmwareConfig validation failed. Ensure FirmwareUrl (or LocalFilePath) and DevicePath are set, and TimeoutSeconds > 0.");
+                var error = "FirmwareConfig validation failed. Ensure FirmwareUrl (or LocalFilePath) and DevicePath are set, and TimeoutSeconds > 0.";
+                FirmwareTrace.Error(error);
+                throw new InvalidOperationException(error);
             }
 
+            FirmwareTrace.Info("FirmwareConfig validated successfully");
             return new FirmwareBootstrap(config);
         }
 
@@ -73,15 +84,19 @@ namespace GeneralUpdate.Firmware
         /// </exception>
         public FirmwareBootstrap UseDefaultStrategy()
         {
+            FirmwareTrace.Info("Selecting default strategy (auto-detect platform)");
+
             // Use explicit platform override if set
             if (_config.Platform.HasValue)
             {
+                FirmwareTrace.Info("Using explicit platform override: {0}", _config.Platform.Value);
                 _strategy = ResolveStrategy(_config.Platform.Value);
                 return this;
             }
 
             // Auto-detect platform
             var platform = DetectPlatform();
+            FirmwareTrace.Info("Auto-detected platform: {0} (OS: {1})", platform, RuntimeInformation.OSDescription);
             _strategy = ResolveStrategy(platform);
             return this;
         }
@@ -93,6 +108,7 @@ namespace GeneralUpdate.Firmware
         /// <returns>This instance for fluent chaining.</returns>
         public FirmwareBootstrap UsePlatform(FirmwarePlatform platform)
         {
+            FirmwareTrace.Info("Using specified platform strategy: {0}", platform);
             _strategy = ResolveStrategy(platform);
             return this;
         }
@@ -105,7 +121,16 @@ namespace GeneralUpdate.Firmware
         /// <returns>This instance for fluent chaining.</returns>
         public FirmwareBootstrap UseStrategy(IFirmwareStrategy strategy)
         {
-            _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+            if (strategy == null)
+            {
+                FirmwareTrace.Error("UseStrategy called with null strategy");
+                throw new ArgumentNullException(nameof(strategy));
+            }
+
+            FirmwareTrace.Info("Using custom strategy: {0} (Platform: {1})",
+                strategy.GetType().Name,
+                strategy.TargetPlatform);
+            _strategy = strategy;
             return this;
         }
 
@@ -122,17 +147,29 @@ namespace GeneralUpdate.Firmware
         {
             if (_strategy == null)
             {
-                throw new InvalidOperationException(
-                    "No strategy has been configured. Call UseDefaultStrategy(), UsePlatform(), or UseStrategy() before ExecuteAsync().");
+                var error = "No strategy has been configured. Call UseDefaultStrategy(), UsePlatform(), or UseStrategy() before ExecuteAsync().";
+                FirmwareTrace.Error(error);
+                throw new InvalidOperationException(error);
             }
 
-            var overallSw = System.Diagnostics.Stopwatch.StartNew();
+            FirmwareTrace.BeginOperation("FirmwareUpdate");
+
+            var overallSw = Stopwatch.StartNew();
+            var totalStopwatch = Stopwatch.StartNew();
 
             try
             {
+                // ========================================================
                 // Step 1: Validate device readiness
+                // ========================================================
+                FirmwareTrace.BeginOperation("DeviceValidation");
+                var validationSw = Stopwatch.StartNew();
+
                 bool isReady = await _strategy.ValidateDeviceAsync(_config, cancellationToken)
                     .ConfigureAwait(false);
+
+                validationSw.Stop();
+                FirmwareTrace.EndOperation("DeviceValidation", validationSw.Elapsed, isReady);
 
                 if (!isReady)
                 {
@@ -141,11 +178,19 @@ namespace GeneralUpdate.Firmware
                         "FW_DEVICE_NOT_READY");
                 }
 
+                // ========================================================
                 // Step 2: Create backup (if enabled)
+                // ========================================================
                 if (_config.BackupEnabled)
                 {
+                    FirmwareTrace.BeginOperation("FirmwareBackup");
+                    var backupSw = Stopwatch.StartNew();
+
                     bool backupOk = await _strategy.BackupCurrentFirmwareAsync(_config, cancellationToken)
                         .ConfigureAwait(false);
+
+                    backupSw.Stop();
+                    FirmwareTrace.EndOperation("FirmwareBackup", backupSw.Elapsed, backupOk);
 
                     if (!backupOk)
                     {
@@ -154,33 +199,69 @@ namespace GeneralUpdate.Firmware
                             "FW_BACKUP_FAILED");
                     }
                 }
+                else
+                {
+                    FirmwareTrace.Warn("Firmware backup is disabled. Proceeding without safety net.");
+                }
 
-                // Step 3: Download firmware (if URL is provided — downloader will be implemented in Issue 3)
+                // ========================================================
+                // Step 3: Download firmware (if URL is provided)
+                // ========================================================
                 string localPath = _config.LocalFilePath;
                 if (!string.IsNullOrWhiteSpace(_config.FirmwareUrl))
                 {
-                    // Placeholder: download will be implemented in the OTA layer
-                    // For now, if LocalFilePath is not set, this will fail
+                    FirmwareTrace.Info("Firmware URL provided: {0}", _config.FirmwareUrl);
+
                     if (string.IsNullOrWhiteSpace(localPath))
                     {
+                        var downloadError = "Firmware download is not yet implemented. Provide a LocalFilePath for now.";
+                        FirmwareTrace.Error(downloadError);
                         return FirmwareUpdateResult.Fail(
-                            "Firmware download is not yet implemented. Provide a LocalFilePath for now.",
+                            downloadError,
                             "FW_DOWNLOAD_NOT_IMPLEMENTED");
                     }
+
+                    // Placeholder: download will be implemented in the OTA layer (Issue 3)
+                    FirmwareTrace.Info("Local firmware file path: {0}", localPath);
+                }
+                else
+                {
+                    FirmwareTrace.Info("Using local firmware file: {0}", localPath ?? "(not set)");
                 }
 
+                // ========================================================
                 // Step 4: Apply firmware to device
+                // ========================================================
+                FirmwareTrace.BeginOperation("ApplyFirmware");
+                var applySw = Stopwatch.StartNew();
+
+                FirmwareTrace.Info("Applying firmware to device: {0} | File: {1}",
+                    _config.DevicePath,
+                    localPath);
+                FirmwareTrace.Info("Strategy: {0} (Platform: {1})",
+                    _strategy.GetType().Name,
+                    _strategy.TargetPlatform);
+
                 FirmwareUpdateResult result = await _strategy.ApplyFirmwareAsync(localPath, _config, cancellationToken)
                     .ConfigureAwait(false);
 
+                applySw.Stop();
+                FirmwareTrace.EndOperation("ApplyFirmware", applySw.Elapsed, result.Success);
+
                 overallSw.Stop();
                 result.Duration = overallSw.Elapsed;
+
+                FirmwareTrace.EndOperation("FirmwareUpdate", overallSw.Elapsed, result.Success);
+                FirmwareTrace.Info("Total firmware update time: {0:F3}s", overallSw.Elapsed.TotalSeconds);
 
                 return result;
             }
             catch (OperationCanceledException)
             {
                 overallSw.Stop();
+                FirmwareTrace.Warn("Firmware update was cancelled after {0:F3}s", overallSw.Elapsed.TotalSeconds);
+                FirmwareTrace.EndOperation("FirmwareUpdate", overallSw.Elapsed, false);
+
                 return FirmwareUpdateResult.Fail(
                     "Firmware update was cancelled.",
                     "FW_CANCELLED",
@@ -189,6 +270,9 @@ namespace GeneralUpdate.Firmware
             catch (Exception ex)
             {
                 overallSw.Stop();
+                FirmwareTrace.Error("Firmware update failed with unexpected error", ex);
+                FirmwareTrace.EndOperation("FirmwareUpdate", overallSw.Elapsed, false);
+
                 return FirmwareUpdateResult.Fail(
                     string.Format("An unexpected error occurred: {0}", ex.Message),
                     "FW_UNEXPECTED_ERROR",
@@ -206,19 +290,25 @@ namespace GeneralUpdate.Firmware
         /// </exception>
         internal static FirmwarePlatform DetectPlatform()
         {
+            FirmwareTrace.Debug("Detecting current runtime platform...");
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
+                FirmwareTrace.Debug("Platform detected: Linux");
                 return FirmwarePlatform.Linux;
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
+                FirmwareTrace.Debug("Platform detected: Windows");
                 return FirmwarePlatform.Windows;
             }
 
-            throw new PlatformNotSupportedException(
-                string.Format("The current platform '{0}' is not supported by GeneralUpdate.Firmware. Supported platforms: Linux, Windows.",
-                    RuntimeInformation.OSDescription));
+            var error = string.Format(
+                "The current platform '{0}' is not supported by GeneralUpdate.Firmware. Supported platforms: Linux, Windows.",
+                RuntimeInformation.OSDescription);
+            FirmwareTrace.Error(error);
+            throw new PlatformNotSupportedException(error);
         }
 
         /// <summary>
@@ -231,19 +321,24 @@ namespace GeneralUpdate.Firmware
         /// </exception>
         internal static IFirmwareStrategy ResolveStrategy(FirmwarePlatform platform)
         {
+            FirmwareTrace.Debug("Resolving strategy for platform: {0}", platform);
+
             switch (platform)
             {
                 case FirmwarePlatform.Linux:
                     // Placeholder: will be replaced with LinuxFirmwareStrategy in Issue 4
+                    FirmwareTrace.Warn("Linux firmware strategy is not yet implemented (planned for Issue 4)");
                     throw new PlatformNotSupportedException(
                         "Linux firmware strategy is not yet implemented. It will use vela FlashPack for dual A/B slot updates.");
 
                 case FirmwarePlatform.Windows:
                     // Placeholder: will be replaced with WindowsFirmwareStrategy in Issue 5
+                    FirmwareTrace.Warn("Windows firmware strategy is not yet implemented (planned for Issue 5)");
                     throw new PlatformNotSupportedException(
                         "Windows firmware strategy is not yet implemented. It will use OS firmware commands (WMI/DeviceIoControl).");
 
                 default:
+                    FirmwareTrace.Error("Unknown firmware platform: {0}", platform);
                     throw new ArgumentOutOfRangeException(nameof(platform), platform, "Unknown firmware platform.");
             }
         }
