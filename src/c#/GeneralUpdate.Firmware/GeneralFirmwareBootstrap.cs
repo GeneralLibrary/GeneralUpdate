@@ -445,6 +445,21 @@ namespace GeneralUpdate.Firmware
             }
         }
 
+        /// <summary>
+        /// Merges fluent-registered callbacks into <see cref="FirmwareConfig"/> so that
+        /// strategies and validators can fire them internally without needing separate
+        /// callback parameters.
+        /// </summary>
+        private void MergeCallbacksIntoConfig()
+        {
+            _config.OnStageChanged     += _onStageChanged;
+            _config.OnProgress          += _onProgress;
+            _config.OnDownloadProgress  += _onDownloadProgress;
+            _config.OnCompleted         += _onCompleted;
+            _config.OnFailed            += _onFailed;
+            _config.OnWarning           += _onWarning;
+        }
+
         // ============================================================
         // Internal helpers — callback invocation
         // ============================================================
