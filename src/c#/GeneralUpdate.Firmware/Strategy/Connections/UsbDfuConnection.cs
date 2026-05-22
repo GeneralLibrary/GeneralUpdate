@@ -267,7 +267,7 @@ namespace GeneralUpdate.Firmware.Strategy.Connections
             return new DfuStatus
             {
                 Status  = response[0],
-                PollTimeout = (response[1] | (response[2] << 8) | (response[3] << 16)),
+                PollTimeout = (uint)(response[1] | (response[2] << 8) | (response[3] << 16)),
                 State   = response[4],
                 StringIndex = response[5]
             };
