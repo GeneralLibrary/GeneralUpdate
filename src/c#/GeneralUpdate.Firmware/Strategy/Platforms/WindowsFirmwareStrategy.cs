@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
+using GeneralUpdate.Firmware.Strategy.Connections;
 using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware.Strategy.Platforms
@@ -318,7 +319,7 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
         }
 
         /// <summary>
-        /// Writes the firmware binary directly to the Windows physical drive.
+        /// Writes the firmware binary to the target device using the configured connection type.
         /// </summary>
         private async Task<FirmwareUpdateResult> ApplyRawWriteAsync(
             string firmwareFilePath,
@@ -326,90 +327,59 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
             CancellationToken cancellationToken,
             Stopwatch timer)
         {
-            FirmwareTrace.Info("Raw write: {0} → {1}", firmwareFilePath, config.DevicePath);
+            FirmwareTrace.Info(
+                "Starting firmware write via {0}: {1}",
+                config.Connection.Type,
+                firmwareFilePath);
 
             long firmwareSize = new FileInfo(firmwareFilePath).Length;
-            long totalWritten = 0;
-
             FirmwareTrace.Info(
                 "Firmware size: {0} bytes ({1:F1} MB)",
                 firmwareSize,
                 firmwareSize / (1024.0 * 1024.0));
 
+            IConnection connection = null;
+
             try
             {
-                using (var sourceStream = new FileStream(
-                    firmwareFilePath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    DeviceBufferSize,
-                    useAsync: true))
-                using (var deviceStream = new FileStream(
-                    config.DevicePath,
-                    FileMode.Open,
-                    FileAccess.ReadWrite,
-                    FileShare.ReadWrite,
-                    DeviceBufferSize,
-                    useAsync: true))
+                connection = Connections.ConnectionFactory.Create(config.Connection);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                byte[] firmwareData = File.ReadAllBytes(firmwareFilePath);
+
+                if (config.ProgressCallback != null)
                 {
-                    if (deviceStream.Length < firmwareSize)
-                    {
-                        return FirmwareUpdateResult.Fail(
-                            string.Format(
-                                CultureInfo.InvariantCulture,
-                                "Firmware file ({0} bytes) exceeds device size ({1} bytes).",
-                                firmwareSize,
-                                deviceStream.Length),
-                            "FW_WINDOWS_SIZE_MISMATCH");
-                    }
-
-                    byte[] buffer = new byte[DeviceBufferSize];
-                    int bytesRead;
-
-                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
-                        .ConfigureAwait(false)) > 0)
-                    {
-                        await deviceStream.WriteAsync(buffer, 0, bytesRead, cancellationToken)
-                            .ConfigureAwait(false);
-                        totalWritten += bytesRead;
-
-                        if (totalWritten % (10L * DeviceBufferSize) == 0 || totalWritten == firmwareSize)
-                        {
-                            FirmwareTrace.Progress("WindowsFlash", totalWritten, firmwareSize);
-
-                            if (config.ProgressCallback != null)
-                            {
-                                try { config.ProgressCallback(totalWritten, firmwareSize); }
-                                catch (Exception ex) { FirmwareTrace.Warn("Callback error: {0}", ex.Message); }
-                            }
-                        }
-
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-
-                    await deviceStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    try { config.ProgressCallback(firmwareData.Length, firmwareData.Length); }
+                    catch (Exception ex) { FirmwareTrace.Warn("Callback error: {0}", ex.Message); }
                 }
 
+                await connection.WriteAsync(firmwareData, cancellationToken).ConfigureAwait(false);
+
                 timer.Stop();
-                double speedMBps = (totalWritten / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds;
+                double speedMBps = (firmwareData.Length / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds;
                 FirmwareTrace.Info(
                     "Write complete. {0} bytes in {1:F1}s ({2:F1} MB/s)",
-                    totalWritten, timer.Elapsed.TotalSeconds, speedMBps);
+                    firmwareData.Length, timer.Elapsed.TotalSeconds, speedMBps);
                 FirmwareTrace.EndOperation("WindowsApplyFirmware", timer.Elapsed, true);
 
-                return FirmwareUpdateResult.Succeed("windows-raw", timer.Elapsed);
+                return FirmwareUpdateResult.Succeed(config.Connection.Type.ToString(), timer.Elapsed);
             }
             catch (UnauthorizedAccessException uae)
             {
                 timer.Stop();
                 FirmwareTrace.EndOperation("WindowsApplyFirmware", timer.Elapsed, false);
                 return FirmwareUpdateResult.Fail(
-                    string.Format("Access denied to '{0}'. Run as Administrator. Error: {1}",
-                        config.DevicePath, uae.Message),
+                    string.Format("Access denied: {0}", uae.Message),
                     "FW_WINDOWS_ACCESS_DENIED",
                     uae,
                     timer.Elapsed);
+            }
+            finally
+            {
+                if (connection != null)
+                {
+                    await connection.CloseAsync().ConfigureAwait(false);
+                }
             }
         }
 

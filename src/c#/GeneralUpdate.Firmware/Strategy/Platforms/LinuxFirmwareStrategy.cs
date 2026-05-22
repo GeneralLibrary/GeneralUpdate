@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
+using GeneralUpdate.Firmware.Strategy.Connections;
 using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware.Strategy.Platforms
@@ -344,8 +345,8 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
         }
 
         /// <summary>
-        /// Writes the firmware binary directly to the block device using FileStream.
-        /// This is the fallback mode when vela is not available.
+        /// Writes the firmware binary to the target device using the configured
+        /// connection type (BlockDevice via FileStream, or other IConnection implementations).
         /// </summary>
         private async Task<FirmwareUpdateResult> ApplyDirectWriteAsync(
             string firmwareFilePath,
@@ -353,101 +354,61 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
             CancellationToken cancellationToken,
             Stopwatch timer)
         {
-            FirmwareTrace.Info("Starting direct block device write: {0} -> {1}", firmwareFilePath, config.DevicePath);
+            FirmwareTrace.Info(
+                "Starting firmware write via {0}: {1} -> {2}",
+                config.Connection.Type,
+                firmwareFilePath,
+                config.DevicePath ?? config.Connection.ToString());
 
             long firmwareSize = new FileInfo(firmwareFilePath).Length;
-            long totalWritten = 0;
+            FirmwareTrace.Info("Firmware size: {0} bytes ({1:F1} MB)", firmwareSize, firmwareSize / (1024.0 * 1024.0));
 
-            FirmwareTrace.Info("Firmware file size: {0} bytes ({1:F1} MB)", firmwareSize, firmwareSize / (1024.0 * 1024.0));
+            IConnection connection = null;
 
             try
             {
-                using (var sourceStream = new FileStream(
-                    firmwareFilePath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    BlockDeviceBufferSize,
-                    useAsync: true))
-                using (var deviceStream = new FileStream(
-                    config.DevicePath,
-                    FileMode.Open,
-                    FileAccess.Write,
-                    FileShare.None,
-                    BlockDeviceBufferSize,
-                    useAsync: true))
+                // Create the appropriate connection based on config.Connection.Type
+                connection = Connections.ConnectionFactory.Create(config.Connection);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                byte[] firmwareData = File.ReadAllBytes(firmwareFilePath);
+
+                // Report progress via callback if configured
+                if (config.ProgressCallback != null)
                 {
-                    // Verify device is large enough
-                    if (deviceStream.Length < firmwareSize)
-                    {
-                        return FirmwareUpdateResult.Fail(
-                            string.Format(
-                                CultureInfo.InvariantCulture,
-                                "Firmware file ({0} bytes) is larger than the target device ({1} bytes).",
-                                firmwareSize,
-                                deviceStream.Length),
-                            "FW_LINUX_SIZE_MISMATCH");
-                    }
-
-                    byte[] buffer = new byte[BlockDeviceBufferSize];
-                    int bytesRead;
-
-                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
-                        .ConfigureAwait(false)) > 0)
-                    {
-                        await deviceStream.WriteAsync(buffer, 0, bytesRead, cancellationToken)
-                            .ConfigureAwait(false);
-                        totalWritten += bytesRead;
-
-                        // Report progress periodically
-                        if (totalWritten % (10 * BlockDeviceBufferSize) == 0 || totalWritten == firmwareSize)
-                        {
-                            FirmwareTrace.Progress("Flash", totalWritten, firmwareSize);
-
-                            if (config.ProgressCallback != null)
-                            {
-                                try
-                                {
-                                    config.ProgressCallback(totalWritten, firmwareSize);
-                                }
-                                catch (Exception ex)
-                                {
-                                    FirmwareTrace.Warn("Progress callback error (ignored): {0}", ex.Message);
-                                }
-                            }
-                        }
-
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-
-                    // Ensure all data is flushed to the physical device
-                    await deviceStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    try { config.ProgressCallback(firmwareData.Length, firmwareData.Length); }
+                    catch (Exception ex) { FirmwareTrace.Warn("Progress callback error: {0}", ex.Message); }
                 }
 
+                await connection.WriteAsync(firmwareData, cancellationToken).ConfigureAwait(false);
+
                 timer.Stop();
+                double speedMBps = (firmwareData.Length / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds;
                 FirmwareTrace.Info(
                     "Firmware written successfully. {0} bytes in {1:F1}s ({2:F1} MB/s)",
-                    totalWritten,
+                    firmwareData.Length,
                     timer.Elapsed.TotalSeconds,
-                    (totalWritten / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds);
+                    speedMBps);
                 FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
 
-                return FirmwareUpdateResult.Succeed(
-                    "direct-write",
-                    timer.Elapsed);
+                return FirmwareUpdateResult.Succeed(config.Connection.Type.ToString(), timer.Elapsed);
             }
             catch (UnauthorizedAccessException uae)
             {
                 timer.Stop();
                 FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
                 return FirmwareUpdateResult.Fail(
-                    string.Format(
-                        "Permission denied writing to device '{0}'. Run with root privileges. Error: {1}",
-                        config.DevicePath,
-                        uae.Message),
-                    "FW_LINUX_PERMISSION_DENIED",
+                    string.Format("Access denied. Error: {0}", uae.Message),
+                    "FW_LINUX_ACCESS_DENIED",
                     uae,
                     timer.Elapsed);
+            }
+            finally
+            {
+                if (connection != null)
+                {
+                    await connection.CloseAsync().ConfigureAwait(false);
+                }
             }
         }
 
