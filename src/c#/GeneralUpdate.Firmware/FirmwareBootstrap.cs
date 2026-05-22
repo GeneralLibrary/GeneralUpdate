@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Firmware.Models;
 using GeneralUpdate.Firmware.Strategy;
+using GeneralUpdate.Firmware.Strategy.Platforms;
 using GeneralUpdate.Firmware.Trace;
 
 namespace GeneralUpdate.Firmware
@@ -357,10 +358,8 @@ namespace GeneralUpdate.Firmware
             switch (platform)
             {
                 case FirmwarePlatform.Linux:
-                    // Placeholder: will be replaced with LinuxFirmwareStrategy in Issue 4
-                    FirmwareTrace.Warn("Linux firmware strategy is not yet implemented (planned for Issue 4)");
-                    throw new PlatformNotSupportedException(
-                        "Linux firmware strategy is not yet implemented. It will use vela FlashPack for dual A/B slot updates.");
+                    FirmwareTrace.Info("Resolving Linux firmware strategy (vela-based)");
+                    return new LinuxFirmwareStrategy();
 
                 case FirmwarePlatform.Windows:
                     // Placeholder: will be replaced with WindowsFirmwareStrategy in Issue 5
