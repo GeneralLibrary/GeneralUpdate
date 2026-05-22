@@ -233,6 +233,13 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
                         if (totalBytesRead % (10 * BlockDeviceBufferSize) == 0)
                         {
                             FirmwareTrace.Progress("Backup", totalBytesRead, sourceStream.Length);
+
+                            // Fire progress callback for the backup stage
+                            FireProgress(config, FirmwareUpdateStage.BackingUp,
+                                sourceStream.Length > 0 ? (float)totalBytesRead / sourceStream.Length * 100f : 0f,
+                                5f + (sourceStream.Length > 0 ? (float)totalBytesRead / sourceStream.Length * 15f : 0f),
+                                string.Format(CultureInfo.InvariantCulture, "Backing up... {0}/{1} MB",
+                                    totalBytesRead / (1024 * 1024), sourceStream.Length / (1024 * 1024)));
                         }
                     }
 
@@ -373,14 +380,26 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
 
                 byte[] firmwareData = File.ReadAllBytes(firmwareFilePath);
 
-                // Report progress via callback if configured
+                // Fire progress: flashing starts
+                FireProgress(config, FirmwareUpdateStage.Flashing, 0, 80f,
+                    string.Format(CultureInfo.InvariantCulture, "Writing firmware... {0} MB", firmwareData.Length / (1024 * 1024)));
+
+                // Legacy callback (deprecated but still supported)
+#pragma warning disable 618
                 if (config.ProgressCallback != null)
                 {
                     try { config.ProgressCallback(firmwareData.Length, firmwareData.Length); }
                     catch (Exception ex) { FirmwareTrace.Warn("Progress callback error: {0}", ex.Message); }
                 }
+#pragma warning restore 618
+
+                // Fire progress: writing
+                FireProgress(config, FirmwareUpdateStage.Flashing, 50f, 90f, "Writing firmware to device...");
 
                 await connection.WriteAsync(firmwareData, cancellationToken).ConfigureAwait(false);
+
+                // Fire progress: write complete
+                FireProgress(config, FirmwareUpdateStage.Flashing, 100f, 100f, "Firmware written successfully.");
 
                 timer.Stop();
                 double speedMBps = (firmwareData.Length / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds;
@@ -528,6 +547,34 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
                 FirmwareTrace.Warn("Falling back to direct block device write.");
                 return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, timer)
                     .ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Safely fires <see cref="FirmwareConfig.OnProgress"/> during backup or flashing.
+        /// </summary>
+        private static void FireProgress(
+            FirmwareConfig config,
+            FirmwareUpdateStage stage,
+            float stagePct,
+            float overallPct,
+            string statusText)
+        {
+            var callback = config?.OnProgress;
+            if (callback == null) return;
+            try
+            {
+                callback(new FirmwareProgressInfo
+                {
+                    Stage = stage,
+                    StageProgressPercent = stagePct,
+                    OverallProgressPercent = overallPct,
+                    StatusText = statusText
+                });
+            }
+            catch (Exception ex)
+            {
+                FirmwareTrace.Warn("Progress callback threw an exception (ignored): {0}", ex.Message);
             }
         }
     }
