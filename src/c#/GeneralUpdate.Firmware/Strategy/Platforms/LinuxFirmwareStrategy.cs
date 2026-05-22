@@ -36,25 +36,28 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
         public FirmwarePlatform TargetPlatform => FirmwarePlatform.Linux;
 
         /// <summary>
-        /// Gets whether the vela CLI tool is available on this system.
+        /// Gets whether the vela native library (libvela_ffi.so) is available on this system.
         /// </summary>
         public bool IsVelaAvailable { get; }
 
         // Default buffer size for block device I/O: 1MB
         private const int BlockDeviceBufferSize = 1024 * 1024;
 
+        // Engine handle for P/Invoke calls (null if vela is not available)
+        private IntPtr _velaHandle = IntPtr.Zero;
+
         // Minimum device size to consider valid (512 bytes — one sector)
         private const long MinimumDeviceSize = 512;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LinuxFirmwareStrategy"/> class.
-        /// Detects vela availability at construction time.
+        /// Detects vela native library availability at construction time.
         /// </summary>
         public LinuxFirmwareStrategy()
         {
-            IsVelaAvailable = DetectVelaAvailability();
+            IsVelaAvailable = VelaNativeMethods.IsAvailable;
             FirmwareTrace.Info(
-                "LinuxFirmwareStrategy initialized. Vela available: {0}",
+                "LinuxFirmwareStrategy initialized. Vela native library available: {0}",
                 IsVelaAvailable);
         }
 
@@ -145,12 +148,12 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
                 // Check vela availability if using .fpk format
                 if (IsVelaAvailable)
                 {
-                    FirmwareTrace.Info("Vela flash engine detected — will use A/B slot management.");
+                    FirmwareTrace.Info("Vela native library detected — will use A/B slot management via P/Invoke.");
                 }
                 else
                 {
                     FirmwareTrace.Warn(
-                        "Vela flash engine not detected. Will use direct block device write mode. " +
+                        "Vela native library not detected. Will use direct block device write mode. " +
                         "A/B slot management is not available without vela.");
                 }
 
@@ -450,7 +453,7 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
 
         /// <summary>
         /// Applies a vela FlashPack (.fpk) firmware package to the device using the
-        /// vela flash engine for A/B slot management.
+        /// vela native library (P/Invoke) for A/B slot management.
         /// </summary>
         private async Task<FirmwareUpdateResult> ApplyVelaFlashPackAsync(
             string firmwareFilePath,
@@ -458,136 +461,112 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
             CancellationToken cancellationToken,
             Stopwatch timer)
         {
-            FirmwareTrace.Info("Delegating to vela flash engine for .fpk firmware");
+            FirmwareTrace.Info("Using vela native library (P/Invoke) for .fpk firmware");
 
             try
             {
-                // Attempt to use vela CLI for flash operation
-                // The vela CLI provides: vela flash --input <fpk> --device <path>
-                var processInfo = new ProcessStartInfo
+                // Initialize vela engine
+                _velaHandle = VelaNativeMethods.vela_flash_init(null);
+                if (_velaHandle == IntPtr.Zero)
                 {
-                    FileName = "vela",
-                    Arguments = string.Format(
-                        CultureInfo.InvariantCulture,
-                        "flash --input \"{0}\" --device \"{1}\" --slot auto",
+                    string err = VelaNativeMethods.GetLastError() ?? "unknown error";
+                    FirmwareTrace.Error("Failed to initialize vela engine: {0}", err);
+                    return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, timer)
+                        .ConfigureAwait(false);
+                }
+
+                try
+                {
+                    // Validate device via vela
+                    int validateResult = VelaNativeMethods.vela_flash_validate_device(
+                        _velaHandle, config.DevicePath);
+                    if (validateResult != 0)
+                    {
+                        string err = VelaNativeMethods.GetLastError() ?? "device check failed";
+                        FirmwareTrace.Error("Vela device validation failed: {0}", err);
+                        return FirmwareUpdateResult.Fail(
+                            string.Format("Vela device validation failed: {0}", err),
+                            "FW_LINUX_VELA_VALIDATE");
+                    }
+
+                    // Flash the .fpk via vela native library
+                    FirmwareTrace.Info(
+                        "Vela flash: fpk={0}, device={1}",
                         firmwareFilePath,
-                        config.DevicePath),
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
+                        config.DevicePath);
 
-                using (var process = Process.Start(processInfo))
-                {
-                    if (process == null)
+                    ulong bytesWritten = await Task.Run(() =>
+                        VelaNativeMethods.vela_flash_write_fpk(
+                            _velaHandle,
+                            firmwareFilePath,
+                            config.DevicePath),
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (bytesWritten == 0)
                     {
-                        throw new InvalidOperationException("Failed to start vela process.");
-                    }
+                        string err = VelaNativeMethods.GetLastError() ?? "flash returned 0 bytes";
+                        FirmwareTrace.Error("Vela flash failed: {0}", err);
 
-                    var outputReader = process.StandardOutput.ReadToEndAsync();
-                    var errorReader = process.StandardError.ReadToEndAsync();
-
-                    // Wait with timeout
-                    if (!process.WaitForExit(config.TimeoutSeconds * 1000))
-                    {
-                        try { process.Kill(); } catch { /* ignore */ }
-                        throw new TimeoutException(
-                            string.Format(
-                                CultureInfo.InvariantCulture,
-                                "Vela flash operation timed out after {0} seconds.",
-                                config.TimeoutSeconds));
-                    }
-
-                    string stdOut = await outputReader.ConfigureAwait(false);
-                    string stdErr = await errorReader.ConfigureAwait(false);
-
-                    if (process.ExitCode == 0)
-                    {
-                        FirmwareTrace.Info("Vela flash completed successfully.");
-                        if (!string.IsNullOrWhiteSpace(stdOut))
-                        {
-                            FirmwareTrace.Debug("Vela stdout: {0}", stdOut.Trim());
-                        }
-
-                        timer.Stop();
-                        FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
-
-                        return FirmwareUpdateResult.Succeed(
-                            "vela-flashpack",
-                            timer.Elapsed);
-                    }
-                    else
-                    {
-                        string errorMsg = string.Format(
-                            CultureInfo.InvariantCulture,
-                            "Vela flash failed with exit code {0}. Stderr: {1}",
-                            process.ExitCode,
-                            stdErr?.Trim() ?? "(none)");
-
-                        FirmwareTrace.Error(errorMsg);
                         timer.Stop();
                         FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
-
                         return FirmwareUpdateResult.Fail(
-                            errorMsg,
+                            string.Format("Vela flash failed: {0}", err),
                             "FW_LINUX_VELA_FLASH_ERROR",
                             duration: timer.Elapsed);
                     }
+
+                    // Switch to the alternate slot after successful flash
+                    int switchResult = VelaNativeMethods.vela_flash_switch_slot(_velaHandle);
+                    if (switchResult == 0)
+                    {
+                        string activeSlot = VelaNativeMethods.GetActiveSlot(_velaHandle);
+                        FirmwareTrace.Info(
+                            "Slot switched successfully. New active slot: {0}",
+                            activeSlot ?? "unknown");
+                    }
+                    else
+                    {
+                        FirmwareTrace.Warn(
+                            "Slot switch reported failure (code: {0}). The system may need manual slot selection.",
+                            switchResult);
+                    }
+
+                    FirmwareTrace.Info(
+                        "Vela flash completed successfully. {0} bytes written.",
+                        bytesWritten);
+
+                    timer.Stop();
+                    FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
+                    return FirmwareUpdateResult.Succeed("vela-pinvoke", timer.Elapsed);
+                }
+                finally
+                {
+                    // Always shut down the engine
+                    if (_velaHandle != IntPtr.Zero)
+                    {
+                        VelaNativeMethods.vela_flash_shutdown(_velaHandle);
+                        _velaHandle = IntPtr.Zero;
+                    }
                 }
             }
-            catch (TimeoutException tex)
+            catch (OperationCanceledException)
             {
-                timer.Stop();
-                FirmwareTrace.Error("Vela flash timeout", tex);
-                FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
-                return FirmwareUpdateResult.Fail(
-                    tex.Message,
-                    "FW_LINUX_VELA_TIMEOUT",
-                    tex,
-                    timer.Elapsed);
+                FirmwareTrace.Warn("Vela flash operation was cancelled.");
+                throw;
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (DllNotFoundException)
             {
-                // Vela not found or failed to start — fall back to direct write
                 FirmwareTrace.Warn(
-                    "Vela flash engine failed: {0}. Falling back to direct block device write.",
-                    ex.Message);
-
+                    "Vela native library not found. Falling back to direct block device write.");
                 return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, timer)
                     .ConfigureAwait(false);
             }
-        }
-
-        /// <summary>
-        /// Detects whether the vela CLI tool is available on the current system.
-        /// </summary>
-        /// <returns>True if vela is found; false otherwise.</returns>
-        private static bool DetectVelaAvailability()
-        {
-            try
+            catch (Exception ex)
             {
-                var processInfo = new ProcessStartInfo
-                {
-                    FileName = "vela",
-                    Arguments = "--version",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                using (var process = Process.Start(processInfo))
-                {
-                    if (process == null) return false;
-                    process.WaitForExit(5000);
-                    return process.ExitCode == 0;
-                }
-            }
-            catch (Exception)
-            {
-                // Vela not found or not executable
-                return false;
+                FirmwareTrace.Error("Vela native flash failed", ex);
+                FirmwareTrace.Warn("Falling back to direct block device write.");
+                return await ApplyDirectWriteAsync(firmwareFilePath, config, cancellationToken, timer)
+                    .ConfigureAwait(false);
             }
         }
     }
