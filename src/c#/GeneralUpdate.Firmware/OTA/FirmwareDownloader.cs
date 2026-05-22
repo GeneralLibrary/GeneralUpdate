@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -15,8 +16,9 @@ namespace GeneralUpdate.Firmware.OTA
     /// 
     /// <para>
     /// The downloader reads the firmware binary in configurable chunks,
-    /// reports progress via <see cref="FirmwareConfig.ProgressCallback"/>,
-    /// and retries transient failures according to the configuration.
+    /// reports progress via <see cref="FirmwareConfig.OnDownloadProgress"/>
+    /// with speed and ETA, and retries transient failures according to
+    /// the configuration.
     /// </para>
     /// </summary>
     public class FirmwareDownloader
@@ -27,14 +29,28 @@ namespace GeneralUpdate.Firmware.OTA
         public const int DefaultBufferSize = 8192;
 
         private readonly FirmwareConfig _config;
+        private readonly Action<long, long, double, TimeSpan> _onDownloadProgress;
+        private readonly Action<FirmwareProgressInfo> _onProgress;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FirmwareDownloader"/> class.
         /// </summary>
         /// <param name="config">The firmware update configuration.</param>
-        public FirmwareDownloader(FirmwareConfig config)
+        /// <param name="onDownloadProgress">
+        /// Optional callback for download progress with speed and ETA.
+        /// Parameters: (bytesReceived, totalBytes, speedBytesPerSecond, estimatedRemaining).
+        /// </param>
+        /// <param name="onProgress">
+        /// Optional callback for rich progress information.
+        /// </param>
+        public FirmwareDownloader(
+            FirmwareConfig config,
+            Action<long, long, double, TimeSpan> onDownloadProgress = null,
+            Action<FirmwareProgressInfo> onProgress = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _onDownloadProgress = onDownloadProgress;
+            _onProgress = onProgress;
         }
 
         /// <summary>
@@ -158,6 +174,8 @@ namespace GeneralUpdate.Firmware.OTA
         /// <summary>
         /// Performs a single download attempt with progress reporting.
         /// Uses <see cref="HttpWebRequest"/> for broad .NET Standard 2.0 compatibility.
+        /// Reports speed and ETA via <see cref="FirmwareConfig.OnDownloadProgress"/> and
+        /// rich progress via <see cref="FirmwareConfig.OnProgress"/> at ~500 ms intervals.
         /// </summary>
         /// <param name="localFilePath">Where to save the downloaded file.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
@@ -206,8 +224,10 @@ namespace GeneralUpdate.Firmware.OTA
                     {
                         byte[] buffer = new byte[DefaultBufferSize];
                         int bytesRead;
-                        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                        long lastReportedBytes = 0;
+                        var stageStopwatch = System.Diagnostics.Stopwatch.StartNew();
+                        long lastReportBytes = 0;
+                        long lastReportTimeMs = 0;
+                        var speedSamples = new Queue<double>(4);
 
                         while ((bytesRead = await responseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)
                             .ConfigureAwait(false)) > 0)
@@ -217,33 +237,77 @@ namespace GeneralUpdate.Firmware.OTA
 
                             totalBytesRead += bytesRead;
 
-                            // Report progress at reasonable intervals (every 100KB or when complete)
-                            if (totalBytesRead - lastReportedBytes >= 102400 ||
-                                totalBytesRead == contentLength ||
-                                contentLength <= 0)
+                            // Report at ~500 ms intervals for smooth speed/ETA updates
+                            long elapsedMs = stageStopwatch.ElapsedMilliseconds;
+                            if (elapsedMs - lastReportTimeMs >= 500 ||
+                                totalBytesRead == contentLength)
                             {
+                                // --- Calculate instant speed and sliding-window average ---
+                                double deltaBytes = totalBytesRead - lastReportBytes;
+                                double deltaSeconds = (elapsedMs - lastReportTimeMs) / 1000.0;
+                                double instantSpeed = deltaSeconds > 0 ? deltaBytes / deltaSeconds : 0;
+
+                                speedSamples.Enqueue(instantSpeed);
+                                if (speedSamples.Count > 3) speedSamples.Dequeue();
+
+                                double avgSpeed = 0;
+                                foreach (var s in speedSamples) avgSpeed += s;
+                                avgSpeed = speedSamples.Count > 0 ? avgSpeed / speedSamples.Count : instantSpeed;
+
+                                TimeSpan eta = contentLength > 0 && avgSpeed > 0
+                                    ? TimeSpan.FromSeconds((contentLength - totalBytesRead) / avgSpeed)
+                                    : TimeSpan.Zero;
+
+                                // --- Stage progress ---
+                                float stagePct = contentLength > 0
+                                    ? (float)totalBytesRead / contentLength * 100f
+                                    : 0f;
+
+                                // --- Overall progress (download stage = 20%→70% band) ---
+                                float overallPct = contentLength > 0
+                                    ? 20f + (stagePct * 0.5f)
+                                    : 20f;
+
+                                // --- Trace ---
                                 FirmwareTrace.Progress("Download", totalBytesRead, contentLength > 0 ? contentLength : totalBytesRead);
 
-                                // Invoke user-provided progress callback
-                                if (_config.ProgressCallback != null)
-                                {
-                                    try
-                                    {
-                                        _config.ProgressCallback(totalBytesRead, contentLength > 0 ? contentLength : totalBytesRead);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        FirmwareTrace.Warn("Progress callback threw an exception (ignored): {0}", ex.Message);
-                                    }
-                                }
+                                // --- New: rich download callback (bytes, total, speed, eta) ---
+                                FireCallback(_onDownloadProgress, totalBytesRead, contentLength > 0 ? contentLength : totalBytesRead, avgSpeed, eta);
+                                FireCallback(_config.OnDownloadProgress, totalBytesRead, contentLength > 0 ? contentLength : totalBytesRead, avgSpeed, eta);
 
-                                lastReportedBytes = totalBytesRead;
+                                // --- New: general progress callback ---
+                                var info = new FirmwareProgressInfo
+                                {
+                                    Stage = FirmwareUpdateStage.Downloading,
+                                    StageProgressPercent = stagePct,
+                                    OverallProgressPercent = overallPct,
+                                    BytesDownloaded = totalBytesRead,
+                                    TotalBytes = contentLength,
+                                    SpeedBytesPerSecond = avgSpeed,
+                                    EstimatedRemaining = eta,
+                                    Elapsed = stageStopwatch.Elapsed,
+                                    StatusText = string.Format(
+                                        CultureInfo.InvariantCulture,
+                                        "下载中... {0}/{1} KB",
+                                        totalBytesRead / 1024,
+                                        contentLength > 0 ? contentLength / 1024 : -1)
+                                };
+                                FireCallback(_onProgress, info);
+                                FireCallback(_config.OnProgress, info);
+
+                                // --- Legacy: backward-compatible callback ---
+#pragma warning disable 618
+                                FireCallback(_config.ProgressCallback, totalBytesRead, contentLength > 0 ? contentLength : totalBytesRead);
+#pragma warning restore 618
+
+                                lastReportBytes = totalBytesRead;
+                                lastReportTimeMs = elapsedMs;
                             }
 
                             cancellationToken.ThrowIfCancellationRequested();
                         }
 
-                        stopwatch.Stop();
+                        stageStopwatch.Stop();
 
                         if (contentLength > 0 && totalBytesRead != contentLength)
                         {
@@ -255,18 +319,49 @@ namespace GeneralUpdate.Firmware.OTA
                                     contentLength));
                         }
 
-                        double speedKBps = stopwatch.Elapsed.TotalSeconds > 0
-                            ? (totalBytesRead / 1024.0) / stopwatch.Elapsed.TotalSeconds
+                        double speedKBps = stageStopwatch.Elapsed.TotalSeconds > 0
+                            ? (totalBytesRead / 1024.0) / stageStopwatch.Elapsed.TotalSeconds
                             : 0;
 
                         FirmwareTrace.Info(
                             "Download finished. Total: {0} bytes, Duration: {1:F1}s, Speed: {2:F1} KB/s",
                             totalBytesRead,
-                            stopwatch.Elapsed.TotalSeconds,
+                            stageStopwatch.Elapsed.TotalSeconds,
                             speedKBps);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Safely invokes a 4-parameter callback, catching and logging any exceptions.
+        /// Prevents a misbehaving callback from crashing the download pipeline.
+        /// </summary>
+        private static void FireCallback<T1, T2, T3, T4>(Action<T1, T2, T3, T4> callback, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        {
+            if (callback == null) return;
+            try { callback(arg1, arg2, arg3, arg4); }
+            catch (Exception ex) { FirmwareTrace.Warn("Download progress callback threw an exception (ignored): {0}", ex.Message); }
+        }
+
+        /// <summary>
+        /// Safely invokes a 1-parameter callback, catching and logging any exceptions.
+        /// </summary>
+        private static void FireCallback<T>(Action<T> callback, T arg)
+        {
+            if (callback == null) return;
+            try { callback(arg); }
+            catch (Exception ex) { FirmwareTrace.Warn("Progress callback threw an exception (ignored): {0}", ex.Message); }
+        }
+
+        /// <summary>
+        /// Safely invokes a 2-parameter callback, catching and logging any exceptions.
+        /// </summary>
+        private static void FireCallback<T1, T2>(Action<T1, T2> callback, T1 arg1, T2 arg2)
+        {
+            if (callback == null) return;
+            try { callback(arg1, arg2); }
+            catch (Exception ex) { FirmwareTrace.Warn("Progress legacy callback threw an exception (ignored): {0}", ex.Message); }
         }
     }
 }

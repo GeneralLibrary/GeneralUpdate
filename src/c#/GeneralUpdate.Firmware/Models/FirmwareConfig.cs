@@ -118,7 +118,50 @@ namespace GeneralUpdate.Firmware.Models
         /// The first argument is bytes received, second is total bytes.
         /// Set to null to disable progress callbacks.
         /// </summary>
+        [Obsolete("Use OnDownloadProgress to also get download speed and estimated time remaining. Both callbacks fire together.")]
         public Action<long, long> ProgressCallback { get; set; }
+
+        // ===== New notification callbacks =====
+
+        /// <summary>
+        /// Gets or sets a callback invoked when the firmware update enters a new stage.
+        /// Parameters: (<see cref="FirmwareUpdateStage"/> stage, string description).
+        /// Example stages: ValidatingDevice, BackingUp, Downloading, Flashing, Completed, Failed.
+        /// </summary>
+        public Action<FirmwareUpdateStage, string> OnStageChanged { get; set; }
+
+        /// <summary>
+        /// Gets or sets a callback invoked periodically (approx. every 500 ms) with rich progress information.
+        /// Parameter: <see cref="FirmwareProgressInfo"/> containing stage, percentages, speed, ETA, etc.
+        /// Suitable for driving a progress bar or status display.
+        /// </summary>
+        public Action<FirmwareProgressInfo> OnProgress { get; set; }
+
+        /// <summary>
+        /// Gets or sets a callback invoked during the download stage with speed and ETA.
+        /// Parameters: (long bytesReceived, long totalBytes, double speedBytesPerSecond, TimeSpan estimatedRemaining).
+        /// Fires roughly every 500 ms during the download.
+        /// </summary>
+        public Action<long, long, double, TimeSpan> OnDownloadProgress { get; set; }
+
+        /// <summary>
+        /// Gets or sets a callback invoked when the firmware update completes successfully.
+        /// Parameter: <see cref="FirmwareUpdateResult"/> with the applied version, duration, etc.
+        /// </summary>
+        public Action<FirmwareUpdateResult> OnCompleted { get; set; }
+
+        /// <summary>
+        /// Gets or sets a callback invoked when the firmware update fails.
+        /// Parameter: <see cref="FirmwareUpdateResult"/> with the error code, message, and exception details.
+        /// </summary>
+        public Action<FirmwareUpdateResult> OnFailed { get; set; }
+
+        /// <summary>
+        /// Gets or sets a callback invoked for non-fatal warnings during the update.
+        /// Parameters: (string message, string warningCode).
+        /// Examples: backup skipped by configuration, retry attempts, etc.
+        /// </summary>
+        public Action<string, string> OnWarning { get; set; }
 
         /// <summary>
         /// Validates that the configuration contains all required fields for an update operation.
