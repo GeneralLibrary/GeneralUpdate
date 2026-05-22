@@ -362,10 +362,8 @@ namespace GeneralUpdate.Firmware
                     return new LinuxFirmwareStrategy();
 
                 case FirmwarePlatform.Windows:
-                    // Placeholder: will be replaced with WindowsFirmwareStrategy in Issue 5
-                    FirmwareTrace.Warn("Windows firmware strategy is not yet implemented (planned for Issue 5)");
-                    throw new PlatformNotSupportedException(
-                        "Windows firmware strategy is not yet implemented. It will use OS firmware commands (WMI/DeviceIoControl).");
+                    FirmwareTrace.Info("Resolving Windows firmware strategy (OS firmware commands)");
+                    return new WindowsFirmwareStrategy();
 
                 default:
                     FirmwareTrace.Error("Unknown firmware platform: {0}", platform);
