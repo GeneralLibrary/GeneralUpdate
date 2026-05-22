@@ -14,9 +14,7 @@ namespace GeneralUpdate.Firmware.Strategy.Connections
     /// <list type="bullet">
     ///   <item><description><c>BlockDeviceConnection</c> — FileStream to local block device</description></item>
     ///   <item><description><c>SerialConnection</c> — SerialPort with XMODEM/YMODEM</description></item>
-    ///   <item><description><c>UsbDfuConnection</c> — libusb (Linux) / WinUSB (Windows)</description></item>
-    ///   <item><description><c>NetworkConnection</c> — TcpClient + TFTP</description></item>
-    ///   <item><description><c>JtagConnection</c> — Process("openocd") subprocess</description></item>
+    ///   <item><description><c>UsbDfuConnection</c> — libusb (Linux) / WinUSB (Windows), full USB DFU 1.1 protocol</description></item>
     /// </list>
     /// </summary>
     internal interface IConnection

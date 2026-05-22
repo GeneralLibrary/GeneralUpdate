@@ -39,24 +39,15 @@ namespace GeneralUpdate.Firmware.Strategy.Connections
                     return new SerialConnection(config);
 
                 case ConnectionType.UsbDfu:
-                    return new UsbDfuConnection(config);
-
-                case ConnectionType.Network:
-                    if (string.IsNullOrWhiteSpace(config.Host))
+                    if (config.VendorId == 0 && config.ProductId == 0)
                         throw new InvalidOperationException(
-                            "Host is required for Network connection.");
-                    return new NetworkConnection(config);
+                            "VendorId and/or ProductId is required for UsbDfu connection.");
+                    return new UsbDfuConnection(config);
 
                 case ConnectionType.Uefi:
                     // UEFI is handled inline by the Windows strategy
                     // Return a block device connection as fallback
                     return new BlockDeviceConnection(config.DevicePath ?? @"\\.\PhysicalDrive0");
-
-                case ConnectionType.Jtag:
-                    if (string.IsNullOrWhiteSpace(config.JtagConfig))
-                        throw new InvalidOperationException(
-                            "JtagConfig is required for Jtag connection.");
-                    return new JtagConnection(config);
 
                 default:
                     throw new NotSupportedException(string.Format(

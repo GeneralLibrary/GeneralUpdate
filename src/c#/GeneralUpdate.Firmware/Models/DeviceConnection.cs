@@ -60,28 +60,6 @@ namespace GeneralUpdate.Firmware.Models
         /// </summary>
         public ushort ProductId { get; set; }
 
-        // ── Network ──────────────────────────────────────────────
-
-        /// <summary>
-        /// Gets or sets the remote host IP address or hostname
-        /// for network-based firmware transfer (TFTP/TCP).
-        /// </summary>
-        public string Host { get; set; }
-
-        /// <summary>
-        /// Gets or sets the remote port for network communication.
-        /// Default value is 69 (TFTP).
-        /// </summary>
-        public int Port { get; set; } = 69;
-
-        // ── Jtag ─────────────────────────────────────────────────
-
-        /// <summary>
-        /// Gets or sets the OpenOCD configuration file or script path.
-        /// Example: "interface/stlink.cfg", "board/raspberrypi.cfg".
-        /// </summary>
-        public string JtagConfig { get; set; }
-
         /// <summary>
         /// Validates that all required parameters for the selected connection type are present.
         /// </summary>
@@ -99,14 +77,8 @@ namespace GeneralUpdate.Firmware.Models
                 case ConnectionType.UsbDfu:
                     return VendorId != 0 || ProductId != 0;
 
-                case ConnectionType.Network:
-                    return !string.IsNullOrWhiteSpace(Host) && Port > 0;
-
                 case ConnectionType.Uefi:
                     return true; // Uses system firmware interface, no extra params needed
-
-                case ConnectionType.Jtag:
-                    return !string.IsNullOrWhiteSpace(JtagConfig);
 
                 default:
                     return false;
@@ -130,14 +102,8 @@ namespace GeneralUpdate.Firmware.Models
                 case ConnectionType.UsbDfu:
                     return string.Format("UsbDfu[VID:0x{0:X4}, PID:0x{1:X4}]", VendorId, ProductId);
 
-                case ConnectionType.Network:
-                    return string.Format("Network[{0}:{1}]", Host ?? "(not set)", Port);
-
                 case ConnectionType.Uefi:
                     return "Uefi[SystemFirmware]";
-
-                case ConnectionType.Jtag:
-                    return string.Format("Jtag[{0}]", JtagConfig ?? "(not set)");
 
                 default:
                     return string.Format("Unknown[{0}]", Type);
