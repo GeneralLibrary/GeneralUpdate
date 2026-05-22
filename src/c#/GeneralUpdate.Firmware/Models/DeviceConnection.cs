@@ -60,26 +60,29 @@ namespace GeneralUpdate.Firmware.Models
         /// </summary>
         public ushort ProductId { get; set; }
 
-        // ── Network ──────────────────────────────────────────────
+        // ── Network (deprecated — not implemented) ────────────
 
         /// <summary>
         /// Gets or sets the remote host IP address or hostname
         /// for network-based firmware transfer (TFTP/TCP).
         /// </summary>
+        [Obsolete("Network connection is not implemented. This property is reserved for future use.")]
         public string Host { get; set; }
 
         /// <summary>
         /// Gets or sets the remote port for network communication.
         /// Default value is 69 (TFTP).
         /// </summary>
+        [Obsolete("Network connection is not implemented. This property is reserved for future use.")]
         public int Port { get; set; } = 69;
 
-        // ── Jtag ─────────────────────────────────────────────────
+        // ── Jtag (deprecated — not implemented) ────────────────
 
         /// <summary>
         /// Gets or sets the OpenOCD configuration file or script path.
         /// Example: "interface/stlink.cfg", "board/raspberrypi.cfg".
         /// </summary>
+        [Obsolete("Jtag connection is not implemented. This property is reserved for future use.")]
         public string JtagConfig { get; set; }
 
         /// <summary>

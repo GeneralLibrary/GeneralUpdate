@@ -30,6 +30,7 @@ namespace GeneralUpdate.Firmware.Models
         /// Network-based firmware transfer via TFTP or TCP.
         /// Used for network boot scenarios (U-Boot, OpenWrt, PXE).
         /// </summary>
+        [Obsolete("Network connection type is not yet implemented. Use BlockDevice, Serial, or UsbDfu instead.")]
         Network,
 
         /// <summary>
@@ -42,6 +43,7 @@ namespace GeneralUpdate.Firmware.Models
         /// JTAG/SWD debug interface via OpenOCD or similar debug probe.
         /// Used for bare-metal flashing on development boards.
         /// </summary>
+        [Obsolete("Jtag connection type is not yet implemented. Use BlockDevice, Serial, or UsbDfu instead.")]
         Jtag
     }
 }
