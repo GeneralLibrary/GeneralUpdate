@@ -433,7 +433,7 @@ mod tests {
             bundle_version: "2.1.3".into(),
             compatible_slots: vec!["rpi4-model-b".into()],
             payload_type: PayloadType::FullImage,
-            payload_size: 51, // length of test payload
+            payload_size: 50, // length of test payload
             requires_version: "2.0.0".into(),
             created_at: "2026-05-18T12:00:00Z".into(),
             builder_id: "ci/v0.1".into(),
