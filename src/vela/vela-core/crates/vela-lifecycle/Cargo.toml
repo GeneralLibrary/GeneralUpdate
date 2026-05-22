@@ -15,8 +15,14 @@ chrono.workspace = true
 uuid.workspace = true
 vela-flashpack = { path = "../vela-flashpack" }
 vela-slotmgr = { path = "../vela-slotmgr" }
+vela-flasher = { path = "../vela-flasher" }
 vela-crypto = { path = "../vela-crypto" }
 
 [dev-dependencies]
 tempfile.workspace = true
 mockall.workspace = true
+sha2.workspace = true
+hex.workspace = true
+flate2.workspace = true
+tar.workspace = true
+serde_json.workspace = true

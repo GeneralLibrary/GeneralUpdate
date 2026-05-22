@@ -3,13 +3,13 @@
 //! The engine manages strict unidirectional phase transitions with
 //! per-phase timeout enforcement and structured tracing.
 
-use std::sync::Arc;
+use std::path::Path;
 use std::time::Duration;
 
 use tracing::{error, info, info_span, instrument, trace, warn};
 
 use crate::{
-    LifecycleConfig, LifecycleContext, LifecycleError, LifecycleMetrics, LifecycleOutcome,
+    LifecycleConfig, LifecycleContext, LifecycleError, LifecycleOutcome,
     LifecycleResult, PhaseTimer, UpdatePhase,
 };
 
@@ -68,12 +68,12 @@ impl LifecycleEngine {
                 return Ok(UpdatePhase::Idle);
             }
             UpdatePhase::FallbackRecovery => {
-                warn!("Entering fallback recovery �?attempting to restore");
+                warn!("Entering fallback recovery — attempting to restore");
                 self.handle_fallback_recovery(ctx).await?;
                 return Ok(UpdatePhase::Idle);
             }
             UpdatePhase::Idle => {
-                trace!("Entering idle �?waiting for next poll trigger");
+                trace!("Entering idle — waiting for next poll trigger");
                 return Ok(UpdatePhase::Polling);
             }
             phase => {
@@ -106,6 +106,11 @@ impl LifecycleEngine {
     }
 
     /// Handle a non-terminal phase transition.
+    ///
+    /// Each phase has real logic wired up:
+    /// - `Validating`: Opens the `.fpk` file and runs `verify_checksums()`.
+    /// - `Installing`: Flashes the decompressed payload via `FpkInstaller`.
+    /// - `FallbackRecovery`: Clears the FPK path and restores system state.
     async fn handle_phase(
         &self,
         phase: UpdatePhase,
@@ -125,15 +130,61 @@ impl LifecycleEngine {
                 Ok(UpdatePhase::Validating)
             }
             UpdatePhase::Validating => {
-                trace!("Validating FlashPack");
+                info!("Validating FlashPack bundle");
                 let start = std::time::Instant::now();
-                // Validation logic would go here
+
+                // Get the .fpk path from context
+                let fpk_path = ctx
+                    .fpk_path
+                    .lock()
+                    .map_err(|_| LifecycleError::FpkNotAvailable)?
+                    .clone()
+                    .ok_or(LifecycleError::FpkNotAvailable)?;
+
+                // Open and verify the FlashPack
+                let reader = vela_flashpack::FlashPackReader::open(Path::new(&fpk_path))
+                    .map_err(|e| LifecycleError::InstallError(format!("FPK open failed: {e}")))?;
+
+                let _bundle_hash = reader
+                    .verify_checksums()
+                    .map_err(|e| LifecycleError::InstallError(format!("Checksum verification failed: {e}")))?;
+
+                info!(
+                    bundle = %reader.header.bundle_name,
+                    version = %reader.header.bundle_version,
+                    "FlashPack validation passed"
+                );
+
                 ctx.record_validation_time(start.elapsed().as_millis() as u64);
                 Ok(UpdatePhase::Installing)
             }
             UpdatePhase::Installing => {
-                trace!("Installing to alternate slot");
-                ctx.record_bytes_written(0); // placeholder
+                info!("Installing firmware to target device");
+
+                let fpk_path = ctx
+                    .fpk_path
+                    .lock()
+                    .map_err(|_| LifecycleError::FpkNotAvailable)?
+                    .clone()
+                    .ok_or(LifecycleError::FpkNotAvailable)?;
+
+                let target_device = ctx
+                    .target_device
+                    .lock()
+                    .map_err(|_| LifecycleError::NoTargetDevice)?
+                    .clone()
+                    .ok_or(LifecycleError::NoTargetDevice)?;
+
+                let config = vela_flasher::FlashConfig::new(&target_device);
+                let writer = vela_flasher::BlockDeviceWriter::new(config);
+                let mut installer = vela_flasher::FpkInstaller::new(&fpk_path, writer);
+
+                let bytes_written = installer
+                    .install(None)
+                    .map_err(|e| LifecycleError::InstallError(format!("Flasher error: {e}")))?;
+
+                ctx.record_bytes_written(bytes_written);
+                info!(bytes = bytes_written, "Firmware installation complete");
                 Ok(UpdatePhase::Rebooting)
             }
             UpdatePhase::Rebooting => {
@@ -151,14 +202,19 @@ impl LifecycleEngine {
         }
     }
 
-    /// Handle fallback recovery �?idempotent operations to restore the system.
+    /// Handle fallback recovery — idempotent operations to restore the system.
     async fn handle_fallback_recovery(&self, ctx: &LifecycleContext) -> LifecycleResult<()> {
         warn!("Executing fallback recovery procedures");
 
         // Fallback steps (all must be idempotent):
         // 1. Set boot flag to FallbackRequested
         // 2. Restore primary slot version markers
-        // 3. Clean up partial downloads
+        // 3. Clear the FPK path to prevent stale state
+        // 4. Clean up partial downloads
+
+        if let Ok(mut fpk) = ctx.fpk_path.lock() {
+            *fpk = None;
+        }
 
         let reason = ctx
             .metrics
@@ -175,7 +231,7 @@ impl LifecycleEngine {
             phase: UpdatePhase::FallbackRecovery,
         });
 
-        info!("Fallback recovery complete �?system restored to last known-good state");
+        info!("Fallback recovery complete — system restored to last known-good state");
         Ok(())
     }
 }
@@ -235,13 +291,101 @@ pub async fn run_lifecycle(
 mod tests {
     use super::*;
     use crate::LifecycleConfig;
+    use std::io::Write;
     use std::sync::Mutex;
+    use tempfile::NamedTempFile;
+    use vela_flashpack::header::{FpkHeader, PayloadType};
+    use sha2::{Digest, Sha256};
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
 
     fn make_ctx() -> LifecycleContext {
-        LifecycleContext {
-            update_id: "test-update-001".into(),
-            metrics: Mutex::new(LifecycleMetrics::default()),
-        }
+        LifecycleContext::new("test-update-001")
+    }
+
+    /// Build a minimal valid `.fpk` file for testing.
+    fn build_test_fpk(payload_data: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let fpk_path = dir.path().join("test.fpk");
+
+        // Compress the payload
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(payload_data).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let payload_sha256 = {
+            let mut h = Sha256::new();
+            h.update(&compressed);
+            hex::encode(h.finalize())
+        };
+
+        let header = FpkHeader {
+            format_version: "1.0.0".into(),
+            min_reader_version: "1.0.0".into(),
+            bundle_name: "test-lifecycle-bundle".into(),
+            bundle_version: "2.0.0".into(),
+            compatible_slots: vec!["test-slot".into()],
+            payload_type: PayloadType::FullImage,
+            payload_size: compressed.len() as u64,
+            requires_version: "1.0.0".into(),
+            created_at: "2026-05-22T00:00:00Z".into(),
+            builder_id: "test-ci".into(),
+            compat_flags: vec![],
+        };
+        let header_json = serde_json::to_vec_pretty(&header).unwrap();
+        let header_sha256 = {
+            let mut h = Sha256::new();
+            h.update(&header_json);
+            hex::encode(h.finalize())
+        };
+
+        let file = std::fs::File::create(&fpk_path).unwrap();
+        let mut archive = tar::Builder::new(file);
+
+        let mut hdr = tar::Header::new_gnu();
+        hdr.set_path("fpk-header.json").unwrap();
+        hdr.set_size(header_json.len() as u64);
+        hdr.set_mode(0o644);
+        hdr.set_cksum();
+        archive.append(&hdr, header_json.as_slice()).unwrap();
+
+        let mut phdr = tar::Header::new_gnu();
+        phdr.set_path("payload/data.gz").unwrap();
+        phdr.set_size(compressed.len() as u64);
+        phdr.set_mode(0o644);
+        phdr.set_cksum();
+        archive.append(&phdr, compressed.as_slice()).unwrap();
+
+        let cs = format!(
+            "SHA256(fpk-header.json)= {header_sha256}\nSHA256(payload/data.gz)= {payload_sha256}\n"
+        );
+        let mut cshdr = tar::Header::new_gnu();
+        cshdr.set_path("checksums.sha256").unwrap();
+        cshdr.set_size(cs.len() as u64);
+        cshdr.set_mode(0o644);
+        cshdr.set_cksum();
+        archive.append(&cshdr, cs.as_bytes()).unwrap();
+
+        let sig = b"PLACEHOLDER_SIGNATURE";
+        let mut shdr = tar::Header::new_gnu();
+        shdr.set_path("signature.p7s").unwrap();
+        shdr.set_size(sig.len() as u64);
+        shdr.set_mode(0o644);
+        shdr.set_cksum();
+        archive.append(&shdr, sig.as_slice()).unwrap();
+
+        archive.finish().unwrap();
+        (dir, fpk_path)
+    }
+
+    /// Set up a context with fpk_path and target_device populated.
+    fn ctx_with_fpk(payload: &[u8]) -> (tempfile::TempDir, LifecycleContext, NamedTempFile) {
+        let (dir, fpk_path) = build_test_fpk(payload);
+        let device = NamedTempFile::new().unwrap();
+        let ctx = LifecycleContext::new("test-update-with-fpk");
+        *ctx.fpk_path.lock().unwrap() = Some(fpk_path.to_string_lossy().to_string());
+        *ctx.target_device.lock().unwrap() = Some(device.path().to_string_lossy().to_string());
+        (dir, ctx, device)
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -273,11 +417,11 @@ mod tests {
         let engine = LifecycleEngine::new(LifecycleConfig::default());
         let ctx = make_ctx();
 
-        // Idle �?Polling
+        // Idle -> Polling
         let next = engine.execute_phase(&ctx, UpdatePhase::Idle).await.unwrap();
         assert_eq!(next, UpdatePhase::Polling);
 
-        // Polling �?Idle (no update available)
+        // Polling -> Idle (no update available)
         let next = engine.execute_phase(&ctx, next).await.unwrap();
         assert_eq!(next, UpdatePhase::Idle);
     }
@@ -333,10 +477,73 @@ mod tests {
         let engine = LifecycleEngine::new(LifecycleConfig::default());
         let ctx = make_ctx();
         let outcome = run_lifecycle(&engine, &ctx).await.unwrap();
-        // With current stub implementations, Polling �?Idle completes.
+        // With current stub implementations, Polling -> Idle completes.
         assert!(matches!(
             outcome,
             LifecycleOutcome::Aborted | LifecycleOutcome::FallbackRecovery { .. }
         ));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_validating_with_fpk() {
+        let payload = b"Lifecycle validating test payload!";
+        let (_dir, ctx, _device) = ctx_with_fpk(payload);
+
+        let engine = LifecycleEngine::new(LifecycleConfig::default());
+        let result = engine.execute_phase(&ctx, UpdatePhase::Validating).await;
+        assert_eq!(result.unwrap(), UpdatePhase::Installing);
+
+        // Validation time should be recorded
+        let metrics = ctx.metrics.lock().unwrap();
+        assert!(metrics.validation_time_ms > 0);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_validating_no_fpk_fails() {
+        let ctx = make_ctx();
+        let engine = LifecycleEngine::new(LifecycleConfig::default());
+        let result = engine.execute_phase(&ctx, UpdatePhase::Validating).await;
+        // Should fail because no .fpk path is set, triggering fallback
+        assert_eq!(result.unwrap(), UpdatePhase::FallbackRecovery);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_installing_with_fpk() {
+        let payload = b"Installing phase test payload data here!";
+        let (_dir, ctx, device) = ctx_with_fpk(payload);
+
+        // Also set a checksum for the decompressed payload
+        let decompressed_hash = {
+            let mut h = Sha256::new();
+            h.update(payload);
+            hex::encode(h.finalize())
+        };
+        *ctx.expected_checksum.lock().unwrap() = Some(decompressed_hash);
+
+        let engine = LifecycleEngine::new(LifecycleConfig::default());
+        let result = engine.execute_phase(&ctx, UpdatePhase::Installing).await;
+        assert_eq!(result.unwrap(), UpdatePhase::Rebooting);
+
+        // Verify the device file contains the decompressed payload
+        let written = std::fs::read(device.path()).unwrap();
+        assert_eq!(&written[..payload.len()], payload);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_fallback_recovery_clears_fpk_path() {
+        let (dir, fpk_path) = build_test_fpk(b"fallback test");
+        let ctx = make_ctx();
+        *ctx.fpk_path.lock().unwrap() = Some(fpk_path.to_string_lossy().to_string());
+
+        let engine = LifecycleEngine::new(LifecycleConfig::default());
+        engine
+            .execute_phase(&ctx, UpdatePhase::FallbackRecovery)
+            .await
+            .unwrap();
+
+        // FPK path should be cleared
+        assert!(ctx.fpk_path.lock().unwrap().is_none());
+        // Prevent dir from being dropped (unused variable warning)
+        let _ = dir;
     }
 }

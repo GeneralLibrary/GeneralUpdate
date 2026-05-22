@@ -37,6 +37,9 @@ pub enum SlotError {
     #[error("Slot swap failed: {0}")]
     SwapFailed(String),
 
+    #[error("Flash error: {0}")]
+    FlashError(Box<vela_flasher::FlasherError>),
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 }

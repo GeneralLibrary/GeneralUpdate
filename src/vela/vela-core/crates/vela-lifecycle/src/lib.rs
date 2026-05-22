@@ -15,7 +15,7 @@ pub mod engine;
 pub use engine::{LifecycleEngine, run_lifecycle};
 
 /// Errors during the update lifecycle.
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug)]
 pub enum LifecycleError {
     #[error("Phase timeout: {0:?}")]
     PhaseTimeout(UpdatePhase),
@@ -25,6 +25,18 @@ pub enum LifecycleError {
 
     #[error("Hook execution failed in phase {phase:?}: {message}")]
     HookError { phase: UpdatePhase, message: String },
+
+    #[error("FPK not available: no FlashPack path configured")]
+    FpkNotAvailable,
+
+    #[error("No target device configured")]
+    NoTargetDevice,
+
+    #[error("Install error: {0}")]
+    InstallError(String),
+
+    #[error("Slot error: {0}")]
+    SlotError(String),
 
     #[error("Operation aborted")]
     Aborted,
@@ -107,9 +119,29 @@ pub struct LifecycleMetrics {
 pub struct LifecycleContext {
     pub update_id: String,
     pub metrics: Mutex<LifecycleMetrics>,
+    /// Path to the downloaded `.fpk` file.
+    pub fpk_path: Mutex<Option<String>>,
+    /// Target block device for flashing (e.g., `/dev/mmcblk0p3`).
+    pub target_device: Mutex<Option<String>>,
+    /// Expected SHA-256 checksum of the decompressed payload.
+    pub expected_checksum: Mutex<Option<String>>,
+    /// Target version for this update.
+    pub target_version: Mutex<Option<String>>,
 }
 
 impl LifecycleContext {
+    /// Create a new context with the given update ID.
+    pub fn new(update_id: impl Into<String>) -> Self {
+        Self {
+            update_id: update_id.into(),
+            metrics: Mutex::new(LifecycleMetrics::default()),
+            fpk_path: Mutex::new(None),
+            target_device: Mutex::new(None),
+            expected_checksum: Mutex::new(None),
+            target_version: Mutex::new(None),
+        }
+    }
+
     /// Record an error that occurred during a phase.
     pub fn record_error(&self, _err: &LifecycleError) {
         if let Ok(mut m) = self.metrics.lock() {

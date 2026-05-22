@@ -23,7 +23,7 @@ pub struct EngineHandle {
 
 /// Get the last error message. Caller must free the returned string.
 /// Returns null if no error recorded.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_last_error() -> *mut std::os::raw::c_char {
     let err = LAST_ERROR.lock().ok().and_then(|g| g.clone());
     match err {
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn vela_last_error() -> *mut std::os::raw::c_char {
 }
 
 /// Clear the last error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_clear_error() {
     if let Ok(mut guard) = LAST_ERROR.lock() {
         *guard = None;
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn vela_clear_error() {
 }
 
 /// Initialize the Vela Core engine. Returns engine handle or null on error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_init() -> *mut EngineHandle {
     trace!("FFI: vela_init called");
     info!("Vela Core engine initialized");
@@ -52,7 +52,7 @@ pub unsafe extern "C" fn vela_init() -> *mut EngineHandle {
 }
 
 /// Shut down and release the engine handle.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_shutdown(handle: *mut EngineHandle) -> i32 {
     if handle.is_null() {
         trace!("FFI: vela_shutdown called with null handle");
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn vela_shutdown(handle: *mut EngineHandle) -> i32 {
 }
 
 /// Open a FlashPack file. Returns handle or null on error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_fpk_open(path: *const std::os::raw::c_char) -> *mut FpkHandle {
     let path_str = match unsafe { std::ffi::CStr::from_ptr(path) }.to_str() {
         Ok(s) => s,
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn vela_fpk_open(path: *const std::os::raw::c_char) -> *mu
 }
 
 /// Close a FlashPack handle and release resources.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn vela_fpk_close(handle: *mut FpkHandle) -> i32 {
     if handle.is_null() {
         return 1;
