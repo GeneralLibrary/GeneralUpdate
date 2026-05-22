@@ -49,12 +49,6 @@ namespace GeneralUpdate.Firmware.Strategy.Connections
                     // Return a block device connection as fallback
                     return new BlockDeviceConnection(config.DevicePath ?? @"\\.\PhysicalDrive0");
 
-                case ConnectionType.Network:
-                case ConnectionType.Jtag:
-                    throw new NotSupportedException(string.Format(
-                        "Connection type '{0}' has been removed. Use BlockDevice, Serial, or UsbDfu instead.",
-                        config.Type));
-
                 default:
                     throw new NotSupportedException(string.Format(
                         "Connection type '{0}' is not supported.", config.Type));

@@ -27,23 +27,9 @@ namespace GeneralUpdate.Firmware.Models
         UsbDfu,
 
         /// <summary>
-        /// Network-based firmware transfer via TFTP or TCP.
-        /// Used for network boot scenarios (U-Boot, OpenWrt, PXE).
-        /// </summary>
-        [Obsolete("Network connection type is not yet implemented. Use BlockDevice, Serial, or UsbDfu instead.")]
-        Network,
-
-        /// <summary>
         /// UEFI firmware capsule update.
         /// Windows-only: uses DeviceIoControl with FSCTL_SET_FIRMWARE_RESOURCE.
         /// </summary>
-        Uefi,
-
-        /// <summary>
-        /// JTAG/SWD debug interface via OpenOCD or similar debug probe.
-        /// Used for bare-metal flashing on development boards.
-        /// </summary>
-        [Obsolete("Jtag connection type is not yet implemented. Use BlockDevice, Serial, or UsbDfu instead.")]
-        Jtag
+        Uefi
     }
 }
