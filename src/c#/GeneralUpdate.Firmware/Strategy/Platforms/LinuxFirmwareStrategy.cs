@@ -250,6 +250,7 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
                     "Backup completed. {0} bytes written to {1}",
                     totalBytesRead,
                     backupPath);
+                config.LastBackupPath = backupPath;
                 FirmwareTrace.EndOperation("LinuxFirmwareBackup", TimeSpan.Zero, true);
                 return true;
             }
@@ -378,35 +379,122 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
                 connection = Connections.ConnectionFactory.Create(config.Connection);
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-                byte[] firmwareData = File.ReadAllBytes(firmwareFilePath);
+                // === Chunked streaming write with progress ===
+                // Avoids File.ReadAllBytes — large firmware files won't OOM.
+                // Each 1 MB chunk is read, written, and reported independently.
+                var chunkBuffer = new byte[1024 * 1024]; // 1 MB chunks
+                long totalWritten = 0;
+                var writeSw = System.Diagnostics.Stopwatch.StartNew();
+                long lastReportBytes = 0;
+                long lastReportMs = 0;
+                var speedSamples = new System.Collections.Generic.Queue<double>(4);
 
-                // Fire progress: flashing starts
-                FireProgress(config, FirmwareUpdateStage.Flashing, 0, 80f,
-                    string.Format(CultureInfo.InvariantCulture, "Writing firmware... {0} MB", firmwareData.Length / (1024 * 1024)));
-
-                // Legacy callback (deprecated but still supported)
-#pragma warning disable 618
-                if (config.ProgressCallback != null)
+                using (var fileStream = new FileStream(
+                    firmwareFilePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    bufferSize: 1024 * 1024, useAsync: true))
                 {
-                    try { config.ProgressCallback(firmwareData.Length, firmwareData.Length); }
-                    catch (Exception ex) { FirmwareTrace.Warn("Progress callback error: {0}", ex.Message); }
-                }
+                    int bytesRead;
+                    while ((bytesRead = await fileStream.ReadAsync(
+                        chunkBuffer, 0, chunkBuffer.Length, cancellationToken)
+                        .ConfigureAwait(false)) > 0)
+                    {
+                        // Write this chunk to the device
+                        if (bytesRead == chunkBuffer.Length)
+                        {
+                            await connection.WriteAsync(chunkBuffer, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            // Last chunk: copy to correctly-sized array
+                            byte[] lastChunk = new byte[bytesRead];
+                            Array.Copy(chunkBuffer, 0, lastChunk, 0, bytesRead);
+                            await connection.WriteAsync(lastChunk, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+
+                        totalWritten += bytesRead;
+
+                        // Report progress at ~500 ms intervals
+                        long elapsedMs = writeSw.ElapsedMilliseconds;
+                        if (elapsedMs - lastReportMs >= 500 || totalWritten == firmwareSize)
+                        {
+                            double deltaBytes = totalWritten - lastReportBytes;
+                            double deltaSecs = (elapsedMs - lastReportMs) / 1000.0;
+                            double instantSpeed = deltaSecs > 0 ? deltaBytes / deltaSecs : 0;
+
+                            speedSamples.Enqueue(instantSpeed);
+                            if (speedSamples.Count > 3) speedSamples.Dequeue();
+                            double avgSpeed = 0;
+                            foreach (var s in speedSamples) avgSpeed += s;
+                            avgSpeed = speedSamples.Count > 0 ? avgSpeed / speedSamples.Count : instantSpeed;
+
+                            TimeSpan eta = firmwareSize > 0 && avgSpeed > 0
+                                ? TimeSpan.FromSeconds((firmwareSize - totalWritten) / avgSpeed)
+                                : TimeSpan.Zero;
+
+                            float stagePct = firmwareSize > 0
+                                ? (float)totalWritten / firmwareSize * 100f
+                                : 0f;
+
+                            FireProgress(config, FirmwareUpdateStage.Flashing,
+                                stagePct,
+                                80f + (stagePct * 0.20f),
+                                string.Format(CultureInfo.InvariantCulture,
+                                    "Flashing... {0}/{1} MB | {2:F1} MB/s",
+                                    totalWritten / (1024 * 1024),
+                                    firmwareSize / (1024 * 1024),
+                                    avgSpeed / (1024 * 1024)));
+
+                            // Fire download-style callback (bytes, total, speed, eta) for flashing too
+                            if (config.OnDownloadProgress != null)
+                            {
+                                try { config.OnDownloadProgress(totalWritten, firmwareSize, avgSpeed, eta); }
+                                catch (Exception ex) { FirmwareTrace.Warn("OnDownloadProgress error: {0}", ex.Message); }
+                            }
+
+                            // Legacy callback
+#pragma warning disable 618
+                            if (config.ProgressCallback != null)
+                            {
+                                try { config.ProgressCallback(totalWritten, firmwareSize); }
+                                catch (Exception ex) { FirmwareTrace.Warn("Legacy callback error: {0}", ex.Message); }
+                            }
 #pragma warning restore 618
 
-                // Fire progress: writing
-                FireProgress(config, FirmwareUpdateStage.Flashing, 50f, 90f, "Writing firmware to device...");
+                            lastReportBytes = totalWritten;
+                            lastReportMs = elapsedMs;
+                        }
+                    }
+                }
 
-                await connection.WriteAsync(firmwareData, cancellationToken).ConfigureAwait(false);
+                writeSw.Stop();
 
-                // Fire progress: write complete
-                FireProgress(config, FirmwareUpdateStage.Flashing, 100f, 100f, "Firmware written successfully.");
+                // === Write-verify: read back and compare with source ===
+                bool verified = true;
+                if (config.EnableWriteVerify)
+                {
+                    verified = await VerifyWrittenDataAsync(
+                        firmwareFilePath, config, firmwareSize, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (!verified)
+                    {
+                        timer.Stop();
+                        FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, false);
+                        return FirmwareUpdateResult.Fail(
+                            "Write verification failed: data read back from device does not match source.",
+                            "FW_LINUX_VERIFY_FAILED",
+                            duration: timer.Elapsed);
+                    }
+                }
 
                 timer.Stop();
-                double speedMBps = (firmwareData.Length / (1024.0 * 1024.0)) / timer.Elapsed.TotalSeconds;
+                double speedMBps = (totalWritten / (1024.0 * 1024.0)) / writeSw.Elapsed.TotalSeconds;
                 FirmwareTrace.Info(
                     "Firmware written successfully. {0} bytes in {1:F1}s ({2:F1} MB/s)",
-                    firmwareData.Length,
-                    timer.Elapsed.TotalSeconds,
+                    totalWritten,
+                    writeSw.Elapsed.TotalSeconds,
                     speedMBps);
                 FirmwareTrace.EndOperation("LinuxApplyFirmware", timer.Elapsed, true);
 
@@ -575,6 +663,111 @@ namespace GeneralUpdate.Firmware.Strategy.Platforms
             catch (Exception ex)
             {
                 FirmwareTrace.Warn("Progress callback threw an exception (ignored): {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Verifies that data written to the device matches the source firmware file.
+        /// Reads back from the device in chunks and compares with the source.
+        /// Reports progress via <see cref="FirmwareConfig.OnProgress"/>.
+        /// </summary>
+        private async Task<bool> VerifyWrittenDataAsync(
+            string firmwareFilePath,
+            FirmwareConfig config,
+            long expectedSize,
+            CancellationToken cancellationToken)
+        {
+            FireProgress(config, FirmwareUpdateStage.VerifyingWrite, 0, 100f, "Verifying written data...");
+            FirmwareTrace.Info("Starting write-verify. Expected size: {0} bytes", expectedSize);
+
+            try
+            {
+                var verifySw = System.Diagnostics.Stopwatch.StartNew();
+                var sourceBuffer = new byte[1024 * 1024];
+                var deviceBuffer = new byte[1024 * 1024];
+                long totalVerified = 0;
+                long lastReportMs = 0;
+
+                using (var sourceStream = new FileStream(
+                    firmwareFilePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    bufferSize: 1024 * 1024, useAsync: true))
+                using (var deviceStream = new FileStream(
+                    config.DevicePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+                    bufferSize: 1024 * 1024, useAsync: true))
+                {
+                    while (totalVerified < expectedSize)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        int sourceBytes = await sourceStream.ReadAsync(
+                            sourceBuffer, 0, sourceBuffer.Length, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        if (sourceBytes == 0) break;
+
+                        int devicePos = 0;
+                        while (devicePos < sourceBytes)
+                        {
+                            int deviceBytes = await deviceStream.ReadAsync(
+                                deviceBuffer, devicePos, sourceBytes - devicePos, cancellationToken)
+                                .ConfigureAwait(false);
+
+                            if (deviceBytes == 0)
+                            {
+                                FirmwareTrace.Error("Device read returned 0 bytes at offset {0}", totalVerified + devicePos);
+                                return false;
+                            }
+                            devicePos += deviceBytes;
+                        }
+
+                        // Compare
+                        for (int i = 0; i < sourceBytes; i++)
+                        {
+                            if (sourceBuffer[i] != deviceBuffer[i])
+                            {
+                                long badOffset = totalVerified + i;
+                                FirmwareTrace.Error(
+                                    "Write-verify mismatch at byte {0}: expected 0x{1:X2}, got 0x{2:X2}",
+                                    badOffset, sourceBuffer[i], deviceBuffer[i]);
+                                return false;
+                            }
+                        }
+
+                        totalVerified += sourceBytes;
+
+                        long elapsedMs = verifySw.ElapsedMilliseconds;
+                        if (elapsedMs - lastReportMs >= 500 || totalVerified >= expectedSize)
+                        {
+                            float pct = expectedSize > 0 ? (float)totalVerified / expectedSize * 100f : 0f;
+                            FireProgress(config, FirmwareUpdateStage.VerifyingWrite,
+                                pct, 100f,
+                                string.Format(CultureInfo.InvariantCulture,
+                                    "Verifying... {0}/{1} MB",
+                                    totalVerified / (1024 * 1024),
+                                    expectedSize / (1024 * 1024)));
+                            lastReportMs = elapsedMs;
+                        }
+                    }
+                }
+
+                verifySw.Stop();
+                double speedMBps = (totalVerified / (1024.0 * 1024.0)) / verifySw.Elapsed.TotalSeconds;
+                FirmwareTrace.Info(
+                    "Write-verify passed. {0} bytes verified in {1:F1}s ({2:F1} MB/s)",
+                    totalVerified, verifySw.Elapsed.TotalSeconds, speedMBps);
+
+                FireProgress(config, FirmwareUpdateStage.VerifyingWrite, 100f, 100f, "Verification passed.");
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                FirmwareTrace.Warn("Write-verify cancelled.");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                FirmwareTrace.Error("Write-verify failed with exception", ex);
+                return false;
             }
         }
     }

@@ -108,6 +108,29 @@ namespace GeneralUpdate.Firmware.Models
         public string BackupDirectory { get; set; }
 
         /// <summary>
+        /// Gets or sets whether to verify the written firmware by reading it back
+        /// from the device and comparing with the source file.
+        /// Default value is true (safe-by-default).
+        /// Verification uses chunked comparison to keep memory usage low.
+        /// </summary>
+        public bool EnableWriteVerify { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether to automatically restore the backup if flashing fails.
+        /// When enabled and a backup exists, the original firmware is written back
+        /// to the device automatically on flash failure.
+        /// Default value is true (safe-by-default).
+        /// Requires <see cref="BackupEnabled"/> to be true for the backup to exist.
+        /// </summary>
+        public bool EnableAutoRollback { get; set; } = true;
+
+        /// <summary>
+        /// Set internally by <see cref="Strategy.IFirmwareStrategy.BackupCurrentFirmwareAsync"/>
+        /// after a successful backup. Used for automatic rollback if flashing fails.
+        /// </summary>
+        internal string LastBackupPath { get; set; }
+
+        /// <summary>
         /// Gets or sets whether to require user confirmation before proceeding with the update.
         /// Default value is false (headless/automated by default).
         /// </summary>
