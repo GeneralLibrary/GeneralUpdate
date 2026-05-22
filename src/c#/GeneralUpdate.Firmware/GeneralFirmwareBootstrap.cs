@@ -238,6 +238,9 @@ namespace GeneralUpdate.Firmware
 
             try
             {
+                // Track whether we have a usable backup for potential rollback
+                bool backupOk = false;
+
                 // ========================================================
                 // Step 1: Validate device readiness
                 // ========================================================
@@ -275,7 +278,7 @@ namespace GeneralUpdate.Firmware
                     FirmwareTrace.BeginOperation("FirmwareBackup");
                     var backupSw = Stopwatch.StartNew();
 
-                    bool backupOk = await _strategy.BackupCurrentFirmwareAsync(_config, cancellationToken)
+                    backupOk = await _strategy.BackupCurrentFirmwareAsync(_config, cancellationToken)
                         .ConfigureAwait(false);
 
                     backupSw.Stop();
@@ -404,6 +407,68 @@ namespace GeneralUpdate.Firmware
                 // Flashing complete
                 RaiseProgress(FlashingProgress(result.Success ? 100 : 0));
 
+                // ========================================================
+                // Step 5: Auto-rollback on failure
+                // ========================================================
+                if (!result.Success && _config.EnableAutoRollback && backupOk && !string.IsNullOrWhiteSpace(_config.LastBackupPath))
+                {
+                    FirmwareTrace.Warn("Flashing failed. Attempting auto-rollback from: {0}", _config.LastBackupPath);
+                    RaiseWarning(
+                        string.Format("Flashing failed [{0}]. Rolling back to original firmware...", result.ErrorCode),
+                        "FW_ROLLBACK_ATTEMPT");
+
+                    try
+                    {
+                        RaiseStageChanged(FirmwareUpdateStage.RollingBack,
+                            "Flashing failed — restoring original firmware from backup...");
+                        RaiseProgress(VerifyingWriteProgress(0));
+
+                        var rollbackSw = Stopwatch.StartNew();
+                        FirmwareUpdateResult rollbackResult = await _strategy.ApplyFirmwareAsync(
+                            _config.LastBackupPath, _config, cancellationToken)
+                            .ConfigureAwait(false);
+                        rollbackSw.Stop();
+
+                        if (rollbackResult.Success)
+                        {
+                            FirmwareTrace.Info("Rollback completed successfully in {0:F1}s", rollbackSw.Elapsed.TotalSeconds);
+                            RaiseProgress(VerifyingWriteProgress(100));
+
+                            overallSw.Stop();
+                            return FirmwareUpdateResult.Fail(
+                                string.Format("Flashing failed [{0}], but firmware was rolled back to the original version. {1}",
+                                    result.ErrorCode, result.Message),
+                                "FW_FLASH_FAILED_ROLLED_BACK",
+                                result.Error,
+                                overallSw.Elapsed);
+                        }
+                        else
+                        {
+                            FirmwareTrace.Error("Rollback failed: {0}", rollbackResult.Message);
+                            RaiseWarning(
+                                string.Format("Rollback also failed: {0}", rollbackResult.Message),
+                                "FW_ROLLBACK_FAILED");
+
+                            overallSw.Stop();
+                            result.Duration = overallSw.Elapsed;
+                            RaiseResultCallbacks(result);
+                            return result;
+                        }
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        FirmwareTrace.Error("Rollback threw an exception", rollbackEx);
+                        RaiseWarning(
+                            string.Format("Rollback failed with exception: {0}", rollbackEx.Message),
+                            "FW_ROLLBACK_EXCEPTION");
+
+                        overallSw.Stop();
+                        result.Duration = overallSw.Elapsed;
+                        RaiseResultCallbacks(result);
+                        return result;
+                    }
+                }
+
                 overallSw.Stop();
                 result.Duration = overallSw.Elapsed;
 
@@ -422,6 +487,9 @@ namespace GeneralUpdate.Firmware
                 FirmwareTrace.Warn("Firmware update was cancelled after {0:F3}s", overallSw.Elapsed.TotalSeconds);
                 FirmwareTrace.EndOperation("FirmwareUpdate", overallSw.Elapsed, false);
 
+                // Attempt rollback if cancelled mid-flash
+                await TryRollbackAsync(cancellationToken).ConfigureAwait(false);
+
                 var cancelResult = FirmwareUpdateResult.Fail(
                     "Firmware update was cancelled.",
                     "FW_CANCELLED",
@@ -434,6 +502,9 @@ namespace GeneralUpdate.Firmware
                 overallSw.Stop();
                 FirmwareTrace.Error("Firmware update failed with unexpected error", ex);
                 FirmwareTrace.EndOperation("FirmwareUpdate", overallSw.Elapsed, false);
+
+                // Attempt rollback on unexpected error
+                await TryRollbackAsync(cancellationToken).ConfigureAwait(false);
 
                 var errorResult = FirmwareUpdateResult.Fail(
                     string.Format("An unexpected error occurred: {0}", ex.Message),
@@ -559,6 +630,55 @@ namespace GeneralUpdate.Firmware
             OverallProgressPercent = 80f + stagePct * 0.20f,
             StatusText = string.Format("Flashing firmware... {0:F0}%", stagePct)
         };
+
+        private static FirmwareProgressInfo VerifyingWriteProgress(float stagePct) => new FirmwareProgressInfo
+        {
+            Stage = FirmwareUpdateStage.VerifyingWrite,
+            StageProgressPercent = stagePct,
+            OverallProgressPercent = 100f,
+            StatusText = string.Format("Verifying written data... {0:F0}%", stagePct)
+        };
+
+        // ============================================================
+        // Rollback
+        // ============================================================
+
+        /// <summary>
+        /// Attempts to restore the backup firmware if auto-rollback is enabled
+        /// and a backup path is available. Safe to call even when no backup exists.
+        /// </summary>
+        private async Task TryRollbackAsync(CancellationToken cancellationToken)
+        {
+            if (!_config.EnableAutoRollback) return;
+            if (string.IsNullOrWhiteSpace(_config.LastBackupPath)) return;
+            if (!System.IO.File.Exists(_config.LastBackupPath)) return;
+
+            FirmwareTrace.Warn("Attempting automatic rollback from backup: {0}", _config.LastBackupPath);
+            RaiseStageChanged(FirmwareUpdateStage.RollingBack, "Unexpected error — restoring original firmware...");
+
+            try
+            {
+                var rollbackResult = await _strategy.ApplyFirmwareAsync(
+                    _config.LastBackupPath, _config, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (rollbackResult.Success)
+                {
+                    FirmwareTrace.Info("Rollback completed successfully.");
+                    RaiseWarning("Original firmware restored from backup.", "FW_ROLLBACK_OK");
+                }
+                else
+                {
+                    FirmwareTrace.Error("Rollback failed: {0}", rollbackResult.Message);
+                    RaiseWarning("Rollback failed — device may be in an inconsistent state.", "FW_ROLLBACK_FAILED");
+                }
+            }
+            catch (Exception rollbackEx)
+            {
+                FirmwareTrace.Error("Rollback threw exception", rollbackEx);
+                RaiseWarning(string.Format("Rollback failed: {0}", rollbackEx.Message), "FW_ROLLBACK_EXCEPTION");
+            }
+        }
 
         // ============================================================
         // Safe invoke helpers

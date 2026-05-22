@@ -25,6 +25,12 @@ namespace GeneralUpdate.Firmware.Models
         /// <summary>Writing (flashing) the firmware to the target device.</summary>
         Flashing,
 
+        /// <summary>Verifying that the firmware was written correctly by comparing with source.</summary>
+        VerifyingWrite,
+
+        /// <summary>Restoring the original firmware from a backup after a failed update.</summary>
+        RollingBack,
+
         /// <summary>The firmware update completed successfully.</summary>
         Completed,
 
