@@ -155,7 +155,6 @@ namespace GeneralUpdate.Firmware
             FirmwareTrace.BeginOperation("FirmwareUpdate");
 
             var overallSw = Stopwatch.StartNew();
-            var totalStopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -212,21 +211,53 @@ namespace GeneralUpdate.Firmware
                 {
                     FirmwareTrace.Info("Firmware URL provided: {0}", _config.FirmwareUrl);
 
+                    // If no local path specified, generate one in temp directory
                     if (string.IsNullOrWhiteSpace(localPath))
                     {
-                        var downloadError = "Firmware download is not yet implemented. Provide a LocalFilePath for now.";
-                        FirmwareTrace.Error(downloadError);
-                        return FirmwareUpdateResult.Fail(
-                            downloadError,
-                            "FW_DOWNLOAD_NOT_IMPLEMENTED");
+                        string tempDir = System.IO.Path.GetTempPath();
+                        string fileName = string.Format(
+                            "firmware_{0}.bin",
+                            Guid.NewGuid().ToString("N"));
+                        localPath = System.IO.Path.Combine(tempDir, fileName);
+                        FirmwareTrace.Info("No LocalFilePath specified; using temp path: {0}", localPath);
                     }
 
-                    // Placeholder: download will be implemented in the OTA layer (Issue 3)
-                    FirmwareTrace.Info("Local firmware file path: {0}", localPath);
+                    // Download the firmware
+                    var downloader = new OTA.FirmwareDownloader(_config);
+                    try
+                    {
+                        localPath = await downloader.DownloadAsync(localPath, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception downloadEx)
+                    {
+                        FirmwareTrace.Error("Firmware download failed", downloadEx);
+                        return FirmwareUpdateResult.Fail(
+                            string.Format("Firmware download failed: {0}", downloadEx.Message),
+                            "FW_DOWNLOAD_FAILED",
+                            downloadEx);
+                    }
+
+                    // Set the resolved local path back to config for downstream use
+                    _config.LocalFilePath = localPath;
                 }
                 else
                 {
                     FirmwareTrace.Info("Using local firmware file: {0}", localPath ?? "(not set)");
+                }
+
+                // ========================================================
+                // Step 3.5: Validate firmware integrity
+                // ========================================================
+                var validator = new OTA.FirmwareValidator(_config);
+                bool isValid = await validator.ValidateAsync(localPath, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!isValid)
+                {
+                    return FirmwareUpdateResult.Fail(
+                        "Firmware validation failed. The downloaded file does not match the expected SHA256 hash.",
+                        "FW_VALIDATION_FAILED");
                 }
 
                 // ========================================================
