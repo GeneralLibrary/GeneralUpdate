@@ -250,7 +250,7 @@ public class GeneralDrivelutionTests
             // Act & Assert
             // Should either complete quickly or throw cancellation exception
             var exception = await Record.ExceptionAsync(
-                () => GeneralDrivelution.QuickUpdateAsync(driverInfo, cts.Token));
+                () => GeneralDrivelution.QuickUpdateAsync(driverInfo, cancellationToken: cts.Token));
 
             // Either succeeded, failed gracefully, or was cancelled
             Assert.True(exception == null || exception is OperationCanceledException);
@@ -274,13 +274,9 @@ public class GeneralDrivelutionTests
         var platformInfo = GeneralDrivelution.GetPlatformInfo();
 
         // Assert
-        if (platformInfo.Platform == "Windows" || platformInfo.Platform == "Linux")
+        if (platformInfo.Platform == "Windows" || platformInfo.Platform == "Linux" || platformInfo.Platform == "MacOS")
         {
             Assert.True(platformInfo.IsSupported);
-        }
-        else if (platformInfo.Platform == "MacOS")
-        {
-            Assert.False(platformInfo.IsSupported); // MacOS not yet implemented
         }
     }
 
