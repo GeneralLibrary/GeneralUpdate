@@ -229,6 +229,8 @@ namespace GeneralUpdate.Differential.Differ
             long ctrlBytes = 0;
             int newPos = 0;
             int lastOldPos = 0; // Track old file position for seek calculations
+            int lastEmitted = 0; // Tracks last emitted new-file position to avoid double-writing
+                                   // when a backwards-extending match overlaps previously emitted no-match chunks.
 
             // Reusable write buffer
             byte[] buf = new byte[8];
@@ -270,45 +272,76 @@ namespace GeneralUpdate.Differential.Differ
                     // The region [newPos - backwardLen, newPos) is the diff region
                     int diffStart = newPos - backwardLen;
 
-                    // Forward diff: find optimal diff within the forward region
-                    int s = 0, sf = 0, lenf = 0;
-                    int diffMid = newPos;
-                    int diffOldRef = matchOldPos - backwardLen;
-
-                    for (int i = 0; diffStart + i < diffMid && diffOldRef + i < oldBytes.Length; i++)
+                    // Clamp backward region: previous 64-byte no-match chunks may have
+                    // already emitted bytes [lastEmitted, newPos). Don't write them twice.
+                    if (diffStart < lastEmitted)
                     {
-                        if (oldBytes[diffOldRef + i] == newBytes[diffStart + i])
-                            s++;
-                        if (s * 2 - i > sf * 2 - lenf)
-                        {
-                            sf = s;
-                            lenf = i + 1;
-                        }
+                        int overlap = lastEmitted - diffStart;
+                        backwardLen -= overlap;
+                        diffStart = lastEmitted;
                     }
 
-                    // Write diff bytes (lenf bytes)
-                    WriteBuffered(newBytes, diffStart, lenf, oldBytes, diffOldRef, diffStream, writeBuf);
+                    if (diffStart < newPos)
+                    {
+                        // Forward diff: find optimal diff within the forward region
+                        int s = 0, sf = 0, lenf = 0;
+                        int diffMid = newPos;
+                        int diffOldRef = matchOldPos - backwardLen;
 
-                    // Extra region: bytes between [diffStart + lenf, newPos) plus the match itself
-                    int extraStart = diffStart + lenf;
-                    int extraLen = (newPos - extraStart) + matchLen;
+                        for (int i = 0; diffStart + i < diffMid && diffOldRef + i < oldBytes.Length; i++)
+                        {
+                            if (oldBytes[diffOldRef + i] == newBytes[diffStart + i])
+                                s++;
+                            if (s * 2 - i > sf * 2 - lenf)
+                            {
+                                sf = s;
+                                lenf = i + 1;
+                            }
+                        }
 
-                    // Write extra bytes
-                    WriteBufferedRaw(newBytes, extraStart, extraLen, extraStream, writeBuf);
+                        // Write diff bytes (lenf bytes)
+                        WriteBuffered(newBytes, diffStart, lenf, oldBytes, diffOldRef, diffStream, writeBuf);
 
-                    // Control tuple: (diff_len, extra_len, old_seek)
-                    long seek = (matchOldPos - backwardLen) - lastOldPos;
-                    WriteInt64(lenf, buf, 0);
-                    ctrlStream.Write(buf, 0, 8);
-                    WriteInt64(extraLen, buf, 0);
-                    ctrlStream.Write(buf, 0, 8);
-                    WriteInt64(seek, buf, 0);
-                    ctrlStream.Write(buf, 0, 8);
+                        // Extra region: bytes between [diffStart + lenf, newPos) plus the match itself
+                        int extraStart = diffStart + lenf;
+                        int extraLen = (newPos - extraStart) + matchLen;
 
-                    ctrlBytes += 24;
+                        // Write extra bytes
+                        WriteBufferedRaw(newBytes, extraStart, extraLen, extraStream, writeBuf);
 
-                    lastOldPos = (matchOldPos - backwardLen) + lenf;
-                    newPos = extraStart + extraLen;
+                        // Control tuple: (diff_len, extra_len, old_seek)
+                        long seek = (matchOldPos - backwardLen) - lastOldPos;
+                        WriteInt64(lenf, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+                        WriteInt64(extraLen, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+                        WriteInt64(seek, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+
+                        ctrlBytes += 24;
+
+                        lastOldPos = (matchOldPos - backwardLen) + lenf;
+                        newPos = extraStart + extraLen;
+                        lastEmitted = newPos;
+                    }
+                    else
+                    {
+                        // Match found but all backward bytes already emitted by previous
+                        // no-match chunks. Emit the match as pure extra data.
+                        int extraLen = matchLen;
+                        WriteInt64(0, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+                        WriteInt64(extraLen, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+                        long seek2 = matchOldPos - lastOldPos;
+                        WriteInt64(seek2, buf, 0);
+                        ctrlStream.Write(buf, 0, 8);
+                        WriteBufferedRaw(newBytes, newPos, extraLen, extraStream, writeBuf);
+                        ctrlBytes += 24;
+                        lastOldPos = matchOldPos + matchLen;
+                        newPos += extraLen;
+                        lastEmitted = newPos;
+                    }
                 }
                 else
                 {
@@ -326,6 +359,7 @@ namespace GeneralUpdate.Differential.Differ
 
                     ctrlBytes += 24;
                     newPos += extraLen;
+                    lastEmitted = newPos;
                 }
             }
 
