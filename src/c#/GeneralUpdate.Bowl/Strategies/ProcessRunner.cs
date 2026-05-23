@@ -71,7 +71,10 @@ internal static class ProcessRunner
         {
             var exitCode = await tcs.Task;
             GeneralTracer.Info($"ProcessRunner.RunAsync: process exited, ExitCode={exitCode}");
-            return new ProcessExitResult { ExitCode = exitCode, OutputLines = outputLines };
+            // Snapshot output under lock to avoid race with in-flight handlers
+            IReadOnlyList<string> snapshot;
+            lock (outputLines) { snapshot = outputLines.ToArray(); }
+            return new ProcessExitResult { ExitCode = exitCode, OutputLines = snapshot };
         }
 
         // Timeout or cancellation — kill the process

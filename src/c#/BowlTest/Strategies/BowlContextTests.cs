@@ -18,7 +18,7 @@ namespace BowlTest.Strategies
         }
 
         [Fact]
-        public void BowlContext_Normalize_PresesrvesExplicitTimeout()
+        public void BowlContext_Normalize_PreservesExplicitTimeout()
         {
             var ctx = new BowlContext
             {
@@ -40,7 +40,7 @@ namespace BowlTest.Strategies
         }
 
         [Fact]
-        public void BowlContext_Normalize_PresesrvesExplicitWorkModel()
+        public void BowlContext_Normalize_PreservesExplicitWorkModel()
         {
             var ctx = new BowlContext
             {

@@ -74,9 +74,10 @@ public sealed class Bowl
         var startInfo = _strategy.Prepare(context);
         if (startInfo == null)
         {
-            GeneralTracer.Fatal("Bowl.LaunchAsync: platform strategy returned null — unsupported platform.");
-            throw new PlatformNotSupportedException(
-                $"No Bowl strategy available for the current platform.");
+            // Strategy may return null when tooling is unavailable (e.g. procdump not installed on Linux).
+            // This is a graceful degradation, not a platform error.
+            GeneralTracer.Warn("Bowl.LaunchAsync: strategy returned null — monitoring tool unavailable.");
+            return new BowlResult { Success = false, ExitCode = -1, DumpCaptured = false };
         }
 
         // Phase 2: Run procdump child process
@@ -131,6 +132,10 @@ public sealed class Bowl
             crashReportPath = await _crashReporter.GenerateReportAsync(
                 context, exitResult.OutputLines, ct);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             GeneralTracer.Error("Bowl.HandleCrashAsync: crash report generation failed.", ex);
@@ -141,6 +146,10 @@ public sealed class Bowl
         try
         {
             await _systemInfoProvider.ExportAsync(context.FailDirectory, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -158,6 +167,10 @@ public sealed class Bowl
                 restored = true;
                 GeneralTracer.Info("Bowl.HandleCrashAsync: restore completed.");
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 GeneralTracer.Error("Bowl.HandleCrashAsync: restore failed.", ex);
@@ -172,6 +185,10 @@ public sealed class Bowl
                 _env.SetVariable("UpgradeFail", context.ExtendedField);
                 GeneralTracer.Warn($"Bowl.HandleCrashAsync: UpgradeFail set to '{context.ExtendedField}'.");
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 GeneralTracer.Error("Bowl.HandleCrashAsync: failed to set UpgradeFail env var.", ex);
@@ -183,6 +200,10 @@ public sealed class Bowl
         {
             await _strategy.PostProcessAsync(context, exitResult, ct);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             GeneralTracer.Error("Bowl.HandleCrashAsync: post-process failed.", ex);
@@ -193,14 +214,33 @@ public sealed class Bowl
         {
             try
             {
+                // Only invoke callback if we have something to report
+                if (crashReportPath == null)
+                {
+                    GeneralTracer.Warn("Bowl.HandleCrashAsync: skipping OnCrash callback — no crash report generated.");
+                    return new BowlResult
+                    {
+                        Success = false,
+                        ExitCode = exitResult.ExitCode,
+                        DumpCaptured = true,
+                        DumpFilePath = dumpPath,
+                        CrashReportPath = null,
+                        Restored = restored,
+                    };
+                }
+
                 var crashInfo = new CrashInfo
                 {
                     DumpFilePath = dumpPath,
-                    CrashReportPath = crashReportPath ?? string.Empty,
+                    CrashReportPath = crashReportPath!,
                     Version = context.ExtendedField,
                     ExitCode = exitResult.ExitCode,
                 };
                 await context.OnCrash(crashInfo, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -242,7 +282,7 @@ public sealed class Bowl
         }
 
         var bowl = new Bowl();
-        bowl.LaunchAsync(context).GetAwaiter().GetResult();
+        bowl.LaunchAsync(context).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     /// <summary>

@@ -5,7 +5,7 @@ namespace GeneralUpdate.Bowl.Strategies;
 /// <summary>
 /// Result of the child (procdump) process run.
 /// </summary>
-public readonly record struct ProcessExitResult
+internal readonly record struct ProcessExitResult
 {
     /// <summary>Process exit code.</summary>
     public int ExitCode { get; init; }

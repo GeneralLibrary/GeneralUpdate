@@ -16,7 +16,6 @@ internal sealed class WindowsSystemInfoProvider : ISystemInfoProvider
     {
         GeneralTracer.Info($"WindowsSystemInfoProvider.ExportAsync: exporting to {outputDirectory}.");
 
-        // Determine the Applications directory relative to Bowl's assembly location
         var appDir = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "Applications", "Windows");
         var batPath = Path.Combine(appDir, "export.bat");
@@ -39,9 +38,15 @@ internal sealed class WindowsSystemInfoProvider : ISystemInfoProvider
         if (process != null)
         {
             GeneralTracer.Info("WindowsSystemInfoProvider: export.bat started.");
-            // Non-blocking: export.bat runs independently
-            process.WaitForExit(30_000);
-            GeneralTracer.Info($"WindowsSystemInfoProvider: export.bat finished, exit code {process.ExitCode}.");
+            var exited = process.WaitForExit(30_000);
+            if (exited)
+            {
+                GeneralTracer.Info($"WindowsSystemInfoProvider: export.bat finished, exit code {process.ExitCode}.");
+            }
+            else
+            {
+                GeneralTracer.Warn("WindowsSystemInfoProvider: export.bat timed out after 30s.");
+            }
         }
 
         return Task.CompletedTask;

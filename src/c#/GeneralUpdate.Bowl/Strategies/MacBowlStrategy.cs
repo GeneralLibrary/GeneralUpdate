@@ -21,29 +21,28 @@ internal sealed class MacBowlStrategy : IBowlStrategy
 {
     public ProcessStartInfo? Prepare(in BowlContext context)
     {
-        // Check if lldb is available
         if (!IsLldbAvailable())
         {
             GeneralTracer.Warn(
-                "MacBowlStrategy.Prepare: lldb not available. macOS crash monitoring is unavailable without a crash capture tool.");
+                "MacBowlStrategy.Prepare: lldb not available. macOS crash monitoring is unavailable.");
             return null;
         }
 
         var dumpFullPath = Path.Combine(context.FailDirectory, context.DumpFileName);
         EnsureDirectory(context.FailDirectory);
 
-        // lldb batch mode: attach to process by name, save core dump, quit
-        var lldbCommands = string.Join("\n",
-            $"process attach --name {context.ProcessNameOrId} --waitfor",
-            $"process save-core \"{dumpFullPath}\"",
-            "quit");
-
+        // lldb batch mode: attach to process by name, save core dump, quit.
+        // Use separate -o arguments per command to avoid nested quoting issues.
         GeneralTracer.Info($"MacBowlStrategy.Prepare: target={context.ProcessNameOrId}");
 
         return new ProcessStartInfo
         {
             FileName = "/usr/bin/lldb",
-            Arguments = $"--batch -o \"{lldbCommands}\"",
+            Arguments = string.Concat(
+                "--batch",
+                $" -o \"process attach --name {context.ProcessNameOrId} --waitfor\"",
+                $" -o \"process save-core {dumpFullPath}\"",
+                " -o quit"),
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -73,7 +72,12 @@ internal sealed class MacBowlStrategy : IBowlStrategy
                 },
             };
             process.Start();
-            process.WaitForExit(3000);
+            var exited = process.WaitForExit(3000);
+            if (!exited)
+            {
+                process.Kill();
+                return false;
+            }
             return process.ExitCode == 0;
         }
         catch

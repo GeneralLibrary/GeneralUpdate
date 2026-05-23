@@ -40,7 +40,7 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
                 GeneralTracer.Warn(
                     "LinuxBowlStrategy.Prepare: procdump installation failed on this system.");
                 _procdumpInstalled = false;
-                // Don't throw; return null signals "unsupported" to Bowl
+                // Don't throw; return null signals "tool unavailable" to Bowl (graceful degradation)
             }
             else
             {
@@ -114,7 +114,7 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
                 {
                     FileName = "/bin/bash",
                     Arguments = $"\"{script}\" \"{package}\"",
-                    RedirectStandardOutput = true,
+                    RedirectStandardOutput = false,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -122,6 +122,10 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
             };
 
             process.Start();
+
+            // Read stderr asynchronously to avoid pipe buffer deadlock
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
             var exited = process.WaitForExit(60_000);
             if (!exited)
             {
@@ -136,7 +140,7 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
                 return true;
             }
 
-            var stderr = process.StandardError.ReadToEnd();
+            var stderr = stderrTask.Result;
             GeneralTracer.Error(
                 $"LinuxBowlStrategy: install script failed with exit code {process.ExitCode}. stderr: {stderr}");
             return false;
