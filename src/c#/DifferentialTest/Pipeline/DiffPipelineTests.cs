@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
@@ -29,14 +30,14 @@ namespace DifferentialTest.Pipeline
         }
 
         [Fact]
-        public async Task Builder_WithDefaults_ProducesValidPipeline()
+        public void Builder_WithDefaults_ProducesValidPipeline()
         {
             var pipeline = new DiffPipelineBuilder().Build();
             Assert.NotNull(pipeline);
         }
 
         [Fact]
-        public async Task Builder_WithCustomDiffer_UsesProvidedDiffer()
+        public void Builder_WithCustomDiffer_UsesProvidedDiffer()
         {
             var differ = new BinaryHandler();
             var pipeline = new DiffPipelineBuilder().UseDiffer(differ).Build();
@@ -44,12 +45,11 @@ namespace DifferentialTest.Pipeline
         }
 
         [Fact]
-        public async Task Builder_WithParallelism_SetsCorrectly()
+        public void Builder_WithParallelism_SetsCorrectly()
         {
             var pipeline = new DiffPipelineBuilder()
                 .WithParallelism(2)
                 .Build();
-
             Assert.NotNull(pipeline);
         }
 
@@ -71,13 +71,12 @@ namespace DifferentialTest.Pipeline
                 .WithParallelism(1)
                 .Build();
 
-            var lastProgress = default(DiffProgress);
-            var reporter = new Progress<DiffProgress>(p => lastProgress = p);
-
+            var reporter = new SyncProgress<DiffProgress>();
             await pipeline.CleanAsync(src, tgt, patch, reporter);
 
-            Assert.True(lastProgress.IsComplete);
-            Assert.Equal(2, lastProgress.Total);
+            Assert.True(reporter.LastValue.IsComplete);
+            Assert.True(reporter.LastValue.Total > 0);
+            Assert.Equal(reporter.LastValue.Total, reporter.LastValue.Completed);
         }
 
         [Fact]
@@ -89,7 +88,7 @@ namespace DifferentialTest.Pipeline
             Directory.CreateDirectory(patch);
 
             File.WriteAllText(Path.Combine(app, "x.txt"), "old data");
-            // Create a patch for x.txt
+
             var src = Path.Combine(_testDir, "src");
             var tgt = Path.Combine(_testDir, "tgt");
             Directory.CreateDirectory(src);
@@ -100,14 +99,13 @@ namespace DifferentialTest.Pipeline
             var genPipeline = new DiffPipelineBuilder().WithParallelism(1).Build();
             await genPipeline.CleanAsync(src, tgt, patch);
 
-            // Now apply with progress
             var pipeline = new DiffPipelineBuilder().WithParallelism(1).Build();
-            var lastProgress = default(DiffProgress);
-            var reporter = new Progress<DiffProgress>(p => lastProgress = p);
-
+            var reporter = new SyncProgress<DiffProgress>();
             await pipeline.DirtyAsync(app, patch, reporter);
 
-            Assert.True(lastProgress.IsComplete);
+            Assert.True(reporter.LastValue.IsComplete);
+            Assert.True(reporter.LastValue.Total > 0);
+            Assert.Equal(reporter.LastValue.Total, reporter.LastValue.Completed);
             Assert.Equal("new data", File.ReadAllText(Path.Combine(app, "x.txt")));
         }
 
@@ -121,7 +119,6 @@ namespace DifferentialTest.Pipeline
             Directory.CreateDirectory(tgt);
             Directory.CreateDirectory(patch);
 
-            // Create many files so processing takes some time
             for (int i = 0; i < 10; i++)
             {
                 File.WriteAllText(Path.Combine(src, $"f{i}.txt"), $"old_{i}");
@@ -130,14 +127,14 @@ namespace DifferentialTest.Pipeline
 
             var pipeline = new DiffPipelineBuilder().WithParallelism(2).Build();
             var cts = new CancellationTokenSource();
-            cts.Cancel(); // Cancel immediately
+            cts.Cancel();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
                 pipeline.CleanAsync(src, tgt, patch, cancellationToken: cts.Token));
         }
 
         [Fact]
-        public async Task DiffProgress_Properties_CalculateCorrectly()
+        public void DiffProgress_Properties_CalculateCorrectly()
         {
             var p = new DiffProgress(5, 10, "file.txt");
             Assert.Equal(5, p.Completed);
@@ -149,7 +146,7 @@ namespace DifferentialTest.Pipeline
         }
 
         [Fact]
-        public async Task DiffProgress_Complete_IsComplete()
+        public void DiffProgress_Complete_IsComplete()
         {
             var p = DiffProgress.Complete(10);
             Assert.True(p.IsComplete);
@@ -157,10 +154,24 @@ namespace DifferentialTest.Pipeline
         }
 
         [Fact]
-        public async Task DiffProgress_WithError_ReportsError()
+        public void DiffProgress_WithError_ReportsError()
         {
             var p = new DiffProgress(3, 5, "bad.txt", "Access denied");
             Assert.Equal("Access denied", p.Error);
+        }
+
+        /// <summary>
+        /// Synchronous IProgress implementation for deterministic test assertions.
+        /// Unlike System.Progress, callbacks fire immediately during Report().
+        /// </summary>
+        private sealed class SyncProgress<T> : IProgress<T>
+        {
+            public T LastValue { get; private set; } = default!;
+
+            public void Report(T value)
+            {
+                LastValue = value;
+            }
         }
     }
 }

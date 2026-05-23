@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Differ;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit;
 namespace DifferentialTest.Differ
 {
     /// <summary>
-    /// Test cases for StreamingHdiffDiffer — round-trip diff & patch,
+    /// Test cases for StreamingHdiffDiffer — round-trip diff and patch,
     /// IBinaryDiffer interface compliance, and edge cases.
     /// </summary>
     public class StreamingHdiffDifferTests : IDisposable
@@ -89,7 +90,7 @@ namespace DifferentialTest.Differ
         }
 
         [Fact]
-        public async Task CleanAsync_LargeBinary_ProducesValidPatch()
+        public async Task CleanAsync_LargeBinary_RoundTrip_ProducesCorrectOutput()
         {
             var differ = new StreamingHdiffDiffer();
             var rng = new Random(123);
@@ -97,7 +98,6 @@ namespace DifferentialTest.Differ
             var newData = new byte[100_000];
             rng.NextBytes(oldData);
             Array.Copy(oldData, newData, 100_000);
-            // Modify a chunk in the middle
             for (int i = 40_000; i < 40_100; i++)
                 newData[i] = (byte)(oldData[i] ^ 0xFF);
 
@@ -110,10 +110,12 @@ namespace DifferentialTest.Differ
             File.WriteAllBytes(newPath, newData);
 
             await differ.CleanAsync(oldPath, newPath, patchPath);
-
             Assert.True(File.Exists(patchPath));
-            // Patch should be significantly smaller than the full file
             Assert.True(new FileInfo(patchPath).Length < newData.Length / 2);
+
+            // Round-trip: apply patch and verify output
+            await differ.DirtyAsync(oldPath, outputPath, patchPath);
+            Assert.Equal(newData, File.ReadAllBytes(outputPath));
         }
     }
 }
