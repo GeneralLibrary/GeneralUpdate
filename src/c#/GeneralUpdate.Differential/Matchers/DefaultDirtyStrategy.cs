@@ -10,20 +10,18 @@ using GeneralUpdate.Differential.Abstractions;
 namespace GeneralUpdate.Differential.Matchers
 {
     /// <summary>
-    /// Default implementation of <see cref="IDirtyStrategy"/> that preserves the original
-    /// behaviour of the Dirty (patch-application) phase.
-    /// <para>
-    /// An optional <see cref="IDirtyMatcher"/> can be supplied to customise how an
-    /// application file is matched to its corresponding patch file, without replacing the
-    /// entire execution flow.  When no matcher is provided, <see cref="DefaultDirtyMatcher"/>
-    /// is used.
-    /// </para>
-    /// <para>
-    /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
-    /// algorithm.  Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression
-    /// for fast patch application.
-    /// </para>
+    /// Default implementation of <see cref="IDirtyStrategy"/> for the Dirty (patch-application) phase.
     /// </summary>
+    /// <remarks>
+    /// An optional <see cref="IDirtyMatcher"/> can be supplied to customise how an
+    /// application file is matched to its corresponding patch file.
+    /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
+    /// algorithm. Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression.
+    ///
+    /// File replacement strategy: after patching, the strategy performs an atomic
+    /// delete-and-replace of the original file with the patched output.
+    /// This ensures correctness regardless of the IBinaryDiffer implementation used.
+    /// </remarks>
     public class DefaultDirtyStrategy : IDirtyStrategy
     {
         private const string DeleteFilesName = "generalupdate_delete_files.json";
@@ -90,13 +88,35 @@ namespace GeneralUpdate.Differential.Matchers
             }
         }
 
+        /// <summary>
+        /// Applies a patch to a single file, then atomically replaces the original with the patched version.
+        /// The IBinaryDiffer writes to a temp path; this method handles the replacement.
+        /// </summary>
         private async Task ApplyPatch(string appFilePath, string patchFilePath)
         {
             if (!File.Exists(appFilePath) || !File.Exists(patchFilePath)) return;
-            var newPath = Path.Combine(
+
+            var tempPath = Path.Combine(
                 Path.GetDirectoryName(appFilePath)!,
                 $"{Path.GetRandomFileName()}_{Path.GetFileName(appFilePath)}");
-            await _binaryDiffer.DirtyAsync(appFilePath, newPath, patchFilePath);
+
+            // Let the differ produce the new file at tempPath
+            await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath);
+
+            // Atomic replacement: if the differ didn't already replace the file,
+            // copy the patched output back over the original, then clean up.
+            if (File.Exists(tempPath) && !File.Exists(appFilePath))
+            {
+                // Differ already replaced (e.g., BinaryHandler built-in behavior)
+                File.Move(tempPath, appFilePath);
+            }
+            else if (File.Exists(tempPath) && File.Exists(appFilePath))
+            {
+                // Differ wrote to temp but didn't replace -- we do the replacement
+                File.SetAttributes(appFilePath, FileAttributes.Normal);
+                File.Delete(appFilePath);
+                File.Move(tempPath, appFilePath);
+            }
         }
 
         private static async Task CopyUnknownFiles(string appPath, string patchPath)

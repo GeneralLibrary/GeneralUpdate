@@ -7,13 +7,13 @@ namespace GeneralUpdate.Differential.Abstractions
     /// <summary>
     /// Defines a pluggable compression strategy for patch data.
     /// Each patch format version may use a different compression algorithm
-    /// (BZip2 for legacy, Brotli for new, Deflate for compatibility).
+    /// (BZip2 for legacy, Brotli for new, Deflate for compatibility scenarios).
     /// </summary>
     public interface ICompressionProvider
     {
         /// <summary>
-        /// Gets the format identifier byte written into the patch header for version detection.
-        /// 0x00 = BZip2 (legacy BSDIFF), 0x01 = Brotli, 0x02+ = reserved.
+        /// The format identifier byte written into the patch header for version detection.
+        /// 0x00 = BZip2 (legacy BSDIFF), 0x01 = Deflate, 0x02 = Brotli (.NET 6+), 0x03+ = reserved.
         /// </summary>
         byte FormatVersion { get; }
 

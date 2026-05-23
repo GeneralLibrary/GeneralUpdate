@@ -1,4 +1,3 @@
-#if NET6_0_OR_GREATER
 using System.IO;
 using System.Threading;
 using GeneralUpdate.Differential.Abstractions;
@@ -6,30 +5,28 @@ using GeneralUpdate.Differential.Abstractions;
 namespace GeneralUpdate.Differential.Abstractions
 {
     /// <summary>
-    /// Brotli compression provider using <see cref="System.IO.Compression.BrotliStream"/> (BCL, .NET 6+).
-    /// Format version byte: 0x02.
+    /// Deflate compression provider using <see cref="System.IO.Compression.DeflateStream"/> (BCL, universally available).
+    /// Format version byte: 0x01.
     /// </summary>
     /// <remarks>
     /// Compared to BZip2:
-    /// - Decompression is 3-5x faster (critical for client-side patch application).
-    /// - Compression ratio is comparable or slightly better for binary data.
-    /// - Only available on .NET 6+ targets.
-    ///
-    /// For netstandard2.0 targets, use <see cref="DeflateCompressionProvider"/> instead (format 0x01).
+    /// - Decompression is 2-3x faster (good for client-side patch application).
+    /// - Compression ratio is comparable for binary data.
+    /// - Available on all target frameworks including netstandard2.0 with zero extra dependencies.
     /// </remarks>
-    public sealed class BrotliCompressionProvider : ICompressionProvider
+    public sealed class DeflateCompressionProvider : ICompressionProvider
     {
         private readonly System.IO.Compression.CompressionLevel _compressionLevel;
 
         /// <summary>
-        /// Initialises a new Brotli compression provider with the specified quality.
+        /// Initialises a new Deflate compression provider with the specified quality.
         /// </summary>
         /// <param name="optimalLevel">
         /// If true, uses CompressionLevel.Optimal (best compression, slower).
         /// If false, uses CompressionLevel.Fastest (faster compression, slightly larger output).
         /// Default: true (optimal).
         /// </param>
-        public BrotliCompressionProvider(bool optimalLevel = true)
+        public DeflateCompressionProvider(bool optimalLevel = true)
         {
             _compressionLevel = optimalLevel
                 ? System.IO.Compression.CompressionLevel.Optimal
@@ -37,19 +34,19 @@ namespace GeneralUpdate.Differential.Abstractions
         }
 
         /// <inheritdoc/>
-        public byte FormatVersion => 0x02;
+        public byte FormatVersion => 0x01;
 
         /// <inheritdoc/>
         public Stream CreateCompressStream(Stream output, CancellationToken cancellationToken = default)
         {
-            return new System.IO.Compression.BrotliStream(output, _compressionLevel, leaveOpen: true);
+            // DeflateStream: leaveOpen=true so disposing the wrapper does not close the underlying stream.
+            return new System.IO.Compression.DeflateStream(output, _compressionLevel, leaveOpen: true);
         }
 
         /// <inheritdoc/>
         public Stream CreateDecompressStream(Stream input, CancellationToken cancellationToken = default)
         {
-            return new System.IO.Compression.BrotliStream(input, System.IO.Compression.CompressionMode.Decompress, leaveOpen: true);
+            return new System.IO.Compression.DeflateStream(input, System.IO.Compression.CompressionMode.Decompress, leaveOpen: true);
         }
     }
 }
-#endif

@@ -31,7 +31,7 @@ namespace GeneralUpdate.Differential.Matchers
         private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
-        /// Initialises a new instance using StreamingHdiffDiffer with Brotli compression by default.
+        /// Initialises a new instance using StreamingHdiffDiffer with Deflate compression by default.
         /// </summary>
         public DefaultCleanStrategy()
             : this(null, null)

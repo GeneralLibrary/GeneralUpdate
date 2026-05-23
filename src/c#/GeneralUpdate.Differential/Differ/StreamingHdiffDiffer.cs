@@ -8,30 +8,25 @@ using GeneralUpdate.Differential.Abstractions;
 namespace GeneralUpdate.Differential.Differ
 {
     /// <summary>
-    /// Streaming binary differ with block-level pre-filtering.
-    /// <para>
-    /// Key improvements over <see cref="Binary.BinaryHandler"/> (classic BSDIFF):
-    /// - Block hash index instead of suffix array 鈫?faster O(n) best-case matching.
-    /// - Configurable memory budget (<see cref="MaxWindowSize"/>) vs. BSDIFF's O(oldSize脳17).
-    /// - Content-defined chunking for better binary pattern recognition.
-    /// - Produces BSDIFF-compatible patch format, readable by any Dirty implementation.
-    /// </para>
+    /// Streaming binary differ with block-level hash pre-filtering for faster matching.
     /// </summary>
+    /// <remarks>
+    /// Key improvements over <see cref="Binary.BinaryHandler"/> (classic BSDIFF):
+    /// - Block hash index replaces suffix array for candidate lookup (O(n) typical vs O(n log n)).
+    /// - Configurable memory budget via <see cref="MaxWindowSize"/> vs BSDIFF's O(oldSize * 17).
+    /// - Fixed-size block hashing with stride-based sampling for dense coverage.
+    /// - Produces BSDIFF-compatible patch format readable by any Dirty implementation.
+    /// </remarks>
     public class StreamingHdiffDiffer : IBinaryDiffer
     {
         #region Constants
 
-        // Minimum match length in bytes. Shorter matches are treated as literal data.
         private const int MinMatchLength = 16;
-
-        // Sliding window overlap for extending matches beyond block boundaries.
-        private const int MatchOverlap = MinMatchLength - 1;
-
         private const long BsdiffMagic = 0x3034464649445342L; // "BSDIFF40"
         private const int BsdiffHeaderSize = 32;
         private const int ExtendedHeaderSize = 33; // 32 + 1 format version byte
 
-        // FNV-like rolling hash parameters
+        // FNV-1a parameters
         private const uint FnvPrime32 = 16777619u;
         private const uint FnvOffset32 = 2166136261u;
 
@@ -39,16 +34,10 @@ namespace GeneralUpdate.Differential.Differ
 
         #region Configuration
 
-        /// <summary>
-        /// Block size for hash indexing (default 64KB).
-        /// Smaller blocks = more hash lookups but better match granularity.
-        /// </summary>
+        /// <summary>Block size for hash indexing (default 64KB).</summary>
         public int BlockSize { get; }
 
-        /// <summary>
-        /// Maximum memory budget for loading the old file (default 128MB).
-        /// Files larger than this will use sliding-window mode.
-        /// </summary>
+        /// <summary>Maximum memory budget for loading the old file (default 128MB).</summary>
         public int MaxWindowSize { get; }
 
         private readonly ICompressionProvider _compressionProvider;
@@ -58,10 +47,10 @@ namespace GeneralUpdate.Differential.Differ
         #region Constructor
 
         /// <summary>
-        /// Initialises a new streaming differ with Brotli compression by default.
+        /// Initialises a new streaming differ with Deflate compression by default.
         /// </summary>
         public StreamingHdiffDiffer()
-            : this(new BrotliCompressionProvider(), 64 * 1024, 128 * 1024 * 1024)
+            : this(new DeflateCompressionProvider(), 64 * 1024, 128 * 1024 * 1024)
         {
         }
 
@@ -70,7 +59,10 @@ namespace GeneralUpdate.Differential.Differ
         /// </summary>
         /// <param name="compressionProvider">Compression strategy for patch data.</param>
         /// <param name="blockSize">Block size for hash indexing (default 64KB).</param>
-        /// <param name="maxWindowSize">Maximum memory budget for old file (default 128MB).</param>
+        /// <param name="maxWindowSize">
+        /// Maximum memory budget for loading the old file (default 128MB).
+        /// Files exceeding this budget will fall back to full-memory load for correctness.
+        /// </param>
         public StreamingHdiffDiffer(ICompressionProvider compressionProvider, int blockSize, int maxWindowSize)
         {
             _compressionProvider = compressionProvider ?? throw new ArgumentNullException(nameof(compressionProvider));
@@ -83,18 +75,19 @@ namespace GeneralUpdate.Differential.Differ
         #region IBinaryDiffer
 
         /// <inheritdoc/>
-        public Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
+        public Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken ct = default)
         {
-            return Task.Run(() => Clean(oldFilePath, newFilePath, patchFilePath), cancellationToken);
+            ct.ThrowIfCancellationRequested();
+            return Task.Run(() => Clean(oldFilePath, newFilePath, patchFilePath), ct);
         }
 
         /// <inheritdoc/>
-        public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
+        public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken ct = default)
         {
-            // Patch application is identical to BSDIFF Dirty 鈥?reuse the same logic.
-            // Create a BinaryHandler with matching compression provider to read the patch.
+            ct.ThrowIfCancellationRequested();
+            // Patch application is identical to BSDIFF Dirty; delegate to BinaryHandler.
             var handler = new Binary.BinaryHandler(_compressionProvider);
-            return handler.DirtyAsync(oldFilePath, newFilePath, patchFilePath, cancellationToken);
+            return handler.DirtyAsync(oldFilePath, newFilePath, patchFilePath, ct);
         }
 
         #endregion IBinaryDiffer
@@ -105,19 +98,25 @@ namespace GeneralUpdate.Differential.Differ
         {
             ValidatePaths(oldFilePath, newFilePath, patchFilePath);
 
-            var oldBytes = ReadFileWithBudget(oldFilePath, MaxWindowSize, out bool oldTruncated);
-            var newBytes = ReadFileWithBudget(newFilePath, MaxWindowSize, out bool newTruncated);
+            var oldFileInfo = new FileInfo(oldFilePath);
+            var newFileInfo = new FileInfo(newFilePath);
 
-            if (oldTruncated || newTruncated)
-            {
-                // Fall back to full memory load for correctness when budget exceeded.
+            // Load files with memory budget
+            byte[] oldBytes;
+            if (oldFileInfo.Length <= MaxWindowSize)
                 oldBytes = File.ReadAllBytes(oldFilePath);
+            else
+                oldBytes = ReadFileWithBudget(oldFilePath, MaxWindowSize);
+
+            byte[] newBytes;
+            if (newFileInfo.Length <= MaxWindowSize)
                 newBytes = File.ReadAllBytes(newFilePath);
-            }
+            else
+                newBytes = ReadFileWithBudget(newFilePath, MaxWindowSize);
 
             using (var output = new FileStream(patchFilePath, FileMode.Create))
             {
-                // Write extended header (placeholder, will be overwritten at end)
+                // Write extended header (placeholder values, overwritten at end)
                 byte[] header = new byte[ExtendedHeaderSize];
                 WriteInt64(BsdiffMagic, header, 0);
                 WriteInt64(0, header, 8);   // ctrl length (filled later)
@@ -131,7 +130,7 @@ namespace GeneralUpdate.Differential.Differ
                 // Build block-level hash index from old file
                 var blockIndex = BuildBlockIndex(oldBytes);
 
-                // Temporary buffers for diff/extra data (written to memory first, then compressed)
+                // Temporary buffers for diff/extra data
                 using (var diffMemory = new MemoryStream())
                 using (var extraMemory = new MemoryStream())
                 {
@@ -141,20 +140,20 @@ namespace GeneralUpdate.Differential.Differ
                         ctrlLength = ComputeDiff(oldBytes, newBytes, blockIndex, ctrlCompress, diffMemory, extraMemory);
                     }
 
-                    // Write compressed diff data
                     long ctrlEndPos = output.Position;
                     WriteInt64(ctrlEndPos - headerStart - ExtendedHeaderSize, header, 8);
 
+                    // Write compressed diff data
                     using (var diffCompress = _compressionProvider.CreateCompressStream(output))
                     {
                         diffMemory.Position = 0;
                         diffMemory.CopyTo(diffCompress);
                     }
 
-                    // Write compressed extra data
                     long diffEndPos = output.Position;
                     WriteInt64(diffEndPos - ctrlEndPos, header, 16);
 
+                    // Write compressed extra data
                     using (var extraCompress = _compressionProvider.CreateCompressStream(output))
                     {
                         extraMemory.Position = 0;
@@ -175,8 +174,8 @@ namespace GeneralUpdate.Differential.Differ
         #region Core Algorithm
 
         /// <summary>
-        /// Builds a hash index mapping block hashes to positions in the old file.
-        /// Each block is BlockSize bytes, computed at stride = BlockSize / 4 for denser coverage.
+        /// Builds a hash index mapping FNV-1a block hashes to positions in the old file.
+        /// Stride is BlockSize/4 for denser coverage without excessive memory.
         /// </summary>
         private Dictionary<uint, List<int>> BuildBlockIndex(byte[] oldBytes)
         {
@@ -199,7 +198,7 @@ namespace GeneralUpdate.Differential.Differ
         }
 
         /// <summary>
-        /// Computes a rolling FNV-1a hash over a block of bytes.
+        /// Computes an FNV-1a hash over a block of bytes.
         /// </summary>
         private static uint ComputeBlockHash(byte[] data, int offset, int length)
         {
@@ -214,8 +213,9 @@ namespace GeneralUpdate.Differential.Differ
         }
 
         /// <summary>
-        /// Core diff computation: iterates through the new file, finds matches in the old file,
-        /// and writes BSDIFF-compatible control/diff/extra data.
+        /// Core diff computation. Iterates through the new file, finds matches in the old file
+        /// using block hash lookups with byte-level extension, and writes BSDIFF-compatible
+        /// control/diff/extra tuples.
         /// </summary>
         /// <returns>Number of bytes written to ctrlStream.</returns>
         private long ComputeDiff(
@@ -228,6 +228,11 @@ namespace GeneralUpdate.Differential.Differ
         {
             long ctrlBytes = 0;
             int newPos = 0;
+            int lastOldPos = 0; // Track old file position for seek calculations
+
+            // Reusable write buffer
+            byte[] buf = new byte[8];
+            byte[] writeBuf = new byte[64 * 1024]; // 64KB buffered write buffer
 
             while (newPos < newBytes.Length)
             {
@@ -235,115 +240,96 @@ namespace GeneralUpdate.Differential.Differ
                 int matchLen = 0;
                 int matchOldPos = 0;
 
-                // Look up using block hash at current position
                 int blockLen = Math.Min(BlockSize, newBytes.Length - newPos);
                 uint hash = ComputeBlockHash(newBytes, newPos, blockLen);
 
                 if (blockIndex.TryGetValue(hash, out var candidates))
                 {
-                    // Verify and extend the best match among candidates
                     foreach (int oldPos in candidates)
                     {
-                        int len = ExtendMatch(oldBytes, newBytes, oldPos, newPos);
+                        int len = MeasureForwardMatch(oldBytes, newBytes, oldPos, newPos);
                         if (len > matchLen)
                         {
                             matchLen = len;
                             matchOldPos = oldPos;
-                            if (matchLen >= BlockSize) break; // Good enough
+                            if (matchLen >= BlockSize) break;
                         }
                     }
                 }
-
-                // Determine forward/backward extension for optimal diff
-                int lenf = 0; // Bytes to diff (forward from match start)
-                int lenb = 0; // Bytes matched backward from current position
 
                 if (matchLen >= MinMatchLength)
                 {
-                    // Extend backward: how many bytes before newPos also match?
-                    while (lenb < newPos &&
-                           lenb < matchOldPos &&
-                           oldBytes[matchOldPos - lenb - 1] == newBytes[newPos - lenb - 1])
+                    // Find how far back the match extends from newPos
+                    int backwardLen = 0;
+                    while (backwardLen < newPos && backwardLen < matchOldPos &&
+                           oldBytes[matchOldPos - backwardLen - 1] == newBytes[newPos - backwardLen - 1])
                     {
-                        lenb++;
+                        backwardLen++;
                     }
 
-                    // Forward diff region: bytes between last position and match start
-                    int scanStart = newPos - lenb;
+                    // The region [newPos - backwardLen, newPos) is the diff region
+                    int diffStart = newPos - backwardLen;
 
-                    // Compute forward diff: find optimal diff region
-                    int s = 0, sf = 0;
-                    int scanEnd = scanStart;
-                    int lastOldPos = matchOldPos - lenb;
+                    // Forward diff: find optimal diff within the forward region
+                    int s = 0, sf = 0, lenf = 0;
+                    int diffMid = newPos;
+                    int diffOldRef = matchOldPos - backwardLen;
 
-                    for (int i = 0; scanStart + i < newPos && lastOldPos + i < oldBytes.Length; i++)
+                    for (int i = 0; diffStart + i < diffMid && diffOldRef + i < oldBytes.Length; i++)
                     {
-                        if (oldBytes[lastOldPos + i] == newBytes[scanStart + i]) s++;
-                        if (s * 2 - i > sf * 2 - scanEnd + scanStart)
+                        if (oldBytes[diffOldRef + i] == newBytes[diffStart + i])
+                            s++;
+                        if (s * 2 - i > sf * 2 - lenf)
                         {
                             sf = s;
-                            scanEnd = scanStart + i + 1;
+                            lenf = i + 1;
                         }
                     }
-                    lenf = scanEnd - scanStart;
 
-                    // Write diff bytes for the forward region
-                    for (int i = 0; i < lenf; i++)
-                    {
-                        diffStream.WriteByte((byte)(newBytes[scanStart + i] - oldBytes[lastOldPos + i]));
-                    }
+                    // Write diff bytes (lenf bytes)
+                    WriteBuffered(newBytes, diffStart, lenf, oldBytes, diffOldRef, diffStream, writeBuf);
 
-                    // Write extra bytes: bytes between diff end and match end
-                    int extraStart = scanStart + lenf;
-                    int extraLen = newPos - extraStart;
-                    for (int i = 0; i < extraLen; i++)
-                    {
-                        extraStream.WriteByte(newBytes[extraStart + i]);
-                    }
+                    // Extra region: bytes between [diffStart + lenf, newPos) plus the match itself
+                    int extraStart = diffStart + lenf;
+                    int extraLen = (newPos - extraStart) + matchLen;
 
-                    // Account for the match itself
-                    int totalMatchLen = lenb + matchLen;
-                    int totalExtraLen = extraLen + matchLen;
+                    // Write extra bytes
+                    WriteBufferedRaw(newBytes, extraStart, extraLen, extraStream, writeBuf);
 
-                    // Write control tuple: (diff_len, extra_len, seek_from_last_old_pos)
-                    byte[] buf = new byte[8];
+                    // Control tuple: (diff_len, extra_len, old_seek)
+                    long seek = (matchOldPos - backwardLen + lenf) - lastOldPos;
                     WriteInt64(lenf, buf, 0);
                     ctrlStream.Write(buf, 0, 8);
-
-                    WriteInt64(totalExtraLen, buf, 0);
+                    WriteInt64(extraLen, buf, 0);
                     ctrlStream.Write(buf, 0, 8);
-
-                    long oldSeek = (matchOldPos - lenb) - (matchOldPos > 0 ? lastOldPos : 0);
-                    WriteInt64(oldSeek + lenf, buf, 0);
+                    WriteInt64(seek, buf, 0);
                     ctrlStream.Write(buf, 0, 8);
 
                     ctrlBytes += 24;
-                    newPos += totalMatchLen;
+
+                    lastOldPos = (matchOldPos - backwardLen + lenf) + extraLen;
+                    newPos = extraStart + extraLen;
                 }
                 else
                 {
-                    // No good match found 鈥?write as literal extra data
-                    int extraLen = Math.Min(MatchOverlap + 1, newBytes.Length - newPos);
+                    // No good match found -- write as literal extra data
+                    int extraLen = Math.Min(64, newBytes.Length - newPos);
 
-                    byte[] buf = new byte[8];
-                    WriteInt64(0, buf, 0);     // diff_len = 0
+                    WriteInt64(0, buf, 0);          // diff_len = 0
+                    ctrlStream.Write(buf, 0, 8);
+                    WriteInt64(extraLen, buf, 0);    // extra_len
+                    ctrlStream.Write(buf, 0, 8);
+                    WriteInt64(0, buf, 0);           // seek = 0
                     ctrlStream.Write(buf, 0, 8);
 
-                    WriteInt64(extraLen, buf, 0); // extra_len
-                    ctrlStream.Write(buf, 0, 8);
-
-                    WriteInt64(0, buf, 0);     // seek = 0
-                    ctrlStream.Write(buf, 0, 8);
-
-                    for (int i = 0; i < extraLen; i++)
-                        extraStream.WriteByte(newBytes[newPos + i]);
+                    WriteBufferedRaw(newBytes, newPos, extraLen, extraStream, writeBuf);
 
                     ctrlBytes += 24;
                     newPos += extraLen;
                 }
             }
 
-            // Write terminal control record
+            // Terminal control record (all zeros)
             byte[] termBuf = new byte[24];
             ctrlStream.Write(termBuf, 0, 24);
             ctrlBytes += 24;
@@ -352,29 +338,54 @@ namespace GeneralUpdate.Differential.Differ
         }
 
         /// <summary>
-        /// Extends a match forward byte-by-byte from the candidate position, then backward.
-        /// Returns total match length.
+        /// Measures how many bytes match forward from the candidate positions.
+        /// Does NOT extend backward -- that is handled separately in ComputeDiff.
         /// </summary>
-        private static int ExtendMatch(byte[] oldBytes, byte[] newBytes, int oldPos, int newPos)
+        private static int MeasureForwardMatch(byte[] oldBytes, byte[] newBytes, int oldPos, int newPos)
         {
-            int len = 0;
             int maxLen = Math.Min(oldBytes.Length - oldPos, newBytes.Length - newPos);
-
-            // Extend forward
+            int len = 0;
             while (len < maxLen && oldBytes[oldPos + len] == newBytes[newPos + len])
-            {
                 len++;
-            }
+            return len;
+        }
 
-            // Extend backward
-            int backLen = 0;
-            while (backLen < oldPos && backLen < newPos &&
-                   oldBytes[oldPos - backLen - 1] == newBytes[newPos - backLen - 1])
+        /// <summary>
+        /// Writes diff bytes: newData[start+i] - oldData[oldStart+i] for i in [0, count).
+        /// Uses buffered writes for performance.
+        /// </summary>
+        private static void WriteBuffered(byte[] newData, int start, int count,
+            byte[] oldData, int oldStart, Stream output, byte[] buffer)
+        {
+            int bufPos = 0;
+            for (int i = 0; i < count; i++)
             {
-                backLen++;
+                buffer[bufPos++] = (byte)(newData[start + i] - oldData[oldStart + i]);
+                if (bufPos >= buffer.Length)
+                {
+                    output.Write(buffer, 0, bufPos);
+                    bufPos = 0;
+                }
             }
+            if (bufPos > 0)
+                output.Write(buffer, 0, bufPos);
+        }
 
-            return len + backLen;
+        /// <summary>
+        /// Writes raw bytes from data[start..start+count) to the output stream using buffered writes.
+        /// </summary>
+        private static void WriteBufferedRaw(byte[] data, int start, int count, Stream output, byte[] buffer)
+        {
+            int remaining = count;
+            int pos = start;
+            while (remaining > 0)
+            {
+                int chunk = Math.Min(remaining, buffer.Length);
+                Buffer.BlockCopy(data, pos, buffer, 0, chunk);
+                output.Write(buffer, 0, chunk);
+                pos += chunk;
+                remaining -= chunk;
+            }
         }
 
         #endregion Core Algorithm
@@ -388,46 +399,35 @@ namespace GeneralUpdate.Differential.Differ
             if (string.IsNullOrWhiteSpace(patchPath)) throw new ArgumentNullException(nameof(patchPath));
         }
 
-        private static byte[] ReadFileWithBudget(string path, int maxBytes, out bool truncated)
+        private static byte[] ReadFileWithBudget(string path, int maxBytes)
         {
-            var fileInfo = new FileInfo(path);
-            if (!fileInfo.Exists) throw new FileNotFoundException("File not found.", path);
-
-            long size = fileInfo.Length;
-            if (size <= maxBytes)
+            byte[] buffer = new byte[maxBytes];
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                truncated = false;
-                return File.ReadAllBytes(path);
-            }
-            else
-            {
-                truncated = true;
-                // Read only up to maxBytes in streaming mode
-                byte[] buffer = new byte[maxBytes];
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                int totalRead = 0;
+                while (totalRead < maxBytes)
                 {
-                    int totalRead = 0;
-                    while (totalRead < maxBytes)
-                    {
-                        int read = fs.Read(buffer, totalRead, maxBytes - totalRead);
-                        if (read == 0) break;
-                        totalRead += read;
-                    }
+                    int read = fs.Read(buffer, totalRead, maxBytes - totalRead);
+                    if (read == 0) break;
+                    totalRead += read;
                 }
-                return buffer;
             }
+            return buffer;
         }
 
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            buf[offset + 0] = (byte)(value & 0xFF);
-            buf[offset + 1] = (byte)((value >> 8) & 0xFF);
-            buf[offset + 2] = (byte)((value >> 16) & 0xFF);
-            buf[offset + 3] = (byte)((value >> 24) & 0xFF);
-            buf[offset + 4] = (byte)((value >> 32) & 0xFF);
-            buf[offset + 5] = (byte)((value >> 40) & 0xFF);
-            buf[offset + 6] = (byte)((value >> 48) & 0xFF);
-            buf[offset + 7] = (byte)((value >> 56) & 0xFF);
+            long magnitude = value < 0 ? -value : value;
+            buf[offset + 0] = (byte)(magnitude & 0xFF);
+            buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
+            buf[offset + 2] = (byte)((magnitude >> 16) & 0xFF);
+            buf[offset + 3] = (byte)((magnitude >> 24) & 0xFF);
+            buf[offset + 4] = (byte)((magnitude >> 32) & 0xFF);
+            buf[offset + 5] = (byte)((magnitude >> 40) & 0xFF);
+            buf[offset + 6] = (byte)((magnitude >> 48) & 0xFF);
+            buf[offset + 7] = (byte)((magnitude >> 56) & 0x7F);
+            if (value < 0)
+                buf[offset + 7] |= 0x80;
         }
 
         #endregion Helpers

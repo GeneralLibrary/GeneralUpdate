@@ -37,6 +37,6 @@ namespace GeneralUpdate.Differential.Models
         public override string ToString()
             => IsComplete
                 ? $"Complete: {Completed}/{Total} files"
-                : $"[{Percentage:F1}%] {Completed}/{Total} 鈥?{CurrentFile ?? "..."}{(Error != null ? $" (failed: {Error})" : "")}";
+                : $"[{Percentage:F1}%] {Completed}/{Total} -- {CurrentFile ?? "..."}{(Error != null ? $" (failed: {Error})" : "")}";
     }
 }
