@@ -627,11 +627,14 @@ namespace GeneralUpdate.Differential.Binary
 
             // Allocate extra space for h-doubling access pattern in Split.
             // During suffix sort, v[I[k] + h] is accessed where h doubles
-            // from 1 up to ~oldsize. I[k] is a position in [0, oldsize], so
-            // the index I[k] + h can reach up to 2 * oldsize.
-            // In C the original BSDIFF relies on undefined behaviour here;
-            // in managed code we must size the buffer accordingly.
-            var v = new int[oldData.Length * 2 + 1];
+            // from 1 each iteration. I[k] is in [0, oldsize] and h can reach
+            // the next power of 2 >= oldsize (e.g. oldsize=3 → h reaches 4).
+            // The original C BSDIFF relies on undefined behaviour here;
+            // in managed code we must size the buffer to oldsize + maxH + 1.
+            int maxH = 1;
+            while (maxH < oldData.Length)
+                maxH <<= 1;
+            var v = new int[oldData.Length + maxH + 1];
             for (int i = 0; i < oldData.Length; i++)
                 v[i] = buckets[oldData[i]];
 
