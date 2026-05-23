@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.HashAlgorithms;
 using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
 
 namespace GeneralUpdate.Differential.Matchers
@@ -18,20 +19,26 @@ namespace GeneralUpdate.Differential.Matchers
     /// entire execution flow.  When no matcher is provided, <see cref="DefaultDirtyMatcher"/>
     /// is used.
     /// </para>
+    /// <para>
+    /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
+    /// algorithm.  When no differ is provided, the default <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
+    /// </para>
     /// </summary>
     public class DefaultDirtyStrategy : IDirtyStrategy
     {
         private const string DeleteFilesName = "generalupdate_delete_files.json";
 
         private readonly IDirtyMatcher _matcher;
+        private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
-        /// Initialises a new instance, optionally using a custom file-matching strategy.
-        /// If no matcher is provided, <see cref="DefaultDirtyMatcher"/> is used.
+        /// Initialises a new instance, optionally using a custom file-matching strategy
+        /// and/or a custom binary differ.
         /// </summary>
-        public DefaultDirtyStrategy(IDirtyMatcher? matcher = null)
+        public DefaultDirtyStrategy(IDirtyMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
         {
             _matcher = matcher ?? new DefaultDirtyMatcher();
+            _binaryDiffer = binaryDiffer ?? new BinaryHandler();
         }
 
         /// <inheritdoc/>
@@ -76,13 +83,13 @@ namespace GeneralUpdate.Differential.Matchers
             }
         }
 
-        private static async Task ApplyPatch(string appFilePath, string patchFilePath)
+        private async Task ApplyPatch(string appFilePath, string patchFilePath)
         {
             if (!File.Exists(appFilePath) || !File.Exists(patchFilePath)) return;
             var newPath = Path.Combine(
                 Path.GetDirectoryName(appFilePath)!,
                 $"{Path.GetRandomFileName()}_{Path.GetFileName(appFilePath)}");
-            await new BinaryHandler().Dirty(appFilePath, newPath, patchFilePath);
+            await _binaryDiffer.DirtyAsync(appFilePath, newPath, patchFilePath);
         }
 
         private static async Task CopyUnknownFiles(string appPath, string patchPath)

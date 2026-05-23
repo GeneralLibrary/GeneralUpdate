@@ -1,13 +1,17 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Differential.Abstractions;
 
 namespace GeneralUpdate.Differential.Binary
 {
     /// <summary>
-    /// File binary differential processing.
+    /// BSDIFF 4.0 file binary differential processing.
+    /// Implements <see cref="IBinaryDiffer"/> for pluggable architecture compatibility.
+    /// Uses BZip2 compression for patch data (see <see cref="BZip2CompressionProvider"/>).
     /// </summary>
-    public class BinaryHandler
+    public class BinaryHandler : IBinaryDiffer
     {
         #region Private Members
 
@@ -16,6 +20,22 @@ namespace GeneralUpdate.Differential.Binary
         private string _oldfilePath, _newfilePath, _patchPath;
 
         #endregion Private Members
+
+        #region IBinaryDiffer Implementation
+
+        /// <inheritdoc/>
+        public Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
+        {
+            return Clean(oldFilePath, newFilePath, patchFilePath);
+        }
+
+        /// <inheritdoc/>
+        public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
+        {
+            return Dirty(oldFilePath, newFilePath, patchFilePath);
+        }
+
+        #endregion IBinaryDiffer Implementation
 
         #region Public Methods
 
@@ -42,15 +62,15 @@ namespace GeneralUpdate.Differential.Binary
                     var newBytes = File.ReadAllBytes(_newfilePath);
 
                     /* Header is
-                        0	8	 "BSDIFF40"
-                        8	8	length of bzip2ed ctrl block
-                        16	 8	length of bzip2ed diff block
-                        24	 8	length of new file */
+                        0   8    "BSDIFF40"
+                        8   8   length of bzip2ed ctrl block
+                        16  8   length of bzip2ed diff block
+                        24  8   length of new file */
                     /* File is
-                        0	32	Header
-                        32	??	Bzip2ed ctrl block
-                        ??	??	Bzip2ed diff block
-                        ??	??	Bzip2ed extra block */
+                        0   32  Header
+                        32  ??  Bzip2ed ctrl block
+                        ??  ??  Bzip2ed diff block
+                        ??  ??  Bzip2ed extra block */
                     byte[] header = new byte[c_headerSize];
                     WriteInt64(c_fileSignature, header, 0); // "BSDIFF40"
                     WriteInt64(0, header, 8);
@@ -237,13 +257,13 @@ namespace GeneralUpdate.Differential.Binary
                         Func<Stream> openPatchStream = () =>
                             new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                         //File format:
-                        //	0   8   "BSDIFF40"
-                        //	8   8   X
-                        //	16  8   Y
-                        //	24  8   sizeof(newfile)
-                        //	32  X bzip2(control block)
-                        //	32 + X    Y bzip2(diff block)
-                        //	32 + X + Y ??? bzip2(extra block)
+                        //  0   8   "BSDIFF40"
+                        //  8   8   X
+                        //  16  8   Y
+                        //  24  8   sizeof(newfile)
+                        //  32  X   bzip2(control block)
+                        //  32 + X  Y   bzip2(diff block)
+                        //  32 + X + Y ??? bzip2(extra block)
                         //with control block a set of triples(x, y, z) meaning "add x bytes
                         //from oldfile to x bytes from the diff block; copy y bytes from the
                         //extra block; seek forwards in oldfile by z bytes".
@@ -368,7 +388,7 @@ namespace GeneralUpdate.Differential.Binary
                     File.SetAttributes(_oldfilePath, FileAttributes.Normal);
                     File.Delete(_oldfilePath);
                 }
-                
+
                 if (File.Exists(_newfilePath))
                 {
                     File.SetAttributes(_newfilePath, FileAttributes.Normal);
@@ -399,45 +419,47 @@ namespace GeneralUpdate.Differential.Binary
             return 0;
         }
 
-        private int MatchLength(byte[] oldBytes, int oldOffset, byte[] newBytes, int newOffset)
+        private static int MatchLength(byte[] oldData, int oldOffset, byte[] newData, int newOffset)
         {
             int i;
-            for (i = 0; i < oldBytes.Length - oldOffset && i < newBytes.Length - newOffset; i++)
+            for (i = 0; i < oldData.Length - oldOffset && i < newData.Length - newOffset; i++)
             {
-                if (oldBytes[i + oldOffset] != newBytes[i + newOffset])
-                    break;
+                if (oldData[i + oldOffset] != newData[i + newOffset]) break;
             }
             return i;
         }
 
-        private int Search(int[] I, byte[] oldBytes, byte[] newBytes, int newOffset, int start, int end, out int pos)
+        private static int Search(int[] I, byte[] oldData, byte[] newData, int newOffset, int start, int end, out int pos)
         {
             if (end - start < 2)
             {
-                int startLength = MatchLength(oldBytes, I[start], newBytes, newOffset);
-                int endLength = MatchLength(oldBytes, I[end], newBytes, newOffset);
+                int x = MatchLength(oldData, I[start], newData, newOffset);
+                int y = MatchLength(oldData, I[end], newData, newOffset);
 
-                if (startLength > endLength)
+                if (x > y)
                 {
                     pos = I[start];
-                    return startLength;
+                    return x;
                 }
                 else
                 {
                     pos = I[end];
-                    return endLength;
+                    return y;
                 }
+            }
+
+            int mid = start + (end - start) / 2;
+            if (CompareBytes(oldData, I[mid], newData, newOffset) < 0)
+            {
+                return Search(I, oldData, newData, newOffset, mid, end, out pos);
             }
             else
             {
-                int midPoint = start + (end - start) / 2;
-                return CompareBytes(oldBytes, I[midPoint], newBytes, newOffset) < 0 ?
-                    Search(I, oldBytes, newBytes, newOffset, midPoint, end, out pos) :
-                    Search(I, oldBytes, newBytes, newOffset, start, midPoint, out pos);
+                return Search(I, oldData, newData, newOffset, start, mid, out pos);
             }
         }
 
-        private void Split(int[] I, int[] v, int start, int len, int h)
+        private static void Split(int[] I, int[] v, int start, int len, int h)
         {
             if (len < 16)
             {
@@ -455,7 +477,9 @@ namespace GeneralUpdate.Differential.Binary
                         }
                         if (v[I[k + i] + h] == x)
                         {
-                            Swap(ref I[k + j], ref I[k + i]);
+                            int tmp = I[k + j];
+                            I[k + j] = I[k + i];
+                            I[k + i] = tmp;
                             j++;
                         }
                     }
@@ -464,91 +488,108 @@ namespace GeneralUpdate.Differential.Binary
                     if (j == 1)
                         I[k] = -1;
                 }
+                return;
             }
-            else
+
+            int x2 = v[I[start + len / 2] + h];
+            int jj = 0;
+            int kk = 0;
+            for (int i2 = 0; i2 < len; i2++)
             {
-                int x = v[I[start + len / 2] + h];
-                int jj = 0;
-                int kk = 0;
-                for (int i2 = start; i2 < start + len; i2++)
-                {
-                    if (v[I[i2] + h] < x) jj++;
-                    if (v[I[i2] + h] == x) kk++;
-                }
-                jj += start;
-                kk += jj;
-
-                int i = start;
-                int j = 0;
-                int k = 0;
-                while (i < jj)
-                {
-                    if (v[I[i] + h] < x)
-                    {
-                        i++;
-                    }
-                    else if (v[I[i] + h] == x)
-                    {
-                        Swap(ref I[i], ref I[jj + j]);
-                        j++;
-                    }
-                    else
-                    {
-                        Swap(ref I[i], ref I[kk + k]);
-                        k++;
-                    }
-                }
-
-                while (jj + j < kk)
-                {
-                    if (v[I[jj + j] + h] == x)
-                    {
-                        j++;
-                    }
-                    else
-                    {
-                        Swap(ref I[jj + j], ref I[kk + k]);
-                        k++;
-                    }
-                }
-
-                if (jj > start) Split(I, v, start, jj - start, h);
-
-                for (i = 0; i < kk - jj; i++)
-                    v[I[jj + i]] = kk - 1;
-                if (jj == kk - 1) I[jj] = -1;
-
-                if (start + len > kk) Split(I, v, kk, start + len - kk, h);
+                if (v[I[start + i2] + h] < x2) jj++;
+                if (v[I[start + i2] + h] == x2) kk++;
             }
+            jj += start;
+            kk += jj;
+
+            int i3 = start;
+            int j3 = 0;
+            int k3 = 0;
+            while (i3 < jj)
+            {
+                if (v[I[i3] + h] < x2)
+                {
+                    i3++;
+                }
+                else if (v[I[i3] + h] == x2)
+                {
+                    int tmp = I[i3];
+                    I[i3] = I[jj + j3];
+                    I[jj + j3] = tmp;
+                    j3++;
+                }
+                else
+                {
+                    int tmp = I[i3];
+                    I[i3] = I[kk + k3];
+                    I[kk + k3] = tmp;
+                    k3++;
+                }
+            }
+
+            while (jj + j3 < kk)
+            {
+                if (v[I[jj + j3] + h] == x2)
+                {
+                    j3++;
+                }
+                else
+                {
+                    int tmp = I[jj + j3];
+                    I[jj + j3] = I[kk + k3];
+                    I[kk + k3] = tmp;
+                    k3++;
+                }
+            }
+
+            if (jj > start)
+                Split(I, v, start, jj - start, h);
+
+            for (int i2 = 0; i2 < kk - jj; i2++)
+                v[I[jj + i2]] = kk - 1;
+            if (jj == kk - 1)
+                I[jj] = -1;
+
+            if (start + len > kk)
+                Split(I, v, kk, start + len - kk, h);
         }
 
-        private int[] SuffixSort(byte[] oldBytes)
+        private static int[] SuffixSort(byte[] oldData)
         {
-            int[] buckets = new int[256];
-            foreach (byte oldByte in oldBytes)
-                buckets[oldByte]++;
+            var buckets = new int[256];
+
+            for (int i = 0; i < oldData.Length; i++)
+                buckets[oldData[i]]++;
             for (int i = 1; i < 256; i++)
                 buckets[i] += buckets[i - 1];
             for (int i = 255; i > 0; i--)
                 buckets[i] = buckets[i - 1];
             buckets[0] = 0;
 
-            int[] I = new int[oldBytes.Length + 1];
-            for (int i = 0; i < oldBytes.Length; i++)
-                I[++buckets[oldBytes[i]]] = i;
+            var I = new int[oldData.Length + 1];
+            for (int i = 0; i < oldData.Length; i++)
+                I[++buckets[oldData[i]]] = i;
 
-            int[] v = new int[oldBytes.Length + 1];
-            for (int i = 0; i < oldBytes.Length; i++)
-                v[i] = buckets[oldBytes[i]];
+            var v = new int[oldData.Length + 1];
+            for (int i = 0; i < oldData.Length; i++)
+                v[i] = buckets[oldData[i]];
 
             for (int i = 1; i < 256; i++)
-                if (buckets[i] == buckets[i - 1] + 1) I[buckets[i]] = -1;
-            I[0] = -1;
-            for (int h = 1; I[0] != -(oldBytes.Length + 1); h += h)
+            {
+                if (buckets[i] == buckets[i - 1] + 1)
+                {
+                    I[buckets[i]] = -1;
+                }
+            }
+
+            I[0] = oldData.Length;
+            v[oldData.Length] = 0;
+
+            for (int h = 1; I[0] != -(oldData.Length + 1); h += h)
             {
                 int len = 0;
                 int i = 0;
-                while (i < oldBytes.Length + 1)
+                while (i < oldData.Length + 1)
                 {
                     if (I[i] < 0)
                     {
@@ -557,89 +598,71 @@ namespace GeneralUpdate.Differential.Binary
                     }
                     else
                     {
-                        if (len != 0) I[i - len] = -len;
+                        if (len != 0)
+                            I[i - len] = -len;
                         len = v[I[i]] + 1 - i;
                         Split(I, v, i, len, h);
                         i += len;
                         len = 0;
                     }
                 }
-                if (len != 0) I[i - len] = -len;
+                if (len != 0)
+                    I[i - len] = -len;
             }
 
-            for (int i = 0; i < oldBytes.Length + 1; i++)
+            for (int i = 0; i < oldData.Length + 1; i++)
                 I[v[i]] = i;
 
             return I;
         }
 
-        private void Swap(ref int first, ref int second)
+        private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            int temp = first;
-            first = second;
-            second = temp;
+            buf[offset + 0] = (byte)(value & 0xFF);
+            buf[offset + 1] = (byte)((value >> 8) & 0xFF);
+            buf[offset + 2] = (byte)((value >> 16) & 0xFF);
+            buf[offset + 3] = (byte)((value >> 24) & 0xFF);
+            buf[offset + 4] = (byte)((value >> 32) & 0xFF);
+            buf[offset + 5] = (byte)((value >> 40) & 0xFF);
+            buf[offset + 6] = (byte)((value >> 48) & 0xFF);
+            buf[offset + 7] = (byte)((value >> 56) & 0xFF);
         }
 
-        private long ReadInt64(byte[] buf, int offset)
+        private static long ReadInt64(byte[] buf, int offset)
         {
-            long value = buf[offset + 7] & 0x7F;
-            for (int index = 6; index >= 0; index--)
-            {
-                value *= 256;
-                value += buf[offset + index];
-            }
-            if ((buf[offset + 7] & 0x80) != 0) value = -value;
-            return value;
+            return (long)(
+                   ((ulong)buf[offset + 0]) |
+                   ((ulong)buf[offset + 1] << 8) |
+                   ((ulong)buf[offset + 2] << 16) |
+                   ((ulong)buf[offset + 3] << 24) |
+                   ((ulong)buf[offset + 4] << 32) |
+                   ((ulong)buf[offset + 5] << 40) |
+                   ((ulong)buf[offset + 6] << 48) |
+                   ((ulong)buf[offset + 7] << 56));
         }
 
-        private void WriteInt64(long value, byte[] buf, int offset)
+        private static byte[] ReadExactly(Stream stream, int count)
         {
-            long valueToWrite = value < 0 ? -value : value;
-            for (int byteIndex = 0; byteIndex < 8; byteIndex++)
-            {
-                buf[offset + byteIndex] = unchecked((byte)valueToWrite);
-                valueToWrite >>= 8;
-            }
-            if (value < 0) buf[offset + 7] |= 0x80;
-        }
-
-        /// <summary>
-        /// Reads exactly <paramref name="count"/> bytes from <paramref name="stream"/>.
-        /// </summary>
-        /// <param name="stream">The stream to read from.</param>
-        /// <param name="count">The count of bytes to read.</param>
-        /// <returns>A new byte array containing the data read from the stream.</returns>
-        private byte[] ReadExactly(Stream stream, int count)
-        {
-            if (count < 0) throw new ArgumentOutOfRangeException("count");
-            byte[] buffer = new byte[count];
-            ReadExactly(stream, buffer, 0, count);
-            return buffer;
-        }
-
-        /// <summary>
-        /// Reads exactly <paramref name="count"/> bytes from <paramref name="stream"/> into
-        /// <paramref name="buffer"/>, starting at the byte given by <paramref name="offset"/>.
-        /// </summary>
-        /// <param name="stream">The stream to read from.</param>
-        /// <param name="buffer">The buffer to read data into.</param>
-        /// <param name="offset">The offset within the buffer at which data is first written.</param>
-        /// <param name="count">The count of bytes to read.</param>
-        private void ReadExactly(Stream stream, byte[] buffer, int offset, int count)
-        {
-            // check arguments
-            if (stream == null) throw new ArgumentNullException("stream");
-            if (buffer == null) throw new ArgumentNullException("buffer");
-            if (offset < 0 || offset > buffer.Length) throw new ArgumentOutOfRangeException("offset");
-            if (count < 0 || buffer.Length - offset < count) throw new ArgumentOutOfRangeException("count");
-
+            byte[] data = new byte[count];
+            int offset = 0;
             while (count > 0)
             {
-                // read data
+                int bytesRead = stream.Read(data, offset, count);
+                if (bytesRead == 0)
+                    throw new EndOfStreamException("Unexpected end of stream.");
+                offset += bytesRead;
+                count -= bytesRead;
+            }
+            return data;
+        }
+
+        private static void ReadExactly(Stream stream, byte[] buffer, int offset, int count)
+        {
+            while (count > 0)
+            {
                 int bytesRead = stream.Read(buffer, offset, count);
-                // check for failure to read
-                if (bytesRead == 0) throw new EndOfStreamException();
-                // move to next block
+                if (bytesRead == 0)
+                    throw new EndOfStreamException("Unexpected end of stream.");
                 offset += bytesRead;
                 count -= bytesRead;
             }

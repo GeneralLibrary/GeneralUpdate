@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
 
 namespace GeneralUpdate.Differential.Matchers
@@ -16,6 +17,10 @@ namespace GeneralUpdate.Differential.Matchers
     /// entire execution flow.  When no matcher is provided, <see cref="DefaultCleanMatcher"/>
     /// is used.
     /// </para>
+    /// <para>
+    /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
+    /// algorithm.  When no differ is provided, the default <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
+    /// </para>
     /// </summary>
     public class DefaultCleanStrategy : ICleanStrategy
     {
@@ -23,14 +28,18 @@ namespace GeneralUpdate.Differential.Matchers
         private const string DeleteFilesName = "generalupdate_delete_files.json";
 
         private readonly ICleanMatcher _matcher;
+        private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
-        /// Initialises a new instance, optionally using a custom file-matching strategy.
+        /// Initialises a new instance, optionally using a custom file-matching strategy
+        /// and/or a custom binary differ.
         /// If no matcher is provided, <see cref="DefaultCleanMatcher"/> is used.
+        /// If no binary differ is provided, <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
         /// </summary>
-        public DefaultCleanStrategy(ICleanMatcher? matcher = null)
+        public DefaultCleanStrategy(ICleanMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
         {
             _matcher = matcher ?? new DefaultCleanMatcher();
+            _binaryDiffer = binaryDiffer ?? new BinaryHandler();
         }
 
         /// <inheritdoc/>
@@ -48,7 +57,7 @@ namespace GeneralUpdate.Differential.Matchers
                     if (!StorageManager.HashEquals(oldFile.FullName, newFile.FullName))
                     {
                         var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PatchFormat}");
-                        await new BinaryHandler().Clean(oldFile.FullName, newFile.FullName, tempPatchPath);
+                        await _binaryDiffer.CleanAsync(oldFile.FullName, newFile.FullName, tempPatchPath);
                     }
                 }
                 else
