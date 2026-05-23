@@ -613,12 +613,15 @@ public class GeneralExtensionHost : IExtensionHost
     /// </summary>
     /// <param name="filePath">Path to the file.</param>
     /// <returns>Hexadecimal SHA256 hash string.</returns>
-    private static async Task<string> ComputeFileSha256Async(string filePath)
+    private static Task<string> ComputeFileSha256Async(string filePath)
     {
-        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, useAsync: true);
-        using var sha256 = SHA256.Create();
-        var hashBytes = await sha256.ComputeHashAsync(stream);
-        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        return Task.Run(() =>
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = File.OpenRead(filePath);
+            var hashBytes = sha256.ComputeHash(stream);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        });
     }
 
     /// <summary>

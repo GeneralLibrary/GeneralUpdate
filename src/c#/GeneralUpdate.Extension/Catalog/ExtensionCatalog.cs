@@ -174,11 +174,14 @@ public class ExtensionCatalog : IExtensionCatalog
                 var tempPath = manifestPath + ".tmp";
                 var json = JsonConvert.SerializeObject(extension, Formatting.Indented);
                 
-                // Write to temp file first, then atomically rename
-                // This prevents corruption if the process crashes mid-write
+                // Atomic write: write to temp file, then replace the real file
+                // netstandard2.0 File.Move doesn't support overwrite, so delete first
                 File.WriteAllText(tempPath, json);
+                if (File.Exists(manifestPath))
+                {
+                    File.Delete(manifestPath);
+                }
                 File.Move(tempPath, manifestPath);
-                // Note: using Delete+Move for true cross-volume atomicity is a future enhancement
             }
         }
         catch (Exception ex)
