@@ -628,7 +628,7 @@ namespace GeneralUpdate.Differential.Binary
             // Allocate extra space for h-doubling access pattern in Split.
             // During suffix sort, v[I[k] + h] is accessed where h doubles
             // from 1 each iteration. I[k] is in [0, oldsize] and h can reach
-            // the next power of 2 >= oldsize (e.g. oldsize=3 â†’ h reaches 4).
+            // the next power of 2 >= oldsize (e.g. oldsize=3 â†?h reaches 4).
             // The original C BSDIFF relies on undefined behaviour here;
             // in managed code we must size the buffer to oldsize + maxH + 1.
             int maxH = 1;

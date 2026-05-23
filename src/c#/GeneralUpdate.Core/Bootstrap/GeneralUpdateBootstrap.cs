@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,18 +7,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Bootstrap;
-using GeneralUpdate.Common.Internal.Event;
-using GeneralUpdate.Common.Internal.JsonContext;
-using GeneralUpdate.Common.Internal.Strategy;
-using GeneralUpdate.Common.Shared;
-using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Common.Shared.Object.Enum;
-using GeneralUpdate.Common.Shared.Service;
-using GeneralUpdate.Core.Strategys;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Strategy;
+using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core
 {

@@ -19,7 +19,7 @@
     <TargetFrameworks>netstandard2.0;</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Common\GeneralUpdate.Common.csproj" />
+    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../../imgs/GeneralUpdate.ico">

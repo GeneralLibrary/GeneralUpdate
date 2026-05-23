@@ -1,8 +1,8 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Differential.Abstractions;
 
 namespace GeneralUpdate.Differential.Matchers

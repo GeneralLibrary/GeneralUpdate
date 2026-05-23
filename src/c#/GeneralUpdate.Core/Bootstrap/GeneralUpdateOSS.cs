@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Internal.Bootstrap;
-using GeneralUpdate.Common.Internal.JsonContext;
-using GeneralUpdate.Common.Shared;
-using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Core.Strategys;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Strategy;
 
 namespace GeneralUpdate.Core
 {

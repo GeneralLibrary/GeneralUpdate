@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Diagnostics;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Event;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Internal.Strategy;
-using GeneralUpdate.Common.Shared;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Strategy;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Pipeline;
 
-namespace GeneralUpdate.Core.Strategys
+namespace GeneralUpdate.Core.Strategy
 {
     /// <summary>
     /// Update policy based on the Windows platform.

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.HashAlgorithms;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Pipeline;
 

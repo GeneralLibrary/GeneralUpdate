@@ -1,18 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Compress;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.Internal.JsonContext;
-using GeneralUpdate.Common.Shared;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Compress;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
 
-namespace GeneralUpdate.Core.Strategys
+namespace GeneralUpdate.Core.Strategy
 {
     public class OSSStrategy
     {

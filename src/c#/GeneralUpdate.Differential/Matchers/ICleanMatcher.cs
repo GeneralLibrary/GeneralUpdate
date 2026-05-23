@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Core.FileSystem;
 
 namespace GeneralUpdate.Differential.Matchers
 {

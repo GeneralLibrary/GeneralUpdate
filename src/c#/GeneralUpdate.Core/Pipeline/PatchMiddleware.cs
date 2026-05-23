@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core;
 using GeneralUpdate.Differential;
 
 namespace GeneralUpdate.Core.Pipeline;
