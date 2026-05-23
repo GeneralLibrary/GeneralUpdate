@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Matchers;
@@ -26,7 +25,8 @@ namespace GeneralUpdate.Differential
         /// </summary>
         /// <param name="binaryDiffer">
         /// The binary differ to use. Defaults to <see cref="Differ.StreamingHdiffDiffer"/>.
-        /// Ignored when <paramref name="strategy"/> is provided (the strategy owns the differ).
+        /// When <paramref name="strategy"/> is non-null, the strategy owns the differ
+        /// and this parameter is ignored.
         /// </param>
         /// <param name="strategy">
         /// Full execution strategy override. Defaults to <see cref="DefaultCleanStrategy"/>.
@@ -36,22 +36,25 @@ namespace GeneralUpdate.Differential
             string targetPath,
             string patchPath,
             IBinaryDiffer? binaryDiffer = null,
-            ICleanStrategy? strategy = null,
-            CancellationToken cancellationToken = default)
+            ICleanStrategy? strategy = null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var usedStrategy = strategy ?? new DefaultCleanStrategy(
                 matcher: null,
                 binaryDiffer: binaryDiffer);
             return usedStrategy.ExecuteAsync(sourcePath, targetPath, patchPath);
         }
 
+        // Backward-compatible overload: 4th positional argument is a strategy.
+        public static Task Clean(string sourcePath, string targetPath, string patchPath, ICleanStrategy? strategy)
+            => Clean(sourcePath, targetPath, patchPath, strategy: strategy);
+
         /// <summary>
         /// Applies a binary patch from <paramref name="patchPath"/> to <paramref name="appPath"/>.
         /// </summary>
         /// <param name="binaryDiffer">
         /// The binary differ to use. Defaults to <see cref="Differ.StreamingHdiffDiffer"/>.
-        /// Ignored when <paramref name="strategy"/> is provided (the strategy owns the differ).
+        /// When <paramref name="strategy"/> is non-null, the strategy owns the differ
+        /// and this parameter is ignored.
         /// </param>
         /// <param name="strategy">
         /// Full execution strategy override. Defaults to <see cref="DefaultDirtyStrategy"/>.
@@ -60,14 +63,16 @@ namespace GeneralUpdate.Differential
             string appPath,
             string patchPath,
             IBinaryDiffer? binaryDiffer = null,
-            IDirtyStrategy? strategy = null,
-            CancellationToken cancellationToken = default)
+            IDirtyStrategy? strategy = null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var usedStrategy = strategy ?? new DefaultDirtyStrategy(
                 matcher: null,
                 binaryDiffer: binaryDiffer);
             return usedStrategy.ExecuteAsync(appPath, patchPath);
         }
+
+        // Backward-compatible overload: 3rd positional argument is a strategy.
+        public static Task Dirty(string appPath, string patchPath, IDirtyStrategy? strategy)
+            => Dirty(appPath, patchPath, strategy: strategy);
     }
 }

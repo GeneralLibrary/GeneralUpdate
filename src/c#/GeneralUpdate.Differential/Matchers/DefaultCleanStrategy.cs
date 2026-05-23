@@ -18,7 +18,7 @@ namespace GeneralUpdate.Differential.Matchers
     /// </para>
     /// <para>
     /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
-    /// algorithm.  Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression
+    /// algorithm.  Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Deflate compression
     /// for optimal patch size and speed.
     /// </para>
     /// </summary>
@@ -42,7 +42,7 @@ namespace GeneralUpdate.Differential.Matchers
         /// Initialises a new instance, optionally using a custom file-matching strategy
         /// and/or a custom binary differ.
         /// If no matcher is provided, <see cref="DefaultCleanMatcher"/> is used.
-        /// If no binary differ is provided, <see cref="Differ.StreamingHdiffDiffer"/> (Brotli) is used.
+        /// If no binary differ is provided, <see cref="Differ.StreamingHdiffDiffer"/> (Deflate) is used.
         /// </summary>
         public DefaultCleanStrategy(ICleanMatcher? matcher, IBinaryDiffer? binaryDiffer)
         {
