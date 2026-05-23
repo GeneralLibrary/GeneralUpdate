@@ -240,12 +240,18 @@ namespace GeneralUpdate.Differential.Pipeline
 
             await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
 
-            if (File.Exists(appFilePath))
+            // Some differ implementations (e.g., BinaryHandler) perform atomic replacement
+            // internally: they delete oldPath and copy tempPath back to oldPath, then delete tempPath.
+            // We only handle the replacement ourselves when the differ left tempPath intact.
+            if (File.Exists(tempPath))
             {
-                File.SetAttributes(appFilePath, FileAttributes.Normal);
-                File.Delete(appFilePath);
+                if (File.Exists(appFilePath))
+                {
+                    File.SetAttributes(appFilePath, FileAttributes.Normal);
+                    File.Delete(appFilePath);
+                }
+                File.Move(tempPath, appFilePath);
             }
-            File.Move(tempPath, appFilePath);
         }
 
         private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
