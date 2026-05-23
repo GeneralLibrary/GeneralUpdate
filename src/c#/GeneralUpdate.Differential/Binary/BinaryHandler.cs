@@ -13,7 +13,7 @@ namespace GeneralUpdate.Differential.Binary
     /// <remarks>
     /// Supports pluggable compression via <see cref="ICompressionProvider"/>.
     /// Default: <see cref="BZip2CompressionProvider"/> (backward compatible).
-    /// Use <see cref="BrotliCompressionProvider"/> for 3-5x faster decompression.
+    /// Use <see cref="DeflateCompressionProvider"/> (0x01) for faster decompression.
     ///
     /// Thread-safety: this class stores per-call state in instance fields.
     /// A single instance MUST NOT be used concurrently by multiple callers.
@@ -314,7 +314,7 @@ namespace GeneralUpdate.Differential.Binary
                             byte[] formatByte = ReadExactly(patchStream, 1);
                             byte candidate = formatByte[0];
 
-                            if (candidate == BZip2FormatVersion || candidate == BrotliFormatVersion)
+                            if (candidate == BZip2FormatVersion || candidate == DeflateFormatVersion)
                             {
                                 formatVersion = candidate;
                                 actualHeaderSize = ExtendedHeaderSize;
@@ -338,7 +338,7 @@ namespace GeneralUpdate.Differential.Binary
                     ICompressionProvider decompressionProvider = formatVersion switch
                     {
                         BZip2FormatVersion => new BZip2CompressionProvider(),
-                        BrotliFormatVersion => new BrotliCompressionProvider(),
+                        DeflateFormatVersion => new DeflateCompressionProvider(),
                         _ => throw new InvalidOperationException(
                             $"Unsupported patch compression format version: 0x{formatVersion:X2}")
                     };
@@ -453,7 +453,7 @@ namespace GeneralUpdate.Differential.Binary
         #region Private Methods
 
         private const byte BZip2FormatVersion = 0x00;
-        private const byte BrotliFormatVersion = 0x01;
+        private const byte DeflateFormatVersion = 0x01;
 
         private static FileStream OpenPatchStream(string patchPath)
         {

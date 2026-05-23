@@ -112,7 +112,7 @@ namespace GeneralUpdate.Differential.Matchers
             }
             else if (File.Exists(tempPath) && File.Exists(appFilePath))
             {
-                // Differ wrote to temp but didn't replace 鈥?we do the replacement
+                // Differ wrote to temp but didn't replace -- we do the replacement
                 File.SetAttributes(appFilePath, FileAttributes.Normal);
                 File.Delete(appFilePath);
                 File.Move(tempPath, appFilePath);

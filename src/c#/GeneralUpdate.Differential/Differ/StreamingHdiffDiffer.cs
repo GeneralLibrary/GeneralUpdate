@@ -47,10 +47,10 @@ namespace GeneralUpdate.Differential.Differ
         #region Constructor
 
         /// <summary>
-        /// Initialises a new streaming differ with Brotli compression by default.
+        /// Initialises a new streaming differ with Deflate compression by default.
         /// </summary>
         public StreamingHdiffDiffer()
-            : this(new BrotliCompressionProvider(), 64 * 1024, 128 * 1024 * 1024)
+            : this(new DeflateCompressionProvider(), 64 * 1024, 128 * 1024 * 1024)
         {
         }
 

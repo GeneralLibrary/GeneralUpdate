@@ -13,7 +13,7 @@ namespace GeneralUpdate.Differential.Abstractions
     {
         /// <summary>
         /// The format identifier byte written into the patch header for version detection.
-        /// 0x00 = BZip2 (legacy BSDIFF), 0x01 = Brotli, 0x02+ = reserved.
+        /// 0x00 = BZip2 (legacy BSDIFF), 0x01 = Deflate, 0x02 = Brotli (.NET 6+), 0x03+ = reserved.
         /// </summary>
         byte FormatVersion { get; }
 
