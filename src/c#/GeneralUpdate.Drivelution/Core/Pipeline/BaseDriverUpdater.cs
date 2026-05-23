@@ -302,6 +302,108 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
         }, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public virtual async Task<BatchUpdateResult> BatchUpdateAsync(
+        IEnumerable<DriverInfo> drivers,
+        UpdateStrategy strategy,
+        BatchMode mode = BatchMode.Sequential,
+        IProgress<UpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var driverList = drivers.ToList();
+        var result = new BatchUpdateResult { Results = new List<DriverUpdateEntry>(driverList.Count) };
+        var startTime = DateTime.UtcNow;
+        int completed = 0;
+
+        GeneralTracer.Info($"Starting batch update: {driverList.Count} driver(s), mode={mode}");
+
+        if (mode == BatchMode.Parallel)
+        {
+            var tasks = driverList.Select(async (driver, index) =>
+            {
+                progress?.Report(new UpdateProgress
+                {
+                    CurrentStatus = UpdateStatus.NotStarted,
+                    StepName = $"Batch [{index + 1}/{driverList.Count}]",
+                    Percentage = 0,
+                    Message = $"Starting: {driver.Name}",
+                    StepIndex = index,
+                    TotalSteps = driverList.Count
+                });
+
+                var updateResult = await UpdateAsync(driver, strategy, cancellationToken: cancellationToken);
+
+                Interlocked.Increment(ref completed);
+                progress?.Report(new UpdateProgress
+                {
+                    CurrentStatus = updateResult.Status,
+                    StepName = $"Batch [{index + 1}/{driverList.Count}]",
+                    Percentage = (int)((float)Interlocked.CompareExchange(ref completed, completed, completed) / driverList.Count * 100),
+                    Message = updateResult.Success ? $"OK: {driver.Name}" : $"FAIL: {driver.Name}",
+                    StepIndex = index,
+                    TotalSteps = driverList.Count
+                });
+
+                return new DriverUpdateEntry
+                {
+                    DriverInfo = driver,
+                    Success = updateResult.Success,
+                    Result = updateResult
+                };
+            }).ToList();
+
+            var entries = await Task.WhenAll(tasks);
+            result.Results.AddRange(entries);
+        }
+        else
+        {
+            for (int i = 0; i < driverList.Count; i++)
+            {
+                var driver = driverList[i];
+
+                progress?.Report(new UpdateProgress
+                {
+                    CurrentStatus = UpdateStatus.NotStarted,
+                    StepName = $"Batch [{i + 1}/{driverList.Count}]",
+                    Percentage = (int)((float)i / driverList.Count * 100),
+                    Message = $"Starting: {driver.Name}",
+                    StepIndex = i,
+                    TotalSteps = driverList.Count
+                });
+
+                var updateResult = await UpdateAsync(driver, strategy, cancellationToken: cancellationToken);
+
+                completed++;
+                progress?.Report(new UpdateProgress
+                {
+                    CurrentStatus = updateResult.Status,
+                    StepName = $"Batch [{i + 1}/{driverList.Count}]",
+                    Percentage = (int)((float)completed / driverList.Count * 100),
+                    Message = updateResult.Success ? $"OK: {driver.Name}" : $"FAIL: {driver.Name}",
+                    StepIndex = i,
+                    TotalSteps = driverList.Count
+                });
+
+                result.Results.Add(new DriverUpdateEntry
+                {
+                    DriverInfo = driver,
+                    Success = updateResult.Success,
+                    Result = updateResult
+                });
+            }
+        }
+
+        result.SucceededCount = result.Results.Count(r => r.Success);
+        result.FailedCount = result.Results.Count(r => !r.Success);
+        result.AllSucceeded = result.FailedCount == 0;
+        result.Duration = DateTime.UtcNow - startTime;
+
+        GeneralTracer.Info($"Batch update completed: {result.SucceededCount} OK, {result.FailedCount} failed, " +
+                          $"duration={result.Duration.TotalSeconds:F1}s");
+
+        return result;
+    }
+
     // ─── Abstract / Virtual Members ────────────────────────────────────
 
     /// <summary>
