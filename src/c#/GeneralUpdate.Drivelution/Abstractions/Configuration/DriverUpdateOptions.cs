@@ -63,6 +63,12 @@ public class DrivelutionOptions
     public int BackupsToKeep { get; set; } = 5;
 
     /// <summary>
+    /// 重试时是否使用指数退避（每次重试延迟翻倍）
+    /// Whether to use exponential backoff for retries (doubles delay each retry)
+    /// </summary>
+    public bool UseExponentialBackoff { get; set; } = false;
+
+    /// <summary>
     /// 信任的证书指纹列表（用于签名验证）
     /// Trusted certificate thumbprints (for signature validation)
     /// </summary>
