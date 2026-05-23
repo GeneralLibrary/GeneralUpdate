@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 
 namespace GeneralUpdate.Extension.Core;
 
@@ -33,6 +34,8 @@ public class GeneralExtensionHost : IExtensionHost
     private readonly IDownloadQueueManager _downloadQueue;
     private readonly IDependencyResolver _dependencyResolver;
     private readonly IPlatformMatcher _platformMatcher;
+    private readonly IExtensionLifecycleHooks? _lifecycleHooks;
+    private readonly IExtensionMetadataMapper? _metadataMapper;
     private readonly Dictionary<string, bool> _autoUpdateSettings = new();
     private bool _globalAutoUpdate;
 
@@ -50,6 +53,8 @@ public class GeneralExtensionHost : IExtensionHost
     /// <param name="downloadQueue">Download queue manager</param>
     /// <param name="dependencyResolver">Dependency resolver</param>
     /// <param name="platformMatcher">Platform matcher</param>
+    /// <param name="lifecycleHooks">Optional lifecycle hooks for extension events</param>
+    /// <param name="metadataMapper">Optional metadata mapper for DTO-to-domain conversion</param>
     public GeneralExtensionHost(
         ExtensionHostOptions options,
         IExtensionHttpClient httpClient,
@@ -57,7 +62,9 @@ public class GeneralExtensionHost : IExtensionHost
         IVersionCompatibilityChecker compatibilityChecker,
         IDownloadQueueManager downloadQueue,
         IDependencyResolver dependencyResolver,
-        IPlatformMatcher platformMatcher)
+        IPlatformMatcher platformMatcher,
+        IExtensionLifecycleHooks? lifecycleHooks = null,
+        IExtensionMetadataMapper? metadataMapper = null)
     {
         if (options == null)
             throw new ArgumentNullException(nameof(options));
@@ -73,6 +80,8 @@ public class GeneralExtensionHost : IExtensionHost
         _downloadQueue = downloadQueue ?? throw new ArgumentNullException(nameof(downloadQueue));
         _dependencyResolver = dependencyResolver;// ?? throw new ArgumentNullException(nameof(dependencyResolver));
         _platformMatcher = platformMatcher ?? throw new ArgumentNullException(nameof(platformMatcher));
+        _lifecycleHooks = lifecycleHooks;
+        _metadataMapper = metadataMapper;
 
         // Wire up events
         _downloadQueue.DownloadStatusChanged += OnDownloadStatusChanged;
@@ -198,8 +207,10 @@ public class GeneralExtensionHost : IExtensionHost
                 throw new InvalidOperationException($"Extension {extensionId} not found on server");
             }
 
-            // Convert DTO to metadata
-            var metadata = ToMetadata(serverExtension);
+            // Convert DTO to metadata (use injected mapper if available, fallback to static)
+            var metadata = _metadataMapper != null
+                ? _metadataMapper.ToMetadata(serverExtension)
+                : ToMetadata(serverExtension);
             GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: metadata resolved. Name={metadata.Name}, Version={metadata.Version}");
 
             // Check compatibility
@@ -217,13 +228,12 @@ public class GeneralExtensionHost : IExtensionHost
             }
 
             // Resolve and download dependencies
-            if (!string.IsNullOrWhiteSpace(metadata.Dependencies))
+            var dependencyList = metadata.DependencyList;
+            if (dependencyList.Count > 0)
             {
-                var dependencies = metadata.Dependencies!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: resolving {dependencies.Length} dependency/ies for ExtensionId={extensionId}");
-                foreach (var depId in dependencies)
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: resolving {dependencyList.Count} dependency/ies for ExtensionId={extensionId}");
+                foreach (var dep in dependencyList)
                 {
-                    var dep = depId.Trim();
                     var installedDep = ExtensionCatalog.GetInstalledExtensionById(dep);
                     if (installedDep == null)
                     {
@@ -248,6 +258,20 @@ public class GeneralExtensionHost : IExtensionHost
             {
                 GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: download failed for ExtensionId={extensionId}.");
                 throw new InvalidOperationException("Failed to download extension");
+            }
+
+            // Verify SHA256 hash of downloaded package (if hash is provided)
+            if (!string.IsNullOrWhiteSpace(metadata.Hash))
+            {
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: verifying SHA256 hash for ExtensionId={extensionId}.");
+                var actualHash = await ComputeFileSha256Async(savePath);
+                if (!string.Equals(actualHash, metadata.Hash, StringComparison.OrdinalIgnoreCase))
+                {
+                    GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionAsync: hash mismatch for ExtensionId={extensionId}. Expected={metadata.Hash}, Actual={actualHash}");
+                    SafeDeleteFile(savePath);
+                    throw new InvalidOperationException($"SHA256 hash verification failed for extension {extensionId}");
+                }
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: SHA256 hash verified for ExtensionId={extensionId}.");
             }
 
             // Install extension
@@ -313,6 +337,18 @@ public class GeneralExtensionHost : IExtensionHost
                 throw new InvalidOperationException("Extension file must be a .zip file");
             }
 
+            // Invoke lifecycle hook: before install
+            if (_lifecycleHooks != null)
+            {
+                var tempMeta = new ExtensionMetadata { Id = extensionPath, Name = Path.GetFileNameWithoutExtension(extensionPath) };
+                var canInstall = await _lifecycleHooks.OnBeforeInstallAsync(tempMeta, extensionPath);
+                if (!canInstall)
+                {
+                    GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: installation cancelled by lifecycle hook. Path={extensionPath}");
+                    return false;
+                }
+            }
+
             // Extract extension name from file name (e.g., "demo-extension_1.0.0.zip" -> "demo-extension")
             var fileName = Path.GetFileNameWithoutExtension(extensionPath);
             var extensionName = fileName;
@@ -358,9 +394,9 @@ public class GeneralExtensionHost : IExtensionHost
             // Create target directory
             Directory.CreateDirectory(targetExtensionDir);
 
-            // Extract the zip file to the installation directory
+            // Extract the zip file to the installation directory (with Zip Slip protection)
             GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: extracting package to {targetExtensionDir}");
-            await Task.Run(() => ZipFile.ExtractToDirectory(extensionPath, targetExtensionDir));
+            await SafeExtractZipAsync(extensionPath, targetExtensionDir);
             GeneralTracer.Info("GeneralExtensionHost.InstallExtensionAsync: extraction completed successfully.");
 
             // Delete backup on success
@@ -371,6 +407,14 @@ public class GeneralExtensionHost : IExtensionHost
             }
 
             GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: extension installed successfully. Name={extensionName}");
+
+            // Invoke lifecycle hook: after install
+            if (_lifecycleHooks != null)
+            {
+                var installedMeta = new ExtensionMetadata { Id = extensionPath, Name = extensionName };
+                await _lifecycleHooks.OnAfterInstallAsync(installedMeta);
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -433,6 +477,34 @@ public class GeneralExtensionHost : IExtensionHost
             var targetSubDir = Path.Combine(targetDir, dirName);
             CopyDirectory(subDir, targetSubDir);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Dictionary<string, bool>> UpdateExtensionsAsync(IEnumerable<string> extensionIds, CancellationToken cancellationToken = default)
+    {
+        var results = new Dictionary<string, bool>();
+        
+        foreach (var extensionId in extensionIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            try
+            {
+                var success = await UpdateExtensionAsync(extensionId);
+                results[extensionId] = success;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                GeneralTracer.Error($"GeneralExtensionHost.UpdateExtensionsAsync: bulk update failed for ExtensionId={extensionId}.", ex);
+                results[extensionId] = false;
+            }
+        }
+
+        return results;
     }
 
     /// <inheritdoc/>
@@ -505,5 +577,88 @@ public class GeneralExtensionHost : IExtensionHost
             CustomProperties = dto.CustomProperties != null ? 
                 JsonConvert.SerializeObject(dto.CustomProperties) : null
         };
+    }
+
+    /// <summary>
+    /// Securely extract a ZIP archive with path traversal (Zip Slip) protection.
+    /// Each entry's destination path is validated to ensure it stays within the target directory.
+    /// </summary>
+    /// <param name="zipPath">Path to the ZIP archive.</param>
+    /// <param name="destinationDir">Target extraction directory.</param>
+    private static async Task SafeExtractZipAsync(string zipPath, string destinationDir)
+    {
+        var fullDestDir = Path.GetFullPath(destinationDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        await Task.Run(() =>
+        {
+            using var archive = ZipFile.OpenRead(zipPath);
+            foreach (var entry in archive.Entries)
+            {
+                // Decode entry name; ZipArchive entries can use backslashes on some platforms
+                var entryName = entry.FullName.Replace('\\', '/');
+
+                // Combine and normalize to detect traversal
+                var destinationPath = Path.GetFullPath(Path.Combine(fullDestDir, entryName));
+
+                // Validate that the resolved path stays within the destination directory
+                if (!destinationPath.StartsWith(fullDestDir + Path.DirectorySeparatorChar)
+                    && destinationPath != fullDestDir)
+                {
+                    GeneralTracer.Warn($"SafeExtractZipAsync: blocked path traversal for entry '{entry.FullName}' -> '{destinationPath}'");
+                    continue; // Skip malicious entries
+                }
+
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    // Directory entry
+                    Directory.CreateDirectory(destinationPath);
+                }
+                else
+                {
+                    // Ensure parent directory exists
+                    var parentDir = Path.GetDirectoryName(destinationPath);
+                    if (parentDir != null)
+                    {
+                        Directory.CreateDirectory(parentDir);
+                    }
+
+                    entry.ExtractToFile(destinationPath, overwrite: true);
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Compute the SHA256 hash of a file.
+    /// </summary>
+    /// <param name="filePath">Path to the file.</param>
+    /// <returns>Hexadecimal SHA256 hash string.</returns>
+    private static Task<string> ComputeFileSha256Async(string filePath)
+    {
+        return Task.Run(() =>
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = File.OpenRead(filePath);
+            var hashBytes = sha256.ComputeHash(stream);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        });
+    }
+
+    /// <summary>
+    /// Safely delete a file, ignoring errors if the file does not exist.
+    /// </summary>
+    private static void SafeDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"SafeDeleteFile: failed to delete {filePath}. {ex.Message}");
+        }
     }
 }

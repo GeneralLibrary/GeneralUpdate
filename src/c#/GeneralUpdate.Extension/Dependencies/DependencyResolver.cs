@@ -71,12 +71,10 @@ public class DependencyResolver : IDependencyResolver
         visiting.Add(extensionId);
 
         var extension = _catalog.GetInstalledExtensionById(extensionId);
-        if (extension?.Dependencies != null && !string.IsNullOrWhiteSpace(extension.Dependencies))
+        if (extension != null && extension.DependencyList.Count > 0)
         {
-            var dependencies = extension.Dependencies.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var dep in dependencies)
+            foreach (var depId in extension.DependencyList)
             {
-                var depId = dep.Trim();
                 ResolveDependenciesRecursive(depId, resolved, visiting, visited);
             }
         }

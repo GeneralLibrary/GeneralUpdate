@@ -38,4 +38,19 @@ public interface IExtensionHttpClient
         string savePath,
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Download extension by ID with structured error classification.
+    /// Prefer this over <see cref="DownloadExtensionAsync"/> when you need detailed error diagnostics.
+    /// </summary>
+    /// <param name="extensionId">Extension ID</param>
+    /// <param name="savePath">Path to save file</param>
+    /// <param name="progress">Progress callback</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Download result with error classification</returns>
+    Task<DownloadResult> DownloadExtensionWithResultAsync(
+        string extensionId,
+        string savePath,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default);
 }

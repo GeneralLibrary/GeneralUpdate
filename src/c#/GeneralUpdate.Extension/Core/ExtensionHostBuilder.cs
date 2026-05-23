@@ -77,21 +77,44 @@ public class ExtensionHostBuilder
             throw new InvalidOperationException("Options must be configured before building");
         }
 
-        // Register core services
-        _services.AddSingleton(_options);
-        _services.AddSingleton<IExtensionHttpClient>(sp => 
-            new ExtensionHttpClient(_options.ServerUrl, _options.Scheme, _options.Token));
-        _services.AddSingleton<IVersionCompatibilityChecker, VersionCompatibilityChecker>();
-        _services.AddSingleton<IDownloadQueueManager, DownloadQueueManager>();
-        _services.AddSingleton<IPlatformMatcher, PlatformMatcher>();
+        // Register core services (only if not already registered by the user)
+        if (!_services.Any(sd => sd.ServiceType == typeof(ExtensionHostOptions)))
+            _services.AddSingleton(_options);
+
+        if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionHttpClient)))
+            _services.AddSingleton<IExtensionHttpClient>(sp => 
+                new ExtensionHttpClient(_options.ServerUrl, _options.Scheme, _options.Token));
+
+        if (!_services.Any(sd => sd.ServiceType == typeof(IVersionCompatibilityChecker)))
+            _services.AddSingleton<IVersionCompatibilityChecker, VersionCompatibilityChecker>();
+
+        if (!_services.Any(sd => sd.ServiceType == typeof(IDownloadQueueManager)))
+            _services.AddSingleton<IDownloadQueueManager, DownloadQueueManager>();
+
+        if (!_services.Any(sd => sd.ServiceType == typeof(IPlatformMatcher)))
+            _services.AddSingleton<IPlatformMatcher, PlatformMatcher>();
+
+        // Platform detection and metadata mapping (overridable for testing)
+        if (!_services.Any(sd => sd.ServiceType == typeof(IPlatformServices)))
+            _services.AddSingleton<IPlatformServices, RuntimePlatformServices>();
+
+        if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionMetadataMapper)))
+            _services.AddSingleton<IExtensionMetadataMapper, DefaultExtensionMetadataMapper>();
         
         var catalogPath = _options.CatalogPath ?? _options.ExtensionsDirectory;
-        _services.AddSingleton<IExtensionCatalog>(sp => new ExtensionCatalog(catalogPath));
+        if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionCatalog)))
+            _services.AddSingleton<IExtensionCatalog>(sp => new ExtensionCatalog(catalogPath));
         
-        _services.AddSingleton<IDependencyResolver>(sp => 
-            new DependencyResolver(sp.GetRequiredService<IExtensionCatalog>()));
+        if (!_services.Any(sd => sd.ServiceType == typeof(IDependencyResolver)))
+            _services.AddSingleton<IDependencyResolver>(sp => 
+                new DependencyResolver(sp.GetRequiredService<IExtensionCatalog>()));
+
+        // Lifecycle hooks (default: no-op, user can override via ConfigureServices)
+        if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionLifecycleHooks)))
+            _services.AddSingleton<IExtensionLifecycleHooks, DefaultExtensionLifecycleHooks>();
         
-        _services.AddSingleton<IExtensionHost, GeneralExtensionHost>();
+        if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionHost)))
+            _services.AddSingleton<IExtensionHost, GeneralExtensionHost>();
 
         var serviceProvider = _services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<IExtensionHost>();
