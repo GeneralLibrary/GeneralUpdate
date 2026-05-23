@@ -90,6 +90,9 @@
       <Folder Include="Common\" />
     </ItemGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="BowlTest" />
+    </ItemGroup>
+    <ItemGroup>
         <None Include="../../../imgs/bowl.jpeg">
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>
