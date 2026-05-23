@@ -3,6 +3,7 @@ using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GeneralUpdate.Drivelution;
 
@@ -32,6 +33,22 @@ public static class GeneralDrivelution
     /// <exception cref="PlatformNotSupportedException">Thrown when platform is not supported</exception>
     public static IGeneralDrivelution Create(DrivelutionOptions? options = null)
     {
+        return Core.DrivelutionFactory.Create(options);
+    }
+
+    /// <summary>
+    /// Resolves a driver updater from the DI service provider.
+    /// Falls back to <see cref="Create(DrivelutionOptions?)"/> if not registered.
+    /// </summary>
+    /// <param name="serviceProvider">DI service provider.</param>
+    /// <returns>Platform-adapted driver updater.</returns>
+    public static IGeneralDrivelution Create(IServiceProvider serviceProvider)
+    {
+        var updater = serviceProvider.GetService<IGeneralDrivelution>();
+        if (updater is not null)
+            return updater;
+
+        var options = serviceProvider.GetService<DrivelutionOptions>();
         return Core.DrivelutionFactory.Create(options);
     }
 
