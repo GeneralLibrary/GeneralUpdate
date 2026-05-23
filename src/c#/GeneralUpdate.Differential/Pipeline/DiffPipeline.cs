@@ -14,54 +14,49 @@ namespace GeneralUpdate.Differential.Pipeline
 {
     /// <summary>
     /// Parallel differential pipeline with configurable parallelism, progress reporting, and cancellation.
-    /// <para>
+    /// </summary>
+    /// <remarks>
     /// Wraps the existing strategy layer and parallelizes per-file diff operations
     /// using a throttled producer-consumer pattern via <see cref="SemaphoreSlim"/>.
-    /// </para>
-    /// <para>
-    /// Usage:
-    /// <code>
-    /// var pipeline = new DiffPipeline(new DiffPipelineOptions { MaxDegreeOfParallelism = 8 });
-    /// var reporter = new Progress&lt;DiffProgress&gt;(p => Console.WriteLine(p));
-    /// await pipeline.CleanAsync(src, tgt, patch, reporter, ct);
-    /// </code>
-    /// </para>
-    /// </summary>
+    /// Use <see cref="DiffPipelineBuilder"/> for fluent configuration.
+    /// </remarks>
     public class DiffPipeline
     {
         private readonly DiffPipelineOptions _options;
         private readonly IBinaryDiffer _binaryDiffer;
-
+        private readonly IProgress<DiffProgress>? _progress;
         private const string PatchExtension = ".patch";
         private const string DeleteListFileName = "generalupdate_delete_files.json";
 
         /// <summary>
-        /// Initialises a new pipeline with the specified options and a default <see cref="StreamingHdiffDiffer"/>.
+        /// Initialises a new pipeline with default options (<see cref="Differ.StreamingHdiffDiffer"/>).
         /// </summary>
-        public DiffPipeline(DiffPipelineOptions? options = null)
-            : this(options ?? new DiffPipelineOptions(), new Differ.StreamingHdiffDiffer())
+        public DiffPipeline()
+            : this(new DiffPipelineOptions(), new Differ.StreamingHdiffDiffer(), null)
         {
         }
 
         /// <summary>
-        /// Initialises a new pipeline with the specified options and binary differ.
+        /// Initialises a new pipeline with the specified options.
         /// </summary>
-        public DiffPipeline(DiffPipelineOptions options, IBinaryDiffer binaryDiffer)
+        public DiffPipeline(DiffPipelineOptions options)
+            : this(options, new Differ.StreamingHdiffDiffer(), null)
+        {
+        }
+
+        /// <summary>
+        /// Initialises a new pipeline with the specified options, differ, and optional progress reporter.
+        /// </summary>
+        public DiffPipeline(DiffPipelineOptions options, IBinaryDiffer binaryDiffer, IProgress<DiffProgress>? progress = null)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _binaryDiffer = binaryDiffer ?? throw new ArgumentNullException(nameof(binaryDiffer));
+            _progress = progress;
         }
-
-        #region Clean (Patch Generation)
 
         /// <summary>
         /// Compares source and target directories, generating patch files in parallel.
         /// </summary>
-        /// <param name="sourcePath">Old-version directory.</param>
-        /// <param name="targetPath">New-version directory.</param>
-        /// <param name="patchPath">Output patch directory.</param>
-        /// <param name="progress">Optional progress reporter.</param>
-        /// <param name="cancellationToken">Optional cancellation token.</param>
         public async Task CleanAsync(
             string sourcePath,
             string targetPath,
@@ -69,6 +64,7 @@ namespace GeneralUpdate.Differential.Pipeline
             IProgress<DiffProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            var reporter = progress ?? _progress;
             ValidateDirectories(sourcePath, targetPath, patchPath);
 
             var storageManager = new StorageManager();
@@ -79,12 +75,11 @@ namespace GeneralUpdate.Differential.Pipeline
             int total = differentFiles.Count;
             if (total == 0)
             {
-                progress?.Report(DiffProgress.Complete(0));
+                reporter?.Report(DiffProgress.Complete(0));
                 return;
             }
 
             int completed = 0;
-            // Per-file concurrency limit
             var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
             var tasks = differentFiles.Select(file => Task.Run(async () =>
@@ -107,21 +102,20 @@ namespace GeneralUpdate.Differential.Pipeline
                     }
                     else
                     {
-                        // New file 鈥?copy directly
                         File.Copy(file.FullName, Path.Combine(tempDir, Path.GetFileName(file.FullName)), true);
                     }
 
                     int done = Interlocked.Increment(ref completed);
-                    progress?.Report(new DiffProgress(done, total, file.Name));
+                    reporter?.Report(new DiffProgress(done, total, file.Name));
                 }
                 catch (OperationCanceledException)
                 {
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!_options.StopOnFirstError)
                 {
                     int done = Interlocked.Increment(ref completed);
-                    progress?.Report(new DiffProgress(done, total, file.Name, ex.Message));
+                    reporter?.Report(new DiffProgress(done, total, file.Name, ex.Message));
                 }
                 finally
                 {
@@ -131,7 +125,6 @@ namespace GeneralUpdate.Differential.Pipeline
 
             await Task.WhenAll(tasks);
 
-            // Write delete list
             var exceptFiles = storageManager.Except(sourcePath, targetPath)?.ToList();
             if (exceptFiles is { Count: > 0 })
             {
@@ -139,44 +132,32 @@ namespace GeneralUpdate.Differential.Pipeline
                 StorageManager.CreateJson(deletePath, exceptFiles, FileNodesJsonContext.Default.ListFileNode);
             }
 
-            progress?.Report(DiffProgress.Complete(total));
+            reporter?.Report(DiffProgress.Complete(total));
         }
 
-        #endregion Clean
-
-        #region Dirty (Patch Application)
-
         /// <summary>
-        /// Applies patches from patchPath to appPath in parallel where safe.
+        /// Applies patches from patchPath to appPath in parallel.
         /// </summary>
-        /// <param name="appPath">Application directory to patch.</param>
-        /// <param name="patchPath">Patch directory.</param>
-        /// <param name="progress">Optional progress reporter.</param>
-        /// <param name="cancellationToken">Optional cancellation token.</param>
         public async Task DirtyAsync(
             string appPath,
             string patchPath,
             IProgress<DiffProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            var reporter = progress ?? _progress;
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
             var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
             var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory).ToList();
             var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory).ToList();
 
-            // Phase 1: Handle delete list (sequential 鈥?modifies file collection)
             HandleDeleteList(patchFiles, oldFiles);
-
-            // Refresh after deletions
             oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory).ToList();
 
-            // Phase 2: Parallel patch application for independent files
             int total = oldFiles.Count;
             if (total == 0)
             {
-                progress?.Report(DiffProgress.Complete(0));
-                // Still copy new files
+                reporter?.Report(DiffProgress.Complete(0));
                 await CopyUnknownFiles(appPath, patchPath);
                 return;
             }
@@ -184,14 +165,12 @@ namespace GeneralUpdate.Differential.Pipeline
             int completed = 0;
             var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
-            // Match old files to patches (fast, sequential)
             var matchedPairs = new List<(FileInfo OldFile, FileInfo PatchFile)>();
             foreach (var oldFile in oldFiles)
             {
                 var patchFile = patchFiles.FirstOrDefault(f =>
                 {
                     var name = Path.GetFileNameWithoutExtension(f.Name);
-                    // Strip .patch extension from patch file name
                     if (name.EndsWith(".patch", StringComparison.OrdinalIgnoreCase))
                         name = name.Substring(0, name.Length - 6);
                     return name.Equals(oldFile.Name, StringComparison.OrdinalIgnoreCase);
@@ -201,7 +180,6 @@ namespace GeneralUpdate.Differential.Pipeline
                     matchedPairs.Add((oldFile, patchFile));
             }
 
-            // Apply patches in parallel
             var tasks = matchedPairs.Select(pair => Task.Run(async () =>
             {
                 await semaphore.WaitAsync(cancellationToken);
@@ -211,16 +189,16 @@ namespace GeneralUpdate.Differential.Pipeline
                     await ApplyPatch(pair.OldFile.FullName, pair.PatchFile.FullName, cancellationToken);
 
                     int done = Interlocked.Increment(ref completed);
-                    progress?.Report(new DiffProgress(done, total, pair.OldFile.Name));
+                    reporter?.Report(new DiffProgress(done, total, pair.OldFile.Name));
                 }
                 catch (OperationCanceledException)
                 {
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!_options.StopOnFirstError)
                 {
                     int done = Interlocked.Increment(ref completed);
-                    progress?.Report(new DiffProgress(done, total, pair.OldFile.Name, ex.Message));
+                    reporter?.Report(new DiffProgress(done, total, pair.OldFile.Name, ex.Message));
                 }
                 finally
                 {
@@ -229,17 +207,11 @@ namespace GeneralUpdate.Differential.Pipeline
             }, cancellationToken));
 
             await Task.WhenAll(tasks);
-            progress?.Report(DiffProgress.Complete(total));
-
-            // Phase 3: Copy new/unknown files (sequential)
+            reporter?.Report(DiffProgress.Complete(total));
             await CopyUnknownFiles(appPath, patchPath);
         }
 
-        #endregion Dirty
-
-        #region Private Helpers
-
-        private static async Task ApplyPatch(string appFilePath, string patchFilePath, CancellationToken ct)
+        private async Task ApplyPatch(string appFilePath, string patchFilePath, CancellationToken ct)
         {
             if (!File.Exists(appFilePath) || !File.Exists(patchFilePath)) return;
 
@@ -247,8 +219,15 @@ namespace GeneralUpdate.Differential.Pipeline
                 Path.GetDirectoryName(appFilePath)!,
                 $"{Path.GetRandomFileName()}_{Path.GetFileName(appFilePath)}");
 
-            var handler = new Binary.BinaryHandler(); // Use default BZip2 handler for reading patches
-            await handler.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
+            await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
+
+            // Atomic replacement
+            if (File.Exists(appFilePath))
+            {
+                File.SetAttributes(appFilePath, FileAttributes.Normal);
+                File.Delete(appFilePath);
+            }
+            File.Move(tempPath, appFilePath);
         }
 
         private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
@@ -272,9 +251,9 @@ namespace GeneralUpdate.Differential.Pipeline
             }
         }
 
-        private static async Task CopyUnknownFiles(string appPath, string patchPath)
+        private static Task CopyUnknownFiles(string appPath, string patchPath)
         {
-            await Task.Run(() =>
+            return Task.Run(() =>
             {
                 var fileManager = new StorageManager();
                 var comparisonResult = fileManager.Compare(appPath, patchPath);
@@ -331,7 +310,5 @@ namespace GeneralUpdate.Differential.Pipeline
             if (!Directory.Exists(targetPath))
                 throw new DirectoryNotFoundException($"Target directory not found: {targetPath}");
         }
-
-        #endregion Private Helpers
     }
 }

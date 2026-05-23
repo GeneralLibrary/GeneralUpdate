@@ -5,7 +5,7 @@ using GeneralUpdate.Differential.Binary;
 namespace GeneralUpdate.Differential.Abstractions
 {
     /// <summary>
-    /// BZip2 compression provider 鈥?preserves backward compatibility with legacy BSDIFF patches.
+    /// BZip2 compression provider - preserves backward compatibility with legacy BSDIFF patches.
     /// Format version byte: 0x00.
     /// </summary>
     public sealed class BZip2CompressionProvider : ICompressionProvider
@@ -24,8 +24,8 @@ namespace GeneralUpdate.Differential.Abstractions
         /// <inheritdoc/>
         public Stream CreateDecompressStream(Stream input, CancellationToken cancellationToken = default)
         {
-            // BZip2InputStream is the existing managed BZip2 decompressor.
-            return new BZip2InputStream(input, false);
+            // BZip2InputStream only accepts a Stream; the single-parameter constructor is used.
+            return new BZip2InputStream(input);
         }
     }
 }

@@ -7,8 +7,12 @@ namespace GeneralUpdate.Differential.Abstractions
     /// <summary>
     /// Defines a pluggable binary differential algorithm (diff generation and patch application).
     /// Implementations may use different strategies: BSDIFF, HDiffPatch-style, VCDIFF, etc.
-    /// All methods are stateless 鈥?callers pass file paths and instances are safe for concurrent use.
     /// </summary>
+    /// <remarks>
+    /// Implementations should document their thread-safety guarantees.
+    /// Callers should not assume a single instance is safe for concurrent use
+    /// unless the implementation explicitly states so.
+    /// </remarks>
     public interface IBinaryDiffer
     {
         /// <summary>

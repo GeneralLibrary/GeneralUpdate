@@ -9,24 +9,29 @@ namespace GeneralUpdate.Differential.Binary
     /// <summary>
     /// BSDIFF 4.0 file binary differential processing.
     /// Implements <see cref="IBinaryDiffer"/> for pluggable architecture compatibility.
-    /// <para>
+    /// </summary>
+    /// <remarks>
     /// Supports pluggable compression via <see cref="ICompressionProvider"/>.
     /// Default: <see cref="BZip2CompressionProvider"/> (backward compatible).
     /// Use <see cref="BrotliCompressionProvider"/> for 3-5x faster decompression.
-    /// </para>
-    /// </summary>
+    ///
+    /// Thread-safety: this class stores per-call state in instance fields.
+    /// A single instance MUST NOT be used concurrently by multiple callers.
+    /// Create separate instances for concurrent operations.
+    /// </remarks>
     public class BinaryHandler : IBinaryDiffer
     {
         #region Private Members
 
-        private const long c_fileSignature = 0x3034464649445342L; // "BSDIFF40"
-        private const int c_headerSize = 32;
+        private const long FileSignature = 0x3034464649445342L; // "BSDIFF40"
+        private const int HeaderSize = 32;
         // Extended header adds 1 byte for compression format version after the 32-byte BSDIFF header.
-        // Legacy patches have exactly 32-byte headers 鈫?treated as BZip2 (0x00).
-        // New patches have 33-byte headers 鈫?the 33rd byte selects compression: 0x00=BZip2, 0x01=Brotli.
-        private const int c_extendedHeaderSize = 33;
+        // Legacy patches have exactly 32-byte headers -> treated as BZip2 (0x00).
+        // New patches have 33-byte headers -> the 33rd byte selects compression: 0x00=BZip2, 0x01=Brotli.
+        private const int ExtendedHeaderSize = 33;
 
         private readonly ICompressionProvider _compressionProvider;
+        // Per-call mutable state. NOT thread-safe for concurrent calls on the same instance.
         private string _oldfilePath, _newfilePath, _patchPath;
 
         #endregion Private Members
@@ -57,12 +62,14 @@ namespace GeneralUpdate.Differential.Binary
         /// <inheritdoc/>
         public Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return Clean(oldFilePath, newFilePath, patchFilePath);
         }
 
         /// <inheritdoc/>
         public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return Dirty(oldFilePath, newFilePath, patchFilePath);
         }
 
@@ -71,13 +78,8 @@ namespace GeneralUpdate.Differential.Binary
         #region Public Methods
 
         /// <summary>
-        /// Clean out the files that need to be updated and generate the update package.
+        /// Generates a BSDIFF patch from oldfilePath to patchPath.
         /// </summary>
-        /// <param name="oldfilePath">Old version file path.</param>
-        /// <param name="newfilePath">New version file path</param>
-        /// <param name="patchPath">Patch file generation path.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
         public async Task Clean(string oldfilePath, string newfilePath, string patchPath)
         {
             await Task.Run(() =>
@@ -87,18 +89,23 @@ namespace GeneralUpdate.Differential.Binary
                 _patchPath = patchPath;
                 ValidationParameters();
 
-                using (FileStream output = new FileStream(patchPath, FileMode.Create))
+                using (var output = new FileStream(patchPath, FileMode.Create))
                 {
                     var oldBytes = File.ReadAllBytes(_oldfilePath);
                     var newBytes = File.ReadAllBytes(_newfilePath);
 
-                    // Header: 32-byte BSDIFF header + 1-byte compression format version = 33 bytes total
-                    byte[] header = new byte[c_extendedHeaderSize];
-                    WriteInt64(c_fileSignature, header, 0); // "BSDIFF40"
+                    // Header layout:
+                    //   0    8   "BSDIFF40" (magic)
+                    //   8    8   length of compressed ctrl block
+                    //  16    8   length of compressed diff block
+                    //  24    8   length of new file
+                    //  32    1   compression format version (0x00=BZip2, 0x01=Brotli)
+                    byte[] header = new byte[ExtendedHeaderSize];
+                    WriteInt64(FileSignature, header, 0);
                     WriteInt64(0, header, 8);
                     WriteInt64(0, header, 16);
                     WriteInt64(newBytes.Length, header, 24);
-                    header[32] = _compressionProvider.FormatVersion; // Compression format version byte
+                    header[32] = _compressionProvider.FormatVersion;
 
                     long startPosition = output.Position;
                     output.Write(header, 0, header.Length);
@@ -113,7 +120,7 @@ namespace GeneralUpdate.Differential.Binary
 
                     using (var compressStream = _compressionProvider.CreateCompressStream(output))
                     {
-                        // compute the differences, writing ctrl as we go
+                        // Compute the differences, writing ctrl as we go
                         int scan = 0;
                         int pos = 0;
                         int len = 0;
@@ -226,27 +233,27 @@ namespace GeneralUpdate.Differential.Binary
                         }
                     }
 
-                    // compute size of compressed ctrl data
+                    // Compute size of compressed ctrl data
                     long controlEndPosition = output.Position;
-                    WriteInt64(controlEndPosition - startPosition - c_extendedHeaderSize, header, 8);
+                    WriteInt64(controlEndPosition - startPosition - ExtendedHeaderSize, header, 8);
 
-                    // write compressed diff data
+                    // Write compressed diff data
                     using (var compressStream = _compressionProvider.CreateCompressStream(output))
                     {
                         compressStream.Write(db, 0, dblen);
                     }
 
-                    // compute size of compressed diff data
+                    // Compute size of compressed diff data
                     long diffEndPosition = output.Position;
                     WriteInt64(diffEndPosition - controlEndPosition, header, 16);
 
-                    // write compressed extra data
+                    // Write compressed extra data
                     using (var compressStream = _compressionProvider.CreateCompressStream(output))
                     {
                         compressStream.Write(eb, 0, eblen);
                     }
 
-                    // seek to the beginning, write the header, then seek back to end
+                    // Seek to the beginning, write the header, then seek back to end
                     long endPosition = output.Position;
                     output.Position = startPosition;
                     output.Write(header, 0, header.Length);
@@ -256,14 +263,9 @@ namespace GeneralUpdate.Differential.Binary
         }
 
         /// <summary>
-        /// Update the patch file to the client application.
+        /// Applies a BSDIFF patch to produce the new file.
+        /// Supports both legacy (32-byte header) and extended (33-byte header) patches.
         /// </summary>
-        /// <param name="oldfilePath"></param>
-        /// <param name="newfilePath"></param>
-        /// <param name="patchPath"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="InvalidOperationException"></exception>
         public async Task Dirty(string oldfilePath, string newfilePath, string patchPath)
         {
             await Task.Run(() =>
@@ -272,154 +274,165 @@ namespace GeneralUpdate.Differential.Binary
                 _newfilePath = newfilePath;
                 _patchPath = patchPath;
                 ValidationParameters();
-                using (FileStream input =
-                       new FileStream(_oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+
+                using (var input = new FileStream(_oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var output = new FileStream(_newfilePath, FileMode.Create))
                 {
-                    using (FileStream output = new FileStream(_newfilePath, FileMode.Create))
+                    long controlLength, diffLength, newSize;
+                    byte formatVersion;
+                    int actualHeaderSize;
+
+                    // Read and detect header format
+                    using (var patchStream = OpenPatchStream(patchPath))
                     {
-                        Func<Stream> openPatchStream = () =>
-                            new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        if (!patchStream.CanRead)
+                            throw new ArgumentException("Patch stream must be readable.", nameof(patchPath));
+                        if (!patchStream.CanSeek)
+                            throw new ArgumentException("Patch stream must be seekable.", nameof(patchPath));
 
-                        // read header (supports both 32-byte legacy and 33-byte extended headers)
-                        long controlLength, diffLength, newSize;
-                        byte formatVersion;
-                        using (Stream patchStream = openPatchStream())
+                        // Read 32-byte BSDIFF header
+                        byte[] header = ReadExactly(patchStream, HeaderSize);
+
+                        // Check magic
+                        long signature = ReadInt64(header, 0);
+                        if (signature != FileSignature)
+                            throw new InvalidOperationException("Corrupt patch: invalid magic signature.");
+
+                        // Read lengths from header
+                        controlLength = ReadInt64(header, 8);
+                        diffLength = ReadInt64(header, 16);
+                        newSize = ReadInt64(header, 24);
+                        if (controlLength < 0 || diffLength < 0 || newSize < 0)
+                            throw new InvalidOperationException("Corrupt patch: negative length in header.");
+
+                        // Detect compression format version:
+                        // Peek the byte at offset 32. If it looks like a valid format version
+                        // (0x00 or 0x01), treat it as an extended header. Otherwise, it is a
+                        // legacy patch and the byte is the start of compressed data.
+                        if (patchStream.Position < patchStream.Length)
                         {
-                            if (!patchStream.CanRead)
-                                throw new ArgumentException("Patch stream must be readable.", "openPatchStream");
-                            if (!patchStream.CanSeek)
-                                throw new ArgumentException("Patch stream must be seekable.", "openPatchStream");
+                            byte[] formatByte = ReadExactly(patchStream, 1);
+                            byte candidate = formatByte[0];
 
-                            // First read 32-byte BSDIFF header
-                            byte[] header = ReadExactly(patchStream, c_headerSize);
-
-                            // check for appropriate magic
-                            long signature = ReadInt64(header, 0);
-                            if (signature != c_fileSignature)
-                                throw new InvalidOperationException("Corrupt patch.");
-
-                            // read lengths from header
-                            controlLength = ReadInt64(header, 8);
-                            diffLength = ReadInt64(header, 16);
-                            newSize = ReadInt64(header, 24);
-                            if (controlLength < 0 || diffLength < 0 || newSize < 0)
-                                throw new InvalidOperationException("Corrupt patch.");
-
-                            // Detect extended header: if another byte exists, it's the compression format version
-                            // Legacy patches have exactly 32-byte headers 鈫?default to BZip2 (0x00)
-                            if (patchStream.Position < patchStream.Length)
+                            if (candidate == BZip2FormatVersion || candidate == BrotliFormatVersion)
                             {
-                                byte[] formatByte = ReadExactly(patchStream, 1);
-                                formatVersion = formatByte[0];
+                                formatVersion = candidate;
+                                actualHeaderSize = ExtendedHeaderSize;
                             }
                             else
                             {
-                                formatVersion = 0x00; // Legacy BZip2 default
+                                // Legacy patch: byte 32 is compressed data, not a format marker.
+                                formatVersion = BZip2FormatVersion;
+                                actualHeaderSize = HeaderSize;
                             }
-
-                            // Validate format version
-                            if (formatVersion != 0x00 && formatVersion != 0x01)
-                                throw new InvalidOperationException(
-                                    $"Unsupported patch compression format version: 0x{formatVersion:X2}");
                         }
-
-                        // Select appropriate decompression provider based on format version
-                        ICompressionProvider decompressionProvider = formatVersion switch
+                        else
                         {
-                            0x00 => new BZip2CompressionProvider(),
-                            0x01 => new BrotliCompressionProvider(),
-                            _ => throw new InvalidOperationException(
-                                $"Unsupported patch compression format version: 0x{formatVersion:X2}")
-                        };
+                            // File ends exactly at 32 bytes (degenerate case).
+                            formatVersion = BZip2FormatVersion;
+                            actualHeaderSize = HeaderSize;
+                        }
+                    }
 
-                        // The data offset is c_extendedHeaderSize for new patches, c_headerSize for legacy
-                        int headerOffset = (formatVersion == 0x00 && IsLegacyFormat(patchPath)) ? c_headerSize : c_extendedHeaderSize;
+                    // Select decompression provider based on detected format version
+                    ICompressionProvider decompressionProvider = formatVersion switch
+                    {
+                        BZip2FormatVersion => new BZip2CompressionProvider(),
+                        BrotliFormatVersion => new BrotliCompressionProvider(),
+                        _ => throw new InvalidOperationException(
+                            $"Unsupported patch compression format version: 0x{formatVersion:X2}")
+                    };
 
-                        // preallocate buffers for reading and writing
-                        const int c_bufferSize = 1048576;
-                        byte[] newData = new byte[c_bufferSize];
-                        byte[] oldData = new byte[c_bufferSize];
+                    const int c_bufferSize = 1048576;
+                    byte[] newData = new byte[c_bufferSize];
+                    byte[] oldData = new byte[c_bufferSize];
 
-                        // prepare to read three parts of the patch in parallel
-                        using (Stream compressedControlStream = openPatchStream())
-                        using (Stream compressedDiffStream = openPatchStream())
-                        using (Stream compressedExtraStream = openPatchStream())
+                    // Read three parts of the patch in parallel
+                    using (var compressedControlStream = OpenPatchStream(patchPath))
+                    using (var compressedDiffStream = OpenPatchStream(patchPath))
+                    using (var compressedExtraStream = OpenPatchStream(patchPath))
+                    {
+                        // Seek to the start of each part (using the correct header size)
+                        compressedControlStream.Seek(actualHeaderSize, SeekOrigin.Current);
+                        compressedDiffStream.Seek(actualHeaderSize + controlLength, SeekOrigin.Current);
+                        compressedExtraStream.Seek(actualHeaderSize + controlLength + diffLength, SeekOrigin.Current);
+
+                        // Decompress each part
+                        using (var controlStream = decompressionProvider.CreateDecompressStream(compressedControlStream))
+                        using (var diffStream = decompressionProvider.CreateDecompressStream(compressedDiffStream))
+                        using (var extraStream = decompressionProvider.CreateDecompressStream(compressedExtraStream))
                         {
-                            // seek to the start of each part
-                            compressedControlStream.Seek(headerOffset, SeekOrigin.Current);
-                            compressedDiffStream.Seek(headerOffset + controlLength, SeekOrigin.Current);
-                            compressedExtraStream.Seek(headerOffset + controlLength + diffLength,
-                                SeekOrigin.Current);
+                            long[] control = new long[3];
+                            byte[] buffer = new byte[8];
 
-                            // decompress each part using the detected compression provider
-                            using (Stream controlStream = decompressionProvider.CreateDecompressStream(compressedControlStream))
-                            using (Stream diffStream = decompressionProvider.CreateDecompressStream(compressedDiffStream))
-                            using (Stream extraStream = decompressionProvider.CreateDecompressStream(compressedExtraStream))
+                            int oldPosition = 0;
+                            int newPosition = 0;
+
+                            while (newPosition < newSize)
                             {
-                                long[] control = new long[3];
-                                byte[] buffer = new byte[8];
-
-                                int oldPosition = 0;
-                                int newPosition = 0;
-                                while (newPosition < newSize)
+                                // Read control data
+                                for (int i = 0; i < 3; i++)
                                 {
-                                    // read control data
-                                    for (int i = 0; i < 3; i++)
-                                    {
-                                        ReadExactly(controlStream, buffer, 0, 8);
-                                        control[i] = ReadInt64(buffer, 0);
-                                    }
-
-                                    // sanity-check
-                                    if (newPosition + control[0] > newSize)
-                                        throw new InvalidOperationException("Corrupt patch.");
-
-                                    // seek old file to the position that the new data is diffed against
-                                    input.Position = oldPosition;
-
-                                    int bytesToCopy = (int)control[0];
-                                    while (bytesToCopy > 0)
-                                    {
-                                        int actualBytesToCopy = Math.Min(bytesToCopy, c_bufferSize);
-
-                                        ReadExactly(diffStream, newData, 0, actualBytesToCopy);
-
-                                        int availableInputBytes = Math.Min(actualBytesToCopy,
-                                            (int)(input.Length - input.Position));
-                                        ReadExactly(input, oldData, 0, availableInputBytes);
-
-                                        for (int index = 0; index < availableInputBytes; index++)
-                                            newData[index] += oldData[index];
-
-                                        output.Write(newData, 0, actualBytesToCopy);
-
-                                        newPosition += actualBytesToCopy;
-                                        oldPosition += actualBytesToCopy;
-                                        bytesToCopy -= actualBytesToCopy;
-                                    }
-
-                                    if (newPosition + control[1] > newSize)
-                                        throw new InvalidOperationException("Corrupt patch.");
-
-                                    bytesToCopy = (int)control[1];
-                                    while (bytesToCopy > 0)
-                                    {
-                                        int actualBytesToCopy = Math.Min(bytesToCopy, c_bufferSize);
-
-                                        ReadExactly(extraStream, newData, 0, actualBytesToCopy);
-                                        output.Write(newData, 0, actualBytesToCopy);
-
-                                        newPosition += actualBytesToCopy;
-                                        bytesToCopy -= actualBytesToCopy;
-                                    }
-
-                                    oldPosition = (int)(oldPosition + control[2]);
+                                    ReadExactly(controlStream, buffer, 0, 8);
+                                    control[i] = ReadInt64(buffer, 0);
                                 }
+
+                                // Sanity-check
+                                if (newPosition + control[0] > newSize)
+                                    throw new InvalidOperationException("Corrupt patch: diff data exceeds new file size.");
+
+                                // Seek old file to the position that the new data is diffed against
+                                input.Position = oldPosition;
+
+                                int bytesToCopy = (int)control[0];
+                                while (bytesToCopy > 0)
+                                {
+                                    int actualBytesToCopy = Math.Min(bytesToCopy, c_bufferSize);
+
+                                    // Read diff string
+                                    ReadExactly(diffStream, newData, 0, actualBytesToCopy);
+
+                                    // Add old data to diff string
+                                    int availableInputBytes = Math.Min(actualBytesToCopy,
+                                        (int)(input.Length - input.Position));
+                                    ReadExactly(input, oldData, 0, availableInputBytes);
+
+                                    for (int index = 0; index < availableInputBytes; index++)
+                                        newData[index] += oldData[index];
+
+                                    output.Write(newData, 0, actualBytesToCopy);
+
+                                    // Adjust counters
+                                    newPosition += actualBytesToCopy;
+                                    oldPosition += actualBytesToCopy;
+                                    bytesToCopy -= actualBytesToCopy;
+                                }
+
+                                // Sanity-check
+                                if (newPosition + control[1] > newSize)
+                                    throw new InvalidOperationException("Corrupt patch: extra data exceeds new file size.");
+
+                                // Read extra string
+                                bytesToCopy = (int)control[1];
+                                while (bytesToCopy > 0)
+                                {
+                                    int actualBytesToCopy = Math.Min(bytesToCopy, c_bufferSize);
+
+                                    ReadExactly(extraStream, newData, 0, actualBytesToCopy);
+                                    output.Write(newData, 0, actualBytesToCopy);
+
+                                    newPosition += actualBytesToCopy;
+                                    bytesToCopy -= actualBytesToCopy;
+                                }
+
+                                // Adjust position in old file
+                                oldPosition = (int)(oldPosition + control[2]);
                             }
                         }
                     }
                 }
 
+                // Atomic replacement: delete old file, move new file into place
                 if (File.Exists(_oldfilePath))
                 {
                     File.SetAttributes(_oldfilePath, FileAttributes.Normal);
@@ -439,40 +452,25 @@ namespace GeneralUpdate.Differential.Binary
 
         #region Private Methods
 
+        private const byte BZip2FormatVersion = 0x00;
+        private const byte BrotliFormatVersion = 0x01;
+
+        private static FileStream OpenPatchStream(string patchPath)
+        {
+            return new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
         private void ValidationParameters()
         {
-            if (string.IsNullOrWhiteSpace(_oldfilePath)) throw new ArgumentNullException("'oldfilePath' This parameter cannot be empty .");
-            if (string.IsNullOrWhiteSpace(_newfilePath)) throw new ArgumentNullException("'newfilePath' This parameter cannot be empty .");
-            if (string.IsNullOrWhiteSpace(_patchPath)) throw new ArgumentNullException("'patchPath' This parameter cannot be empty .");
+            if (string.IsNullOrWhiteSpace(_oldfilePath))
+                throw new ArgumentNullException(nameof(_oldfilePath), "Old file path must not be empty.");
+            if (string.IsNullOrWhiteSpace(_newfilePath))
+                throw new ArgumentNullException(nameof(_newfilePath), "New file path must not be empty.");
+            if (string.IsNullOrWhiteSpace(_patchPath))
+                throw new ArgumentNullException(nameof(_patchPath), "Patch path must not be empty.");
         }
 
-        private static bool IsLegacyFormat(string patchPath)
-        {
-            // Legacy patches have exactly 32-byte headers (no format version byte).
-            // Extended patches have 33-byte headers (32 + 1 format version byte).
-            // We check the file size: if the 33rd byte doesn't exist, it's legacy.
-            try
-            {
-                var fileInfo = new FileInfo(patchPath);
-                if (!fileInfo.Exists) return false;
-                // We can't definitively tell from file size alone, but we can check
-                // by reading the header again. For simplicity, we check if the file
-                // was produced by this version of the code (always writes 33 bytes).
-                // Legacy files from older versions have 32-byte headers.
-                using (var fs = new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    // Try to read 33rd byte
-                    fs.Seek(c_headerSize, SeekOrigin.Begin);
-                    return fs.Position >= fs.Length;
-                }
-            }
-            catch
-            {
-                return true; // Assume legacy on error (safe default)
-            }
-        }
-
-        private int CompareBytes(byte[] left, int leftOffset, byte[] right, int rightOffset)
+        private static int CompareBytes(byte[] left, int leftOffset, byte[] right, int rightOffset)
         {
             for (int index = 0; index < left.Length - leftOffset && index < right.Length - rightOffset; index++)
             {
@@ -679,29 +677,44 @@ namespace GeneralUpdate.Differential.Binary
             return I;
         }
 
+        /// <summary>
+        /// Writes a 64-bit signed integer in BSDIFF sign-magnitude encoding.
+        /// Bytes 0-6: magnitude bits 0-55. Byte 7 lower 7 bits: magnitude bits 56-62.
+        /// Byte 7 upper bit: sign flag (1 = negative).
+        /// </summary>
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            buf[offset + 0] = (byte)(value & 0xFF);
-            buf[offset + 1] = (byte)((value >> 8) & 0xFF);
-            buf[offset + 2] = (byte)((value >> 16) & 0xFF);
-            buf[offset + 3] = (byte)((value >> 24) & 0xFF);
-            buf[offset + 4] = (byte)((value >> 32) & 0xFF);
-            buf[offset + 5] = (byte)((value >> 40) & 0xFF);
-            buf[offset + 6] = (byte)((value >> 48) & 0xFF);
-            buf[offset + 7] = (byte)((value >> 56) & 0xFF);
+            long magnitude = value < 0 ? -value : value;
+            buf[offset + 0] = (byte)(magnitude & 0xFF);
+            buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
+            buf[offset + 2] = (byte)((magnitude >> 16) & 0xFF);
+            buf[offset + 3] = (byte)((magnitude >> 24) & 0xFF);
+            buf[offset + 4] = (byte)((magnitude >> 32) & 0xFF);
+            buf[offset + 5] = (byte)((magnitude >> 40) & 0xFF);
+            buf[offset + 6] = (byte)((magnitude >> 48) & 0xFF);
+            buf[offset + 7] = (byte)((magnitude >> 56) & 0x7F);
+            if (value < 0)
+                buf[offset + 7] |= 0x80;
         }
 
+        /// <summary>
+        /// Reads a 64-bit signed integer in BSDIFF sign-magnitude encoding.
+        /// Inverse of <see cref="WriteInt64"/>.
+        /// </summary>
         private static long ReadInt64(byte[] buf, int offset)
         {
-            return (long)(
-                   ((ulong)buf[offset + 0]) |
-                   ((ulong)buf[offset + 1] << 8) |
-                   ((ulong)buf[offset + 2] << 16) |
-                   ((ulong)buf[offset + 3] << 24) |
-                   ((ulong)buf[offset + 4] << 32) |
-                   ((ulong)buf[offset + 5] << 40) |
-                   ((ulong)buf[offset + 6] << 48) |
-                   ((ulong)buf[offset + 7] << 56));
+            long value =
+                ((long)buf[offset + 0]) |
+                ((long)buf[offset + 1] << 8) |
+                ((long)buf[offset + 2] << 16) |
+                ((long)buf[offset + 3] << 24) |
+                ((long)buf[offset + 4] << 32) |
+                ((long)buf[offset + 5] << 40) |
+                ((long)buf[offset + 6] << 48) |
+                ((long)(buf[offset + 7] & 0x7F) << 56);
+            if ((buf[offset + 7] & 0x80) != 0)
+                value = -value;
+            return value;
         }
 
         private static byte[] ReadExactly(Stream stream, int count)
