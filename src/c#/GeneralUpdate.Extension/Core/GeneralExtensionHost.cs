@@ -337,6 +337,18 @@ public class GeneralExtensionHost : IExtensionHost
                 throw new InvalidOperationException("Extension file must be a .zip file");
             }
 
+            // Invoke lifecycle hook: before install
+            if (_lifecycleHooks != null)
+            {
+                var tempMeta = new ExtensionMetadata { Id = extensionPath, Name = Path.GetFileNameWithoutExtension(extensionPath) };
+                var canInstall = await _lifecycleHooks.OnBeforeInstallAsync(tempMeta, extensionPath);
+                if (!canInstall)
+                {
+                    GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: installation cancelled by lifecycle hook. Path={extensionPath}");
+                    return false;
+                }
+            }
+
             // Extract extension name from file name (e.g., "demo-extension_1.0.0.zip" -> "demo-extension")
             var fileName = Path.GetFileNameWithoutExtension(extensionPath);
             var extensionName = fileName;
@@ -395,6 +407,14 @@ public class GeneralExtensionHost : IExtensionHost
             }
 
             GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: extension installed successfully. Name={extensionName}");
+
+            // Invoke lifecycle hook: after install
+            if (_lifecycleHooks != null)
+            {
+                var installedMeta = new ExtensionMetadata { Id = extensionPath, Name = extensionName };
+                await _lifecycleHooks.OnAfterInstallAsync(installedMeta);
+            }
+
             return true;
         }
         catch (Exception ex)
