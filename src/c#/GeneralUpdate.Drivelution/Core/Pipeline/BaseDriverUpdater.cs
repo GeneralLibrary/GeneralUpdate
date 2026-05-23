@@ -49,6 +49,7 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
     public async Task<UpdateResult> UpdateAsync(
         DriverInfo driverInfo,
         UpdateStrategy strategy,
+        IProgress<UpdateProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var result = new UpdateResult
@@ -70,6 +71,7 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, timeoutCts.Token);
 
+        int stepCount = 0;
         try
         {
             GeneralTracer.Info($"Starting driver update: {driverInfo.Name} v{driverInfo.Version} " +
@@ -78,8 +80,9 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
             var steps = GetPipelineSteps(strategy)
                 .Where(s => s.ShouldExecute(context))
                 .ToList();
+            stepCount = steps.Count;
 
-            var totalSteps = steps.Count;
+            var totalSteps = stepCount;
             int stepIndex = 0;
             PipelineResult? lastStepResult = null;
 
@@ -87,7 +90,16 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
             {
                 stepIndex++;
                 OnStepStarted?.Invoke(step.StepName);
-                ReportProgress((int)((float)(stepIndex - 1) / totalSteps * 100), $"Running: {step.StepName}");
+
+                progress?.Report(new UpdateProgress
+                {
+                    CurrentStatus = UpdateStatus.Updating,
+                    StepName = step.StepName,
+                    Percentage = (int)((float)(stepIndex - 1) / totalSteps * 100),
+                    Message = $"Running: {step.StepName}",
+                    StepIndex = stepIndex - 1,
+                    TotalSteps = totalSteps
+                });
 
                 // Execute step with retry on transient failures
                 try
@@ -179,7 +191,17 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
         {
             result.EndTime = DateTime.UtcNow;
             GeneralTracer.Info($"Driver update finished. Duration={result.DurationMs}ms, Success={result.Success}");
-            ReportProgress(100, result.Success ? "Completed" : "Failed");
+
+            progress?.Report(new UpdateProgress
+            {
+                CurrentStatus = result.Status,
+                StepName = result.Success ? "Completed" : "Failed",
+                Percentage = 100,
+                Message = result.Success ? "Driver update completed successfully" : result.Error?.Message ?? "Failed",
+                StepIndex = stepCount,
+                TotalSteps = stepCount
+            });
+
             OnUpdateCompleted?.Invoke(result);
         }
 

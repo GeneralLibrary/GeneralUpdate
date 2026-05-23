@@ -26,6 +26,7 @@ public class MacOsGeneralDrivelution : IGeneralDrivelution
     public Task<UpdateResult> UpdateAsync(
         DriverInfo driverInfo,
         UpdateStrategy strategy,
+        IProgress<UpdateProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         throw new PlatformNotSupportedException(

@@ -12,9 +12,14 @@ public interface IGeneralDrivelution
     /// </summary>
     /// <param name="driverInfo">Driver information</param>
     /// <param name="strategy">Update strategy</param>
+    /// <param name="progress">Optional progress reporter for real-time status updates.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Update result</returns>
-    Task<UpdateResult> UpdateAsync(DriverInfo driverInfo, UpdateStrategy strategy, CancellationToken cancellationToken = default);
+    Task<UpdateResult> UpdateAsync(
+        DriverInfo driverInfo,
+        UpdateStrategy strategy,
+        IProgress<UpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates driver asynchronously
