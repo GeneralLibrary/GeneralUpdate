@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Binary;
 
 namespace GeneralUpdate.Differential.Matchers
 {
@@ -19,7 +18,8 @@ namespace GeneralUpdate.Differential.Matchers
     /// </para>
     /// <para>
     /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
-    /// algorithm.  When no differ is provided, the default <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
+    /// algorithm.  Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression
+    /// for optimal patch size and speed.
     /// </para>
     /// </summary>
     public class DefaultCleanStrategy : ICleanStrategy
@@ -31,15 +31,23 @@ namespace GeneralUpdate.Differential.Matchers
         private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
+        /// Initialises a new instance using StreamingHdiffDiffer with Brotli compression by default.
+        /// </summary>
+        public DefaultCleanStrategy()
+            : this(null, null)
+        {
+        }
+
+        /// <summary>
         /// Initialises a new instance, optionally using a custom file-matching strategy
         /// and/or a custom binary differ.
         /// If no matcher is provided, <see cref="DefaultCleanMatcher"/> is used.
-        /// If no binary differ is provided, <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
+        /// If no binary differ is provided, <see cref="Differ.StreamingHdiffDiffer"/> (Brotli) is used.
         /// </summary>
-        public DefaultCleanStrategy(ICleanMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
+        public DefaultCleanStrategy(ICleanMatcher? matcher, IBinaryDiffer? binaryDiffer)
         {
             _matcher = matcher ?? new DefaultCleanMatcher();
-            _binaryDiffer = binaryDiffer ?? new BinaryHandler();
+            _binaryDiffer = binaryDiffer ?? new Differ.StreamingHdiffDiffer();
         }
 
         /// <inheritdoc/>

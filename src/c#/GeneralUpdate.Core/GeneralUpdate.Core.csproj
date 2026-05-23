@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <PackageId>$(AssemblyName)</PackageId>
@@ -102,6 +102,15 @@
     <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanStrategy.cs" Link="Common\ICleanStrategy.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyMatcher.cs" Link="Common\IDirtyMatcher.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyStrategy.cs" Link="Common\IDirtyStrategy.cs" />
+    <!-- Differential v2 abstractions and pipeline -->
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\IBinaryDiffer.cs" Link="Common\IBinaryDiffer.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\ICompressionProvider.cs" Link="Common\ICompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\BZip2CompressionProvider.cs" Link="Common\BZip2CompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\BrotliCompressionProvider.cs" Link="Common\BrotliCompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Differ\StreamingHdiffDiffer.cs" Link="Common\StreamingHdiffDiffer.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Pipeline\DiffPipeline.cs" Link="Common\DiffPipeline.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Pipeline\DiffPipelineOptions.cs" Link="Common\DiffPipelineOptions.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Models\DiffProgress.cs" Link="Common\DiffProgress.cs" />
   </ItemGroup>
   <!-- Link Drivelution files for net10.0 target only -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">

@@ -6,7 +6,6 @@ using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.HashAlgorithms;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Binary;
 
 namespace GeneralUpdate.Differential.Matchers
 {
@@ -21,7 +20,8 @@ namespace GeneralUpdate.Differential.Matchers
     /// </para>
     /// <para>
     /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
-    /// algorithm.  When no differ is provided, the default <see cref="BinaryHandler"/> (BSDIFF + BZip2) is used.
+    /// algorithm.  Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression
+    /// for fast patch application.
     /// </para>
     /// </summary>
     public class DefaultDirtyStrategy : IDirtyStrategy
@@ -32,13 +32,21 @@ namespace GeneralUpdate.Differential.Matchers
         private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
+        /// Initialises a new instance using StreamingHdiffDiffer with Brotli compression by default.
+        /// </summary>
+        public DefaultDirtyStrategy()
+            : this(null, null)
+        {
+        }
+
+        /// <summary>
         /// Initialises a new instance, optionally using a custom file-matching strategy
         /// and/or a custom binary differ.
         /// </summary>
-        public DefaultDirtyStrategy(IDirtyMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
+        public DefaultDirtyStrategy(IDirtyMatcher? matcher, IBinaryDiffer? binaryDiffer)
         {
             _matcher = matcher ?? new DefaultDirtyMatcher();
-            _binaryDiffer = binaryDiffer ?? new BinaryHandler();
+            _binaryDiffer = binaryDiffer ?? new Differ.StreamingHdiffDiffer();
         }
 
         /// <inheritdoc/>
@@ -49,7 +57,6 @@ namespace GeneralUpdate.Differential.Matchers
             var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
             var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
             var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
-            // Refresh the collection after deleting the files.
             HandleDeleteList(patchFiles, oldFiles);
             oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
             foreach (var oldFile in oldFiles)
