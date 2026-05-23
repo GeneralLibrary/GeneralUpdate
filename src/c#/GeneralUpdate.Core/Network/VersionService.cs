@@ -1,116 +1,117 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Security;
 
 namespace GeneralUpdate.Core.Network
 {
     public class VersionService
     {
+        private static readonly HttpClient _sharedClient;
+        private static ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
+
+        private readonly IHttpAuthProvider _auth;
+        private readonly TimeSpan _timeout;
+        private readonly int _maxRetries;
+
+        static VersionService()
+        {
+            var handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback = SharedCertValidation;
+            _sharedClient = new HttpClient(handler, disposeHandler: false);
+        }
+
+        public static void SetSslValidationPolicy(ISslValidationPolicy policy)
+            => _globalSslPolicy = policy ?? throw new ArgumentNullException(nameof(policy));
+
+        private static bool SharedCertValidation(HttpRequestMessage m, X509Certificate2? c,
+            X509Chain? ch, SslPolicyErrors e)
+            => _globalSslPolicy.ValidateCertificate(c, ch, e);
+
+        public VersionService(IHttpAuthProvider? auth = null, TimeSpan? timeout = null, int maxRetries = 3)
+        {
+            _auth = auth ?? new NoOpAuthProvider();
+            _timeout = timeout ?? TimeSpan.FromSeconds(30);
+            _maxRetries = maxRetries;
+        }
         private VersionService() { }
-        
-        /// <summary>
-        /// Report the result of this update: whether it was successful.
-        /// </summary>
-        /// <param name="httpUrl"></param>
-        /// <param name="recordId"></param>
-        /// <param name="status"></param>
-        /// <param name="type"></param>
-        /// <returns></returns>
-        public static async Task Report(string httpUrl
-            , int recordId
-            , int status
-            , int? type
-            , string scheme = null
-            , string token = null)
+
+        // Static API (backward-compatible)
+        public static Task Report(string url, int recordId, int status, int? type,
+            string scheme = null, string token = null)
         {
-            var parameters = new Dictionary<string, object>
-            {
-                { "RecordId", recordId },
-                { "Status", status },
-                { "Type", type }
-            };
-            await PostTaskAsync<BaseResponseDTO<bool>>(httpUrl, parameters, ReportRespJsonContext.Default.BaseResponseDTOBoolean, scheme, token);
+            var a = HttpAuthProviderFactory.Create(scheme, token, null);
+            return new VersionService(a).ReportAsync(url, recordId, status, type);
         }
 
-        /// <summary>
-        /// Verify whether the current version needs an update.
-        /// </summary>
-        /// <param name="httpUrl"></param>
-        /// <param name="version"></param>
-        /// <param name="appType"></param>
-        /// <param name="appKey"></param>
-        /// <param name="platform"></param>
-        /// <param name="productId"></param>
-        /// <returns></returns>
-        public static async Task<VersionRespDTO> Validate(string httpUrl
-            , string version
-            , int appType
-            , string appKey
-            , int platform
-            , string productId
-            , string scheme = null
-            , string token = null)
+        public static Task<VersionRespDTO> Validate(string url, string version,
+            int appType, string appKey, int platform, string productId,
+            string scheme = null, string token = null)
         {
-            var parameters = new Dictionary<string, object>
-            {
-                { "Version", version },
-                { "AppType", appType },
-                { "AppKey", appKey },
-                { "Platform", platform },
-                { "ProductId", productId }
-            };
-            return await PostTaskAsync<VersionRespDTO>(httpUrl, parameters, VersionRespJsonContext.Default.VersionRespDTO, scheme, token);
+            var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
+            return new VersionService(a).ValidateAsync(url, version, appType, platform, productId);
         }
 
-        private static async Task<T> PostTaskAsync<T>(string httpUrl, Dictionary<string, object> parameters, JsonTypeInfo<T>? typeInfo = null, string scheme = null, string token = null)
+        private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
         {
-            try
+            var p = new Dictionary<string, object> { ["RecordId"] = recordId, ["Status"] = status, ["Type"] = type };
+            await PostAsync<BaseResponseDTO<bool>>(url, p, ReportRespJsonContext.Default.BaseResponseDTOBoolean, t);
+        }
+
+        private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, int pf, string pid,
+            CancellationToken t = default)
+        {
+            var p = new Dictionary<string, object> { ["Version"] = v, ["AppType"] = at, ["Platform"] = pf, ["ProductId"] = pid };
+            return await PostAsync<VersionRespDTO>(url, p, VersionRespJsonContext.Default.VersionRespDTO, t);
+        }
+
+        private async Task<T> PostAsync<T>(string url, Dictionary<string, object> p,
+            JsonTypeInfo<T>? ti, CancellationToken t)
+        {
+            for (int attempt = 0; ; attempt++)
             {
-                var uri = new Uri(httpUrl);
-                using var httpClient = new HttpClient(new HttpClientHandler
+                try { return await SendAsync<T>(url, p, ti, t).ConfigureAwait(false); }
+                catch (Exception ex) when (attempt < _maxRetries - 1 && IsRetryable(ex))
                 {
-                    ServerCertificateCustomValidationCallback = CheckValidationResult
-                });
-                httpClient.Timeout = TimeSpan.FromSeconds(15);
-                httpClient.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml, */*");
-                
-                if (!string.IsNullOrEmpty(scheme) && !string.IsNullOrEmpty(token))
-                {
-                    httpClient.DefaultRequestHeaders.Authorization = 
-                        new System.Net.Http.Headers.AuthenticationHeaderValue(scheme, token);
+                    GeneralTracer.Warn($"HTTP attempt {attempt + 1}/{_maxRetries} failed, retrying. {ex.Message}");
+                    await Task.Delay(TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 1000), t).ConfigureAwait(false);
                 }
-                
-                var parametersJson =
-                    JsonSerializer.Serialize(parameters, HttpParameterJsonContext.Default.DictionaryStringObject);
-                var stringContent = new StringContent(parametersJson, Encoding.UTF8, "application/json");
-                var result = await httpClient.PostAsync(uri, stringContent);
-                var reseponseJson = await result.Content.ReadAsStringAsync();
-                return typeInfo == null
-                    ? JsonSerializer.Deserialize<T>(reseponseJson)
-                    : JsonSerializer.Deserialize(reseponseJson, typeInfo);
-            }
-            catch (Exception e)
-            {
-                GeneralTracer.Error("The PostTaskAsync method in the VersionService class throws an exception.", e);
-                throw e;
             }
         }
 
-        private static bool CheckValidationResult(
-            HttpRequestMessage message,
-            X509Certificate2 certificate,
-            X509Chain chain,
-            SslPolicyErrors sslPolicyErrors
-        ) => true;
+        private async Task<T> SendAsync<T>(string url, Dictionary<string, object> p,
+            JsonTypeInfo<T>? ti, CancellationToken t)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, new Uri(url));
+            req.Headers.Accept.ParseAdd("application/json");
+            var json = JsonSerializer.Serialize(p, HttpParameterJsonContext.Default.DictionaryStringObject);
+            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            await _auth.ApplyAuthAsync(req, t).ConfigureAwait(false);
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(t);
+            cts.CancelAfter(_timeout);
+            var r = await _sharedClient.SendAsync(req, cts.Token).ConfigureAwait(false);
+            r.EnsureSuccessStatusCode();
+            var rj = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return ti == null ? JsonSerializer.Deserialize<T>(rj) : JsonSerializer.Deserialize(rj, ti);
+        }
+
+        private static bool IsRetryable(Exception ex)
+        {
+            if (ex is OperationCanceledException) return false;
+            if (ex is TaskCanceledException or TimeoutException or System.IO.IOException) return true;
+            if (ex is HttpRequestException h && (h.Message ?? "").Contains("timeout", StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
     }
 }
