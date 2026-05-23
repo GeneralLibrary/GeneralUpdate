@@ -7,7 +7,7 @@
         <PackageIcon>GeneralUpdate.png</PackageIcon>
         <SignAssembly>False</SignAssembly>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
-        <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
+        <Copyright>Copyright 漏 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageReleaseNotes>Provides high-performance, low-loss, resume-breakpoint, version-by-version update, binary differential update, incremental update function, configuration file retention update and other features</PackageReleaseNotes>
         <PackageProjectUrl>https://github.com/JusterZhu/GeneralUpdate</PackageProjectUrl>
         <LangVersion>default</LangVersion>
@@ -94,6 +94,15 @@
         <Compile Include="..\GeneralUpdate.Differential\Matchers\ICleanStrategy.cs" Link="Common\ICleanStrategy.cs" />
         <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyMatcher.cs" Link="Common\IDirtyMatcher.cs" />
         <Compile Include="..\GeneralUpdate.Differential\Matchers\IDirtyStrategy.cs" Link="Common\IDirtyStrategy.cs" />
+    <!-- Differential v2 abstractions and pipeline -->
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\IBinaryDiffer.cs" Link="Common\IBinaryDiffer.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\ICompressionProvider.cs" Link="Common\ICompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\BZip2CompressionProvider.cs" Link="Common\BZip2CompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Abstractions\BrotliCompressionProvider.cs" Link="Common\BrotliCompressionProvider.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Differ\StreamingHdiffDiffer.cs" Link="Common\StreamingHdiffDiffer.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Pipeline\DiffPipeline.cs" Link="Common\DiffPipeline.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Pipeline\DiffPipelineOptions.cs" Link="Common\DiffPipelineOptions.cs" />
+    <Compile Include="..\GeneralUpdate.Differential\Models\DiffProgress.cs" Link="Common\DiffProgress.cs" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
