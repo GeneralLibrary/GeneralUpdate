@@ -30,6 +30,15 @@ namespace BowlTest.Integration
 
         public void Dispose()
         {
+            // When debugging, keep files on disk so you can inspect them.
+            // Set KEEP_FILES=1 env var or attach a debugger to skip cleanup.
+            if (System.Diagnostics.Debugger.IsAttached ||
+                Environment.GetEnvironmentVariable("KEEP_FILES") == "1")
+            {
+                _output.WriteLine($"[KEPT] Test files at: {_testBasePath}");
+                return;
+            }
+
             if (Directory.Exists(_testBasePath))
             {
                 try { Directory.Delete(_testBasePath, recursive: true); }
