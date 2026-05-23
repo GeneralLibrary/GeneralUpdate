@@ -10,11 +10,11 @@
     <Project Path="GeneralUpdate.Firmware/GeneralUpdate.Firmware.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="../../tests/c#/BowlTest/BowlTest.csproj" />
-    <Project Path="../../tests/c#/ClientCoreTest/ClientCoreTest.csproj" />
-    <Project Path="../../tests/c#/CoreTest/CoreTest.csproj" />
-    <Project Path="../../tests/c#/DifferentialTest/DifferentialTest.csproj" />
-    <Project Path="../../tests/c#/DrivelutionTest/DrivelutionTest.csproj" />
-    <Project Path="../../tests/c#/ExtensionTest/ExtensionTest.csproj" />
+    <Project Path="../../tests/BowlTest/BowlTest.csproj" />
+    <Project Path="../../tests/ClientCoreTest/ClientCoreTest.csproj" />
+    <Project Path="../../tests/CoreTest/CoreTest.csproj" />
+    <Project Path="../../tests/DifferentialTest/DifferentialTest.csproj" />
+    <Project Path="../../tests/DrivelutionTest/DrivelutionTest.csproj" />
+    <Project Path="../../tests/ExtensionTest/ExtensionTest.csproj" />
   </Folder>
 </Solution>
