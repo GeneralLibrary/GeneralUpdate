@@ -77,17 +77,11 @@ public class DrivelutionFactoryTests
     [Fact]
     public void CreateValidator_WithoutParameters_ReturnsNonNullInstance()
     {
-        // Skip on MacOS and Unknown platforms
         var platform = DrivelutionFactory.GetCurrentPlatform();
-        if (platform == "MacOS" || platform == "Unknown")
-        {
+        if (platform == "Unknown")
             return;
-        }
 
-        // Act
         var validator = DrivelutionFactory.CreateValidator();
-
-        // Assert
         Assert.NotNull(validator);
         Assert.IsAssignableFrom<IDriverValidator>(validator);
     }
@@ -98,17 +92,11 @@ public class DrivelutionFactoryTests
     [Fact]
     public void CreateBackup_WithoutParameters_ReturnsNonNullInstance()
     {
-        // Skip on MacOS and Unknown platforms
         var platform = DrivelutionFactory.GetCurrentPlatform();
-        if (platform == "MacOS" || platform == "Unknown")
-        {
+        if (platform == "Unknown")
             return;
-        }
 
-        // Act
         var backup = DrivelutionFactory.CreateBackup();
-
-        // Assert
         Assert.NotNull(backup);
         Assert.IsAssignableFrom<IDriverBackup>(backup);
     }
@@ -120,17 +108,15 @@ public class DrivelutionFactoryTests
     [Fact]
     public void Create_OnSupportedPlatform_DoesNotThrow()
     {
-        // Skip on MacOS as it's not yet implemented
         var platform = DrivelutionFactory.GetCurrentPlatform();
-        
-        if (platform == "MacOS")
+
+        if (platform == "Unknown")
         {
-            // MacOS should throw PlatformNotSupportedException
             Assert.Throws<PlatformNotSupportedException>(() => DrivelutionFactory.Create());
             return;
         }
 
-        // Act & Assert - should not throw on Windows/Linux
+        // Windows, Linux, and MacOS should all work
         var exception = Record.Exception(() => DrivelutionFactory.Create());
         Assert.Null(exception);
     }
