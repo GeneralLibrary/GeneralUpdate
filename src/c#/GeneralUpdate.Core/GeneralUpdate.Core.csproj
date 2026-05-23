@@ -114,7 +114,9 @@
     <Compile Include="..\GeneralUpdate.Differential\Pipeline\DiffPipelineBuilder.cs" Link="Common\DiffPipelineBuilder.cs" />
     <Compile Include="..\GeneralUpdate.Differential\Models\DiffProgress.cs" Link="Common\DiffProgress.cs" />
   </ItemGroup>
-  <!-- Link Drivelution files for net10.0 target only -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+  </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Configuration\DriverUpdateOptions.cs" Link="Common\DriverUpdateOptions.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Events\DrivelutionLogger.cs" Link="Common\DrivelutionLogger.cs" />
@@ -129,8 +131,20 @@
     <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\ErrorInfo.cs" Link="Common\ErrorInfo.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\UpdateResult.cs" Link="Common\UpdateResult.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\UpdateStrategy.cs" Link="Common\UpdateStrategy.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\UpdateProgress.cs" Link="Common\UpdateProgress.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Abstractions\Models\BatchUpdateResult.cs" Link="Common\BatchUpdateResult.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Core\DriverUpdaterFactory.cs" Link="Common\DriverUpdaterFactory.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Core\Logging\LoggerConfigurator.cs" Link="Common\LoggerConfigurator.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\IPipelineStep.cs" Link="Common\IPipelineStep.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\PipelineContext.cs" Link="Common\PipelineContext.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\PipelineResult.cs" Link="Common\PipelineResult.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\RetryPolicy.cs" Link="Common\RetryPolicy.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\DefaultPipelineSteps.cs" Link="Common\DefaultPipelineSteps.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Pipeline\BaseDriverUpdater.cs" Link="Common\BaseDriverUpdater.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Execution\ICommandRunner.cs" Link="Common\ICommandRunner.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Execution\CommandRunner.cs" Link="Common\CommandRunner.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\Execution\CommandResult.cs" Link="Common\CommandResult.cs" />
+    <Compile Include="..\GeneralUpdate.Drivelution\Core\ServiceCollectionExtensions.cs" Link="Common\ServiceCollectionExtensions.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\CompatibilityChecker.cs" Link="Common\CompatibilityChecker.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\HashValidator.cs" Link="Common\HashValidator.cs" />
     <Compile Include="..\GeneralUpdate.Drivelution\Core\Utilities\RestartHelper.cs" Link="Common\RestartHelper.cs" />
