@@ -8,7 +8,7 @@ namespace GeneralUpdate.Differential.Matchers
     /// Default implementation of <see cref="IDirtyMatcher"/> that preserves the
     /// original matching behaviour of <c>DifferentialCore.Dirty</c>:
     /// a patch file matches an application file when the patch file's name
-    /// (without the <c>.patch</c> extension) equals the application file's name,
+    /// (without the <c>.patch</c> extension, case-insensitive) equals the application file's name,
     /// and the patch file carries the <c>.patch</c> extension.
     /// </summary>
     public class DefaultDirtyMatcher : IDirtyMatcher
@@ -19,9 +19,16 @@ namespace GeneralUpdate.Differential.Matchers
         public FileInfo? Match(FileInfo oldFile, IEnumerable<FileInfo> patchFiles)
         {
             var findFile = patchFiles.FirstOrDefault(f =>
-                Path.GetFileNameWithoutExtension(f.Name).Replace(PatchFormat, "").Equals(oldFile.Name));
+            {
+                var name = Path.GetFileNameWithoutExtension(f.Name);
+                // Strip only a trailing .patch extension (case-insensitive)
+                if (name.EndsWith(PatchFormat, System.StringComparison.OrdinalIgnoreCase))
+                    name = name.Substring(0, name.Length - PatchFormat.Length);
+                return name.Equals(oldFile.Name, System.StringComparison.OrdinalIgnoreCase);
+            });
 
-            if (findFile != null && string.Equals(Path.GetExtension(findFile.FullName), PatchFormat))
+            if (findFile != null &&
+                Path.GetExtension(findFile.FullName).Equals(PatchFormat, System.StringComparison.OrdinalIgnoreCase))
                 return findFile;
 
             return null;
