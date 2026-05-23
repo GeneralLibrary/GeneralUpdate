@@ -43,11 +43,11 @@ public static class DrivelutionFactory
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            GeneralTracer.Warn("MacOS platform detected but not yet implemented");
-            throw new PlatformNotSupportedException(
-                "MacOS driver update is not yet implemented. " +
-                "This is a placeholder for future MacOS support. " +
-                "Current platform: macOS");
+            GeneralTracer.Info("Detected macOS platform, creating MacOsGeneralDrivelution");
+            var validator = new MacOSDriverValidator();
+            var backup = new MacOSDriverBackup();
+            var commandRunner = new CommandRunner();
+            return new MacOsGeneralDrivelution(validator, backup, commandRunner, options);
         }
         else
         {
@@ -134,7 +134,7 @@ public static class DrivelutionFactory
     public static bool IsPlatformSupported()
     {
         return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
-               RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-        // MacOS is planned but not yet implemented
+               RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+               RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
     }
 }
