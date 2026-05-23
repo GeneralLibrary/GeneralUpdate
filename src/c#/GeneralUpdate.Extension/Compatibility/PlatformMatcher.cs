@@ -2,42 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Extension.Common.Enums;
-using GeneralUpdate.Extension.Core;
-using GeneralUpdate.Extension.Catalog;
-using GeneralUpdate.Extension.Download;
-using GeneralUpdate.Extension.Compatibility;
-using GeneralUpdate.Extension.Dependencies;
-using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
 
 namespace GeneralUpdate.Extension.Compatibility;
 
 /// <summary>
-/// Platform matching utility
+/// Platform matching utility. Delegates OS detection to <see cref="IPlatformServices"/> for testability.
 /// </summary>
 public class PlatformMatcher : IPlatformMatcher
 {
+    private readonly IPlatformServices _platformServices;
+
+    /// <summary>
+    /// Initialize with platform services (default: production runtime-based detection).
+    /// </summary>
+    public PlatformMatcher(IPlatformServices? platformServices = null)
+    {
+        _platformServices = platformServices ?? new RuntimePlatformServices();
+    }
+
     /// <inheritdoc/>
     public TargetPlatform GetCurrentPlatform()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            return TargetPlatform.Windows;
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            return TargetPlatform.Linux;
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            return TargetPlatform.MacOS;
-        }
-
-        return TargetPlatform.None;
+        return _platformServices.GetCurrentPlatform();
     }
 
     /// <inheritdoc/>

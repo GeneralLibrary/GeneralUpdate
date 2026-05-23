@@ -52,6 +52,14 @@ public interface IExtensionHost
     Task<bool> InstallExtensionAsync(string extensionPath, bool rollbackOnFailure = true);
 
     /// <summary>
+    /// Update multiple extensions in bulk. Returns a dictionary of extensionId → success.
+    /// </summary>
+    /// <param name="extensionIds">IDs of extensions to update</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dictionary of results per extension</returns>
+    Task<Dictionary<string, bool>> UpdateExtensionsAsync(IEnumerable<string> extensionIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Check if an extension is compatible with the host version
     /// </summary>
     /// <param name="extension">Extension to check</param>

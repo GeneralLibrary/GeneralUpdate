@@ -67,11 +67,28 @@ public class VersionCompatibilityChecker : IVersionCompatibilityChecker
     /// <inheritdoc/>
     public ExtensionMetadata? FindLatestCompatibleVersion(List<ExtensionMetadata> extensions, string hostVersion)
     {
-        var compatible = extensions
-            .Where(e => IsCompatible(e, hostVersion))
-            .OrderByDescending(e => Version.TryParse(e.Version, out var v) ? v : new Version(0, 0))
+        if (extensions == null || extensions.Count == 0)
+            return null;
+
+        // Parse valid versions only; unparseable version strings are treated as "unknown"
+        // and sorted AFTER all valid versions (so they don't accidentally become "latest")
+        var parsed = extensions
+            .Select(e => new
+            {
+                Extension = e,
+                IsCompatible = IsCompatible(e, hostVersion),
+                HasValidVersion = Version.TryParse(e.Version, out var v),
+                ParsedVersion = v
+            })
+            .ToList();
+
+        // Filter to compatible only, then sort: valid versions descending, then unknown versions
+        var best = parsed
+            .Where(x => x.IsCompatible)
+            .OrderBy(x => x.HasValidVersion ? 0 : 1)          // valid versions first
+            .ThenByDescending(x => x.HasValidVersion ? x.ParsedVersion : null)  // highest version first
             .FirstOrDefault();
 
-        return compatible;
+        return best?.Extension;
     }
 }

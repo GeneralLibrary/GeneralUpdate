@@ -100,9 +100,31 @@ public class ExtensionMetadata
     public DateTime? ReleaseDate { get; set; }
 
     /// <summary>
-    /// List of extension IDs (Guids) this extension depends on (comma-separated)
+    /// List of extension IDs (Guids) this extension depends on (comma-separated, legacy storage format).
+    /// Prefer <see cref="DependencyList"/> for programmatic access.
     /// </summary>
     public string? Dependencies { get; set; }
+
+    /// <summary>
+    /// Parsed dependency list from <see cref="Dependencies"/>. Avoids repeated string splitting.
+    /// </summary>
+    [Newtonsoft.Json.JsonIgnore]
+    public IReadOnlyList<string> DependencyList =>
+        _dependencyList ??= ParseDependencies();
+    private IReadOnlyList<string>? _dependencyList;
+
+    private IReadOnlyList<string> ParseDependencies()
+    {
+        if (string.IsNullOrWhiteSpace(Dependencies))
+            return Array.Empty<string>();
+
+        return Dependencies!
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(d => d.Trim())
+            .Where(d => d.Length > 0)
+            .ToList()
+            .AsReadOnly();
+    }
 
     /// <summary>
     /// Pre-release flag (0-Stable, 1-PreRelease)

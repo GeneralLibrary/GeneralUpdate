@@ -56,6 +56,9 @@ public class ExtensionCatalog : IExtensionCatalog
                 {
                     if (extensionDir.Contains(".backup")) continue;
                     
+                    // Clean up orphaned temp files from interrupted atomic writes
+                    CleanOrphanedTempFiles(extensionDir);
+
                     var manifestPath = Path.Combine(extensionDir, "manifest.json");
                     
                     // Check if manifest.json exists in the subdirectory
@@ -156,7 +159,7 @@ public class ExtensionCatalog : IExtensionCatalog
                 Directory.CreateDirectory(_catalogPath);
             }
 
-            // Save each extension to its own subdirectory with manifest.json
+            // Save each extension using atomic write (temp file -> rename)
             foreach (var extension in _installedExtensions.Values)
             {
                 var extensionDirName = GetExtensionDirectoryName(extension);
@@ -168,8 +171,14 @@ public class ExtensionCatalog : IExtensionCatalog
                 }
 
                 var manifestPath = Path.Combine(extensionDir, "manifest.json");
+                var tempPath = manifestPath + ".tmp";
                 var json = JsonConvert.SerializeObject(extension, Formatting.Indented);
-                File.WriteAllText(manifestPath, json);
+                
+                // Write to temp file first, then atomically rename
+                // This prevents corruption if the process crashes mid-write
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, manifestPath);
+                // Note: using Delete+Move for true cross-volume atomicity is a future enhancement
             }
         }
         catch (Exception ex)
@@ -185,6 +194,24 @@ public class ExtensionCatalog : IExtensionCatalog
     {
         var baseName = !string.IsNullOrEmpty(extension.Name) ? extension.Name : extension.Id;
         return SanitizeDirectoryName(baseName ?? "unknown");
+    }
+
+    /// <summary>
+    /// Clean up orphaned .tmp files from interrupted atomic writes.
+    /// </summary>
+    private static void CleanOrphanedTempFiles(string directoryPath)
+    {
+        try
+        {
+            foreach (var tmpFile in Directory.GetFiles(directoryPath, "*.tmp"))
+            {
+                File.Delete(tmpFile);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup; non-critical
+        }
     }
 
     /// <summary>
