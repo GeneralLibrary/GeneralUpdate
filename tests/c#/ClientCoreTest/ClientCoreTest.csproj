@@ -4,9 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj" />
+    <ProjectReference Include="..\..\..\src\c#\GeneralUpdate.ClientCore\GeneralUpdate.ClientCore.csproj" />
   </ItemGroup>
 
 </Project>
