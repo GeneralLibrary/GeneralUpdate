@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core;
 using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions.Models;
 

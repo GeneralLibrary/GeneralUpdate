@@ -1,8 +1,8 @@
-﻿using System.Text;
+using System.Text;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Compress;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.Compress;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Pipeline;
 
