@@ -41,7 +41,7 @@ namespace GeneralUpdate.Differential.Matchers
         /// Initialises a new instance, optionally using a custom file-matching strategy
         /// and/or a custom binary differ.
         /// </summary>
-        public DefaultDirtyStrategy(IDirtyMatcher? matcher, IBinaryDiffer? binaryDiffer)
+        public DefaultDirtyStrategy(IDirtyMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
         {
             _matcher = matcher ?? new DefaultDirtyMatcher();
             _binaryDiffer = binaryDiffer ?? new Differ.StreamingHdiffDiffer();

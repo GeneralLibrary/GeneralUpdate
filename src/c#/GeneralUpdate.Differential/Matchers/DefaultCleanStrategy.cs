@@ -44,7 +44,7 @@ namespace GeneralUpdate.Differential.Matchers
         /// If no matcher is provided, <see cref="DefaultCleanMatcher"/> is used.
         /// If no binary differ is provided, <see cref="Differ.StreamingHdiffDiffer"/> (Deflate) is used.
         /// </summary>
-        public DefaultCleanStrategy(ICleanMatcher? matcher, IBinaryDiffer? binaryDiffer)
+        public DefaultCleanStrategy(ICleanMatcher? matcher = null, IBinaryDiffer? binaryDiffer = null)
         {
             _matcher = matcher ?? new DefaultCleanMatcher();
             _binaryDiffer = binaryDiffer ?? new Differ.StreamingHdiffDiffer();
