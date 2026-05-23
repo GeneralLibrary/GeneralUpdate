@@ -10,6 +10,7 @@ using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
+[System.Obsolete("Use Strategies.WindowsBowlStrategy instead. Will be removed in v10.")]
 internal class WindowStrategy : AbstractStrategy
 {
     private const string WorkModel = "Upgrade";

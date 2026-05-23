@@ -6,6 +6,7 @@ using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
+[System.Obsolete("Use Strategies.IBowlStrategy instead. Will be removed in v10.")]
 internal abstract class AbstractStrategy : IStrategy
 {
     protected MonitorParameter _parameter;

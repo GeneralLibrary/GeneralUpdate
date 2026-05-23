@@ -1,5 +1,6 @@
 ﻿namespace GeneralUpdate.Bowl.Strategys;
 
+[System.Obsolete("Use BowlContext instead. Will be removed in v10.")]
 public class MonitorParameter
 {
     public MonitorParameter() { }

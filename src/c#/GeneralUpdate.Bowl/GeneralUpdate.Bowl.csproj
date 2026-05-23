@@ -13,7 +13,7 @@
         <RepositoryType>public</RepositoryType>
         <PackageTags>upgrade,update</PackageTags>
         <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
-        <Version>9.5.10</Version>
+        <Version>10.0.0-preview.1</Version>
         <PackageIcon>bowl.jpeg</PackageIcon>
         <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
