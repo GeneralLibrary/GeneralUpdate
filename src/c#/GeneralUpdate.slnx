@@ -14,6 +14,7 @@
     <Project Path="ClientCoreTest/ClientCoreTest.csproj" />
     <Project Path="CoreTest/CoreTest.csproj" />
     <Project Path="DifferentialTest/DifferentialTest.csproj" />
+    <Project Path="DrivelutionTest/DrivelutionTest.csproj" />
     <Project Path="ExtensionTest/ExtensionTest.csproj" />
   </Folder>
 </Solution>
