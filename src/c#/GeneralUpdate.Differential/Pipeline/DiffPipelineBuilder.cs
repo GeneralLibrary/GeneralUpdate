@@ -15,15 +15,17 @@ namespace GeneralUpdate.Differential.Pipeline
     /// <code>
     /// var pipeline = new DiffPipelineBuilder()
     ///     .UseDiffer(new StreamingHdiffDiffer())
+    ///     .UseCleanMatcher(new DefaultCleanMatcher())
     ///     .WithParallelism(Environment.ProcessorCount)
-    ///     .WithProgress(progress => Console.WriteLine(progress))
     ///     .Build();
-    /// await pipeline.CleanAsync(src, tgt, patch, cancellationToken);
+    /// await pipeline.CleanAsync(src, tgt, patch);
     /// </code>
     /// </remarks>
     public class DiffPipelineBuilder
     {
         private IBinaryDiffer? _differ;
+        private ICleanMatcher? _cleanMatcher;
+        private IDirtyMatcher? _dirtyMatcher;
         private int _maxParallelism = Environment.ProcessorCount;
         private bool _stopOnFirstError;
         private IProgress<DiffProgress>? _progress;
@@ -34,6 +36,26 @@ namespace GeneralUpdate.Differential.Pipeline
         public DiffPipelineBuilder UseDiffer(IBinaryDiffer differ)
         {
             _differ = differ ?? throw new ArgumentNullException(nameof(differ));
+            return this;
+        }
+
+        /// <summary>
+        /// Sets a custom clean matcher for directory comparison and file matching during patch generation.
+        /// Defaults to <see cref="DefaultCleanMatcher"/> if not set.
+        /// </summary>
+        public DiffPipelineBuilder UseCleanMatcher(ICleanMatcher matcher)
+        {
+            _cleanMatcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
+            return this;
+        }
+
+        /// <summary>
+        /// Sets a custom dirty matcher for matching patch files to application files during patch application.
+        /// Defaults to <see cref="DefaultDirtyMatcher"/> if not set.
+        /// </summary>
+        public DiffPipelineBuilder UseDirtyMatcher(IDirtyMatcher matcher)
+        {
+            _dirtyMatcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
             return this;
         }
 
@@ -80,7 +102,7 @@ namespace GeneralUpdate.Differential.Pipeline
             };
 
             var differ = _differ ?? new Differ.StreamingHdiffDiffer();
-            return new DiffPipeline(options, differ, _progress);
+            return new DiffPipeline(options, differ, _cleanMatcher, _dirtyMatcher, _progress);
         }
     }
 }

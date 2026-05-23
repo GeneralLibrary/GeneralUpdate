@@ -8,31 +8,35 @@ using GeneralUpdate.Common.FileBasic;
 using GeneralUpdate.Common.HashAlgorithms;
 using GeneralUpdate.Common.Internal.JsonContext;
 using GeneralUpdate.Differential.Abstractions;
+using GeneralUpdate.Differential.Matchers;
 using GeneralUpdate.Differential.Models;
 
 namespace GeneralUpdate.Differential.Pipeline
 {
     /// <summary>
-    /// Parallel differential pipeline with configurable parallelism, progress reporting, and cancellation.
+    /// Parallel differential pipeline with configurable parallelism, progress reporting,
+    /// pluggable matchers, and cancellation.
     /// </summary>
     /// <remarks>
-    /// Wraps the existing strategy layer and parallelizes per-file diff operations
-    /// using a throttled producer-consumer pattern via <see cref="SemaphoreSlim"/>.
     /// Use <see cref="DiffPipelineBuilder"/> for fluent configuration.
+    /// Direct construction is also supported for scenarios where a builder is unnecessary.
     /// </remarks>
     public class DiffPipeline
     {
         private readonly DiffPipelineOptions _options;
         private readonly IBinaryDiffer _binaryDiffer;
+        private readonly ICleanMatcher _cleanMatcher;
+        private readonly IDirtyMatcher _dirtyMatcher;
         private readonly IProgress<DiffProgress>? _progress;
+
         private const string PatchExtension = ".patch";
         private const string DeleteListFileName = "generalupdate_delete_files.json";
 
         /// <summary>
-        /// Initialises a new pipeline with default options (<see cref="Differ.StreamingHdiffDiffer"/>).
+        /// Initialises a new pipeline with default options and matchers.
         /// </summary>
         public DiffPipeline()
-            : this(new DiffPipelineOptions(), new Differ.StreamingHdiffDiffer(), null)
+            : this(new DiffPipelineOptions(), new Differ.StreamingHdiffDiffer(), null, null, null)
         {
         }
 
@@ -40,22 +44,35 @@ namespace GeneralUpdate.Differential.Pipeline
         /// Initialises a new pipeline with the specified options.
         /// </summary>
         public DiffPipeline(DiffPipelineOptions options)
-            : this(options, new Differ.StreamingHdiffDiffer(), null)
+            : this(options, new Differ.StreamingHdiffDiffer(), null, null, null)
         {
         }
 
         /// <summary>
-        /// Initialises a new pipeline with the specified options, differ, and optional progress reporter.
+        /// Initialises a new pipeline with full configuration.
         /// </summary>
-        public DiffPipeline(DiffPipelineOptions options, IBinaryDiffer binaryDiffer, IProgress<DiffProgress>? progress = null)
+        /// <param name="options">Pipeline options. Must not be null.</param>
+        /// <param name="binaryDiffer">Binary differ. Must not be null.</param>
+        /// <param name="cleanMatcher">Clean-phase file matcher. Defaults to <see cref="DefaultCleanMatcher"/>.</param>
+        /// <param name="dirtyMatcher">Dirty-phase file matcher. Defaults to <see cref="DefaultDirtyMatcher"/>.</param>
+        /// <param name="progress">Optional progress reporter.</param>
+        public DiffPipeline(
+            DiffPipelineOptions options,
+            IBinaryDiffer binaryDiffer,
+            ICleanMatcher? cleanMatcher = null,
+            IDirtyMatcher? dirtyMatcher = null,
+            IProgress<DiffProgress>? progress = null)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _binaryDiffer = binaryDiffer ?? throw new ArgumentNullException(nameof(binaryDiffer));
+            _cleanMatcher = cleanMatcher ?? new DefaultCleanMatcher();
+            _dirtyMatcher = dirtyMatcher ?? new DefaultDirtyMatcher();
             _progress = progress;
         }
 
         /// <summary>
-        /// Compares source and target directories, generating patch files in parallel.
+        /// Compares source and target directories using the configured clean matcher,
+        /// generating patch files in parallel.
         /// </summary>
         public async Task CleanAsync(
             string sourcePath,
@@ -67,8 +84,7 @@ namespace GeneralUpdate.Differential.Pipeline
             var reporter = progress ?? _progress;
             ValidateDirectories(sourcePath, targetPath, patchPath);
 
-            var storageManager = new StorageManager();
-            var comparisonResult = storageManager.Compare(sourcePath, targetPath);
+            var comparisonResult = _cleanMatcher.Compare(sourcePath, targetPath);
             var differentFiles = comparisonResult.DifferentNodes.ToList();
             var leftNodes = comparisonResult.LeftNodes.ToList();
 
@@ -90,7 +106,7 @@ namespace GeneralUpdate.Differential.Pipeline
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var tempDir = GetTempDirectory(file, targetPath, patchPath);
-                    var oldFile = FindMatchingFile(file, leftNodes);
+                    var oldFile = _cleanMatcher.Match(file, leftNodes);
 
                     if (oldFile != null)
                     {
@@ -125,7 +141,7 @@ namespace GeneralUpdate.Differential.Pipeline
 
             await Task.WhenAll(tasks);
 
-            var exceptFiles = storageManager.Except(sourcePath, targetPath)?.ToList();
+            var exceptFiles = _cleanMatcher.Except(sourcePath, targetPath)?.ToList();
             if (exceptFiles is { Count: > 0 })
             {
                 var deletePath = Path.Combine(patchPath, DeleteListFileName);
@@ -136,7 +152,8 @@ namespace GeneralUpdate.Differential.Pipeline
         }
 
         /// <summary>
-        /// Applies patches from patchPath to appPath in parallel.
+        /// Applies patches from patchPath to appPath in parallel,
+        /// using the configured dirty matcher.
         /// </summary>
         public async Task DirtyAsync(
             string appPath,
@@ -165,17 +182,11 @@ namespace GeneralUpdate.Differential.Pipeline
             int completed = 0;
             var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
+            // Match old files to patches using the pluggable dirty matcher
             var matchedPairs = new List<(FileInfo OldFile, FileInfo PatchFile)>();
             foreach (var oldFile in oldFiles)
             {
-                var patchFile = patchFiles.FirstOrDefault(f =>
-                {
-                    var name = Path.GetFileNameWithoutExtension(f.Name);
-                    if (name.EndsWith(".patch", StringComparison.OrdinalIgnoreCase))
-                        name = name.Substring(0, name.Length - 6);
-                    return name.Equals(oldFile.Name, StringComparison.OrdinalIgnoreCase);
-                });
-
+                var patchFile = _dirtyMatcher.Match(oldFile, patchFiles);
                 if (patchFile != null)
                     matchedPairs.Add((oldFile, patchFile));
             }
@@ -221,7 +232,6 @@ namespace GeneralUpdate.Differential.Pipeline
 
             await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
 
-            // Atomic replacement
             if (File.Exists(appFilePath))
             {
                 File.SetAttributes(appFilePath, FileAttributes.Normal);
@@ -285,18 +295,6 @@ namespace GeneralUpdate.Differential.Pipeline
             var tempDir = string.IsNullOrEmpty(tempPath) ? patchPath : Path.Combine(patchPath, tempPath);
             Directory.CreateDirectory(tempDir);
             return tempDir;
-        }
-
-        private static FileNode? FindMatchingFile(FileNode newFile, IEnumerable<FileNode> leftNodes)
-        {
-            var match = leftNodes.FirstOrDefault(i =>
-                string.Equals(i.Name, newFile.Name, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(i.RelativePath, newFile.RelativePath, StringComparison.OrdinalIgnoreCase));
-
-            if (match == null) return null;
-            if (!File.Exists(match.FullName)) return null;
-            if (!File.Exists(newFile.FullName)) return null;
-            return match;
         }
 
         private static void ValidateDirectories(string sourcePath, string targetPath, string patchPath)
