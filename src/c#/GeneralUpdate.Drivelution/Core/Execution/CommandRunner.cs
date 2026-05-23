@@ -54,7 +54,14 @@ public class CommandRunner : ICommandRunner
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await process.WaitForExitAsync(cancellationToken);
+        // Ensure the process is killed if the caller cancels the wait
+        await using (cancellationToken.Register(() =>
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* already exited */ }
+        }))
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
 
         return new CommandResult
         {

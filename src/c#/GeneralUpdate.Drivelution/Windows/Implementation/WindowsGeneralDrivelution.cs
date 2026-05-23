@@ -74,6 +74,14 @@ public class WindowsGeneralDrivelution : BaseDriverUpdater
                 new[] { "/enum-drivers" },
                 cancellationToken);
 
+            // Non-fatal: pnputil may fail (permissions, no drivers, etc.) but the driver
+            // might still be installed correctly — don't let this trigger a rollback
+            if (!result.Success)
+            {
+                GeneralTracer.Warn($"PnPUtil verification failed (exit {result.ExitCode}): {result.StandardError.Trim()}");
+                return true;
+            }
+
             var driverFileName = Path.GetFileName(driverInfo.FilePath);
             var driverName = Path.GetFileNameWithoutExtension(driverInfo.FilePath);
 

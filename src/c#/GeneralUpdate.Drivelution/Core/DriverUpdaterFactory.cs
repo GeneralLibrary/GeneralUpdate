@@ -55,7 +55,7 @@ public static class DrivelutionFactory
             GeneralTracer.Error($"Unsupported platform detected: {osDescription}");
             throw new PlatformNotSupportedException(
                 $"Current platform '{osDescription}' is not supported. " +
-                "Supported platforms: Windows (8+), Linux (Ubuntu 18.04+, CentOS 7+, Debian 10+)");
+                "Supported platforms: Windows, Linux, macOS.");
         }
     }
 
@@ -76,7 +76,7 @@ public static class DrivelutionFactory
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            throw new PlatformNotSupportedException("MacOS driver validator is not yet implemented");
+            return new MacOSDriverValidator(new CommandRunner());
         }
         else
         {
@@ -101,7 +101,7 @@ public static class DrivelutionFactory
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            throw new PlatformNotSupportedException("MacOS driver backup is not yet implemented");
+            return new MacOSDriverBackup();
         }
         else
         {

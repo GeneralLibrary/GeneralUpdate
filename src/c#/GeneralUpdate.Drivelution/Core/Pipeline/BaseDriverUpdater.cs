@@ -157,6 +157,8 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
                         Type = ErrorType.InstallationFailed,
                         Code = "ERR_PIPELINE",
                         Message = lastStepResult.ErrorMessage,
+                        Details = lastStepResult.Exception?.ToString() ?? lastStepResult.ErrorMessage,
+                        StackTrace = lastStepResult.Exception?.StackTrace,
                         Timestamp = DateTime.UtcNow
                     };
                 }
@@ -169,7 +171,9 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
                 if (!string.IsNullOrEmpty(backupPath))
                 {
                     result.StepLogs.Add($"[{DateTime.Now:HH:mm:ss}] Attempting rollback");
-                    var rolledBack = await TryRollbackAsync(backupPath, linkedCts.Token);
+
+                    // Use a fresh CancellationToken for rollback — the linked token may be cancelled by timeout
+                    var rolledBack = await TryRollbackAsync(backupPath, CancellationToken.None);
                     if (rolledBack)
                     {
                         result.RolledBack = true;
@@ -249,12 +253,20 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
     }
 
     /// <inheritdoc/>
-    public Task<bool> BackupAsync(
+    public async Task<bool> BackupAsync(
         DriverInfo driverInfo,
         string backupPath,
         CancellationToken cancellationToken = default)
     {
-        return _backup.BackupAsync(driverInfo.FilePath, backupPath, cancellationToken);
+        try
+        {
+            return await _backup.BackupAsync(driverInfo.FilePath, backupPath, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("Driver backup failed", ex);
+            return false;
+        }
     }
 
     /// <inheritdoc/>
@@ -333,12 +345,12 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
 
                 var updateResult = await UpdateAsync(driver, strategy, cancellationToken: cancellationToken);
 
-                Interlocked.Increment(ref completed);
+                var currentCompleted = Interlocked.Increment(ref completed);
                 progress?.Report(new UpdateProgress
                 {
                     CurrentStatus = updateResult.Status,
                     StepName = $"Batch [{index + 1}/{driverList.Count}]",
-                    Percentage = (int)((float)Interlocked.CompareExchange(ref completed, completed, completed) / driverList.Count * 100),
+                    Percentage = (int)((float)currentCompleted / driverList.Count * 100),
                     Message = updateResult.Success ? $"OK: {driver.Name}" : $"FAIL: {driver.Name}",
                     StepIndex = index,
                     TotalSteps = driverList.Count
@@ -478,20 +490,7 @@ public abstract class BaseDriverUpdater : IGeneralDrivelution
     /// </summary>
     public event Action<UpdateResult>? OnUpdateCompleted;
 
-    /// <summary>
-    /// Raised to report progress (percentage, message).
-    /// </summary>
-    public event Action<int, string>? OnProgress;
-
     // ─── Helpers ───────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Reports progress through the OnProgress event.
-    /// </summary>
-    protected void ReportProgress(int percentage, string message)
-    {
-        OnProgress?.Invoke(percentage, message);
-    }
 
     /// <summary>
     /// Attempts to roll back the driver to the given backup path.
