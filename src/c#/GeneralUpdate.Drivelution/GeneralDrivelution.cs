@@ -60,6 +60,7 @@ public static class GeneralDrivelution
     /// <returns>Update result</returns>
     public static async Task<UpdateResult> QuickUpdateAsync(
         DriverInfo driverInfo, 
+        IProgress<UpdateProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync: starting quick driver update. Driver={driverInfo.Name}, Version={driverInfo.Version}");
@@ -71,7 +72,7 @@ public static class GeneralDrivelution
             RetryIntervalSeconds = 5
         };
         
-        var result = await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        var result = await updater.UpdateAsync(driverInfo, strategy, progress, cancellationToken);
         GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync: quick driver update completed. Success={result.Success}, Status={result.Status}, DurationMs={result.DurationMs}");
         return result;
     }
@@ -86,11 +87,12 @@ public static class GeneralDrivelution
     public static async Task<UpdateResult> QuickUpdateAsync(
         DriverInfo driverInfo,
         UpdateStrategy strategy,
+        IProgress<UpdateProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync(strategy): starting driver update with custom strategy. Driver={driverInfo.Name}, Version={driverInfo.Version}, RequireBackup={strategy.RequireBackup}, RetryCount={strategy.RetryCount}");
         var updater = Create();
-        var result = await updater.UpdateAsync(driverInfo, strategy, cancellationToken);
+        var result = await updater.UpdateAsync(driverInfo, strategy, progress, cancellationToken);
         GeneralTracer.Info($"GeneralDrivelution.QuickUpdateAsync(strategy): driver update completed. Success={result.Success}, Status={result.Status}, DurationMs={result.DurationMs}");
         return result;
     }
