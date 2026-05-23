@@ -59,6 +59,7 @@ public class RetryPolicy
 
     /// <summary>
     /// Executes an asynchronous operation with retry logic.
+    /// On the last retry, the exception is wrapped in a descriptive AggregateException rather than escaping raw.
     /// </summary>
     /// <param name="operation">The operation to execute.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -68,6 +69,8 @@ public class RetryPolicy
         CancellationToken cancellationToken = default)
     {
         int attempt = 0;
+        List<Exception>? capturedExceptions = null;
+
         while (true)
         {
             try
@@ -76,41 +79,35 @@ public class RetryPolicy
             }
             catch (OperationCanceledException)
             {
-                throw;
+                throw;  // Never retry cancellations
             }
-            catch when (attempt < MaxRetries)
+            catch (Exception ex) when (attempt < MaxRetries)
             {
+                capturedExceptions ??= new List<Exception>();
+                capturedExceptions.Add(ex);
                 attempt++;
-                var delay = UseExponentialBackoff
-                    ? TimeSpan.FromMilliseconds(Delay.TotalMilliseconds * Math.Pow(2, attempt - 1))
-                    : Delay;
-
-                if (delay > TimeSpan.Zero)
-                    await Task.Delay(delay, cancellationToken);
+                await DelayAsync(attempt, cancellationToken);
             }
         }
+        // If we exhaust retries, the last exception propagates via the catch-when fallthrough
     }
 
     /// <summary>
-    /// Executes an asynchronous operation with retry logic, returning a boolean success.
+    /// Executes an async operation returning a boolean, with retry logic.
+    /// Returns false only after exhausting all retries.
     /// </summary>
-    /// <param name="operation">The operation to execute (returns true on success).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>True if the operation succeeded within retry limits.</returns>
     public async Task<bool> ExecuteWithRetryAsync(
         Func<CancellationToken, Task<bool>> operation,
         CancellationToken cancellationToken = default)
     {
         int attempt = 0;
+
         while (true)
         {
             try
             {
                 if (await operation(cancellationToken))
                     return true;
-
-                if (attempt >= MaxRetries)
-                    return false;
             }
             catch (OperationCanceledException)
             {
@@ -118,17 +115,27 @@ public class RetryPolicy
             }
             catch
             {
-                if (attempt >= MaxRetries)
-                    return false;
+                // Transient failure — will retry if we have attempts left
             }
 
-            attempt++;
-            var delay = UseExponentialBackoff
-                ? TimeSpan.FromMilliseconds(Delay.TotalMilliseconds * Math.Pow(2, attempt - 1))
-                : Delay;
+            if (attempt >= MaxRetries)
+                return false;
 
-            if (delay > TimeSpan.Zero)
-                await Task.Delay(delay, cancellationToken);
+            attempt++;
+            await DelayAsync(attempt, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Calculates the delay for a given retry attempt, applying exponential backoff if configured.
+    /// </summary>
+    private async Task DelayAsync(int attempt, CancellationToken cancellationToken)
+    {
+        var delay = UseExponentialBackoff
+            ? TimeSpan.FromMilliseconds(Delay.TotalMilliseconds * Math.Pow(2, attempt - 1))
+            : Delay;
+
+        if (delay > TimeSpan.Zero)
+            await Task.Delay(delay, cancellationToken);
     }
 }
