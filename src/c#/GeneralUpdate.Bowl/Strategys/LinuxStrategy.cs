@@ -8,6 +8,7 @@ using GeneralUpdate.Common.Shared;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
+[System.Obsolete("Use Strategies.LinuxBowlStrategy instead. Will be removed in v10.")]
 internal class LinuxStrategy : AbstractStrategy
 {
     /*procdump-3.3.0-0.cm2.x86_64.rpm:
