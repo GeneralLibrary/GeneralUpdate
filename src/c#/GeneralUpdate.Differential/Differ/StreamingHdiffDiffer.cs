@@ -297,7 +297,7 @@ namespace GeneralUpdate.Differential.Differ
                     WriteBufferedRaw(newBytes, extraStart, extraLen, extraStream, writeBuf);
 
                     // Control tuple: (diff_len, extra_len, old_seek)
-                    long seek = (matchOldPos - backwardLen + lenf) - lastOldPos;
+                    long seek = (matchOldPos - backwardLen) - lastOldPos;
                     WriteInt64(lenf, buf, 0);
                     ctrlStream.Write(buf, 0, 8);
                     WriteInt64(extraLen, buf, 0);
@@ -307,7 +307,7 @@ namespace GeneralUpdate.Differential.Differ
 
                     ctrlBytes += 24;
 
-                    lastOldPos = (matchOldPos - backwardLen + lenf) + extraLen;
+                    lastOldPos = (matchOldPos - backwardLen) + lenf;
                     newPos = extraStart + extraLen;
                 }
                 else

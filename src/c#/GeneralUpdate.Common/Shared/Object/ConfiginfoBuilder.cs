@@ -392,9 +392,9 @@ namespace GeneralUpdate.Common.Shared.Object
                 Bowl = _bowl,
                 Script = _script,
                 DriverDirectory = _driverDirectory,
-                BlackFiles = _blackFiles,
-                BlackFormats = _blackFormats,
-                SkipDirectorys = _skipDirectorys
+                BlackFiles = _blackFiles ?? new List<string>(),
+                BlackFormats = _blackFormats ?? new List<string>(),
+                SkipDirectorys = _skipDirectorys ?? new List<string>()
             };
 
             // Validate the built configuration

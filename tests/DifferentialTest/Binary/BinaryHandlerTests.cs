@@ -326,7 +326,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal(newContent, resultContent);
         }
 
@@ -359,7 +359,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.bin"), patchPath);
 
             // Assert
-            var resultBytes = File.ReadAllBytes(targetFilePath);
+            var resultBytes = File.ReadAllBytes(Path.Combine(_testDirectory, "result.bin"));
             Assert.Equal(newBytes, resultBytes);
         }
 
@@ -391,7 +391,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal(newContent, resultContent);
         }
 
@@ -421,7 +421,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal("", resultContent);
         }
 
@@ -453,7 +453,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal(content, resultContent);
         }
 
@@ -515,7 +515,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal(newContent.ToString(), resultContent);
         }
 
@@ -552,7 +552,7 @@ namespace DifferentialTest.Binary
             await handler.Dirty(targetFilePath, Path.Combine(_testDirectory, "result.txt"), patchPath);
 
             // Assert
-            var resultContent = File.ReadAllText(targetFilePath);
+            var resultContent = File.ReadAllText(Path.Combine(_testDirectory, "result.txt"));
             Assert.Equal(newContent, resultContent);
         }
 

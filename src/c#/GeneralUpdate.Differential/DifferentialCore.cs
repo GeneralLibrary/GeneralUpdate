@@ -46,7 +46,7 @@ namespace GeneralUpdate.Differential
 
         // Backward-compatible overload: 4th positional argument is a strategy.
         public static Task Clean(string sourcePath, string targetPath, string patchPath, ICleanStrategy? strategy)
-            => Clean(sourcePath, targetPath, patchPath, strategy: strategy);
+            => Clean(sourcePath, targetPath, patchPath, binaryDiffer: null, strategy: strategy);
 
         /// <summary>
         /// Applies a binary patch from <paramref name="patchPath"/> to <paramref name="appPath"/>.
@@ -73,6 +73,6 @@ namespace GeneralUpdate.Differential
 
         // Backward-compatible overload: 3rd positional argument is a strategy.
         public static Task Dirty(string appPath, string patchPath, IDirtyStrategy? strategy)
-            => Dirty(appPath, patchPath, strategy: strategy);
+            => Dirty(appPath, patchPath, binaryDiffer: null, strategy: strategy);
     }
 }

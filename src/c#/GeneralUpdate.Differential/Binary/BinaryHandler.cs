@@ -432,19 +432,9 @@ namespace GeneralUpdate.Differential.Binary
                     }
                 }
 
-                // Atomic replacement: delete old file, move new file into place
-                if (File.Exists(_oldfilePath))
-                {
-                    File.SetAttributes(_oldfilePath, FileAttributes.Normal);
-                    File.Delete(_oldfilePath);
-                }
-
-                if (File.Exists(_newfilePath))
-                {
-                    File.SetAttributes(_newfilePath, FileAttributes.Normal);
-                    File.Copy(_newfilePath, _oldfilePath, true);
-                    File.Delete(_newfilePath);
-                }
+                // The result is left at _newfilePath.
+                // Atomic replacement (if needed) is handled by the caller
+                // (e.g. DefaultDirtyStrategy.ApplyPatch).
             });
         }
 
@@ -617,6 +607,10 @@ namespace GeneralUpdate.Differential.Binary
 
         private static int[] SuffixSort(byte[] oldData)
         {
+            // Empty input: no suffixes to sort, return sentinel-only array.
+            if (oldData.Length == 0)
+                return new int[1] { 0 };
+
             var buckets = new int[256];
 
             for (int i = 0; i < oldData.Length; i++)
@@ -631,7 +625,13 @@ namespace GeneralUpdate.Differential.Binary
             for (int i = 0; i < oldData.Length; i++)
                 I[++buckets[oldData[i]]] = i;
 
-            var v = new int[oldData.Length + 1];
+            // Allocate extra space for h-doubling access pattern in Split.
+            // During suffix sort, v[I[k] + h] is accessed where h doubles
+            // from 1 up to ~oldsize. I[k] is a position in [0, oldsize], so
+            // the index I[k] + h can reach up to 2 * oldsize.
+            // In C the original BSDIFF relies on undefined behaviour here;
+            // in managed code we must size the buffer accordingly.
+            var v = new int[oldData.Length * 2 + 1];
             for (int i = 0; i < oldData.Length; i++)
                 v[i] = buckets[oldData[i]];
 
