@@ -4,6 +4,7 @@ using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
+using GeneralUpdate.Drivelution.Core.Execution;
 using GeneralUpdate.Drivelution.Core.Pipeline;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Linux.Helpers;
@@ -18,18 +19,23 @@ namespace GeneralUpdate.Drivelution.Linux.Implementation;
 [SupportedOSPlatform("linux")]
 public class LinuxGeneralDrivelution : BaseDriverUpdater
 {
+    private readonly ICommandRunner _commandRunner;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LinuxGeneralDrivelution"/> class.
     /// </summary>
     /// <param name="validator">Driver validator.</param>
     /// <param name="backup">Driver backup manager.</param>
+    /// <param name="commandRunner">Command runner for Linux operations.</param>
     /// <param name="options">Configuration options (optional).</param>
     public LinuxGeneralDrivelution(
         IDriverValidator validator,
         IDriverBackup backup,
+        ICommandRunner commandRunner,
         DrivelutionOptions? options = null)
         : base(validator, backup, options)
     {
+        _commandRunner = commandRunner ?? throw new ArgumentNullException(nameof(commandRunner));
     }
 
     // ─── Pipeline overrides ────────────────────────────────────────────
@@ -108,7 +114,7 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
                     // Unload current module first
                     try
                     {
-                        await ExecuteCommandAsync("modprobe", $"-r {moduleName}", cancellationToken);
+                        await _commandRunner.RunOrThrowAsync("modprobe", new[] { "-r", moduleName }, cancellationToken);
                     }
                     catch
                     {
@@ -116,7 +122,7 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
                     }
 
                     // Reload the backed-up module
-                    await ExecuteCommandAsync("insmod", koFile, cancellationToken);
+                    await _commandRunner.RunOrThrowAsync("insmod", new[] { koFile }, cancellationToken);
                     GeneralTracer.Info($"Restored module: {moduleName}");
                 }
                 catch (Exception ex)
@@ -226,7 +232,7 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
 
     // ─── Private: Format-specific installers ───────────────────────────
 
-    private static async Task InstallKernelModuleAsync(
+    private async Task InstallKernelModuleAsync(
         string modulePath,
         CancellationToken cancellationToken)
     {
@@ -234,7 +240,7 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
 
         try
         {
-            await ExecuteCommandAsync("insmod", modulePath, cancellationToken);
+            await _commandRunner.RunOrThrowAsync("insmod", new[] { modulePath }, cancellationToken);
             GeneralTracer.Info("Module loaded via insmod");
         }
         catch
@@ -242,21 +248,21 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
             // Fallback: modprobe with the module name
             GeneralTracer.Info("insmod failed, trying modprobe...");
             var moduleName = Path.GetFileNameWithoutExtension(modulePath);
-            await ExecuteCommandAsync("modprobe", moduleName, cancellationToken);
+            await _commandRunner.RunOrThrowAsync("modprobe", new[] { moduleName }, cancellationToken);
             GeneralTracer.Info("Module loaded via modprobe");
         }
     }
 
-    private static async Task InstallDebPackageAsync(
+    private async Task InstallDebPackageAsync(
         string packagePath,
         CancellationToken cancellationToken)
     {
         GeneralTracer.Info($"Installing Debian package: {packagePath}");
-        await ExecuteCommandAsync("dpkg", $"-i {packagePath}", cancellationToken);
+        await _commandRunner.RunOrThrowAsync("dpkg", new[] { "-i", packagePath }, cancellationToken);
         GeneralTracer.Info("Debian package installed");
     }
 
-    private static async Task InstallRpmPackageAsync(
+    private async Task InstallRpmPackageAsync(
         string packagePath,
         CancellationToken cancellationToken)
     {
@@ -264,12 +270,12 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
 
         try
         {
-            await ExecuteCommandAsync("rpm", $"-ivh {packagePath}", cancellationToken);
+            await _commandRunner.RunOrThrowAsync("rpm", new[] { "-ivh", packagePath }, cancellationToken);
         }
         catch
         {
             // Fallback to dnf/yum
-            await ExecuteCommandAsync("dnf", $"install -y {packagePath}", cancellationToken);
+            await _commandRunner.RunOrThrowAsync("dnf", new[] { "install", "-y", packagePath }, cancellationToken);
         }
 
         GeneralTracer.Info("RPM package installed");
@@ -277,7 +283,7 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
 
     // ─── Private: File parsing ─────────────────────────────────────────
 
-    private static async Task<DriverInfo?> ParseLinuxDriverFileAsync(
+    private async Task<DriverInfo?> ParseLinuxDriverFileAsync(
         string filePath,
         CancellationToken cancellationToken)
     {
@@ -320,14 +326,15 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
         }
     }
 
-    private static async Task ParseKernelModuleAsync(
+    private async Task ParseKernelModuleAsync(
         string koPath,
         DriverInfo driverInfo,
         CancellationToken cancellationToken)
     {
         try
         {
-            var output = await ExecuteCommandAsync("modinfo", koPath, cancellationToken);
+            var result = await _commandRunner.RunAsync("modinfo", new[] { koPath }, cancellationToken);
+            var output = result.Success ? result.StandardOutput : string.Empty;
             var lines = output.Split('\n');
 
             foreach (var line in lines)
@@ -355,15 +362,16 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
         }
     }
 
-    private static async Task ParseDebPackageAsync(
+    private async Task ParseDebPackageAsync(
         string debPath,
         DriverInfo driverInfo,
         CancellationToken cancellationToken)
     {
         try
         {
-            var escapedPath = debPath.Replace("'", "'\\''");
-            var output = await ExecuteCommandAsync("dpkg-deb", $"-I '{escapedPath}'", cancellationToken);
+            // No shell escaping needed — ArgumentList bypasses the shell entirely
+            var result = await _commandRunner.RunAsync("dpkg-deb", new[] { "-I", debPath }, cancellationToken);
+            var output = result.Success ? result.StandardOutput : string.Empty;
 
             foreach (var line in output.Split('\n'))
             {
@@ -385,15 +393,16 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
         }
     }
 
-    private static async Task ParseRpmPackageAsync(
+    private async Task ParseRpmPackageAsync(
         string rpmPath,
         DriverInfo driverInfo,
         CancellationToken cancellationToken)
     {
         try
         {
-            var escapedPath = rpmPath.Replace("'", "'\\''");
-            var output = await ExecuteCommandAsync("rpm", $"-qip '{escapedPath}'", cancellationToken);
+            // No shell escaping needed — ArgumentList bypasses the shell entirely
+            var result = await _commandRunner.RunAsync("rpm", new[] { "-qip", rpmPath }, cancellationToken);
+            var output = result.Success ? result.StandardOutput : string.Empty;
 
             foreach (var line in output.Split('\n'))
             {
@@ -421,40 +430,6 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
             GeneralTracer.Debug($"Could not get package info for {rpmPath}: {ex.Message}");
             driverInfo.Version = "1.0.0";
         }
-    }
-
-    // ─── Private: Command execution ────────────────────────────────────
-
-    private static async Task<string> ExecuteCommandAsync(
-        string command,
-        string arguments,
-        CancellationToken cancellationToken)
-    {
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = command,
-            Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = System.Diagnostics.Process.Start(psi)
-            ?? throw new InvalidOperationException($"Failed to start process: {command}");
-
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-
-        if (process.ExitCode != 0)
-        {
-            GeneralTracer.Warn($"Command {command} {arguments} exited with code {process.ExitCode}. Error: {error}");
-            throw new InvalidOperationException(
-                $"Command '{command}' failed with exit code {process.ExitCode}: {error}");
-        }
-
-        return output;
     }
 
     // ─── Nested type ──────────────────────────────────────────────────

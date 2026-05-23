@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;
+using GeneralUpdate.Drivelution.Core.Execution;
 using GeneralUpdate.Drivelution.Core.Pipeline;
 using GeneralUpdate.Drivelution.Core.Utilities;
 using GeneralUpdate.Drivelution.Windows.Helpers;
@@ -19,18 +19,23 @@ namespace GeneralUpdate.Drivelution.Windows.Implementation;
 [SupportedOSPlatform("windows")]
 public class WindowsGeneralDrivelution : BaseDriverUpdater
 {
+    private readonly ICommandRunner _commandRunner;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WindowsGeneralDrivelution"/> class.
     /// </summary>
     /// <param name="validator">Driver validator.</param>
     /// <param name="backup">Driver backup manager.</param>
+    /// <param name="commandRunner">Command runner for PnPUtil operations.</param>
     /// <param name="options">Configuration options (optional).</param>
     public WindowsGeneralDrivelution(
         IDriverValidator validator,
         IDriverBackup backup,
+        ICommandRunner commandRunner,
         DrivelutionOptions? options = null)
         : base(validator, backup, options)
     {
+        _commandRunner = commandRunner ?? throw new ArgumentNullException(nameof(commandRunner));
     }
 
     // ─── Pipeline overrides ────────────────────────────────────────────
@@ -64,31 +69,16 @@ public class WindowsGeneralDrivelution : BaseDriverUpdater
         {
             GeneralTracer.Info($"Verifying Windows driver installation for: {driverInfo.FilePath}");
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "pnputil.exe",
-                Arguments = "/enum-drivers",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                GeneralTracer.Warn("Failed to start PnPUtil for verification");
-                return false;
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
+            var result = await _commandRunner.RunAsync(
+                "pnputil.exe",
+                new[] { "/enum-drivers" },
+                cancellationToken);
 
             var driverFileName = Path.GetFileName(driverInfo.FilePath);
             var driverName = Path.GetFileNameWithoutExtension(driverInfo.FilePath);
 
-            bool isInstalled = output.Contains(driverFileName, StringComparison.OrdinalIgnoreCase)
-                            || output.Contains(driverName, StringComparison.OrdinalIgnoreCase);
+            bool isInstalled = result.StandardOutput.Contains(driverFileName, StringComparison.OrdinalIgnoreCase)
+                            || result.StandardOutput.Contains(driverName, StringComparison.OrdinalIgnoreCase);
 
             GeneralTracer.Info($"Driver verification result: {isInstalled}");
             return isInstalled;
@@ -227,38 +217,26 @@ public class WindowsGeneralDrivelution : BaseDriverUpdater
     }
 
     /// <summary>
-    /// Installs a driver using the Windows PnPUtil command-line tool.
+    /// Installs a driver using the Windows PnPUtil command-line tool (via ICommandRunner).
     /// </summary>
-    private static async Task InstallDriverUsingPnPUtilAsync(
+    private async Task InstallDriverUsingPnPUtilAsync(
         string driverPath,
         CancellationToken cancellationToken)
     {
         GeneralTracer.Info($"PnPUtil installing: {driverPath}");
 
-        var psi = new ProcessStartInfo
+        var result = await _commandRunner.RunAsync(
+            "pnputil.exe",
+            new[] { "/add-driver", driverPath, "/install" },
+            cancellationToken);
+
+        GeneralTracer.Info($"PnPUtil output: {result.StandardOutput.Trim()}");
+
+        if (!result.Success)
         {
-            FileName = "pnputil.exe",
-            Arguments = $"/add-driver \"{driverPath}\" /install",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        using var process = Process.Start(psi)
-            ?? throw new DriverInstallationException("Failed to start PnPUtil process.");
-
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-
-        GeneralTracer.Info($"PnPUtil output: {output}");
-
-        if (process.ExitCode != 0)
-        {
-            GeneralTracer.Error($"PnPUtil failed (exit {process.ExitCode}): {error}");
+            GeneralTracer.Error($"PnPUtil failed (exit {result.ExitCode}): {result.StandardError}");
             throw new DriverInstallationException(
-                $"PnPUtil failed with exit code {process.ExitCode}: {error}");
+                $"PnPUtil failed with exit code {result.ExitCode}: {result.StandardError}");
         }
     }
 

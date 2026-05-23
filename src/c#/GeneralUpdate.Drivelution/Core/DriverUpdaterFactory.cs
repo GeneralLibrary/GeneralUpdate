@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using GeneralUpdate.Common.Shared;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
+using GeneralUpdate.Drivelution.Core.Execution;
 using GeneralUpdate.Drivelution.Windows.Implementation;
 using GeneralUpdate.Drivelution.Linux.Implementation;
 using GeneralUpdate.Drivelution.MacOS.Implementation;
@@ -29,14 +30,16 @@ public static class DrivelutionFactory
             GeneralTracer.Info("Detected Windows platform, creating WindowsGeneralDrivelution");
             var validator = new WindowsDriverValidator();
             var backup = new WindowsDriverBackup();
-            return new WindowsGeneralDrivelution(validator, backup);
+            var commandRunner = new CommandRunner();
+            return new WindowsGeneralDrivelution(validator, backup, commandRunner, options);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             GeneralTracer.Info("Detected Linux platform, creating LinuxGeneralDrivelution");
             var validator = new LinuxDriverValidator();
             var backup = new LinuxDriverBackup();
-            return new LinuxGeneralDrivelution(validator, backup);
+            var commandRunner = new CommandRunner();
+            return new LinuxGeneralDrivelution(validator, backup, commandRunner, options);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
