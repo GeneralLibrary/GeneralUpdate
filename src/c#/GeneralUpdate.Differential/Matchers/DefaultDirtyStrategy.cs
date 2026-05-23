@@ -16,7 +16,7 @@ namespace GeneralUpdate.Differential.Matchers
     /// An optional <see cref="IDirtyMatcher"/> can be supplied to customise how an
     /// application file is matched to its corresponding patch file.
     /// An optional <see cref="IBinaryDiffer"/> can be supplied to customise the binary diff
-    /// algorithm. Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Brotli compression.
+    /// algorithm. Defaults to <see cref="Differ.StreamingHdiffDiffer"/> with Deflate compression.
     ///
     /// File replacement strategy: after patching, the strategy performs an atomic
     /// delete-and-replace of the original file with the patched output.
@@ -30,7 +30,7 @@ namespace GeneralUpdate.Differential.Matchers
         private readonly IBinaryDiffer _binaryDiffer;
 
         /// <summary>
-        /// Initialises a new instance using StreamingHdiffDiffer with Brotli compression by default.
+        /// Initialises a new instance using StreamingHdiffDiffer with Deflate compression by default.
         /// </summary>
         public DefaultDirtyStrategy()
             : this(null, null)
