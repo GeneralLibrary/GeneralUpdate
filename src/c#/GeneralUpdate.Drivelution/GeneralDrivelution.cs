@@ -151,6 +151,29 @@ public static class GeneralDrivelution
         GeneralTracer.Info($"GeneralDrivelution.GetDriversFromDirectoryAsync: found {drivers?.Count ?? 0} driver(s) in directory={directoryPath}");
         return drivers;
     }
+
+    /// <summary>
+    /// Batch updates multiple drivers
+    /// </summary>
+    /// <param name="drivers">Drivers to update</param>
+    /// <param name="strategy">Update strategy</param>
+    /// <param name="mode">Execution mode (Sequential or Parallel)</param>
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Aggregated batch result</returns>
+    public static async Task<BatchUpdateResult> BatchUpdateAsync(
+        IEnumerable<DriverInfo> drivers,
+        UpdateStrategy strategy,
+        BatchMode mode = BatchMode.Sequential,
+        IProgress<UpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        GeneralTracer.Info("GeneralDrivelution.BatchUpdateAsync: starting batch driver update");
+        var updater = Create();
+        var result = await updater.BatchUpdateAsync(drivers, strategy, mode, progress, cancellationToken);
+        GeneralTracer.Info($"GeneralDrivelution.BatchUpdateAsync: batch complete. OK={result.SucceededCount}, Failed={result.FailedCount}");
+        return result;
+    }
 }
 
 /// <summary>

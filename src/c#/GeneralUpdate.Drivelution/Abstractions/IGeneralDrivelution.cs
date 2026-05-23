@@ -54,4 +54,20 @@ public interface IGeneralDrivelution
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of driver information</returns>
     Task<List<DriverInfo>> GetDriversFromDirectoryAsync(string directoryPath, string? searchPattern = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates multiple drivers in a batch operation.
+    /// </summary>
+    /// <param name="drivers">Drivers to update.</param>
+    /// <param name="strategy">Update strategy applied to each driver.</param>
+    /// <param name="mode">Execution mode: Sequential or Parallel.</param>
+    /// <param name="progress">Optional progress reporter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Aggregated batch result with per-driver outcomes.</returns>
+    Task<BatchUpdateResult> BatchUpdateAsync(
+        IEnumerable<DriverInfo> drivers,
+        UpdateStrategy strategy,
+        BatchMode mode = BatchMode.Sequential,
+        IProgress<UpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
