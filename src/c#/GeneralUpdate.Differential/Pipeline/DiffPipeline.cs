@@ -71,6 +71,14 @@ namespace GeneralUpdate.Differential.Pipeline
         }
 
         /// <summary>
+        /// Initialises a new pipeline (backward-compatible constructor, preserved for binary compatibility).
+        /// </summary>
+        public DiffPipeline(DiffPipelineOptions options, IBinaryDiffer binaryDiffer, IProgress<DiffProgress>? progress = null)
+            : this(options, binaryDiffer, null, null, progress)
+        {
+        }
+
+        /// <summary>
         /// Compares source and target directories using the configured clean matcher,
         /// generating patch files in parallel.
         /// </summary>
