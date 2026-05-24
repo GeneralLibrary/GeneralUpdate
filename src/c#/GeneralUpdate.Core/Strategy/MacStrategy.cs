@@ -1,22 +1,34 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using GeneralUpdate.Core;
+using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy;
 
-/// <summary>macOS update strategy — follows Linux conventions with platform-specific paths.</summary>
+/// <summary>macOS update strategy — follows Linux conventions.</summary>
 public class MacStrategy : AbstractStrategy
 {
     public override void Execute()
     {
         GeneralTracer.Info("MacStrategy: executing macOS update");
-        var mainApp = Path.Combine(
-            _configinfo.InstallPath ?? string.Empty,
-            _configinfo.MainAppName ?? string.Empty);
-
-        if (!string.IsNullOrEmpty(_configinfo.MainAppName) && File.Exists(mainApp))
-            StartApp();
+        try
+        {
+            if (!string.IsNullOrEmpty(_configinfo.MainAppName))
+            {
+                var mainApp = Path.Combine(
+                    _configinfo.InstallPath ?? string.Empty,
+                    _configinfo.MainAppName);
+                if (File.Exists(mainApp))
+                    StartApp();
+            }
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("MacStrategy.Execute failed", ex);
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        }
     }
 
     public override async Task ExecuteAsync()
@@ -39,4 +51,13 @@ public class MacStrategy : AbstractStrategy
     }
 
     public override void Create(GlobalConfigInfo configInfo) => _configinfo = configInfo;
+
+    protected override PipelineBuilder BuildPipeline(PipelineContext context)
+    {
+        var builder = new PipelineBuilder(context);
+        builder.Use(new HashMiddleware());
+        builder.Use(new CompressMiddleware());
+        builder.Use(new PatchMiddleware());
+        return builder;
+    }
 }

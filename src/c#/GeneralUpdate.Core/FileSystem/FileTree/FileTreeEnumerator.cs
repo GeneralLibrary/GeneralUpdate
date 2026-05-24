@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using GeneralUpdate.Core.FileSystem;
 
 namespace GeneralUpdate.Core.FileSystem.FileTree;
 
-/// <summary>Recursively enumerates files, respecting blacklist rules.</summary>
+/// <summary>Recursively enumerates files with blacklist filtering and SHA256 hashing.</summary>
 public class FileTreeEnumerator
 {
     private readonly IBlackListMatcher? _blacklist;
@@ -20,19 +19,35 @@ public class FileTreeEnumerator
         if (!Directory.Exists(rootPath))
             yield break;
 
-        foreach (var file in Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories))
+        foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
         {
-            var relativePath = GetRelativePath(rootPath, file);
-            if (_blacklist?.IsBlacklisted(relativePath) == true)
-                continue;
-
-            var dir = Path.GetDirectoryName(relativePath);
-            if (dir != null && _blacklist?.ShouldSkipDirectory(dir) == true)
-                continue;
+            if (_blacklist != null)
+            {
+                var relativePath = GetRelativePath(rootPath, file);
+                if (_blacklist.IsBlacklisted(relativePath))
+                    continue;
+                var dir = Path.GetDirectoryName(relativePath);
+                if (dir != null && _blacklist.ShouldSkipDirectory(dir))
+                    continue;
+            }
 
             var fi = new FileInfo(file);
-            yield return new FileEntry(relativePath, fi.Length, string.Empty, fi.LastWriteTimeUtc);
+            var hash = ComputeSha256(file);
+            var relative = GetRelativePath(rootPath, file);
+            yield return new FileEntry(relative, fi.Length, hash, fi.LastWriteTimeUtc);
         }
+    }
+
+    private static string ComputeSha256(string path)
+    {
+        try
+        {
+            using var sha = SHA256.Create();
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var h = sha.ComputeHash(fs);
+            return BitConverter.ToString(h).Replace("-", "").ToLowerInvariant();
+        }
+        catch { return string.Empty; }
     }
 
     private static string GetRelativePath(string root, string fullPath)
@@ -52,9 +67,10 @@ public record FileTreeSnapshot(
     DateTime CapturedAt
 );
 
+/// <summary>Individual file entry with hash.</summary>
 public record FileEntry(string RelativePath, long SizeBytes, string SHA256, DateTime LastWriteUtc);
 
-/// <summary>Compares two file tree snapshots, producing add/modify/delete lists.</summary>
+/// <summary>Compares two file tree snapshots using SHA256 for content comparison.</summary>
 public class FileTreeComparer
 {
     public FileTreeDiff Compare(FileTreeSnapshot oldSnap, FileTreeSnapshot newSnap)
@@ -67,7 +83,7 @@ public class FileTreeComparer
         {
             if (oldSnap.Files.TryGetValue(path, out var oldEntry))
             {
-                if (oldEntry.LastWriteUtc != newEntry.LastWriteUtc || oldEntry.SizeBytes != newEntry.SizeBytes)
+                if (oldEntry.SHA256 != newEntry.SHA256)
                     modified.Add(path);
             }
             else

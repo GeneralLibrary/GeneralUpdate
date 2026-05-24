@@ -27,7 +27,8 @@ public class DefaultBlackListMatcher : IBlackListMatcher
         => _config.BlackFormats?.Any(f => string.Equals(f, extension, StringComparison.OrdinalIgnoreCase)) == true;
 
     public bool ShouldSkipDirectory(string directoryName)
-        => _config.SkipDirectorys?.Any(d => directoryName.Contains(d)) == true;
+        => _config.SkipDirectorys?.Any(d =>
+            directoryName.IndexOf(d, StringComparison.OrdinalIgnoreCase) >= 0) == true;
 
     private static bool MatchGlob(string input, string pattern)
     {

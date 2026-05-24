@@ -17,6 +17,8 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>User-registered extension types for lazy instantiation.</summary>
         private readonly Dictionary<Type, Type> _extensions = new();
+        /// <summary>Registered singleton instances (e.g., BlackListConfig).</summary>
+        private readonly Dictionary<Type, object> _instances = new();
 
         protected internal AbstractBootstrap()
         {
@@ -75,7 +77,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap Strategy<T>() where T : IStrategy, new()
         { _extensions[typeof(IStrategy)] = typeof(T); return (TBootstrap)this; }
 
-        public TBootstrap Hooks<T>() where T : class, new()
+        public TBootstrap Hooks<T>() where T : Hooks.IUpdateHooks, new()
         { _extensions[typeof(Hooks.IUpdateHooks)] = typeof(T); return (TBootstrap)this; }
 
         public TBootstrap SslPolicy<T>() where T : Security.ISslValidationPolicy, new()
@@ -96,17 +98,18 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
         { _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T); return (TBootstrap)this; }
 
-        public TBootstrap ConfigureBlackList(Action<BlackListConfig> configure)
+        public TBootstrap ConfigureBlackList(BlackListConfig config)
         {
-            var cfg = new BlackListConfig(); configure(cfg);
-            _extensions[typeof(BlackListConfig)] = cfg;
+            _instances[typeof(BlackListConfig)] = config ?? BlackListConfig.Empty;
             return (TBootstrap)this;
         }
 
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
             if (_extensions.TryGetValue(typeof(TExtension), out var t))
-                return t is Type type ? Activator.CreateInstance(type) as TExtension : t as TExtension;
+                return Activator.CreateInstance((Type)t) as TExtension;
+            if (_instances.TryGetValue(typeof(TExtension), out var instance))
+                return instance as TExtension;
             return null;
         }
     }
