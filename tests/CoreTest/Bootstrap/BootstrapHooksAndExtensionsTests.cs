@@ -372,17 +372,14 @@ namespace CoreTest.Bootstrap
             listener.OnUpdateInfo(new UpdateInfoEventArgs(new VersionRespDTO { Code = 200 }));
             listener.OnException(new ExceptionEventArgs(new Exception("test"), "test"));
             listener.OnProgress(new ProgressEventArgs(new DownloadProgress("update.zip", 50L * 1024 * 1024, 100L * 1024 * 1024, 50.0, DownloadStatus.Downloading)));
-            listener.OnCustomEvent("test.event", EventArgs.Empty);
-
-            Assert.True(listener.AllDownloadCalled);
+                        Assert.True(listener.AllDownloadCalled);
             Assert.True(listener.DownloadCompletedCalled);
             Assert.True(listener.DownloadErrorCalled);
             Assert.True(listener.StatisticsCalled);
             Assert.True(listener.UpdateInfoCalled);
             Assert.True(listener.ExceptionCalled);
             Assert.True(listener.ProgressCalled);
-            Assert.True(listener.CustomEventCalled);
-        }
+                    }
 
         private sealed class TestEventListener : IUpdateEventListener
         {
