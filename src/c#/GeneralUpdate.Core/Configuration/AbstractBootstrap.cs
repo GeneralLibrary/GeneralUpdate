@@ -85,8 +85,13 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadOrchestrator<T>() where T : Download.Abstractions.IDownloadOrchestrator, new()
         { _extensions[typeof(Download.Abstractions.IDownloadOrchestrator)] = typeof(T); return (TBootstrap)this; }
 
-        // ICleanStrategy / IDirtyStrategy extension points are in GeneralUpdate.Differential.
-        // Add via external extension methods once the project reference is established.
+        /// <summary>Register a custom clean strategy by type name (interface lives in GeneralUpdate.Differential).</summary>
+        public TBootstrap CleanStrategy<T>() where T : class, new()
+        { _extensions[typeof(T)] = typeof(T); return (TBootstrap)this; }
+
+        /// <summary>Register a custom dirty strategy by type name (interface lives in GeneralUpdate.Differential).</summary>
+        public TBootstrap DirtyStrategy<T>() where T : class, new()
+        { _extensions[typeof(T)] = typeof(T); return (TBootstrap)this; }
 
         public TBootstrap ConfigureBlackList(BlackListConfig config)
         {
