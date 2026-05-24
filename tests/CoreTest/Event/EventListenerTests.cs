@@ -36,7 +36,7 @@ public class EventListenerTests
         public void OnException(ExceptionEventArgs args)
             => ExceptionCalls++;
 
-        public void OnProgress(DownloadProgress progress)
+        public void OnProgress(ProgressEventArgs args)
             => ProgressCalls++;
     }
 
