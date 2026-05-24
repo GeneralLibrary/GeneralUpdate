@@ -117,17 +117,32 @@ public class OSSUpdateStrategy : IStrategy
 
     private async Task DownloadVersionsAsync(List<VersionOSS> versions)
     {
-        var assets = versions.Select(v => new Download.Models.DownloadAsset(
-            Name: v.PacketName ?? v.Version ?? "unknown",
-            Url: v.Url ?? string.Empty,
-            Size: 0,
-            SHA256: v.Hash,
-            Version: v.Version ?? "0.0.0"
-        )).ToList();
+        var assets = versions.Select(v =>
+        {
+            if (string.IsNullOrWhiteSpace(v.Url))
+                throw new InvalidOperationException(
+                    $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
+
+            // Use PacketName.zip as the filename to match Decompress() expectations.
+            // The orchestrator falls back to {Name}.{Version} when URL-based extraction fails,
+            // so we set Version to "zip" to produce e.g. "myapp.zip.zip".
+            // Better: set Name to the zip filename directly.
+            var zipName = $"{v.PacketName ?? v.Version}zip";
+            if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                zipName += ".zip";
+
+            return new Download.Models.DownloadAsset(
+                Name: zipName,
+                Url: v.Url,
+                Size: 0,
+                SHA256: v.Hash,
+                Version: v.Version ?? "0.0.0"
+            );
+        }).ToList();
 
         var plan = new Download.Models.DownloadPlan(assets, false);
 
-        var httpClient = new System.Net.Http.HttpClient();
+        var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(TimeOut) };
         try
         {
             var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);

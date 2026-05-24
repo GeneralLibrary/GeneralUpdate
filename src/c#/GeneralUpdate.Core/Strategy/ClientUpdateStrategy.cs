@@ -172,9 +172,19 @@ public class ClientUpdateStrategy : IStrategy
         }
 
         // Build process info for the upgrade process
+        // Convert DownloadAsset list to VersionInfo for ProcessInfo compatibility
+        var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
+        {
+            Name = a.Name,
+            Hash = a.SHA256,
+            Url = a.Url,
+            Version = a.Version,
+            Format = "ZIP"
+        }).ToList();
+
         _configInfo.ProcessInfo = JsonSerializer.Serialize(
             ConfigurationMapper.MapToProcessInfo(
-                _configInfo, new List<VersionInfo>(),
+                _configInfo, downloadVersions,
                 BlackListManager.Instance.BlackFormats.ToList(),
                 BlackListManager.Instance.BlackFiles.ToList(),
                 BlackListManager.Instance.SkipDirectorys.ToList()),
@@ -185,17 +195,21 @@ public class ClientUpdateStrategy : IStrategy
 
         _osStrategy!.Create(_configInfo);
 
-        // Download via orchestrator (replaces old DownloadManager)
+        // Download via orchestrator
         GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
-        var httpClient = new System.Net.Http.HttpClient();
-        try
+        if (_orchestrator != null)
         {
-            var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
-            await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
+            await _orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
         }
-        finally
+        else
         {
-            httpClient.Dispose();
+            var httpClient = new System.Net.Http.HttpClient();
+            try
+            {
+                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
+                await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
+            }
+            finally { httpClient.Dispose(); }
         }
 
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);

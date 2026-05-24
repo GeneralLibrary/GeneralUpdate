@@ -3,7 +3,7 @@ using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Download;
 
-public class UpdateInfoEventArgs(VersionRespDTO info) : EventArgs
+public class UpdateInfoEventArgs(VersionRespDTO? info = null) : EventArgs
 {
-    public VersionRespDTO Info { get; private set; } = info;
+    public VersionRespDTO? Info { get; private set; } = info;
 }
