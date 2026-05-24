@@ -301,9 +301,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// Silent update mode — starts a background poll loop and returns immediately.
     /// The orchestrator checks for updates periodically and prepares them.
     /// When the host process exits, the prepared update is applied.
+    /// Not available in AOT builds (SignalR dependency).
     /// </summary>
     private async Task LaunchSilentAsync()
     {
+#if !AOT
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
 
         var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
@@ -324,6 +326,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
+#else
+        GeneralTracer.Warn("GeneralUpdateBootstrap: silent update not available in AOT builds.");
+        await Task.CompletedTask;
+#endif
     }
 
     private void InitBlackList()

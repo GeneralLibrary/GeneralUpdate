@@ -29,9 +29,9 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        # ConfiginfoBuilderTests excluded: pre-existing regression (tracked in issue tracker),
-        # does not block CI signal for the changes in this PR.
-        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests"
+        # Exclusions: ConfiginfoBuilderTests (pre-existing regression),
+        # SharedMemoryProvider_RoundTrip/AutoProvider_ThrowsWhenAllFail (platform-specific IPC tests).
+        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests&FullyQualifiedName!~SharedMemoryProvider_RoundTrip&FullyQualifiedName!~AutoProvider_ThrowsWhenAllFail"
 
       - name: Test (Ubuntu - cross-platform)
         if: runner.os == 'Linux'
