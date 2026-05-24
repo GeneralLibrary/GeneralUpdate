@@ -1,56 +1,54 @@
 using System;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
+using GeneralUpdate.Core.FileSystem;
 
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
     /// Convenience accessor for UpdateOption constants.
-    /// Maps to the underlying UpdateOption singleton constants.
-    /// New code should use UpdateOptions.X instead of UpdateOption.X.
+    /// Each option has a unique string name and a reasonable default value.
+    /// Use via <c>.Option(UpdateOptions.UpdateUrl, "https://...")</c>.
     /// </summary>
     public static class UpdateOptions
     {
         // ═══ Core ═══
-        public static UpdateOption<int> AppType => UpdateOption.ValueOf<int>("APPTYPE");
+        public static UpdateOption<int> AppType { get; } = UpdateOption.ValueOf<int>("APPTYPE", Configuration.AppType.ClientApp);
 
-        // ═══ Existing options (backward-compatible) ═══
-        public static UpdateOption<Encoding> Encoding => UpdateOption.Encoding;
-        public static UpdateOption<string> Format => UpdateOption.Format;
-        public static UpdateOption<int?> DownloadTimeout => UpdateOption.DownloadTimeOut;
-        public static UpdateOption<bool?> DriveEnabled => UpdateOption.Drive;
-        public static UpdateOption<bool?> PatchEnabled => UpdateOption.Patch;
-        public static UpdateOption<bool?> BackupEnabled => UpdateOption.BackUp;
-        public static UpdateOption<UpdateMode?> Mode => UpdateOption.Mode;
-        public static UpdateOption<bool> Silent => UpdateOption.EnableSilentUpdate;
+        // ═══ Backward-compatible options ═══
+        public static UpdateOption<Encoding> Encoding { get; } = UpdateOption.ValueOf<Encoding>("COMPRESSENCODING", System.Text.Encoding.UTF8);
+        public static UpdateOption<string> Format { get; } = UpdateOption.ValueOf<string>("COMPRESSFORMAT", "ZIP");
+        public static UpdateOption<int?> DownloadTimeout { get; } = UpdateOption.ValueOf<int?>("DOWNLOADTIMEOUT", 30);
+        public static UpdateOption<bool?> DriveEnabled { get; } = UpdateOption.ValueOf<bool?>("DRIVE", false);
+        public static UpdateOption<bool?> PatchEnabled { get; } = UpdateOption.ValueOf<bool?>("PATCH", true);
+        public static UpdateOption<bool?> BackupEnabled { get; } = UpdateOption.ValueOf<bool?>("BACKUP", true);
+        public static UpdateOption<UpdateMode?> Mode { get; } = UpdateOption.ValueOf<UpdateMode?>("MODE", null);
+        public static UpdateOption<bool> Silent { get; } = UpdateOption.ValueOf<bool>("ENABLESILENTUPDATE", false);
 
         // ═══ New options ═══
-        public static readonly UpdateOption<string?> UpdateUrl = UpdateOption.ValueOf<string?>("UPDATEURL");
-        public static readonly UpdateOption<string> AppSecretKey = UpdateOption.ValueOf<string>("APPSECRETKEY");
-        public static readonly UpdateOption<string> AppName = UpdateOption.ValueOf<string>("APPNAME");
-        public static readonly UpdateOption<string> MainAppName = UpdateOption.ValueOf<string>("MAINAPPNAME");
-        public static readonly UpdateOption<string> InstallPath = UpdateOption.ValueOf<string>("INSTALLPATH");
-        public static readonly UpdateOption<string> ClientVersion = UpdateOption.ValueOf<string>("CLIENTVERSION");
-        public static readonly UpdateOption<string?> UpgradeClientVersion = UpdateOption.ValueOf<string?>("UPGRADECLIENTVERSION");
-        public static readonly UpdateOption<int?> Platform = UpdateOption.ValueOf<int?>("PLATFORM");
-        public static readonly UpdateOption<bool> SilentAutoInstall = UpdateOption.ValueOf<bool>("SILENTAUTOINSTALL");
-        public static readonly UpdateOption<int> MaxConcurrency = UpdateOption.ValueOf<int>("MAXCONCURRENCY");
-        public static readonly UpdateOption<bool> EnableResume = UpdateOption.ValueOf<bool>("ENABLERESUME");
-        public static readonly UpdateOption<int> RetryCount = UpdateOption.ValueOf<int>("RETRYCOUNT");
-        public static readonly UpdateOption<bool> VerifyChecksum = UpdateOption.ValueOf<bool>("VERIFYCHECKSUM");
-        public static readonly UpdateOption<string?> ReportUrl = UpdateOption.ValueOf<string?>("REPORTURL");
-        public static readonly UpdateOption<string?> ProductId = UpdateOption.ValueOf<string?>("PRODUCTID");
-        public static readonly UpdateOption<string?> PermissionScript = UpdateOption.ValueOf<string?>("PERMISSIONSCRIPT");
-        public static readonly UpdateOption<string?> Scheme = UpdateOption.ValueOf<string?>("SCHEME");
-        public static readonly UpdateOption<string?> Token = UpdateOption.ValueOf<string?>("TOKEN");
+        public static UpdateOption<string?> UpdateUrl { get; } = UpdateOption.ValueOf<string?>("UPDATEURL", null);
+        public static UpdateOption<string> AppSecretKey { get; } = UpdateOption.ValueOf<string>("APPSECRETKEY", string.Empty);
+        public static UpdateOption<string> AppName { get; } = UpdateOption.ValueOf<string>("APPNAME", string.Empty);
+        public static UpdateOption<string> MainAppName { get; } = UpdateOption.ValueOf<string>("MAINAPPNAME", string.Empty);
+        public static UpdateOption<string> InstallPath { get; } = UpdateOption.ValueOf<string>("INSTALLPATH", AppContext.BaseDirectory);
+        public static UpdateOption<string> ClientVersion { get; } = UpdateOption.ValueOf<string>("CLIENTVERSION", string.Empty);
+        public static UpdateOption<string?> UpgradeClientVersion { get; } = UpdateOption.ValueOf<string?>("UPGRADECLIENTVERSION", null);
+        public static UpdateOption<int?> Platform { get; } = UpdateOption.ValueOf<int?>("PLATFORM", null);
+        public static UpdateOption<bool> SilentAutoInstall { get; } = UpdateOption.ValueOf<bool>("SILENTAUTOINSTALL", false);
+        public static UpdateOption<int> MaxConcurrency { get; } = UpdateOption.ValueOf<int>("MAXCONCURRENCY", 3);
+        public static UpdateOption<bool> EnableResume { get; } = UpdateOption.ValueOf<bool>("ENABLERESUME", true);
+        public static UpdateOption<int> RetryCount { get; } = UpdateOption.ValueOf<int>("RETRYCOUNT", 3);
+        public static UpdateOption<bool> VerifyChecksum { get; } = UpdateOption.ValueOf<bool>("VERIFYCHECKSUM", true);
+        public static UpdateOption<string?> ReportUrl { get; } = UpdateOption.ValueOf<string?>("REPORTURL", null);
+        public static UpdateOption<string?> ProductId { get; } = UpdateOption.ValueOf<string?>("PRODUCTID", null);
+        public static UpdateOption<string?> PermissionScript { get; } = UpdateOption.ValueOf<string?>("PERMISSIONSCRIPT", null);
+        public static UpdateOption<string?> Scheme { get; } = UpdateOption.ValueOf<string?>("SCHEME", null);
+        public static UpdateOption<string?> Token { get; } = UpdateOption.ValueOf<string?>("TOKEN", null);
 
         // ═══ OSS ═══
-        public static readonly UpdateOption<int?> OSSProvider = UpdateOption.ValueOf<int?>("OSSPROVIDER");
-        public static readonly UpdateOption<string?> OSSBucketRegion = UpdateOption.ValueOf<string?>("OSSBUCKETREGION");
+        public static UpdateOption<int?> OSSProvider { get; } = UpdateOption.ValueOf<int?>("OSSPROVIDER", null);
+        public static UpdateOption<string?> OSSBucketRegion { get; } = UpdateOption.ValueOf<string?>("OSSBUCKETREGION", null);
 
         // ═══ Blacklist ═══
-        public static readonly UpdateOption<BlackListConfig> BlackList = UpdateOption.ValueOf<BlackListConfig>("BLACKLIST");
+        public static UpdateOption<BlackListConfig> BlackList { get; } = UpdateOption.ValueOf<BlackListConfig>("BLACKLIST", BlackListConfig.Empty);
     }
 }
