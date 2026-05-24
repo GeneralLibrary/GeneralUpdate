@@ -82,6 +82,12 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
         { _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T); return (TBootstrap)this; }
 
+        public TBootstrap DownloadOrchestrator<T>() where T : Download.Abstractions.IDownloadOrchestrator, new()
+        { _extensions[typeof(Download.Abstractions.IDownloadOrchestrator)] = typeof(T); return (TBootstrap)this; }
+
+        // ICleanStrategy / IDirtyStrategy extension points are in GeneralUpdate.Differential.
+        // Add via external extension methods once the project reference is established.
+
         public TBootstrap ConfigureBlackList(BlackListConfig config)
         {
             _instances[typeof(BlackListConfig)] = config ?? BlackListConfig.Empty;

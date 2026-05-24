@@ -14,6 +14,9 @@ namespace GeneralUpdate.Core.Configuration
         // ═══ Core ═══
         public static UpdateOption<int> AppType { get; } = UpdateOption.ValueOf<int>("APPTYPE", Configuration.AppType.ClientApp);
 
+        // ═══ Diff mode ═══
+        public static UpdateOption<DiffMode> DiffMode { get; } = UpdateOption.ValueOf<DiffMode>("DIFFMODE", Configuration.DiffMode.Serial);
+
         // ═══ Backward-compatible options ═══
         public static UpdateOption<Encoding> Encoding { get; } = UpdateOption.ValueOf<Encoding>("COMPRESSENCODING", System.Text.Encoding.UTF8);
         public static UpdateOption<string> Format { get; } = UpdateOption.ValueOf<string>("COMPRESSFORMAT", "ZIP");
