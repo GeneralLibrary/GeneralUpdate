@@ -83,7 +83,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         try
         {
             token.ThrowIfCancellationRequested();
-            SyncConfigFromOptions();
+            ApplyRuntimeOptions();
 
             // Resolve hooks and reporter from extensions
             var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
@@ -218,31 +218,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     // Configuration
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Initialize internal runtime state from UpdateOptions. Called automatically by LaunchAsync().
-    /// Replaces the old SetConfig(Configinfo) API — all configuration now flows through UpdateOptions.
-    /// </summary>
-    private void SyncConfigFromOptions()
+    public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
     {
-        _configInfo.AppName = GetOption(UpdateOptions.AppName);
-        _configInfo.MainAppName = GetOption(UpdateOptions.MainAppName);
-        _configInfo.InstallPath = GetOption(UpdateOptions.InstallPath);
-        _configInfo.ClientVersion = GetOption(UpdateOptions.ClientVersion);
-        _configInfo.UpgradeClientVersion = GetOption(UpdateOptions.UpgradeClientVersion);
-        _configInfo.UpdateUrl = GetOption(UpdateOptions.UpdateUrl) ?? string.Empty;
-        _configInfo.AppSecretKey = GetOption(UpdateOptions.AppSecretKey);
-        _configInfo.UpdateLogUrl = GetOption(UpdateOptions.UpdateLogUrl);
-        _configInfo.ReportUrl = GetOption(UpdateOptions.ReportUrl);
-        _configInfo.ProductId = GetOption(UpdateOptions.ProductId);
-        _configInfo.Bowl = GetOption(UpdateOptions.Bowl);
-        _configInfo.Scheme = GetOption(UpdateOptions.Scheme);
-        _configInfo.Token = GetOption(UpdateOptions.Token);
-        _configInfo.Script = GetOption(UpdateOptions.Script);
-
-        // Apply runtime computed values
-        _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
-        _configInfo.Format = GetOption(UpdateOptions.Format);
-        _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
+        _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
         var appType = GetOption(UpdateOptions.AppType);
         if (appType != AppType.Upgrade)
@@ -250,6 +228,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             _configInfo.TempPath = StorageManager.GetTempDirectory("upgrade_temp");
             InitBlackList();
         }
+
+        return this;
     }
 
     public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool>? func)
@@ -308,6 +288,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             Script = processInfo.Script,
             DriverDirectory = processInfo.DriverDirectory
         };
+    }
+
+    private void ApplyRuntimeOptions()
+    {
+        _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
+        _configInfo.Format = GetOption(UpdateOptions.Format);
+        _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
     }
 
     /// <summary>

@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    /// Base configuration class containing common fields shared across configuration objects.
-    /// Used by internal runtime state (GlobalConfigInfo) and inter-process communication (ProcessInfo).
-    /// User configuration flows through <see cref="UpdateOptions"/>.
+    /// Base configuration class containing common fields shared across all configuration objects.
+    /// This class serves as the foundation for user-facing configuration (Configinfo),
+    /// internal runtime state (GlobalConfigInfo), and inter-process communication (ProcessInfo).
     /// </summary>
     public abstract class BaseConfigInfo
     {
