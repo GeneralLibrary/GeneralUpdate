@@ -49,12 +49,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         var mainResp = await VersionService.Validate(
             _updateUrl, _clientVersion, AppType.ClientApp,
             _appSecretKey, _platform, _productId,
-            _scheme, _token);
+            _scheme, _token, token);
 
         var upgradeResp = await VersionService.Validate(
             _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.UpgradeApp,
             _appSecretKey, _platform, _productId,
-            _scheme, _token);
+            _scheme, _token, token);
 
         var assets = new List<DownloadAsset>();
 
