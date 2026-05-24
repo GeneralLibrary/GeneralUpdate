@@ -21,7 +21,8 @@ namespace GeneralUpdate.Core;
 /// <summary>
 /// This component is used only for client application bootstrapping classes.
 /// </summary>
-public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
+[Obsolete("Use GeneralUpdateBootstrap with Option(UpdateOptions.AppType, AppType.ClientApp) instead. This class will be removed in v11. See migration guide at https://github.com/GeneralLibrary/GeneralUpdate/issues/344")]
+    public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, IStrategy>
 {
     /// <summary>
     /// All update actions of the core object for automatic upgrades will be related to the packet object.
