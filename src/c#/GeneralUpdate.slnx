@@ -9,7 +9,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="../../tests/BowlTest/BowlTest.csproj" />
-    <Project Path="../../tests/ClientCoreTest/ClientCoreTest.csproj" />
     <Project Path="../../tests/CoreTest/CoreTest.csproj" />
     <Project Path="../../tests/DifferentialTest/DifferentialTest.csproj" />
     <Project Path="../../tests/DrivelutionTest/DrivelutionTest.csproj" />
