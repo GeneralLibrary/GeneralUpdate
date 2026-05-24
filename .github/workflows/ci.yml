@@ -27,8 +27,13 @@ jobs:
       - name: Build
         run: dotnet build ./src/c#/GeneralUpdate.slnx -c Release --no-restore
 
-      - name: Test
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
         run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests"
+
+      - name: Test (Ubuntu)
+        if: runner.os == 'Linux'
+        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests&FullyQualifiedName!~BowlTest"
 
   aot-verify:
     runs-on: windows-latest
@@ -45,4 +50,4 @@ jobs:
         run: dotnet restore ./src/c#/GeneralUpdate.slnx
 
       - name: Verify AOT compatibility
-        run: dotnet publish ./src/c#/GeneralUpdate.Core/GeneralUpdate.Core.csproj -c Release -r win-x64 /p:PublishAot=true --no-restore
+        run: dotnet publish ./src/c#/GeneralUpdate.Core/GeneralUpdate.Core.csproj -c Release -r win-x64 -f net10.0 /p:PublishAot=true --no-restore
