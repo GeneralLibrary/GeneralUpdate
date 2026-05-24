@@ -1,0 +1,48 @@
+name: CI Build + Test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build-and-test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/c#/GeneralUpdate.slnx
+
+      - name: Build
+        run: dotnet build ./src/c#/GeneralUpdate.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests"
+
+  aot-verify:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ./src/c#/GeneralUpdate.slnx
+
+      - name: Verify AOT compatibility
+        run: dotnet publish ./src/c#/GeneralUpdate.Core/GeneralUpdate.Core.csproj -c Release -r win-x64 /p:PublishAot=true --no-restore

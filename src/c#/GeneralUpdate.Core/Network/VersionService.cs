@@ -55,11 +55,11 @@ namespace GeneralUpdate.Core.Network
         }
 
         public static Task<VersionRespDTO> Validate(string url, string version,
-            int appType, string appKey, int platform, string productId,
+            AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
             var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
-            return new VersionService(a).ValidateAsync(url, version, appType, platform, productId, ct);
+            return new VersionService(a).ValidateAsync(url, version, (int)appType, (int)platform, productId, ct);
         }
 
         private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)

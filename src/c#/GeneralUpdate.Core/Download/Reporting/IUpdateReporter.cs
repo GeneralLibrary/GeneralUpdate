@@ -22,7 +22,7 @@ public record UpdateReport(
     string FromVersion,
     string? ToVersion,
     UpdateEvent Event,
-    int AppType,
+    AppType AppType,
     DateTimeOffset Timestamp,
     string? ErrorMessage = null,
     double? DurationMs = null
@@ -63,7 +63,6 @@ public class HttpUpdateReporter : IUpdateReporter
         }
         catch (Exception ex)
         {
-            // Silent failure — reporting should never break the update flow
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
     }

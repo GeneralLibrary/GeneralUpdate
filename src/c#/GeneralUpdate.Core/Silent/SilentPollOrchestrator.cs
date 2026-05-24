@@ -195,11 +195,11 @@ public class SilentPollOrchestrator : IDisposable
         throw new PlatformNotSupportedException();
     }
 
-    private static int GetPlatform()
+    private static PlatformType GetPlatform()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
-        return -1;
+        return PlatformType.Unknown;
     }
 
     private static bool CheckFail(string? version)

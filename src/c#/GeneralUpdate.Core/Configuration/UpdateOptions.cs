@@ -12,7 +12,7 @@ namespace GeneralUpdate.Core.Configuration
     public static class UpdateOptions
     {
         // ═══ Core ═══
-        public static UpdateOption<int> AppType { get; } = UpdateOption.ValueOf<int>("APPTYPE", Configuration.AppType.ClientApp);
+        public static UpdateOption<AppType> AppType { get; } = UpdateOption.ValueOf<AppType>("APPTYPE", Configuration.AppType.Client);
 
         // ═══ Diff mode ═══
         public static UpdateOption<DiffMode> DiffMode { get; } = UpdateOption.ValueOf<DiffMode>("DIFFMODE", Configuration.DiffMode.Serial);
@@ -35,7 +35,7 @@ namespace GeneralUpdate.Core.Configuration
         public static UpdateOption<string> InstallPath { get; } = UpdateOption.ValueOf<string>("INSTALLPATH", AppContext.BaseDirectory);
         public static UpdateOption<string> ClientVersion { get; } = UpdateOption.ValueOf<string>("CLIENTVERSION", string.Empty);
         public static UpdateOption<string?> UpgradeClientVersion { get; } = UpdateOption.ValueOf<string?>("UPGRADECLIENTVERSION", null);
-        public static UpdateOption<int?> Platform { get; } = UpdateOption.ValueOf<int?>("PLATFORM", null);
+        public static UpdateOption<PlatformType?> Platform { get; } = UpdateOption.ValueOf<PlatformType?>("PLATFORM", null);
         public static UpdateOption<bool> SilentAutoInstall { get; } = UpdateOption.ValueOf<bool>("SILENTAUTOINSTALL", false);
         public static UpdateOption<int> SilentPollIntervalMinutes { get; } = UpdateOption.ValueOf<int>("SILENTPOLLINTERVALMINUTES", 60);
         public static UpdateOption<int> MaxConcurrency { get; } = UpdateOption.ValueOf<int>("MAXCONCURRENCY", 3);
@@ -49,7 +49,7 @@ namespace GeneralUpdate.Core.Configuration
         public static UpdateOption<string?> Token { get; } = UpdateOption.ValueOf<string?>("TOKEN", null);
 
         // ═══ OSS ═══
-        public static UpdateOption<int?> OSSProvider { get; } = UpdateOption.ValueOf<int?>("OSSPROVIDER", null);
+        public static UpdateOption<OssProvider?> OSSProvider { get; } = UpdateOption.ValueOf<OssProvider?>("OSSPROVIDER", null);
         public static UpdateOption<string?> OSSBucketRegion { get; } = UpdateOption.ValueOf<string?>("OSSBUCKETREGION", null);
 
         // ═══ Blacklist ═══

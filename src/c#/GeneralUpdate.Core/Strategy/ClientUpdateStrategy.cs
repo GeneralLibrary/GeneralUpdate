@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// and starts the upgrade process.
 /// </summary>
 /// <remarks>
-/// This is the AppType.ClientApp role strategy. It composes an OS-specific
+/// This is the AppType.Client role strategy. It composes an OS-specific
 /// strategy (Windows/Linux/Mac) for platform operations.
 /// </remarks>
 public class ClientUpdateStrategy : IStrategy
@@ -38,6 +38,8 @@ public class ClientUpdateStrategy : IStrategy
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+    /// <summary>Download source (e.g., HTTP, SignalR Hub). Override via <c>.DownloadSource&lt;T&gt;()</c>.</summary>
+    public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
     public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
 
@@ -109,8 +111,8 @@ public class ClientUpdateStrategy : IStrategy
     {
         GeneralTracer.Info($"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
-        // Use HttpDownloadSource to validate versions and get download assets
-        var downloadSource = new Download.Sources.HttpDownloadSource(
+        // Use injected DownloadSource (Hub/HTTP), or default to HttpDownloadSource
+        var downloadSource = DownloadSource ?? new Download.Sources.HttpDownloadSource(
             _configInfo.UpdateUrl,
             _configInfo.ClientVersion,
             _configInfo.UpgradeClientVersion,
@@ -270,11 +272,11 @@ public class ClientUpdateStrategy : IStrategy
         return new Version(fail) >= new Version(version);
     }
 
-    private static int GetPlatform()
+    private static PlatformType GetPlatform()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
-        return -1;
+        return PlatformType.Unknown;
     }
 
     private async Task CallSmallBowlHomeAsync(string processName)
@@ -320,7 +322,7 @@ public class ClientUpdateStrategy : IStrategy
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
-            AppType.ClientApp
+            AppType.Client
         );
     }
 

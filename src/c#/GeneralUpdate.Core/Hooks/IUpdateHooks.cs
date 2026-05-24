@@ -21,7 +21,7 @@ public record UpdateContext(
     string InstallPath,
     string CurrentVersion,
     string? TargetVersion,
-    int AppType
+    Configuration.AppType AppType
 );
 
 public record DownloadContext(

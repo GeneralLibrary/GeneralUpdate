@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Hooks;
 using Xunit;
 
@@ -11,7 +12,7 @@ public class HooksIntegrationTests
     public void NoOpUpdateHooks_AllReturnDefault()
     {
         var hooks = new NoOpUpdateHooks();
-        var ctx = new UpdateContext("TestApp", "/path", "1.0.0", "1.0.1", 1);
+        var ctx = new UpdateContext("TestApp", "/path", "1.0.0", "1.0.1", AppType.Client);
 
         var beforeResult = hooks.OnBeforeUpdateAsync(ctx).GetAwaiter().GetResult();
         Assert.True(beforeResult);
@@ -27,7 +28,7 @@ public class HooksIntegrationTests
     public async Task UnixPermissionHooks_BeforeStartApp_DoesNotThrow()
     {
         var hooks = new UnixPermissionHooks();
-        var ctx = new UpdateContext("non_existent_app", "/tmp/test", "1.0.0", null, 1);
+        var ctx = new UpdateContext("non_existent_app", "/tmp/test", "1.0.0", null, AppType.Client);
 
         await hooks.OnBeforeStartAppAsync(ctx);
     }
@@ -43,7 +44,7 @@ public class HooksIntegrationTests
     public void CustomPermissionHooks_StoresScriptPath()
     {
         var hooks = new CustomPermissionHooks("/usr/local/bin/my-script.sh");
-        var ctx = new UpdateContext("app", "/path", "1.0.0", null, 1);
+        var ctx = new UpdateContext("app", "/path", "1.0.0", null, AppType.Client);
 
         // CustomPermissionHooks throws when script fails
         var ex = Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -54,7 +55,7 @@ public class HooksIntegrationTests
     public void CustomPermissionHooks_BeforeUpdate_Allows()
     {
         var hooks = new CustomPermissionHooks("/bin/true");
-        var ctx = new UpdateContext("app", "/path", "1.0.0", "1.0.1", 1);
+        var ctx = new UpdateContext("app", "/path", "1.0.0", "1.0.1", AppType.Client);
 
         var result = hooks.OnBeforeUpdateAsync(ctx).GetAwaiter().GetResult();
         Assert.True(result);
@@ -63,13 +64,13 @@ public class HooksIntegrationTests
     [Fact]
     public void UpdateContext_PropertiesSet()
     {
-        var ctx = new UpdateContext("MyApp", "/opt/myapp", "1.0.0", "2.0.0", 1);
+        var ctx = new UpdateContext("MyApp", "/opt/myapp", "1.0.0", "2.0.0", AppType.Client);
 
         Assert.Equal("MyApp", ctx.AppName);
         Assert.Equal("/opt/myapp", ctx.InstallPath);
         Assert.Equal("1.0.0", ctx.CurrentVersion);
         Assert.Equal("2.0.0", ctx.TargetVersion);
-        Assert.Equal(1, ctx.AppType);
+        Assert.Equal(AppType.Client, ctx.AppType);
     }
 
     [Fact]
