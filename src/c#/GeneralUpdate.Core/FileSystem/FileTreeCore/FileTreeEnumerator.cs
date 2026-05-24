@@ -4,7 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using GeneralUpdate.Core.FileSystem;
 
-namespace GeneralUpdate.Core.FileSystem.FileTree;
+namespace GeneralUpdate.Core.FileSystem.FileTreeCore;
 
 /// <summary>Recursively enumerates files with blacklist filtering and SHA256 hashing.</summary>
 public class FileTreeEnumerator
@@ -79,8 +79,10 @@ public class FileTreeComparer
         var modified = new List<string>();
         var deleted = new List<string>();
 
-        foreach (var (path, newEntry) in newSnap.Files)
+        foreach (var kv in newSnap.Files)
         {
+            var path = kv.Key;
+            var newEntry = kv.Value;
             if (oldSnap.Files.TryGetValue(path, out var oldEntry))
             {
                 if (oldEntry.SHA256 != newEntry.SHA256)

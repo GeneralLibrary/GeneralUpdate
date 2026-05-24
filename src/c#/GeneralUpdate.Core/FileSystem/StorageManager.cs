@@ -269,7 +269,7 @@ namespace GeneralUpdate.Core.FileSystem
 
             foreach (var subPath in Directory.EnumerateDirectories(path))
             {
-                if (BlackListManager.Instance.IsSkipDirectory(subPath)) continue;
+                if (BlackListManager.Instance.ShouldSkipDirectory(subPath)) continue;
                 resultFiles.AddRange(ReadFileNode(subPath, rootPath));
             }
 
@@ -282,21 +282,6 @@ namespace GeneralUpdate.Core.FileSystem
         private long GetId() => Interlocked.Increment(ref _fileCount);
 
         private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
-
-        /// <summary>Restore files from backup directory to install path.</summary>
-        public static void Restore(string backupDir, string installPath)
-        {
-            if (!Directory.Exists(backupDir))
-                throw new DirectoryNotFoundException($"Backup directory not found: {backupDir}");
-
-            foreach (var file in Directory.GetFiles(backupDir, "*", SearchOption.AllDirectories))
-            {
-                var relativePath = file.Substring(backupDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                var dest = Path.Combine(installPath, relativePath);
-                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                File.Copy(file, dest, true);
-            }
-        }
 
         /// <summary>Clean old backups, keeping only the N most recent versions.</summary>
         public static void CleanBackup(string installPath, int keepVersions = 3)

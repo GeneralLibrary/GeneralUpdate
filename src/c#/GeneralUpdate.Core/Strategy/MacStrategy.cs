@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Strategy;
 

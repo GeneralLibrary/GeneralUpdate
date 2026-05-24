@@ -21,10 +21,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
         <Compile Remove="Pipeline\DrivelutionMiddleware.cs" />
+        <Compile Remove="Pipeline\PatchMiddleware.cs" />
+        <Compile Remove="Strategy\WindowsStrategy.cs" />
+        <Compile Remove="Strategy\LinuxStrategy.cs" />
+        <Compile Remove="Strategy\OSSStrategy.cs" />
+        <Compile Remove="Strategy\MacStrategy.cs" />
+        <Compile Remove="Bootstrap\GeneralUpdateBootstrap.cs" />
+        <Compile Remove="Bootstrap\GeneralClientBootstrap.cs" />
+        <Compile Remove="Bootstrap\GeneralUpdateOSS.cs" />
+        <Compile Remove="Bootstrap\GeneralClientOSS.cs" />
+        <Compile Remove="Silent\SilentUpdateMode.cs" />
     </ItemGroup>
 </Project>

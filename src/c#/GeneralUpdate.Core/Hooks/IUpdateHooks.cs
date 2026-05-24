@@ -50,7 +50,7 @@ public class UnixPermissionHooks : IUpdateHooks
     {
         var mainApp = Path.Combine(ctx.InstallPath, ctx.AppName);
         if (File.Exists(mainApp))
-            await Process.Start("chmod", $"+x \"{mainApp}\"").WaitForExitAsync();
+            await Task.Run(() => Process.Start("chmod", $"+x \"{mainApp}\"").WaitForExit());
     }
     public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) => Task.FromResult(true);
     public Task OnDownloadCompletedAsync(DownloadContext ctx) => Task.CompletedTask;
@@ -72,7 +72,7 @@ public class CustomPermissionHooks : IUpdateHooks
             RedirectStandardOutput = true, RedirectStandardError = true
         };
         using var proc = Process.Start(psi)!;
-        await proc.WaitForExitAsync();
+        await Task.Run(() => proc.WaitForExit());
         if (proc.ExitCode != 0)
             throw new InvalidOperationException(
                 $"Permission script '{_scriptPath}' failed (exit {proc.ExitCode})");

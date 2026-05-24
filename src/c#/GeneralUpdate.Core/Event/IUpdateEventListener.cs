@@ -1,3 +1,4 @@
+using System;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Event;

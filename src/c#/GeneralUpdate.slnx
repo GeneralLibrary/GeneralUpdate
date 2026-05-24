@@ -1,8 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="GeneralUpdate.Bowl/GeneralUpdate.Bowl.csproj" />
-    <Project Path="GeneralUpdate.ClientCore/GeneralUpdate.ClientCore.csproj" />
-    <Project Path="GeneralUpdate.Common/GeneralUpdate.Common.csproj" />
     <Project Path="GeneralUpdate.Core/GeneralUpdate.Core.csproj" />
     <Project Path="GeneralUpdate.Differential/GeneralUpdate.Differential.csproj" />
     <Project Path="GeneralUpdate.Drivelution/GeneralUpdate.Drivelution.csproj" />
