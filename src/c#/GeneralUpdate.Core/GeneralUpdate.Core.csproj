@@ -34,7 +34,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- DrivelutionMiddleware: requires net10.0 target + Drivelution reference -->
+        <!-- DrivelutionMiddleware: available for users who add GeneralUpdate.Drivelution reference.
+             Restore by: 1) Add <ProjectReference> to Drivelution, 2) Remove this Compile Remove -->
         <Compile Remove="Pipeline\DrivelutionMiddleware.cs" />
         <!-- IsExternalInit is built-in for net8.0+ (C# 9 records) -->
         <Compile Remove="Configuration\IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
