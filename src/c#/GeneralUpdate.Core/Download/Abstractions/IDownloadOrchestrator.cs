@@ -9,8 +9,12 @@ namespace GeneralUpdate.Core.Download.Abstractions;
 /// <summary>Orchestrates batch downloads with concurrency control.</summary>
 public interface IDownloadOrchestrator
 {
+    /// <summary>
+    /// Execute downloads for all assets in the plan.
+    /// Handles parallelism, retry, and SHA256 verification.
+    /// </summary>
     Task<DownloadReport> ExecuteAsync(
-        IReadOnlyList<string> urls,
+        DownloadPlan plan,
         string destDir,
         int maxConcurrency = 3,
         IProgress<DownloadProgress>? progress = null,
