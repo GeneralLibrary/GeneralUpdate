@@ -11,5 +11,11 @@ namespace GeneralUpdate.Core.Configuration
         /// upgrade program.
         /// </summary>
         public const int UpgradeApp = 2;
+
+        /// <summary>
+        /// OSS (Object Storage Service) update mode.
+        /// Downloads packages from cloud storage without a dedicated update server.
+        /// </summary>
+        public const int OSSApp = 3;
     }
 }
