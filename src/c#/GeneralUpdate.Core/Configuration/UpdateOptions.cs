@@ -34,6 +34,7 @@ namespace GeneralUpdate.Core.Configuration
         public static UpdateOption<string?> UpgradeClientVersion { get; } = UpdateOption.ValueOf<string?>("UPGRADECLIENTVERSION", null);
         public static UpdateOption<int?> Platform { get; } = UpdateOption.ValueOf<int?>("PLATFORM", null);
         public static UpdateOption<bool> SilentAutoInstall { get; } = UpdateOption.ValueOf<bool>("SILENTAUTOINSTALL", false);
+        public static UpdateOption<int> SilentPollIntervalMinutes { get; } = UpdateOption.ValueOf<int>("SILENTPOLLINTERVALMINUTES", 60);
         public static UpdateOption<int> MaxConcurrency { get; } = UpdateOption.ValueOf<int>("MAXCONCURRENCY", 3);
         public static UpdateOption<bool> EnableResume { get; } = UpdateOption.ValueOf<bool>("ENABLERESUME", true);
         public static UpdateOption<int> RetryCount { get; } = UpdateOption.ValueOf<int>("RETRYCOUNT", 3);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 
 namespace GeneralUpdate.Core.Download;
@@ -84,6 +85,25 @@ public static class DownloadPlanBuilder
         var cur = ParseVersion(currentVersion);
         if (min == null || cur == null) return true;
         return cur >= min;
+    }
+
+    /// <summary>Map a PacketDTO to a DownloadAsset. Public for use by download sources.</summary>
+    public static DownloadAsset MapToAsset(Abstractions.PacketDTO p)
+    {
+        return new DownloadAsset(
+            Name: p.Name ?? p.Version ?? "unknown",
+            Url: p.Url ?? string.Empty,
+            Size: p.Size ?? 0,
+            SHA256: p.Hash,
+            Version: p.Version ?? "0.0.0",
+            IsCrossVersion: p.IsCrossVersion == true,
+            FromVersion: p.FromVersion,
+            MinClientVersion: p.MinClientVersion,
+            SourceArchiveHash: p.SourceArchiveHash,
+            TargetArchiveHash: p.TargetArchiveHash,
+            IsForcibly: p.IsForcibly == true,
+            IsFreeze: p.IsFreeze == true
+        );
     }
 
     /// <summary>Parse a version string, returning null on failure.</summary>
