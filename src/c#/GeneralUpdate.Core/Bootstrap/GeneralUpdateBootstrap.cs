@@ -27,9 +27,7 @@ namespace GeneralUpdate.Core;
 /// </list>
 /// </summary>
 /// <remarks>
-/// <b>Migration from GeneralClientBootstrap:</b>
-/// Replace <c>new GeneralClientBootstrap().SetConfig(cfg).LaunchAsync()</c> with
-/// <c>new GeneralUpdateBootstrap().Option(UpdateOptions.AppType, AppType.ClientApp).SetConfig(cfg).LaunchAsync()</c>.
+/// For Client mode, use <c>Option(UpdateOptions.AppType, AppType.ClientApp)</c>.
 /// </remarks>
 public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
 {
@@ -72,7 +70,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
                 foreach (var opt in _customOptions)
                     clientStrat.UseCustomOption(opt);
-                CallSmallBowlHome(_configInfo.Bowl);
+                await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
             }
 
             roleStrategy.Create(_configInfo);
@@ -141,7 +139,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
             Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", serialized);
             Process.Start(appPath);
-            Process.GetCurrentProcess().Kill();
+            await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -241,7 +239,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         BlackListManager.Instance.AddSkipDirectorys(_configInfo.SkipDirectorys);
     }
 
-    private void CallSmallBowlHome(string processName)
+    private async Task CallSmallBowlHomeAsync(string processName)
     {
         if (string.IsNullOrWhiteSpace(processName)) return;
         try
@@ -249,13 +247,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             var processes = Process.GetProcessesByName(processName);
             foreach (var process in processes)
             {
-                GeneralTracer.Info($"Killing process {process.ProcessName} (ID: {process.Id})");
-                process.Kill();
+                GeneralTracer.Info($"Shutting down process {process.ProcessName} (ID: {process.Id})");
+                await GracefulExit.ShutdownAsync(process).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("CallSmallBowlHome failed.", ex);
+            GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
         }
     }
 

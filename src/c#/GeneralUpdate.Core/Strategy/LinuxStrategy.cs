@@ -76,7 +76,7 @@ public class LinuxStrategy : AbstractStrategy
         {
             GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: releasing tracer and terminating updater process.");
             GeneralTracer.Dispose();
-            Process.GetCurrentProcess().Kill();
+            GracefulExit.CurrentProcessAsync().GetAwaiter().GetResult();
         }
     }
 

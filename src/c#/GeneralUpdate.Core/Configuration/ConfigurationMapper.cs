@@ -75,7 +75,7 @@ namespace GeneralUpdate.Core.Configuration
                 throw new ArgumentNullException(nameof(source), "GlobalConfigInfo source cannot be null");
 
             // Create ProcessInfo with all required parameters in a single location
-            // This replaces the error-prone manual parameter passing in GeneralClientBootstrap
+            // Centralized parameter mapping for ProcessInfo creation
             return new ProcessInfo(
                 appName: source.MainAppName,              // Maps MainAppName to ProcessInfo.AppName
                 installPath: source.InstallPath,

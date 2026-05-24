@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -49,7 +49,7 @@ public class ClientUpdateStrategy : IStrategy
         try
         {
             GeneralTracer.Debug("ClientUpdateStrategy.ExecuteAsync start.");
-            CallSmallBowlHome(_configInfo.Bowl);
+            await CallSmallBowlHomeAsync(_configInfo.Bowl);
             ExecuteCustomOptions();
             await ExecuteWorkflowAsync();
         }
@@ -88,7 +88,7 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        // Silent mode â€” delegate to SilentUpdateMode
+        // Silent mode ¡ª delegate to SilentUpdateMode
         // (encoding/format/timeout are read from _configInfo)
         var defaultEncoding = Encoding.UTF8;
         var defaultTimeout = 60;
@@ -167,18 +167,18 @@ public class ClientUpdateStrategy : IStrategy
         switch (_configInfo.IsUpgradeUpdate)
         {
             case true when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: both upgrade+main â€” downloading and executing.");
+                GeneralTracer.Info("ClientUpdateStrategy: both upgrade+main ¡ª downloading and executing.");
                 await DownloadAsync();
                 await _osStrategy.ExecuteAsync();
                 _osStrategy.StartApp();
                 break;
             case true when !_configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: upgrade-only â€” downloading and executing.");
+                GeneralTracer.Info("ClientUpdateStrategy: upgrade-only ¡ª downloading and executing.");
                 await DownloadAsync();
                 await _osStrategy.ExecuteAsync();
                 break;
             case false when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: main-only â€” starting updater.");
+                GeneralTracer.Info("ClientUpdateStrategy: main-only ¡ª starting updater.");
                 _osStrategy.StartApp();
                 break;
         }
@@ -194,6 +194,8 @@ public class ClientUpdateStrategy : IStrategy
             return new WindowsStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return new LinuxStrategy();
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return new MacStrategy();
         throw new PlatformNotSupportedException("The current operating system is not supported!");
     }
 
@@ -254,7 +256,7 @@ public class ClientUpdateStrategy : IStrategy
         return -1;
     }
 
-    private void CallSmallBowlHome(string processName)
+    private async Task CallSmallBowlHomeAsync(string processName)
     {
         if (string.IsNullOrWhiteSpace(processName)) return;
         try
@@ -263,13 +265,13 @@ public class ClientUpdateStrategy : IStrategy
             if (processes.Length == 0) return;
             foreach (var process in processes)
             {
-                GeneralTracer.Info($"Killing process {process.ProcessName} (ID: {process.Id})");
-                process.Kill();
+                GeneralTracer.Info($"Shutting down process {process.ProcessName} (ID: {process.Id})");
+                await GracefulExit.ShutdownAsync(process).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("CallSmallBowlHome failed.", ex);
+            GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
         }
     }
 
