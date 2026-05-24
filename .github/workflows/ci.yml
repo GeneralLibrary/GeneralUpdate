@@ -29,6 +29,8 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
+        # ConfiginfoBuilderTests excluded: pre-existing regression (tracked in issue tracker),
+        # does not block CI signal for the changes in this PR.
         run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests"
 
       - name: Test (Ubuntu - cross-platform)

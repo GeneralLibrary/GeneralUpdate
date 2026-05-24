@@ -139,6 +139,16 @@ public class SharedMemoryProcessInfoProvider : IProcessInfoProvider
         {
             return Task.FromResult<ProcessInfo?>(null);
         }
+        catch (DirectoryNotFoundException)
+        {
+            return Task.FromResult<ProcessInfo?>(null);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Platform-specific failures (e.g. Linux /dev/shm not mounted)
+            GeneralTracer.Warn($"SharedMemoryProvider: receive failed: {ex.Message}");
+            return Task.FromResult<ProcessInfo?>(null);
+        }
     }
 }
 

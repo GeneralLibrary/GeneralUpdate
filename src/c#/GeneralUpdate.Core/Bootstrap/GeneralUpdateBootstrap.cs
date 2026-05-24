@@ -94,14 +94,25 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             {
                 clientStrat.Hooks = hooks;
                 clientStrat.Reporter = reporter;
-                // Inject SignalR Hub download source if configured
-                var hubConfig = GetOption(UpdateOptions.Hub);
-                if (hubConfig != null && !string.IsNullOrEmpty(hubConfig.Url))
+                // Resolve DownloadSource from extension registry (Hub, custom, etc.)
+                var resolvedSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
+
+                // Inject SignalR Hub download source if configured (not available in AOT)
+#if !AOT
+                if (resolvedSource == null)
                 {
-                    clientStrat.DownloadSource = new Download.Sources.HubDownloadSource(
-                        hubConfig.Url, GetOption(UpdateOptions.Token), GetOption(UpdateOptions.AppSecretKey));
-                    GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource injected from HubConfig.");
+                    var hubConfig = GetOption(UpdateOptions.Hub);
+                    if (hubConfig != null && !string.IsNullOrEmpty(hubConfig.Url))
+                    {
+                        var hubSource = new Download.Sources.HubDownloadSource(
+                            hubConfig.Url, GetOption(UpdateOptions.Token), GetOption(UpdateOptions.AppSecretKey));
+                        await hubSource.StartAsync().ConfigureAwait(false);
+                        resolvedSource = hubSource;
+                        GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource started from HubConfig.");
+                    }
                 }
+#endif
+                clientStrat.DownloadSource = resolvedSource;
                 if (_updatePrecheck != null)
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
                 foreach (var opt in _customOptions)
@@ -129,6 +140,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         }
         finally
         {
+            // Dispose HubDownloadSource if it was started
+            if (roleStrategy is ClientUpdateStrategy cs && cs.DownloadSource is IDisposable d)
+                d.Dispose();
             _cts?.Dispose();
             _cts = null;
         }

@@ -38,7 +38,7 @@ public class ClientUpdateStrategy : IStrategy
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
-    /// <summary>Download source (e.g., HTTP, SignalR Hub). Override via <c>.DownloadSource&lt;T&gt;()</c>.</summary>
+    /// <summary>Download source (e.g., HTTP, SignalR Hub). Injected by bootstrap via HubConfig or extension registry (<c>.DownloadSource&lt;T&gt;()</c>).</summary>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
     public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
@@ -276,6 +276,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return PlatformType.MacOS;
         return PlatformType.Unknown;
     }
 
