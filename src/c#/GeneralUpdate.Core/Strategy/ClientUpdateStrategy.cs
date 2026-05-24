@@ -96,8 +96,6 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        // Silent mode �� delegate to SilentUpdateMode
-        // (encoding/format/timeout are read from _configInfo)
         var defaultEncoding = Encoding.UTF8;
         var defaultTimeout = 60;
         if (true /* silent check would read from options */)

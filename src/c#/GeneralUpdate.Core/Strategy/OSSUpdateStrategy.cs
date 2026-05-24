@@ -117,21 +117,23 @@ public class OSSUpdateStrategy : IStrategy
 
     private async Task DownloadVersionsAsync(List<VersionOSS> versions)
     {
-        var manager = new DownloadManager(_appPath, Format.ZIP, TimeOut);
-        foreach (var versionInfo in versions)
-        {
-            var version = new VersionInfo
-            {
-                Name = versionInfo.PacketName,
-                Version = versionInfo.Version,
-                Url = versionInfo.Url,
-                Format = Format.ZIP,
-                Hash = versionInfo.Hash
-            };
-            manager.Add(new DownloadTask(manager, version));
-        }
+        var assets = versions.Select(v => new Download.Models.DownloadAsset(
+            Name: v.PacketName ?? v.Version ?? "unknown",
+            Url: v.Url ?? string.Empty,
+            Size: 0,
+            SHA256: v.Hash,
+            Version: v.Version ?? "0.0.0"
+        )).ToList();
 
-        await manager.LaunchTasksAsync();
+        var plan = new Download.Models.DownloadPlan(assets, false);
+
+        var httpClient = new System.Net.Http.HttpClient();
+        try
+        {
+            var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
+            await orchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
+        }
+        finally { httpClient.Dispose(); }
     }
 
     private void Decompress(List<VersionOSS> versions)
