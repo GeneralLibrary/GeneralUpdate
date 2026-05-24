@@ -34,6 +34,11 @@ public class ClientUpdateStrategy : IStrategy
     private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
     private readonly DiffMode _diffMode = DiffMode.Serial;
 
+    /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
+    public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
+    /// <summary>Update status reporter injected by the bootstrap.</summary>
+    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+
     public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
 
     public void Create(GlobalConfigInfo parameter)
@@ -55,6 +60,9 @@ public class ClientUpdateStrategy : IStrategy
         }
         catch (Exception ex)
         {
+            var errCtx = BuildUpdateContext();
+            await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
+            await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
             GeneralTracer.Error("ClientUpdateStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
@@ -88,7 +96,7 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        // Silent mode �� delegate to SilentUpdateMode
+        // Silent mode �� delegate to SilentUpdateMode
         // (encoding/format/timeout are read from _configInfo)
         var defaultEncoding = Encoding.UTF8;
         var defaultTimeout = 60;
@@ -124,6 +132,17 @@ public class ClientUpdateStrategy : IStrategy
             GeneralTracer.Info("ClientUpdateStrategy: update skipped.");
             return;
         }
+
+        // Hooks: allow cancellation before download
+        var hooksCtx = BuildUpdateContext();
+        if (!await SafeOnBeforeUpdateAsync(hooksCtx).ConfigureAwait(false))
+        {
+            GeneralTracer.Info("ClientUpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+            return;
+        }
+
+        // Report: update started
+        await SafeReportUpdateStartedAsync(hooksCtx).ConfigureAwait(false);
 
         InitBlackList();
         ApplyRuntimeOptions(encoding, timeout);
@@ -167,18 +186,22 @@ public class ClientUpdateStrategy : IStrategy
         switch (_configInfo.IsUpgradeUpdate)
         {
             case true when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: both upgrade+main �� downloading and executing.");
+                GeneralTracer.Info("ClientUpdateStrategy: both upgrade+main -- downloading and executing.");
                 await DownloadAsync();
+                await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
                 await _osStrategy.ExecuteAsync();
+                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
                 _osStrategy.StartApp();
                 break;
             case true when !_configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: upgrade-only �� downloading and executing.");
+                GeneralTracer.Info("ClientUpdateStrategy: upgrade-only -- downloading and executing.");
                 await DownloadAsync();
+                await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
                 await _osStrategy.ExecuteAsync();
                 break;
             case false when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: main-only �� starting updater.");
+                GeneralTracer.Info("ClientUpdateStrategy: main-only -- starting updater.");
+                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
                 _osStrategy.StartApp();
                 break;
         }
@@ -286,6 +309,76 @@ public class ClientUpdateStrategy : IStrategy
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
             }
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Hooks & Reporter safe wrappers
+    // ════════════════════════════════════════════════════════════════
+
+    private Hooks.UpdateContext BuildUpdateContext()
+    {
+        return new Hooks.UpdateContext(
+            _configInfo?.AppName ?? "unknown",
+            _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
+            _configInfo?.ClientVersion ?? "0.0.0",
+            _configInfo?.LastVersion,
+            AppType.ClientApp
+        );
+    }
+
+    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
+    {
+        try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
+    }
+
+    private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
+    {
+        try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
+    {
+        try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateStarted, ctx.AppType, DateTimeOffset.UtcNow
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.DownloadCompleted, ctx.AppType, DateTimeOffset.UtcNow
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report DownloadCompleted failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateFailed, ctx.AppType, DateTimeOffset.UtcNow,
+                ErrorMessage: error.Message
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
     }
 
     #endregion

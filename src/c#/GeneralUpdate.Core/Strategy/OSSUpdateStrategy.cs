@@ -28,6 +28,11 @@ public class OSSUpdateStrategy : IStrategy
     private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
     private const int TimeOut = 60;
 
+    /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
+    public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
+    /// <summary>Update status reporter injected by the bootstrap.</summary>
+    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+
     public void Create(GlobalConfigInfo parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
@@ -38,6 +43,7 @@ public class OSSUpdateStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OSSUpdateStrategy not configured. Call Create() first.");
 
+        var ctx = BuildUpdateContext();
         try
         {
             var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.AppName}_versions.json";
@@ -55,17 +61,35 @@ public class OSSUpdateStrategy : IStrategy
 
             versions = versions.OrderBy(v => v.PubTime).ToList();
 
+            // Hooks: allow cancellation before download
+            if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
+            {
+                GeneralTracer.Info("OSSUpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+                return;
+            }
+
+            // Report: update started
+            await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
+
             GeneralTracer.Debug($"OSSUpdateStrategy: 3. Downloading {versions.Count} version(s).");
             await DownloadVersionsAsync(versions);
 
             GeneralTracer.Debug("OSSUpdateStrategy: 4. Decompressing packages.");
             Decompress(versions);
 
+            // Report: update applied
+            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+
+            // Hooks: before starting main app
+            await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
+
             GeneralTracer.Debug("OSSUpdateStrategy: 5. Launching main application.");
             StartApp();
         }
         catch (Exception ex)
         {
+            await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
+            await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
             GeneralTracer.Error("OSSUpdateStrategy.ExecuteAsync failed.", ex);
             throw;
         }
@@ -88,6 +112,8 @@ public class OSSUpdateStrategy : IStrategy
         Process.Start(appPath);
         GeneralTracer.Debug("OSSUpdateStrategy: application started.");
     }
+
+    #region Helpers
 
     private async Task DownloadVersionsAsync(List<VersionOSS> versions)
     {
@@ -121,4 +147,76 @@ public class OSSUpdateStrategy : IStrategy
             File.Delete(zipFilePath);
         }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // Hooks & Reporter safe wrappers
+    // ════════════════════════════════════════════════════════════════
+
+    private Hooks.UpdateContext BuildUpdateContext()
+    {
+        return new Hooks.UpdateContext(
+            _configInfo?.AppName ?? "unknown",
+            _configInfo?.InstallPath ?? _appPath,
+            _configInfo?.ClientVersion ?? "0.0.0",
+            _configInfo?.LastVersion,
+            AppType.OSSApp
+        );
+    }
+
+    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
+    {
+        try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
+    }
+
+    private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
+    {
+        try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
+    {
+        try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateStarted, ctx.AppType, DateTimeOffset.UtcNow
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateApplied, ctx.AppType, DateTimeOffset.UtcNow
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateFailed, ctx.AppType, DateTimeOffset.UtcNow,
+                ErrorMessage: error.Message
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
+    }
+
+    #endregion
 }
