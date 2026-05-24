@@ -245,9 +245,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void ApplyRuntimeOptions()
     {
-        _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
-        _configInfo.Format = GetOption(UpdateOption.Format) ?? Format.ZIP;
-        _configInfo.DownloadTimeOut = GetOption(UpdateOption.DownloadTimeOut) ?? 60;
+        _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
+        _configInfo.Format = GetOption(UpdateOptions.Format);
+        _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
     }
 
     private void InitBlackList()

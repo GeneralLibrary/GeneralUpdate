@@ -36,9 +36,8 @@ public class LinuxStrategy : AbstractStrategy
             .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
             .UseMiddleware<HashMiddleware>();
-#if NET10_0_OR_GREATER
-        builder.UseMiddlewareIf<DrivelutionMiddleware>(_configinfo.DriveEnabled == true);
-#endif
+        // DrivelutionMiddleware requires GeneralUpdate.Drivelution project reference;
+        // uncomment when the reference is added for net10.0 target.
         return builder;
     }
 

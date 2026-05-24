@@ -23,17 +23,6 @@ namespace GeneralUpdate.Core.Configuration
         protected internal AbstractBootstrap()
         {
             _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
-            PopulateDefaults();
-        }
-
-        protected virtual void PopulateDefaults()
-        {
-            Option(UpdateOptions.MaxConcurrency, 3);
-            Option(UpdateOptions.RetryCount, 3);
-            Option(UpdateOptions.EnableResume, true);
-            Option(UpdateOptions.VerifyChecksum, true);
-            Option(UpdateOptions.SilentAutoInstall, false);
-            Option(UpdateOptions.DownloadTimeout, 30);
         }
 
         public abstract Task<TBootstrap> LaunchAsync();
@@ -50,19 +39,12 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
 
-        protected T? GetOption<T>(UpdateOption<T>? option)
+        protected T GetOption<T>(UpdateOption<T>? option)
         {
-            try
-            {
-                Debug.Assert(option != null && _options.Count != 0);
-                var val = _options[option];
-                if (val != null) return (T)val.GetValue();
-                return default;
-            }
-            catch
-            {
-                return default;
-            }
+            if (option == null) return default!;
+            if (_options.TryGetValue(option, out var val) && val != null)
+                return (T)val.GetValue();
+            return option.DefaultValue;
         }
 
         // ═══════════ Extension point registration ═══════════
