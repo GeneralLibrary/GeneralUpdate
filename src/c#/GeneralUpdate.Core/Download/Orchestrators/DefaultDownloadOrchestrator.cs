@@ -40,9 +40,11 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
         if (plan == null || !plan.HasAssets)
             return new DownloadReport(Array.Empty<DownloadResult>(), 0, TimeSpan.Zero, 0, 0);
 
+        Directory.CreateDirectory(destDir);
+
         var sw = Stopwatch.StartNew();
         var results = new List<DownloadResult>();
-        var sem = new SemaphoreSlim(maxConcurrency);
+        using var sem = new SemaphoreSlim(maxConcurrency);
         long totalBytes = 0;
 
         var tasks = plan.Assets.Select(async asset =>

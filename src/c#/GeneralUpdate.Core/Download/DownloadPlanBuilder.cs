@@ -22,6 +22,7 @@ public static class DownloadPlanBuilder
     public static DownloadPlan Build(IEnumerable<DownloadAsset> assets, string currentVersion)
     {
         if (assets == null) return DownloadPlan.Empty;
+        if (ParseVersion(currentVersion) == null) return DownloadPlan.Empty;
 
         // 1. Filter out frozen packages
         var active = assets
