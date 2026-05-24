@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Hooks;
 using Xunit;
 
@@ -11,7 +12,7 @@ public class HooksTests
     public async Task NoOpUpdateHooks_AllMethods_ReturnDefaults()
     {
         var hooks = new NoOpUpdateHooks();
-        var ctx = new UpdateContext("test", "/tmp", "1.0", "2.0", 1);
+        var ctx = new UpdateContext("test", "/tmp", "1.0", "2.0", AppType.Client);
 
         Assert.True(await hooks.OnBeforeUpdateAsync(ctx));
         await hooks.OnDownloadCompletedAsync(new("a", "1.0", 100, TimeSpan.Zero, null, true));
@@ -23,9 +24,9 @@ public class HooksTests
     [Fact]
     public void UpdateContext_RecordEquality_Works()
     {
-        var a = new UpdateContext("app", "/path", "1.0", "2.0", 1);
-        var b = new UpdateContext("app", "/path", "1.0", "2.0", 1);
-        var c = new UpdateContext("app2", "/path", "1.0", "2.0", 1);
+        var a = new UpdateContext("app", "/path", "1.0", "2.0", AppType.Client);
+        var b = new UpdateContext("app", "/path", "1.0", "2.0", AppType.Client);
+        var c = new UpdateContext("app2", "/path", "1.0", "2.0", AppType.Client);
 
         Assert.Equal(a, b);
         Assert.NotEqual(a, c);

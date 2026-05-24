@@ -24,13 +24,13 @@ namespace GeneralUpdate.Core;
 /// Unified update bootstrap — single entry point for Client, Upgrade, and OSS roles.
 /// Use <see cref="AppType"/> to select the workflow:
 /// <list type="bullet">
-///   <item><see cref="AppType.ClientApp"/> — validate versions, download, start upgrade process</item>
-///   <item><see cref="AppType.UpgradeApp"/> — receive ProcessInfo, apply updates, start main app</item>
-///   <item><see cref="AppType.OSSApp"/> — OSS-based cloud storage update</item>
+///   <item><see cref="AppType.Client"/> — validate versions, download, start upgrade process</item>
+///   <item><see cref="AppType.Upgrade"/> — receive ProcessInfo, apply updates, start main app</item>
+///   <item><see cref="AppType.OSS"/> — OSS-based cloud storage update</item>
 /// </list>
 /// </summary>
 /// <remarks>
-/// For Client mode, use <c>Option(UpdateOptions.AppType, AppType.ClientApp)</c>.
+/// For Client mode, use <c>Option(UpdateOptions.AppType, AppType.Client)</c>.
 /// </remarks>
 public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
 {
@@ -58,10 +58,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
-        int appType = GetOption(UpdateOptions.AppType);
+        var appType = GetOption(UpdateOptions.AppType);
 
         // Silent mode: start background poll and return immediately
-        if (appType == AppType.ClientApp && GetOption(UpdateOptions.Silent))
+        if (appType == AppType.Client && GetOption(UpdateOptions.Silent))
         {
             await LaunchSilentAsync().ConfigureAwait(false);
             return this;
@@ -69,9 +69,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return appType switch
         {
-            AppType.ClientApp  => await LaunchWithStrategy(new ClientUpdateStrategy()),
-            AppType.UpgradeApp => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OSSApp     => await LaunchOssAsync(),
+            AppType.Client  => await LaunchWithStrategy(new ClientUpdateStrategy()),
+            AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
+            AppType.OSS     => await LaunchOssAsync(),
             _ => await LaunchWithStrategy(new ClientUpdateStrategy())
         };
     }
@@ -94,6 +94,25 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             {
                 clientStrat.Hooks = hooks;
                 clientStrat.Reporter = reporter;
+                // Resolve DownloadSource from extension registry (Hub, custom, etc.)
+                var resolvedSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
+
+                // Inject SignalR Hub download source if configured (not available in AOT)
+#if !AOT
+                if (resolvedSource == null)
+                {
+                    var hubConfig = GetOption(UpdateOptions.Hub);
+                    if (hubConfig != null && !string.IsNullOrEmpty(hubConfig.Url))
+                    {
+                        var hubSource = new Download.Sources.HubDownloadSource(
+                            hubConfig.Url, GetOption(UpdateOptions.Token), GetOption(UpdateOptions.AppSecretKey));
+                        await hubSource.StartAsync().ConfigureAwait(false);
+                        resolvedSource = hubSource;
+                        GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource started from HubConfig.");
+                    }
+                }
+#endif
+                clientStrat.DownloadSource = resolvedSource;
                 if (_updatePrecheck != null)
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
                 foreach (var opt in _customOptions)
@@ -121,6 +140,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         }
         finally
         {
+            // Dispose HubDownloadSource if it was started
+            if (roleStrategy is ClientUpdateStrategy cs && cs.DownloadSource is IDisposable d)
+                d.Dispose();
             _cts?.Dispose();
             _cts = null;
         }
@@ -201,7 +223,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
         var appType = GetOption(UpdateOptions.AppType);
-        if (appType != AppType.UpgradeApp)
+        if (appType != AppType.Upgrade)
         {
             _configInfo.TempPath = StorageManager.GetTempDirectory("upgrade_temp");
             InitBlackList();
@@ -279,9 +301,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// Silent update mode — starts a background poll loop and returns immediately.
     /// The orchestrator checks for updates periodically and prepares them.
     /// When the host process exits, the prepared update is applied.
+    /// Not available in AOT builds (SignalR dependency).
     /// </summary>
     private async Task LaunchSilentAsync()
     {
+#if !AOT
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
 
         var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
@@ -302,6 +326,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
+#else
+        GeneralTracer.Warn("GeneralUpdateBootstrap: silent update not available in AOT builds.");
+        await Task.CompletedTask;
+#endif
     }
 
     private void InitBlackList()

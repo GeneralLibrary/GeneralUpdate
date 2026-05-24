@@ -54,13 +54,20 @@ namespace GeneralUpdate.Core.Network
             return new VersionService(a).ReportAsync(url, recordId, status, type, ct);
         }
 
+        // Strongly-typed overload (preferred)
         public static Task<VersionRespDTO> Validate(string url, string version,
-            int appType, string appKey, int platform, string productId,
+            AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
             var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
-            return new VersionService(a).ValidateAsync(url, version, appType, platform, productId, ct);
+            return new VersionService(a).ValidateAsync(url, version, (int)appType, (int)platform, productId, ct);
         }
+
+        // Backward-compatible int overload (binary compat for existing callers)
+        public static Task<VersionRespDTO> Validate(string url, string version,
+            int appType, string appKey, int platform, string productId,
+            string scheme = null, string token = null, CancellationToken ct = default)
+            => Validate(url, version, (AppType)appType, appKey, (PlatformType)platform, productId, scheme, token, ct);
 
         private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
         {

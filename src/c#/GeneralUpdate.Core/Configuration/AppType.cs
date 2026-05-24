@@ -1,21 +1,16 @@
-namespace GeneralUpdate.Core.Configuration
+namespace GeneralUpdate.Core.Configuration;
+
+/// <summary>
+/// Application role type — determines the update workflow.
+/// </summary>
+public enum AppType
 {
-    public class AppType
-    {
-        /// <summary>
-        /// main program
-        /// </summary>
-        public const int ClientApp = 1;
+    /// <summary>Main application — validates versions, downloads packages, starts upgrade process.</summary>
+    Client = 1,
 
-        /// <summary>
-        /// upgrade program.
-        /// </summary>
-        public const int UpgradeApp = 2;
+    /// <summary>Upgrade application — applies downloaded update packages, starts main app.</summary>
+    Upgrade = 2,
 
-        /// <summary>
-        /// OSS (Object Storage Service) update mode.
-        /// Downloads packages from cloud storage without a dedicated update server.
-        /// </summary>
-        public const int OSSApp = 3;
-    }
+    /// <summary>OSS (Object Storage Service) update mode — downloads from cloud storage.</summary>
+    OSS = 3
 }

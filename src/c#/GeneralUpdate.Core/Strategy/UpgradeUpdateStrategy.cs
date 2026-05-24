@@ -12,7 +12,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// applies updates via the pipeline, and starts the main application.
 /// </summary>
 /// <remarks>
-/// This is the AppType.UpgradeApp role strategy. It composes an OS-specific
+/// This is the AppType.Upgrade role strategy. It composes an OS-specific
 /// strategy for platform operations (Windows/Linux/Mac).
 ///
 /// <b>Design:</b> Upgrade does NOT validate versions or download packages.
@@ -126,7 +126,7 @@ public class UpgradeUpdateStrategy : IStrategy
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
-            AppType.UpgradeApp
+            AppType.Upgrade
         );
     }
 

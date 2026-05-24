@@ -18,7 +18,7 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     private readonly string _clientVersion;
     private readonly string? _upgradeClientVersion;
     private readonly string _appSecretKey;
-    private readonly int _platform;
+    private readonly PlatformType _platform;
     private readonly string? _productId;
     private readonly string? _scheme;
     private readonly string? _token;
@@ -28,7 +28,7 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         string clientVersion,
         string? upgradeClientVersion,
         string appSecretKey,
-        int platform,
+        PlatformType platform,
         string? productId,
         string? scheme,
         string? token)
@@ -47,12 +47,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     public async Task<IReadOnlyList<DownloadAsset>> ListAsync(CancellationToken token = default)
     {
         var mainResp = await VersionService.Validate(
-            _updateUrl, _clientVersion, AppType.ClientApp,
+            _updateUrl, _clientVersion, AppType.Client,
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
 
         var upgradeResp = await VersionService.Validate(
-            _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.UpgradeApp,
+            _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
 

@@ -1,8 +1,17 @@
 namespace GeneralUpdate.Core.Configuration;
 
-public class PlatformType
+/// <summary>Platform type enumeration.</summary>
+public enum PlatformType
 {
-    public const int Windows = 1;
-    
-    public const int Linux = 2;
+    /// <summary>Unknown / not detected.</summary>
+    Unknown = 0,
+
+    /// <summary>Microsoft Windows.</summary>
+    Windows = 1,
+
+    /// <summary>Linux distributions (Ubuntu, Debian, UOS, Kylin, etc.).</summary>
+    Linux = 2,
+
+    /// <summary>Apple macOS.</summary>
+    MacOS = 3
 }

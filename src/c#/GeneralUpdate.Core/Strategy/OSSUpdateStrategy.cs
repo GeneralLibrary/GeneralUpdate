@@ -188,7 +188,7 @@ public class OSSUpdateStrategy : IStrategy
             _configInfo?.InstallPath ?? _appPath,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
-            AppType.OSSApp
+            AppType.OSS
         );
     }
 
