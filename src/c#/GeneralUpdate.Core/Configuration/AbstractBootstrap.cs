@@ -35,6 +35,7 @@ namespace GeneralUpdate.Core.Configuration
             Option(UpdateOptions.EnableResume, true);
             Option(UpdateOptions.VerifyChecksum, true);
             Option(UpdateOptions.SilentAutoInstall, false);
+            Option(UpdateOptions.DownloadTimeout, 30);
         }
 
         public abstract Task<TBootstrap> LaunchAsync();
@@ -71,15 +72,41 @@ namespace GeneralUpdate.Core.Configuration
 
         // ═══════════ Extension point registration ═══════════
 
-        /// <summary>Register a custom update strategy.</summary>
         public TBootstrap Strategy<T>() where T : IStrategy, new()
         { _extensions[typeof(IStrategy)] = typeof(T); return (TBootstrap)this; }
 
-        /// <summary>Resolve a registered extension type, or null if not registered.</summary>
+        public TBootstrap Hooks<T>() where T : class, new()
+        { _extensions[typeof(Hooks.IUpdateHooks)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap SslPolicy<T>() where T : Security.ISslValidationPolicy, new()
+        { _extensions[typeof(Security.ISslValidationPolicy)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap DownloadPolicy<T>() where T : Download.Abstractions.IDownloadPolicy, new()
+        { _extensions[typeof(Download.Abstractions.IDownloadPolicy)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap DownloadExecutor<T>() where T : Download.Abstractions.IDownloadExecutor, new()
+        { _extensions[typeof(Download.Abstractions.IDownloadExecutor)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap DownloadSource<T>() where T : Download.Abstractions.IDownloadSource, new()
+        { _extensions[typeof(Download.Abstractions.IDownloadSource)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
+        { _extensions[typeof(Download.Reporting.IUpdateReporter)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
+        { _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap ConfigureBlackList(Action<BlackListConfig> configure)
+        {
+            var cfg = new BlackListConfig(); configure(cfg);
+            _extensions[typeof(BlackListConfig)] = cfg;
+            return (TBootstrap)this;
+        }
+
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
             if (_extensions.TryGetValue(typeof(TExtension), out var t))
-                return Activator.CreateInstance(t) as TExtension;
+                return t is Type type ? Activator.CreateInstance(type) as TExtension : t as TExtension;
             return null;
         }
     }

@@ -49,5 +49,8 @@ namespace GeneralUpdate.Core.Configuration
         // ═══ OSS ═══
         public static readonly UpdateOption<int?> OSSProvider = UpdateOption.ValueOf<int?>("OSSPROVIDER");
         public static readonly UpdateOption<string?> OSSBucketRegion = UpdateOption.ValueOf<string?>("OSSBUCKETREGION");
+
+        // ═══ Blacklist ═══
+        public static readonly UpdateOption<BlackListConfig> BlackList = UpdateOption.ValueOf<BlackListConfig>("BLACKLIST");
     }
 }
