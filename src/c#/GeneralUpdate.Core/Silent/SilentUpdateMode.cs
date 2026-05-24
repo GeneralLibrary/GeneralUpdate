@@ -21,6 +21,7 @@ using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core;
 
+[Obsolete("Use SilentPollOrchestrator instead. Will be removed in v11.")]
 internal sealed class SilentUpdateMode
 {
     private const string ProcessInfoEnvironmentKey = "ProcessInfo";

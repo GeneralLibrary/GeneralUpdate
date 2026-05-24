@@ -50,6 +50,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
         int appType = GetOption(UpdateOptions.AppType);
+
+        // Silent mode: start background poll and return immediately
+        if (appType == AppType.ClientApp && GetOption(UpdateOptions.Silent))
+        {
+            await LaunchSilentAsync().ConfigureAwait(false);
+            return this;
+        }
+
         return appType switch
         {
             AppType.ClientApp  => await LaunchWithStrategy(new ClientUpdateStrategy()),
@@ -248,6 +256,35 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
         _configInfo.Format = GetOption(UpdateOptions.Format);
         _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
+    }
+
+    /// <summary>
+    /// Silent update mode — starts a background poll loop and returns immediately.
+    /// The orchestrator checks for updates periodically and prepares them.
+    /// When the host process exits, the prepared update is applied.
+    /// </summary>
+    private async Task LaunchSilentAsync()
+    {
+        GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
+
+        var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
+        var autoInstall = GetOption(UpdateOptions.SilentAutoInstall);
+
+        var silentOptions = new Silent.SilentOptions
+        {
+            PollInterval = TimeSpan.FromMinutes(pollMinutes),
+            AutoInstall = autoInstall
+        };
+
+        var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
+        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
+
+        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions)
+            .WithHooks(hooks)
+            .WithReporter(reporter);
+
+        await orchestrator.StartAsync().ConfigureAwait(false);
+        GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
     }
 
     private void InitBlackList()
