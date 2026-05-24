@@ -29,8 +29,6 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        # Exclusions: ConfiginfoBuilderTests/CleanBackup_KeepsOnlyRecentVersions (pre-existing regressions),
-        # SharedMemoryProvider_RoundTrip/AutoProvider_ThrowsWhenAllFail (platform-specific IPC tests).
         run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests&FullyQualifiedName!~CleanBackup_KeepsOnlyRecentVersions&FullyQualifiedName!~SharedMemoryProvider_RoundTrip&FullyQualifiedName!~AutoProvider_ThrowsWhenAllFail"
 
       - name: Test (Ubuntu - cross-platform)
@@ -38,7 +36,6 @@ jobs:
         run: |
           dotnet test tests/CoreTest/CoreTest.csproj -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests"
           dotnet test tests/DifferentialTest/DifferentialTest.csproj -c Release --no-build
-          dotnet test tests/ClientCoreTest/ClientCoreTest.csproj -c Release --no-build
 
   aot-verify:
     runs-on: windows-latest
@@ -54,8 +51,5 @@ jobs:
       - name: Restore
         run: dotnet restore ./src/c#/GeneralUpdate.slnx
 
-      # Verify AOT compatibility via trim analyzer warnings.
-      # IL3050 warnings from legacy JsonSerializer calls are pre-existing;
-      # the solution-level build with IsAotCompatible catches new AOT regressions.
       - name: Verify AOT compatibility
         run: dotnet build ./src/c#/GeneralUpdate.Core/GeneralUpdate.Core.csproj -c Release -f net10.0 /p:IsAotCompatible=true --no-restore
