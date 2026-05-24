@@ -78,7 +78,7 @@ namespace GeneralUpdate.Core.Strategy
             {
                 GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: releasing tracer and terminating updater process.");
                 GeneralTracer.Dispose();
-                Process.GetCurrentProcess().Kill();
+                GracefulExit.CurrentProcessAsync().GetAwaiter().GetResult();
             }
         }
     }

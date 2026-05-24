@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -21,15 +14,16 @@ namespace GeneralUpdate.Core.Strategy;
 /// <remarks>
 /// This is the AppType.UpgradeApp role strategy. It composes an OS-specific
 /// strategy for platform operations (Windows/Linux/Mac).
+///
+/// <b>Design:</b> Upgrade does NOT validate versions or download packages.
+/// The client has already validated versions, downloaded all packages, and
+/// passed the results via ProcessInfo. Upgrade only applies updates and
+/// starts the main application — zero network.
 /// </remarks>
 public class UpgradeUpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
-    private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
-    private readonly DiffMode _diffMode = DiffMode.Serial;
-
-    public UpgradeUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
 
     public void Create(GlobalConfigInfo parameter)
     {
@@ -44,23 +38,22 @@ public class UpgradeUpdateStrategy : IStrategy
         try
         {
             GeneralTracer.Debug("UpgradeUpdateStrategy.ExecuteAsync start.");
-            StrategyFactory();
 
-            var mode = UpdateMode.Default; // should come from config
-            switch (mode)
+            ApplyRuntimeOptions();
+            _osStrategy!.Create(_configInfo);
+
+            // Apply updates via OS-specific pipeline (Hash → Compress → Patch)
+            if (_configInfo.UpdateVersions?.Count > 0)
             {
-                case UpdateMode.Default:
-                    ApplyRuntimeOptions();
-                    _osStrategy!.Create(_configInfo);
-                    await DownloadAsync();
-                    await _osStrategy.ExecuteAsync();
-                    break;
-                case UpdateMode.Scripts:
-                    await ExecuteScriptsWorkflowAsync();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                GeneralTracer.Info($"UpgradeUpdateStrategy: applying {_configInfo.UpdateVersions.Count} update(s).");
+                await _osStrategy.ExecuteAsync();
             }
+            else
+            {
+                GeneralTracer.Info("UpgradeUpdateStrategy: no updates to apply, starting application directly.");
+            }
+
+            _osStrategy.StartApp();
         }
         catch (Exception ex)
         {
@@ -79,57 +72,6 @@ public class UpgradeUpdateStrategy : IStrategy
         _osStrategy?.StartApp();
     }
 
-    #region Scripts Mode Workflow
-
-    private async Task ExecuteScriptsWorkflowAsync()
-    {
-        GeneralTracer.Info($"UpgradeUpdateStrategy: validating version. Url={_configInfo!.UpdateUrl}, Version={_configInfo.ClientVersion}");
-
-        var mainResp = await VersionService.Validate(
-            _configInfo.UpdateUrl, _configInfo.ClientVersion,
-            AppType.ClientApp, _configInfo.AppSecretKey,
-            GetPlatform(), _configInfo.ProductId,
-            _configInfo.Scheme, _configInfo.Token);
-
-        _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
-        EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(mainResp));
-
-        if (CheckForcibly(mainResp.Body) == false && ShouldSkip())
-        {
-            GeneralTracer.Info("UpgradeUpdateStrategy: update skipped.");
-            return;
-        }
-
-        InitBlackList();
-        ApplyRuntimeOptions();
-
-        _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
-        _configInfo.BackupDirectory = Path.Combine(
-            _configInfo.InstallPath,
-            $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
-
-        _configInfo.UpdateVersions = mainResp.Body!
-            .OrderBy(x => x.ReleaseDate).ToList();
-
-        Backup();
-
-        _osStrategy!.Create(_configInfo);
-
-        if (_configInfo.IsMainUpdate)
-        {
-            GeneralTracer.Info("UpgradeUpdateStrategy: main update required.");
-            await DownloadAsync();
-            await _osStrategy.ExecuteAsync();
-        }
-        else
-        {
-            GeneralTracer.Info("UpgradeUpdateStrategy: no update needed, starting application.");
-            _osStrategy.StartApp();
-        }
-    }
-
-    #endregion
-
     #region Helpers
 
     private static IStrategy ResolveOsStrategy()
@@ -138,57 +80,15 @@ public class UpgradeUpdateStrategy : IStrategy
             return new WindowsStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return new LinuxStrategy();
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return new MacStrategy();
         throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
-
-    private void StrategyFactory()
-    {
-        _osStrategy ??= ResolveOsStrategy();
     }
 
     private void ApplyRuntimeOptions()
     {
         _configInfo!.Encoding = Encoding.UTF8;
         _configInfo.Format = Format.ZIP;
-        _configInfo.DownloadTimeOut = 60;
-    }
-
-    private void InitBlackList()
-    {
-        BlackListManager.Instance.AddBlackFiles(_configInfo!.BlackFiles);
-        BlackListManager.Instance.AddBlackFormats(_configInfo.BlackFormats);
-        BlackListManager.Instance.AddSkipDirectorys(_configInfo.SkipDirectorys);
-    }
-
-    private void Backup()
-    {
-        GeneralTracer.Info($"UpgradeUpdateStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
-        StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            BlackListManager.Instance.SkipDirectorys);
-    }
-
-    private async Task DownloadAsync()
-    {
-        var manager = new DownloadManager(
-            _configInfo!.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
-        foreach (var version in _configInfo.UpdateVersions)
-            manager.Add(new DownloadTask(manager, version));
-        await manager.LaunchTasksAsync();
-    }
-
-    private static bool ShouldSkip() => false;
-
-    private static bool CheckUpgrade(VersionRespDTO? response)
-        => response?.Code == 200 && response.Body?.Count > 0;
-
-    private static bool CheckForcibly(IEnumerable<VersionInfo>? versions)
-        => versions?.Any(v => v.IsForcibly == true) == true;
-
-    private static int GetPlatform()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
-        return -1;
     }
 
     #endregion
