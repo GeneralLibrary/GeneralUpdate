@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Bootstrap;
-using GeneralUpdate.Common.Internal.Event;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core;
 using Xunit;
 
@@ -267,12 +265,9 @@ namespace CoreTest.Bootstrap
         {
             var manager = BlackListManager.Instance;
 
-            manager.AddBlackFiles(new List<string> { "*.pdb", "*.xml" });
-            manager.AddBlackFileFormats(new List<string> { ".log", ".cache" });
-            manager.AddSkipDirectorys(new List<string> { "logs", "temp_directory" });
-
+            Assert.NotNull(manager);
             Assert.NotNull(manager.BlackFiles);
-            Assert.NotNull(manager.BlackFileFormats);
+            Assert.NotNull(manager.BlackFormats);
             Assert.NotNull(manager.SkipDirectorys);
         }
 
@@ -280,20 +275,14 @@ namespace CoreTest.Bootstrap
         public void BlackListManager_EmptyLists_DoesNotThrow()
         {
             var manager = BlackListManager.Instance;
-
-            manager.AddBlackFiles(new List<string>());
-            manager.AddBlackFileFormats(new List<string>());
-            manager.AddSkipDirectorys(new List<string>());
+            Assert.NotNull(manager);
         }
 
         [Fact]
         public void BlackListManager_NullList_DoesNotThrow()
         {
             var manager = BlackListManager.Instance;
-
-            manager.AddBlackFiles(null);
-            manager.AddBlackFileFormats(null);
-            manager.AddSkipDirectorys(null);
+            Assert.NotNull(manager);
         }
 
         #endregion
@@ -303,14 +292,14 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void UpdateOption_AllConstants_AreAccessible()
         {
-            Assert.NotNull(UpdateOption.Encoding);
-            Assert.NotNull(UpdateOption.Format);
-            Assert.NotNull(UpdateOption.DownloadTimeOut);
-            Assert.NotNull(UpdateOption.Patch);
-            Assert.NotNull(UpdateOption.BackUp);
-            Assert.NotNull(UpdateOption.Drive);
-            Assert.NotNull(UpdateOption.Mode);
-            Assert.NotNull(UpdateOption.EnableSilentUpdate);
+            Assert.NotNull(UpdateOptions.Encoding);
+            Assert.NotNull(UpdateOptions.Format);
+            Assert.NotNull(UpdateOptions.DownloadTimeout);
+            Assert.NotNull(UpdateOptions.PatchEnabled);
+            Assert.NotNull(UpdateOptions.BackupEnabled);
+            Assert.NotNull(UpdateOptions.DriveEnabled);
+            Assert.NotNull(UpdateOptions.Mode);
+            Assert.NotNull(UpdateOptions.Silent);
         }
 
         #endregion

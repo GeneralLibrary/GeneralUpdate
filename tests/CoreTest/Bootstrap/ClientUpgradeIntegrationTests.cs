@@ -4,18 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.JsonContext;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core;
 using Xunit;
 
 namespace CoreTest.Bootstrap
 {
     /// <summary>
-    /// Comprehensive integration tests for Client ï¿?Upgrade mutual upgrade process.
+    /// Comprehensive integration tests for Client <-> Upgrade mutual upgrade process.
     /// Tests the full lifecycle: Client validates versions, downloads packages,
     /// passes ProcessInfo to Upgrade, and Upgrade applies updates.
     ///
@@ -42,7 +42,7 @@ namespace CoreTest.Bootstrap
             try { Directory.Delete(_testBaseDir, true); } catch { /* ignore */ }
         }
 
-        #region Client ï¿?Upgrade Mutual Upgrade
+        #region Client <-> Upgrade Mutual Upgrade
 
         /// <summary>
         /// Scenario: Both client and upgrade need updates.
@@ -52,7 +52,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void ClientUpgrade_MutualUpdate_BothNeedUpdates_ConfiguresCorrectly()
         {
-            // Arrange ï¿?emulate a developer configuring for mutual update
+            // Arrange - emulate a developer configuring for mutual update
             var config = new Configinfo
             {
                 UpdateUrl = "https://api.example.com/updates",
@@ -69,14 +69,14 @@ namespace CoreTest.Bootstrap
 
             var bootstrap = new GeneralUpdateBootstrap();
 
-            // Act ï¿?developer chains configuration
+            // Act - developer chains configuration
             var result = bootstrap
                 .SetConfig(config)
                 .SetCustomSkipOption(() => false)
                 .AddListenerException((s, e) => { })
                 .AddListenerUpdateInfo((s, e) => { });
 
-            // Assert ï¿?bootstrap configured without errors
+            // Assert - bootstrap configured without errors
             Assert.NotNull(result);
             Assert.Same(bootstrap, result);
         }
@@ -110,7 +110,7 @@ namespace CoreTest.Bootstrap
         }
 
         /// <summary>
-        /// Scenario: Forcibly update ï¿?user skip callback is ignored.
+        /// Scenario: Forcibly update - user skip callback is ignored.
         /// </summary>
         [Fact]
         public void ClientUpgrade_ForciblyUpdate_SkipCallbackIsIgnored()
@@ -136,6 +136,7 @@ namespace CoreTest.Bootstrap
                 });
 
             Assert.NotNull(bootstrap);
+            Assert.False(skipCalled, "Skip callback should not be invoked during configuration");
         }
 
         #endregion
@@ -153,7 +154,7 @@ namespace CoreTest.Bootstrap
                 ReleaseDate = new DateTime(2026, 5, 20),
                 Url = "https://cdn.example.com/packages/v2.0.0.zip",
                 Version = "2.0.0",
-                AppType = AppType.ClientApp,
+                AppType = (int)AppType.Client,
                 Platform = 1,
                 ProductId = "test-product",
                 IsForcibly = true,
@@ -324,12 +325,12 @@ namespace CoreTest.Bootstrap
 
         #endregion
 
-        #region Pipeline Context Tests (Hash ï¿?Compress ï¿?Patch)
+        #region Pipeline Context Tests (Hash  - Compress  - Patch)
 
         [Fact]
         public void PipelineContext_AllMiddlewareKeys_StoresAndRetrievesCorrectly()
         {
-            var context = new GeneralUpdate.Common.Internal.Pipeline.PipelineContext();
+            var context = new GeneralUpdate.Core.Pipeline.PipelineContext();
             var format = "ZIP";
             var zipPath = @"C:\temp\update.zip";
             var patchPath = @"C:\temp\patch";
@@ -358,7 +359,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void PipelineContext_RemoveAndContainsKey_WorksCorrectly()
         {
-            var context = new GeneralUpdate.Common.Internal.Pipeline.PipelineContext();
+            var context = new GeneralUpdate.Core.Pipeline.PipelineContext();
             context.Add("Key1", "Value1");
             context.Add("Key2", 42);
 
@@ -377,7 +378,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void PipelineContext_NullValue_StoresAndReturnsNull()
         {
-            var context = new GeneralUpdate.Common.Internal.Pipeline.PipelineContext();
+            var context = new GeneralUpdate.Core.Pipeline.PipelineContext();
 
             context.Add<string?>("NullableKey", null);
 
@@ -551,6 +552,7 @@ namespace CoreTest.Bootstrap
                 .AddListenerException((s, e) => eventsFired.Add("Exception"));
 
             Assert.NotNull(bootstrap);
+            Assert.False(skipRequested, "Skip callback should not be invoked during configuration");
         }
 
         [Fact]

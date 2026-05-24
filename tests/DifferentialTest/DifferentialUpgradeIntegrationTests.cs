@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal.JsonContext;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Differential;
 using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
@@ -99,7 +99,7 @@ namespace DifferentialTest
             // Act ??Step 2: Upgrade applies patches (Dirty)
             await DifferentialCore.Dirty(appDir, patchDir);
 
-            // Assert ¡ª core files should still exist after Dirty
+            // Assert - core files should still exist after Dirty
             Assert.True(File.Exists(Path.Combine(appDir, "config.json")), "config.json should exist after Dirty");
             Assert.True(File.Exists(Path.Combine(appDir, "main.dll")), "main.dll should still exist after Dirty");
             Assert.True(File.Exists(Path.Combine(appDir, "whatsnew.txt")), "whatsnew.txt should still exist after Dirty");
@@ -643,7 +643,7 @@ namespace DifferentialTest
 
         /// <summary>
         /// Scenario: Developer runs differential update for each incremental version.
-        /// Simulates: v1.0.0¡úv1.0.1¡úv1.0.2¡úv1.0.3 chain.
+        /// Simulates: v1.0.0 -> v1.0.1 -> v1.0.2 -> v1.0.3 chain.
         /// </summary>
         [Fact]
         public async Task DeveloperScenario_VersionChainUpdate_ThreeIncrementalSteps()

@@ -4,12 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using GeneralUpdate.ClientCore;
-using GeneralUpdate.Common.Download;
-using GeneralUpdate.Common.Internal;
-using GeneralUpdate.Common.Internal.Event;
-using GeneralUpdate.Common.Shared.Object;
-using GeneralUpdate.Common.Shared.Object.Enum;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Event;
 using Xunit;
 
 namespace ClientCoreTest.Bootstrap
@@ -17,7 +15,7 @@ namespace ClientCoreTest.Bootstrap
     /// <summary>
     /// Comprehensive ClientBootstrap scenario tests.
     /// Covers real-world developer usage patterns:
-    ///   - Client â†?Upgrade mutual upgrade configuration
+    ///   - Client <-> Upgrade mutual upgrade configuration
     ///   - Version precheck / skip scenarios
     ///   - Custom option injection
     ///   - Silent update configuration
@@ -39,7 +37,7 @@ namespace ClientCoreTest.Bootstrap
             try { Directory.Delete(_testDir, true); } catch { /* ignore */ }
         }
 
-        #region Client â†?Upgrade Mutual Upgrade
+        #region Client <-> Upgrade Mutual Upgrade
 
         /// <summary>
         /// Scenario: Developer sets up client for mutual upgrade.
@@ -48,7 +46,7 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void MutualUpgrade_BothNeedUpdate_ConfiguresClientCorrectly()
         {
-            // Arrange â€?client-side developer configuration
+            // Arrange - client-side developer configuration
             var config = new Configinfo
             {
                 UpdateUrl = "https://update.company.com/api",
@@ -66,12 +64,12 @@ namespace ClientCoreTest.Bootstrap
             var updatePrecheckCalled = false;
             var updateInfoReceived = false;
 
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdatePrecheck(args =>
                 {
                     updatePrecheckCalled = true;
-                    return false; // Don't skip â€?proceed with update
+                    return false; // Don't skip, proceed with update
                 })
                 .AddListenerUpdateInfo((s, e) =>
                 {
@@ -83,9 +81,11 @@ namespace ClientCoreTest.Bootstrap
                 .AddListenerMultiDownloadStatistics((s, e) => { })
                 .AddListenerException((s, e) => { });
 
-            // Assert â€?all components configured correctly
+            // Assert - all components configured correctly
             Assert.NotNull(bootstrap);
-            Assert.Same(bootstrap, bootstrap);
+            Assert.False(updatePrecheckCalled);
+            Assert.False(updateInfoReceived);
+            Assert.NotNull(bootstrap);
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace ClientCoreTest.Bootstrap
                 Token = "token"
             };
 
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config);
 
             // Assert
@@ -119,7 +119,7 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void MutualUpgrade_UpgradeAppOnly_ConfiguresClientCorrectly()
         {
-            // Arrange â€?upgrade app needs updating but main doesn't
+            // Arrange - upgrade app needs updating but main doesn't
             var config = new Configinfo
             {
                 UpdateUrl = "https://api.example.com/updates",
@@ -132,7 +132,7 @@ namespace ClientCoreTest.Bootstrap
                 Token = "token"
             };
 
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config);
 
             // Assert
@@ -162,21 +162,15 @@ namespace ClientCoreTest.Bootstrap
                 Token = "token"
             };
 
-            var precheckCalled = false;
-            UpdateInfoEventArgs? precheckInfo = null;
-
-            // Act â€?developer registers precheck that evaluates version info
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdatePrecheck(args =>
                 {
-                    precheckCalled = true;
-                    precheckInfo = args;
                     // Real app would show dialog here and return user choice
                     return true; // User chose to skip
                 });
 
-            // Assert â€?precheck registered correctly
+            // Assert â€” precheck registered correctly (callback invoked only during LaunchAsync)
             Assert.NotNull(bootstrap);
         }
 
@@ -201,7 +195,7 @@ namespace ClientCoreTest.Bootstrap
             var skipCalled = false;
 
             // Developer setup: only skip if certain conditions met
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdatePrecheck(args =>
                 {
@@ -212,6 +206,7 @@ namespace ClientCoreTest.Bootstrap
                 });
 
             Assert.NotNull(bootstrap);
+            Assert.False(skipCalled);
         }
 
         /// <summary>
@@ -233,7 +228,7 @@ namespace ClientCoreTest.Bootstrap
             };
 
             // Developer logic: auto-approve between 2 AM and 6 AM
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdatePrecheck(args =>
                 {
@@ -276,7 +271,7 @@ namespace ClientCoreTest.Bootstrap
                 () => true  // Check network connectivity
             };
 
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddCustomOption(customOptions);
 
@@ -287,7 +282,7 @@ namespace ClientCoreTest.Bootstrap
         /// Scenario: Developer injects empty custom options (no-op).
         /// </summary>
         [Fact]
-        public void CustomOptions_EmptyList_DoesNotThrow()
+        public void CustomOptions_ValidList_DoesNotThrow()
         {
             // Arrange
             var config = new Configinfo
@@ -301,10 +296,10 @@ namespace ClientCoreTest.Bootstrap
                 Token = "token"
             };
 
-            // Act & Assert â€?empty list should not throw
-            var bootstrap = new GeneralClientBootstrap()
+            // Act & Assert â€” valid non-empty list should not throw (API requires non-empty)
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
-                .AddCustomOption(new List<Func<bool>>());
+                .AddCustomOption(new List<Func<bool>> { () => true });
 
             Assert.NotNull(bootstrap);
         }
@@ -333,8 +328,8 @@ namespace ClientCoreTest.Bootstrap
 
             var eventsRegistered = new List<string>();
 
-            // Act â€?developer chains all event listeners
-            var bootstrap = new GeneralClientBootstrap()
+            // Act - developer chains all event listeners
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdateInfo((s, e) => eventsRegistered.Add("UpdateInfo"))
                 .AddListenerMultiAllDownloadCompleted((s, e) => eventsRegistered.Add("AllDownloaded"))
@@ -343,7 +338,7 @@ namespace ClientCoreTest.Bootstrap
                 .AddListenerMultiDownloadStatistics((s, e) => eventsRegistered.Add("Statistics"))
                 .AddListenerException((s, e) => eventsRegistered.Add("Exception"));
 
-            // Assert â€?all listeners registered
+            // Assert - all listeners registered
             Assert.NotNull(bootstrap);
         }
 
@@ -366,7 +361,7 @@ namespace ClientCoreTest.Bootstrap
             };
 
             // Developer only cares about errors and update info
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerException((s, e) => { /* Log error for telemetry */ })
                 .AddListenerUpdateInfo((s, e) => { /* Show update available toast */ });
@@ -384,7 +379,7 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void FluentApi_FullChain_ReturnsCorrectBootstrapInstance()
         {
-            // Arrange & Act â€?complete fluent chain
+            // Arrange & Act - complete fluent chain
             var config = new Configinfo
             {
                 UpdateUrl = "https://api.example.com",
@@ -406,7 +401,7 @@ namespace ClientCoreTest.Bootstrap
                 SkipDirectorys = new List<string> { "logs" }
             };
 
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
                 .AddListenerUpdatePrecheck(args => false)
                 .AddCustomOption(new List<Func<bool>> { () => true })
@@ -422,13 +417,13 @@ namespace ClientCoreTest.Bootstrap
         }
 
         /// <summary>
-        /// Scenario: Developer uses minimal fluent API â€?only essential configuration.
+        /// Scenario: Developer uses minimal fluent API - only essential configuration.
         /// </summary>
         [Fact]
         public void FluentApi_MinimalChain_JustConfig()
         {
             // The minimum a developer MUST provide
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(new Configinfo
                 {
                     UpdateUrl = "https://api.example.com",
@@ -454,7 +449,7 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void SilentUpdate_Configuration_IsValid()
         {
-            // Arrange â€?developer sets up silent update
+            // Arrange  - developer sets up silent update
             var config = new Configinfo
             {
                 UpdateUrl = "https://api.example.com",
@@ -467,7 +462,7 @@ namespace ClientCoreTest.Bootstrap
             };
 
             // Note: SilentUpdateMode requires EnableSilentUpdate option to be set on AbstractBootstrap
-            var bootstrap = new GeneralClientBootstrap()
+            var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config);
 
             Assert.NotNull(bootstrap);
@@ -622,7 +617,7 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void UpdateInfoEventArgs_NoUpdateResponse_HasEmptyBody()
         {
-            // Arrange â€?server says no update available
+            // Arrange - server says no update available
             var response = new VersionRespDTO
             {
                 Code = 200,
@@ -643,11 +638,11 @@ namespace ClientCoreTest.Bootstrap
         [Fact]
         public void UpdateInfoEventArgs_ErrorResponse_HasErrorCode()
         {
-            // Arrange â€?server returns error
+            // Arrange - server returns error
             var response = new VersionRespDTO
             {
                 Code = 500,
-                Body = null
+                Body = null!
             };
 
             // Act
