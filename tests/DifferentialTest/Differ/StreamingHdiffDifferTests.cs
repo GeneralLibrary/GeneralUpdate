@@ -8,7 +8,7 @@ using Xunit;
 namespace DifferentialTest.Differ
 {
     /// <summary>
-    /// Test cases for StreamingHdiffDiffer â€” round-trip diff and patch,
+    /// Test cases for StreamingHdiffDiffer â€?round-trip diff and patch,
     /// IBinaryDiffer interface compliance, and edge cases.
     /// </summary>
     public class StreamingHdiffDifferTests : IDisposable

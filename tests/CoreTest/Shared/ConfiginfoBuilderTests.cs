@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Configuration;
 using Xunit;
 
 namespace CoreTest.Shared

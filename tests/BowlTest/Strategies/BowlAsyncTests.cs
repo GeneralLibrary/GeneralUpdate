@@ -20,7 +20,7 @@ namespace BowlTest.Strategies
         }
 
         /// <summary>
-        /// LaunchAsync with non-existent procdump path â€” either throws Win32Exception
+        /// LaunchAsync with non-existent procdump path â€?either throws Win32Exception
         /// (file not found) or returns a result with no dump captured.
         /// </summary>
         [Fact]

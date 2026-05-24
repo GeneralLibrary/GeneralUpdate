@@ -1,5 +1,5 @@
 using System;
-using GeneralUpdate.ClientCore.Hubs;
+using GeneralUpdate.Core.Hubs;
 using Microsoft.AspNetCore.SignalR.Client;
 using Xunit;
 

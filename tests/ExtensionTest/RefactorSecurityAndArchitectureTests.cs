@@ -240,7 +240,7 @@ public class RefactorSecurityAndArchitectureTests : IDisposable
         var extensions = new List<ExtensionMetadata>
         {
             new() { Id = "ext1", Version = "1.0.0" },
-            new() { Id = "ext1", Version = "invalid-ver" }, // unparseable ‚Äî should NOT be selected
+            new() { Id = "ext1", Version = "invalid-ver" }, // unparseable ‚Ä?should NOT be selected
             new() { Id = "ext1", Version = "2.0.0" }
         };
 
@@ -271,7 +271,7 @@ public class RefactorSecurityAndArchitectureTests : IDisposable
         // (the fix sorts unknown versions last, but they're still returned)
         // The key thing: they don't crash and don't falsely claim to be the "latest"
         // Since both are compatible (no version constraints), and both have no valid version,
-        // the ordering doesn't matter ‚Äî but we should not crash
+        // the ordering doesn't matter ‚Ä?but we should not crash
         Assert.NotNull(result); // compatible entries exist
     }
 
@@ -449,7 +449,7 @@ public class RefactorSecurityAndArchitectureTests : IDisposable
     [Fact]
     public async Task CatalogSave_ShouldNotLeaveTempFiles()
     {
-        // The atomic write uses .tmp ‚Üí rename. After successful save,
+        // The atomic write uses .tmp ‚Ü?rename. After successful save,
         // no .tmp files should remain.
 
         var catalogDir = Path.Combine(_testDir, "catalog_test");
@@ -481,7 +481,7 @@ public class RefactorSecurityAndArchitectureTests : IDisposable
 
     #endregion
 
-    #region üèóÔ∏è PlatformMatcher Testability
+    #region üèóÔ∏?PlatformMatcher Testability
 
     [Fact]
     public void PlatformMatcher_ShouldAcceptCustomPlatformServices()

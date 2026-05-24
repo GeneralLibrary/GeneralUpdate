@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
+using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Differential;
 using GeneralUpdate.Differential.Matchers;
 using Xunit;
@@ -32,7 +32,7 @@ namespace DifferentialTest.Matchers
             }
         }
 
-        #region DefaultCleanMatcher â€“ Compare and Except
+        #region DefaultCleanMatcher â€?Compare and Except
 
         [Fact]
         public void DefaultCleanMatcher_Compare_ReturnsDifferentNodes_WhenFilesChange()
@@ -324,7 +324,7 @@ namespace DifferentialTest.Matchers
             File.WriteAllText(Path.Combine(targetDir, "file.txt"), "new");
 
             // Inject a DefaultCleanStrategy that wraps a matcher which always treats every
-            // file as new (Match always returns null â†’ file is copied directly, not patched).
+            // file as new (Match always returns null â†?file is copied directly, not patched).
             var strategy = new DefaultCleanStrategy(new AlwaysNewFileMatcher());
 
             // Act
@@ -350,7 +350,7 @@ namespace DifferentialTest.Matchers
             // Inject a DefaultDirtyStrategy that wraps a matcher which never finds a patch file.
             var strategy = new DefaultDirtyStrategy(new NeverMatchDirtyMatcher());
 
-            // Act â€“ should not throw even though a patch file exists, because the custom matcher skips it
+            // Act â€?should not throw even though a patch file exists, because the custom matcher skips it
             await DifferentialCore.Dirty(appDir, patchDir, strategy);
 
             // Assert: original file is unchanged

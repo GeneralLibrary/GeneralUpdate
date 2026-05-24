@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using GeneralUpdate.ClientCore.Hubs;
+using GeneralUpdate.Core.Hubs;
 using Xunit;
 
 namespace ClientCoreTest.Hubs

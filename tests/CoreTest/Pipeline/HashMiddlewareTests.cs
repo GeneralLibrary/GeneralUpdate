@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using GeneralUpdate.Common.Internal.Pipeline;
+using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Pipeline;
 using Xunit;
 

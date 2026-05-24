@@ -1,6 +1,6 @@
 using System.Text;
-using GeneralUpdate.Common.Internal.Pipeline;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Pipeline;
 using Xunit;
 

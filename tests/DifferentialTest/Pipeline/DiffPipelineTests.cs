@@ -11,7 +11,7 @@ using Xunit;
 namespace DifferentialTest.Pipeline
 {
     /// <summary>
-    /// Test cases for DiffPipeline and DiffPipelineBuilder â€” parallel processing,
+    /// Test cases for DiffPipeline and DiffPipelineBuilder â€?parallel processing,
     /// progress reporting, IBinaryDiffer injection, and cancellation.
     /// </summary>
     public class DiffPipelineTests : IDisposable
