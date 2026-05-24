@@ -17,7 +17,7 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>User-registered extension types for lazy instantiation.</summary>
         private readonly Dictionary<Type, Type> _extensions = new();
-        /// <summary>Registered singleton instances.</summary>
+        /// <summary>Registered singleton instances (e.g., BlackListConfig).</summary>
         private readonly Dictionary<Type, object> _instances = new();
 
         protected internal AbstractBootstrap()
@@ -107,7 +107,9 @@ namespace GeneralUpdate.Core.Configuration
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
             if (_extensions.TryGetValue(typeof(TExtension), out var t))
-                return t is Type type ? Activator.CreateInstance(type) as TExtension : t as TExtension;
+                return Activator.CreateInstance((Type)t) as TExtension;
+            if (_instances.TryGetValue(typeof(TExtension), out var instance))
+                return instance as TExtension;
             return null;
         }
     }
