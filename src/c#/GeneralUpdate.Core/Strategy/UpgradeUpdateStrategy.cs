@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,6 +26,10 @@ public class UpgradeUpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
+    private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
+    private readonly DiffMode _diffMode = DiffMode.Serial;
+
+    public UpgradeUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
 
     public void Create(GlobalConfigInfo parameter)
     {

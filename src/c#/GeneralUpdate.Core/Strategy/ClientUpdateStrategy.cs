@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -31,6 +31,10 @@ public class ClientUpdateStrategy : IStrategy
     private IStrategy? _osStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private readonly List<Func<bool>> _customOptions = new();
+    private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
+    private readonly DiffMode _diffMode = DiffMode.Serial;
+
+    public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
 
     public void Create(GlobalConfigInfo parameter)
     {

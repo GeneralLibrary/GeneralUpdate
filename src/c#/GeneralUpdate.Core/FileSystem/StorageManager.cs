@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -231,6 +231,20 @@ namespace GeneralUpdate.Core.FileSystem
             }
         }
 
+        public static async System.Threading.Tasks.Task BackupAsync(string sourcePath, string backupPath, System.Collections.Generic.IReadOnlyList<string> directoryNames)
+        {
+            await System.Threading.Tasks.Task.Run(() => Backup(sourcePath, backupPath, directoryNames)).ConfigureAwait(false);
+        }
+
+        public static async System.Threading.Tasks.Task RestoreAsync(string backupPath, string sourcePath)
+        {
+            await System.Threading.Tasks.Task.Run(() => Restore(backupPath, sourcePath)).ConfigureAwait(false);
+        }
+
+        public static async System.Threading.Tasks.Task CleanBackupAsync(string installPath, int keepVersions = 3)
+        {
+            await System.Threading.Tasks.Task.Run(() => CleanBackup(installPath, keepVersions)).ConfigureAwait(false);
+        }
         #endregion
 
         #region Private Methods
