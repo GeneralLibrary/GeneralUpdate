@@ -7,28 +7,13 @@ namespace GeneralUpdate.Core.Event
 {
     public class EventManager : IDisposable
     {
-        private static readonly object _lockObj = new();
-        private static EventManager _instance;
+        private static readonly Lazy<EventManager> _lazy = new(() => new EventManager());
         private Dictionary<Type, Delegate> _dicDelegates = new();
         private bool _disposed = false;
 
         private EventManager() { }
 
-        public static EventManager Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    lock (_lockObj)
-                    {
-                        if (_instance == null)
-                            _instance = new EventManager();
-                    }
-                }
-                return _instance;
-            }
-        }
+        public static EventManager Instance => _lazy.Value;
 
         public void AddListener<TEventArgs>(Action<object, TEventArgs> listener) where TEventArgs : EventArgs
         {
