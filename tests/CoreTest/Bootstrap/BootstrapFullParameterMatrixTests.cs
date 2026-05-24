@@ -10,7 +10,7 @@ using Xunit;
 namespace CoreTest.Bootstrap
 {
     /// <summary>
-    /// Full parameter matrix tests — verifies ALL UpdateOptions constants
+    /// Full parameter matrix tests �?verifies ALL UpdateOptions constants
     /// can be set via .Option() without throwing. Covers 39 options across
     /// core, deployment, silent, download, security, reporting, OSS, and
     /// blacklist categories.
@@ -221,6 +221,274 @@ namespace CoreTest.Bootstrap
                 .AddListenerException((s, e) => { }).AddListenerUpdateInfo((s, e) => { })
                 .AddCustomOption(new List<Func<bool>> { () => true });
             Assert.NotNull(b);
+        }
+
+        /// <summary>
+        /// Complete production deployment: Client + Upgrade bootstraps configured
+        /// simultaneously with ALL non-conflicting parameters, hooks, listeners,
+        /// and extension points. This is the closest equivalent to a real-world
+        /// enterprise deployment where the developer configures both roles at once.
+        /// </summary>
+        [Fact]
+        public void Chain_ClientAndUpgrade_BothFullyConfigured()
+        {
+            // Shared configuration used by both client and upgrade
+            var sharedConfig = new Configinfo
+            {
+                UpdateUrl = "https://update.enterprise.com/api/v2",
+                AppName = "Update.exe",
+                MainAppName = "EnterpriseApp.exe",
+                ClientVersion = "4.2.1",
+                UpgradeClientVersion = "2.0.0",
+                InstallPath = _testDir,
+                AppSecretKey = "enterprise-prod-key-2026",
+                ProductId = "enterprise-app-v4",
+                UpdateLogUrl = "https://enterprise.com/releases",
+                ReportUrl = "https://telemetry.enterprise.com/api/report",
+                Scheme = "HMAC",
+                Token = "hmac-prod-secret",
+                Bowl = "Bowl.exe",
+                Script = "#!/bin/bash\nset -e\nchmod +x /opt/enterprise/Update",
+                DriverDirectory = "/opt/enterprise/drivers",
+                BlackFiles = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
+                BlackFormats = new List<string> { ".log", ".tmp", ".cache", ".etl" },
+                SkipDirectorys = new List<string> { "logs", "temp", "cache", "diagnostics", "__backups__" }
+            };
+
+            // ==========================================
+            // CLIENT bootstrap �?full production config
+            // ==========================================
+            var clientBootstrap = new GeneralUpdateBootstrap()
+                // --- Core ---
+                .Option(UpdateOptions.AppType, AppType.Client)
+                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
+                .Option(UpdateOptions.Encoding, Encoding.UTF8)
+                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.DownloadTimeout, 120)
+                .Option(UpdateOptions.DriveEnabled, false)
+                .Option(UpdateOptions.PatchEnabled, true)
+                .Option(UpdateOptions.BackupEnabled, true)
+                .Option(UpdateOptions.Mode, UpdateMode.Default)
+                .Option(UpdateOptions.Silent, false)
+                // --- Deployment ---
+                .Option(UpdateOptions.UpdateUrl, "https://update.enterprise.com/api/v2")
+                .Option(UpdateOptions.AppSecretKey, "enterprise-prod-key-2026")
+                .Option(UpdateOptions.AppName, "Update.exe")
+                .Option(UpdateOptions.MainAppName, "EnterpriseApp.exe")
+                .Option(UpdateOptions.InstallPath, _testDir)
+                .Option(UpdateOptions.ClientVersion, "4.2.1")
+                .Option(UpdateOptions.UpgradeClientVersion, "2.0.0")
+                .Option(UpdateOptions.Platform, PlatformType.Windows)
+                // --- Download Performance ---
+                .Option(UpdateOptions.MaxConcurrency, 4)
+                .Option(UpdateOptions.EnableResume, true)
+                .Option(UpdateOptions.RetryCount, 5)
+                .Option(UpdateOptions.VerifyChecksum, true)
+                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
+                // --- Security ---
+                .Option(UpdateOptions.Scheme, "HMAC")
+                .Option(UpdateOptions.Token, "hmac-prod-secret")
+                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x /opt/enterprise/Update")
+                // --- Reporting ---
+                .Option(UpdateOptions.ReportUrl, "https://telemetry.enterprise.com/api/report")
+                .Option(UpdateOptions.ProductId, "enterprise-app-v4")
+                .Option(UpdateOptions.UpdateLogUrl, "https://enterprise.com/releases")
+                // --- Blacklist ---
+                .Option(UpdateOptions.BlackList, new BlackListConfig(
+                    new List<string> { "*.pdb", "*.config" },
+                    new List<string> { ".log", ".tmp" },
+                    new List<string> { "logs", "temp" }))
+                .Option(UpdateOptions.Bowl, "Bowl.exe")
+                .Option(UpdateOptions.Script, "chmod +x /opt/enterprise/Update")
+                // --- Config ---
+                .SetConfig(sharedConfig)
+                // --- Hooks simulation (precheck) ---
+                .AddListenerUpdatePrecheck(args =>
+                {
+                    var hour = DateTime.Now.Hour;
+                    return hour < 2 || hour > 6; // Auto-approve updates during off-hours
+                })
+                // --- All event listeners ---
+                .AddListenerUpdateInfo((s, e) => { })
+                .AddListenerMultiAllDownloadCompleted((s, e) => { })
+                .AddListenerMultiDownloadCompleted((s, e) => { })
+                .AddListenerMultiDownloadError((s, e) => { })
+                .AddListenerMultiDownloadStatistics((s, e) => { })
+                .AddListenerException((s, e) => { })
+                // --- Custom pre-update checks ---
+                .AddCustomOption(new List<Func<bool>>
+                {
+                    () => true,  // Disk space check
+                    () => true,  // Network connectivity check
+                    () => true   // Service availability check
+                });
+
+            Assert.NotNull(clientBootstrap);
+
+            // ==========================================
+            // UPGRADE bootstrap �?full production config
+            // ==========================================
+            var upgradeBootstrap = new GeneralUpdateBootstrap()
+                // --- Core (Upgrade role) ---
+                .Option(UpdateOptions.AppType, AppType.Upgrade)
+                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
+                .Option(UpdateOptions.Encoding, Encoding.UTF8)
+                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.DownloadTimeout, 30)  // Upgrade needs shorter timeout
+                .Option(UpdateOptions.DriveEnabled, true)     // Upgrade may install drivers
+                .Option(UpdateOptions.PatchEnabled, true)     // Apply differential patches
+                .Option(UpdateOptions.BackupEnabled, false)   // Upgrade doesn't need backup (client did it)
+                .Option(UpdateOptions.Mode, UpdateMode.Default)
+                // --- Deployment ---
+                .Option(UpdateOptions.AppName, "Update.exe")
+                .Option(UpdateOptions.MainAppName, "EnterpriseApp.exe")
+                .Option(UpdateOptions.InstallPath, _testDir)
+                .Option(UpdateOptions.ClientVersion, "4.2.1")
+                .Option(UpdateOptions.Platform, PlatformType.Windows)
+                // --- Download (Upgrade doesn't download in new design, but options available) ---
+                .Option(UpdateOptions.MaxConcurrency, 2)
+                .Option(UpdateOptions.VerifyChecksum, true)
+                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
+                // --- Security ---
+                .Option(UpdateOptions.Scheme, "HMAC")
+                .Option(UpdateOptions.Token, "hmac-prod-secret")
+                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x /opt/enterprise/Update")
+                // --- Reporting (Upgrade reports its own status) ---
+                .Option(UpdateOptions.ReportUrl, "https://telemetry.enterprise.com/api/report")
+                .Option(UpdateOptions.ProductId, "enterprise-app-v4")
+                // --- Blacklist ---
+                .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
+                .Option(UpdateOptions.Script, "chmod +x /opt/enterprise/Update")
+                // --- Config ---
+                .SetConfig(sharedConfig)
+                // --- Event listeners (Upgrade reports failures) ---
+                .AddListenerException((s, e) => { })
+                .AddListenerUpdateInfo((s, e) => { });
+
+            Assert.NotNull(upgradeBootstrap);
+
+            // Both bootstraps coexist without interference
+            Assert.NotSame(clientBootstrap, upgradeBootstrap);
+        }
+
+        /// <summary>
+        /// Real-world developer workflow: configure both bootstraps with
+        /// hooks, reporter, and full extension chain in a single method.
+        /// Demonstrates the complete API surface a developer would use.
+        /// </summary>
+        [Fact]
+        public void Chain_ClientAndUpgrade_CompleteDeveloperWorkflow()
+        {
+            var installPath = _testDir;
+            var updateUrl = "https://update.myapp.com/api";
+            var mainApp = "MyApp.exe";
+            var currentVersion = "3.0.0";
+
+            // Step 1: Developer configures the Client bootstrap
+            var client = new GeneralUpdateBootstrap()
+                .Option(UpdateOptions.AppType, AppType.Client)
+                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
+                .Option(UpdateOptions.UpdateUrl, updateUrl)
+                .Option(UpdateOptions.AppName, "Update.exe")
+                .Option(UpdateOptions.MainAppName, mainApp)
+                .Option(UpdateOptions.InstallPath, installPath)
+                .Option(UpdateOptions.ClientVersion, currentVersion)
+                .Option(UpdateOptions.UpgradeClientVersion, "2.0.0")
+                .Option(UpdateOptions.Encoding, Encoding.UTF8)
+                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.DownloadTimeout, 120)
+                .Option(UpdateOptions.PatchEnabled, true)
+                .Option(UpdateOptions.BackupEnabled, true)
+                .Option(UpdateOptions.MaxConcurrency, 4)
+                .Option(UpdateOptions.EnableResume, true)
+                .Option(UpdateOptions.RetryCount, 5)
+                .Option(UpdateOptions.VerifyChecksum, true)
+                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
+                .Option(UpdateOptions.Scheme, "Bearer")
+                .Option(UpdateOptions.Token, "client-jwt")
+                .Option(UpdateOptions.ReportUrl, "https://telemetry.myapp.com/report")
+                .Option(UpdateOptions.ProductId, "myapp-pro")
+                .Option(UpdateOptions.UpdateLogUrl, "https://myapp.com/changelog")
+                .Option(UpdateOptions.BlackList, new BlackListConfig(
+                    new List<string> { "*.pdb" },
+                    new List<string> { ".log", ".tmp" },
+                    new List<string> { "logs", "temp" }))
+                .Option(UpdateOptions.Bowl, "Bowl.exe")
+                .Option(UpdateOptions.Platform, PlatformType.Windows)
+                .SetConfig(new Configinfo
+                {
+                    UpdateUrl = updateUrl,
+                    AppName = "Update.exe",
+                    MainAppName = mainApp,
+                    ClientVersion = currentVersion,
+                    UpgradeClientVersion = "2.0.0",
+                    InstallPath = installPath,
+                    AppSecretKey = "myapp-key",
+                    ProductId = "myapp-pro",
+                    Scheme = "Bearer",
+                    Token = "client-jwt",
+                    ReportUrl = "https://telemetry.myapp.com/report",
+                    UpdateLogUrl = "https://myapp.com/changelog",
+                    Bowl = "Bowl.exe",
+                    BlackFiles = new List<string> { "*.pdb" },
+                    BlackFormats = new List<string> { ".log", ".tmp" },
+                    SkipDirectorys = new List<string> { "logs", "temp" }
+                })
+                .AddListenerUpdateInfo((s, e) => { })        // UI: show update available toast
+                .AddListenerMultiDownloadCompleted((s, e) => { })  // UI: update progress bar
+                .AddListenerMultiAllDownloadCompleted((s, e) => { }) // UI: ready to restart
+                .AddListenerMultiDownloadError((s, e) => { })       // UI: show error dialog
+                .AddListenerMultiDownloadStatistics((s, e) => { })   // UI: speed/ETA
+                .AddListenerException((s, e) => { })                // Log to telemetry
+                .AddListenerUpdatePrecheck(args => false)           // Don't skip (default)
+                .AddCustomOption(new List<Func<bool>>
+                {
+                    () => Directory.Exists(installPath),
+                    () => true
+                });
+
+            Assert.NotNull(client);
+
+            // Step 2: Developer configures the Upgrade bootstrap
+            var upgrade = new GeneralUpdateBootstrap()
+                .Option(UpdateOptions.AppType, AppType.Upgrade)
+                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
+                .Option(UpdateOptions.AppName, "Update.exe")
+                .Option(UpdateOptions.MainAppName, mainApp)
+                .Option(UpdateOptions.InstallPath, installPath)
+                .Option(UpdateOptions.ClientVersion, currentVersion)
+                .Option(UpdateOptions.Encoding, Encoding.UTF8)
+                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.PatchEnabled, true)
+                .Option(UpdateOptions.VerifyChecksum, true)
+                .Option(UpdateOptions.MaxConcurrency, 2)
+                .Option(UpdateOptions.RetryCount, 3)
+                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
+                .Option(UpdateOptions.Scheme, "Bearer")
+                .Option(UpdateOptions.Token, "upgrade-jwt")
+                .Option(UpdateOptions.ReportUrl, "https://telemetry.myapp.com/report")
+                .Option(UpdateOptions.ProductId, "myapp-pro")
+                .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
+                .Option(UpdateOptions.Platform, PlatformType.Windows)
+                .SetConfig(new Configinfo
+                {
+                    UpdateUrl = updateUrl,
+                    AppName = "Update.exe",
+                    MainAppName = mainApp,
+                    ClientVersion = currentVersion,
+                    InstallPath = installPath,
+                    AppSecretKey = "myapp-key",
+                    Scheme = "Bearer",
+                    Token = "upgrade-jwt",
+                    ReportUrl = "https://telemetry.myapp.com/report"
+                })
+                .AddListenerException((s, e) => { })   // Upgrade logs its own errors
+                .AddListenerUpdateInfo((s, e) => { });
+
+            Assert.NotNull(upgrade);
+
+            // Step 3: Verify independent instances
+            Assert.NotSame(client, upgrade);
         }
         #endregion
     }
