@@ -44,6 +44,10 @@ namespace GeneralUpdate.Core.Configuration
         public static readonly UpdateOption<string?> ProductId = UpdateOption.ValueOf<string?>("PRODUCTID");
         public static readonly UpdateOption<string?> PermissionScript = UpdateOption.ValueOf<string?>("PERMISSIONSCRIPT");
         public static readonly UpdateOption<string?> Scheme = UpdateOption.ValueOf<string?>("SCHEME");
-        public static readonly UpdateOption<string?> Token = UpdateOption.ValueOf<string?>("TOKEN");
+        public static readonly UpdateOption<string?> Token = UpdateOption.ValueOf<string?("TOKEN");
+
+        // ═══ OSS ═══
+        public static readonly UpdateOption<int?> OSSProvider = UpdateOption.ValueOf<int?>("OSSPROVIDER");
+        public static readonly UpdateOption<string?> OSSBucketRegion = UpdateOption.ValueOf<string?>("OSSBUCKETREGION");
     }
 }
