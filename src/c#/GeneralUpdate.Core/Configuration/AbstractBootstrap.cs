@@ -26,10 +26,6 @@ namespace GeneralUpdate.Core.Configuration
             PopulateDefaults();
         }
 
-        /// <summary>
-        /// Populate all UpdateOptions with their best-practice defaults.
-        /// Subclasses can override to customize.
-        /// </summary>
         protected virtual void PopulateDefaults()
         {
             Option(UpdateOptions.MaxConcurrency, 3);
@@ -45,9 +41,6 @@ namespace GeneralUpdate.Core.Configuration
         protected abstract Task ExecuteStrategyAsync();
         protected abstract TBootstrap StrategyFactory();
 
-        /// <summary>
-        /// Setting update configuration.
-        /// </summary>
         public TBootstrap Option<T>(UpdateOption<T> option, T value)
         {
             if (value == null)
@@ -86,6 +79,9 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap BinaryDiffer<T>() where T : Differential.IBinaryDiffer, new()
         { _extensions[typeof(Differential.IBinaryDiffer)] = typeof(T); return (TBootstrap)this; }
 
+        public TBootstrap PipelineFactory<T>() where T : Pipeline.IUpdatePipelineFactory, new()
+        { _extensions[typeof(Pipeline.IUpdatePipelineFactory)] = typeof(T); return (TBootstrap)this; }
+
         public TBootstrap DownloadPolicy<T>() where T : Download.Abstractions.IDownloadPolicy, new()
         { _extensions[typeof(Download.Abstractions.IDownloadPolicy)] = typeof(T); return (TBootstrap)this; }
 
@@ -94,6 +90,9 @@ namespace GeneralUpdate.Core.Configuration
 
         public TBootstrap DownloadSource<T>() where T : Download.Abstractions.IDownloadSource, new()
         { _extensions[typeof(Download.Abstractions.IDownloadSource)] = typeof(T); return (TBootstrap)this; }
+
+        public TBootstrap DownloadPipeline<T>() where T : Download.Abstractions.IDownloadPipeline, new()
+        { _extensions[typeof(Download.Abstractions.IDownloadPipeline)] = typeof(T); return (TBootstrap)this; }
 
         public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
         { _extensions[typeof(Download.Reporting.IUpdateReporter)] = typeof(T); return (TBootstrap)this; }
