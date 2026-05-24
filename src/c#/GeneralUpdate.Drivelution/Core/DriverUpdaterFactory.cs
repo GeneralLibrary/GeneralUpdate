@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Core.Execution;

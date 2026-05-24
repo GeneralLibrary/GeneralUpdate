@@ -1,6 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.Internal.Bootstrap;
+using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Bowl.Internal;
 

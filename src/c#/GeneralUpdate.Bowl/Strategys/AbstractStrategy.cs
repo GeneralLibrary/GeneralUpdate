@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Bowl.Strategys;
 

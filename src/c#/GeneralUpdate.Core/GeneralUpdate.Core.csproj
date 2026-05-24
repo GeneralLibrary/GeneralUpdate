@@ -12,6 +12,9 @@
         <PackageTags>upgrade,update,client</PackageTags>
         <Version>10.0.0-preview</Version>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <!-- Trim readiness within netstandard2.0 constraints -->
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     </PropertyGroup>
 
     <ItemGroup>
