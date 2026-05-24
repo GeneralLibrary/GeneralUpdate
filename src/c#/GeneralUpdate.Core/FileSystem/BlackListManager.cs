@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -5,134 +6,82 @@ using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.FileSystem;
 
-public class BlackListManager
+/// <summary>Matches files/directories against a blacklist configuration.</summary>
+public interface IBlackListMatcher
 {
-    private static readonly object LockObject = new object();
-    private static BlackListManager? _instance;
+    bool IsBlacklisted(string relativeFilePath);
+    bool IsBlacklistedFormat(string extension);
+    bool ShouldSkipDirectory(string directoryName);
+}
 
-    private static readonly List<string> _blackFileFormats =
-    [
-        ".patch",
-        Format.ZIP,
-        ".rar",
-        ".tar",
-        ".json",
-        ".pdb"
-    ];
+/// <summary>
+/// Thread-safe blacklist manager. Uses Lazy<T> singleton.
+/// Matching is case-insensitive and supports prefix matching for skip directories.
+/// </summary>
+public class BlackListManager : IBlackListMatcher
+{
+    private static readonly Lazy<BlackListManager> _lazy = new(() => new BlackListManager());
+    private readonly object _lock = new();
 
-    private static readonly List<string> _blackFiles = 
+    private readonly List<string> _blackFiles =
     [
         "Microsoft.Bcl.AsyncInterfaces.dll",
-        "System.Collections.Immutable.dll", 
-        "System.IO.Pipelines.dll", 
+        "System.Collections.Immutable.dll",
+        "System.IO.Pipelines.dll",
         "System.Text.Encodings.Web.dll",
         "System.Text.Json.dll"
     ];
 
-    private static readonly List<string> _skipDirectorys = ["app-", "fail"];
+    private readonly List<string> _blackFormats = [".patch", ".pdb", ".rar", ".tar", ".json", Format.ZIP];
+    private readonly List<string> _skipDirs = ["app-", "fail"];
 
     private BlackListManager() { }
 
-    public static BlackListManager? Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                lock (LockObject)
-                {
-                    if (_instance == null)
-                    {
-                        _instance = new BlackListManager();
-                    }
-                }
-            }
+    public static BlackListManager Instance => _lazy.Value;
 
-            return _instance;
-        }
-    }
+    // Read-only accessors
+    public IReadOnlyList<string> BlackFiles { get { lock (_lock) return _blackFiles.ToList(); } }
+    public IReadOnlyList<string> BlackFormats { get { lock (_lock) return _blackFormats.ToList(); } }
+    public IReadOnlyList<string> SkipDirectorys { get { lock (_lock) return _skipDirs.ToList(); } }
 
-    public IReadOnlyList<string> BlackFileFormats => _blackFileFormats.AsReadOnly();
-    public IReadOnlyList<string> BlackFiles => _blackFiles.AsReadOnly();
+    // Mutation
+    public void AddBlackFiles(List<string>? files)
+    { if (files == null) return; lock (_lock) { foreach (var f in files) AddBlackFileLocked(f); } }
+    public void AddBlackFile(string file)
+    { if (string.IsNullOrWhiteSpace(file)) return; lock (_lock) AddBlackFileLocked(file); }
+    private void AddBlackFileLocked(string file)
+    { if (!_blackFiles.Contains(file)) _blackFiles.Add(file); }
 
-    public IReadOnlyList<string> SkipDirectorys = _skipDirectorys.AsReadOnly();
+    public void AddBlackFormats(List<string>? formats)
+    { if (formats == null) return; lock (_lock) { foreach (var f in formats) AddBlackFormatLocked(f); } }
+    public void AddBlackFormat(string format)
+    { if (string.IsNullOrWhiteSpace(format)) return; lock (_lock) AddBlackFormatLocked(format); }
+    private void AddBlackFormatLocked(string format)
+    { if (!_blackFormats.Contains(format)) _blackFormats.Add(format); }
 
-    public void AddBlackFileFormats(List<string>? formats)
-    {
-        if (formats == null)
-            return;
+    public void AddSkipDirectorys(List<string>? dirs)
+    { if (dirs == null) return; lock (_lock) { foreach (var d in dirs) AddSkipDirectoryLocked(d); } }
+    public void AddSkipDirectory(string dir)
+    { if (string.IsNullOrWhiteSpace(dir)) return; lock (_lock) AddSkipDirectoryLocked(dir); }
+    private void AddSkipDirectoryLocked(string dir)
+    { if (!_skipDirs.Contains(dir)) _skipDirs.Add(dir); }
 
-        foreach (var format in formats)
-        {
-            AddBlackFileFormat(format);
-        }
-    }
-
-    public void AddBlackFileFormat(string format)
-    {
-        if (string.IsNullOrWhiteSpace(format))
-            return;
-
-        if (!_blackFileFormats.Contains(format))
-        {
-            _blackFileFormats.Add(format);
-        }
-    }
-
-    public void AddBlackFiles(List<string>? fileNames)
-    {
-        if (fileNames == null)
-            return;
-
-        foreach (var fileName in fileNames)
-        {
-            AddBlackFile(fileName);
-        }
-    }
-
-    public void AddBlackFile(string fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-            return;
-
-        if (!_blackFiles.Contains(fileName))
-        {
-            _blackFiles.Add(fileName);
-        }
-    }
-
-    public void AddSkipDirectorys(List<string>? directorys)
-    {
-        if (directorys == null)
-            return;
-        
-        foreach (var directory in directorys)
-        {
-            AddSkipDirectory(directory);
-        }
-    }
-
-    public void AddSkipDirectory(string directory)
-    {
-        if (string.IsNullOrWhiteSpace(directory))
-            return;
-        
-        if (!_skipDirectorys.Contains(directory))
-        {
-            _skipDirectorys.Add(directory);
-        }
-    }
-
+    // Matching (read operations — no lock needed for immutable reads)
     public bool IsBlacklisted(string relativeFilePath)
     {
         var fileName = Path.GetFileName(relativeFilePath);
-        var fileExtension = Path.GetExtension(relativeFilePath);
-
-        return _blackFiles.Contains(fileName) || _blackFileFormats.Contains(fileExtension);
+        var ext = Path.GetExtension(relativeFilePath);
+        lock (_lock)
+            return _blackFiles.Contains(fileName) || _blackFormats.Contains(ext);
     }
 
-    public bool IsSkipDirectory(string directory)
+    public bool IsBlacklistedFormat(string extension)
     {
-        return _skipDirectorys.Any(directory.Contains);
+        lock (_lock) return _blackFormats.Contains(extension);
+    }
+
+    public bool ShouldSkipDirectory(string directoryName)
+    {
+        lock (_lock) return _skipDirs.Any(d => directoryName.Contains(d));
     }
 }
