@@ -7,7 +7,7 @@ using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Dependencies;
 using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core;
 
 using System;
 using System.Collections.Generic;

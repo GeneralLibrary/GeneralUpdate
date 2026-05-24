@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Bowl.Strategys;
 

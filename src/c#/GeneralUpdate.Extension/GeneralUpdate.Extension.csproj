@@ -23,20 +23,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.32" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.32" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.32" />
+    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
-  </ItemGroup>
-
-  <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
-  <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
   </ItemGroup>
 
   <!-- Package Icon -->

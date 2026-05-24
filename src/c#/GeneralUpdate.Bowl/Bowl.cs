@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl.Strategies;
 using GeneralUpdate.Bowl.Strategys;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal.Bootstrap;
-using GeneralUpdate.Common.Internal.JsonContext;
-using GeneralUpdate.Common.Shared;
-using GeneralUpdate.Common.Shared.Object;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Bowl;
 

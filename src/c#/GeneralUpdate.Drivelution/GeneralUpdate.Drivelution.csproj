@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -28,11 +28,9 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
-  <!-- Link GeneralTracer and its dependencies from GeneralUpdate.Common -->
+  <!-- Reference Core for GeneralTracer and shared types -->
   <ItemGroup>
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\GeneralTracer.cs" Link="Shared\Trace\GeneralTracer.cs" />
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\TextTraceListener.cs" Link="Shared\Trace\TextTraceListener.cs" />
-    <Compile Include="..\GeneralUpdate.Common\Shared\Trace\WindowsOutputDebugListener.cs" Link="Shared\Trace\WindowsOutputDebugListener.cs" />
+    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
 
   <!-- Package Icon -->
@@ -48,6 +46,7 @@
       <PackagePath>./</PackagePath>
     </None>
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
   </ItemGroup>

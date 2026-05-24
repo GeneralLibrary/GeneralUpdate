@@ -5,7 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Bowl.Strategies;
 

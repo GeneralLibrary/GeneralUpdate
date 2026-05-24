@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Internal.Bootstrap;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Bowl.Strategys;
 

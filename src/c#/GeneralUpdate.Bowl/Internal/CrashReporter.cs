@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Common.FileBasic;
-using GeneralUpdate.Common.Shared;
+using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Bowl.Internal;
 
