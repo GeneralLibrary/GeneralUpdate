@@ -329,4 +329,24 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     public GeneralUpdateBootstrap AddListenerUpdateInfo(
         Action<object, UpdateInfoEventArgs> cb) => AddListener(cb);
+
+    public GeneralUpdateBootstrap AddListenerProgress(
+        Action<object, ProgressEventArgs> cb) => AddListener(cb);
+
+    /// <summary>
+    /// Batch-register an event listener implementing <see cref="IUpdateEventListener"/>.
+    /// All 7 event handlers are registered at once.
+    /// </summary>
+    public GeneralUpdateBootstrap AddEventListener<TListener>() where TListener : IUpdateEventListener, new()
+    {
+        var listener = new TListener();
+        AddListener<MultiAllDownloadCompletedEventArgs>((s, e) => listener.OnAllDownloadCompleted(e));
+        AddListener<MultiDownloadCompletedEventArgs>((s, e) => listener.OnDownloadCompleted(e));
+        AddListener<MultiDownloadErrorEventArgs>((s, e) => listener.OnDownloadError(e));
+        AddListener<MultiDownloadStatisticsEventArgs>((s, e) => listener.OnDownloadStatistics(e));
+        AddListener<UpdateInfoEventArgs>((s, e) => listener.OnUpdateInfo(e));
+        AddListener<ExceptionEventArgs>((s, e) => listener.OnException(e));
+        AddListener<ProgressEventArgs>((s, e) => listener.OnProgress(e));
+        return this;
+    }
 }
