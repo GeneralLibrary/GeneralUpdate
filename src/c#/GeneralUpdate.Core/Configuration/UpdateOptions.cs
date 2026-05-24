@@ -54,5 +54,23 @@ namespace GeneralUpdate.Core.Configuration
 
         // ═══ Blacklist ═══
         public static UpdateOption<BlackListConfig> BlackList { get; } = UpdateOption.ValueOf<BlackListConfig>("BLACKLIST", BlackListConfig.Empty);
+
+        // ═══ Watchdog ═══
+        /// <summary>Bowl (crash monitor / watchdog) executable path.</summary>
+        public static UpdateOption<string?> Bowl { get; } = UpdateOption.ValueOf<string?>("BOWL", null);
+
+        // ═══ Logging & Script ═══
+        /// <summary>Remote update log / changelog URL.</summary>
+        public static UpdateOption<string?> UpdateLogUrl { get; } = UpdateOption.ValueOf<string?>("UPDATELOGURL", null);
+        /// <summary>Custom execution script path for pre/post-update actions.</summary>
+        public static UpdateOption<string?> Script { get; } = UpdateOption.ValueOf<string?>("SCRIPT", null);
+
+        // ═══ Retry ═══
+        /// <summary>Initial retry interval for exponential backoff. Default 1 second.</summary>
+        public static UpdateOption<TimeSpan> RetryInterval { get; } = UpdateOption.ValueOf<TimeSpan>("RETRYINTERVAL", TimeSpan.FromSeconds(1));
+
+        // ═══ SignalR Hub ═══
+        /// <summary>SignalR Hub configuration for push-based updates.</summary>
+        public static UpdateOption<HubConfig?> Hub { get; } = UpdateOption.ValueOf<HubConfig?>("HUB", null);
     }
 }

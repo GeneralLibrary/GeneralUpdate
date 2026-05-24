@@ -97,6 +97,18 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
 
+        /// <summary>
+        /// Configure blacklist via fluent builder action.
+        /// Usage: <c>.ConfigureBlackList(cfg => cfg.AddBlackFiles("*.log").AddBlackFormats(".pdb"))</c>
+        /// </summary>
+        public TBootstrap ConfigureBlackList(Action<FileSystem.BlackListConfigBuilder> configure)
+        {
+            var builder = new FileSystem.BlackListConfigBuilder();
+            configure(builder);
+            _instances[typeof(BlackListConfig)] = builder.Build();
+            return (TBootstrap)this;
+        }
+
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
             if (_extensions.TryGetValue(typeof(TExtension), out var t))
