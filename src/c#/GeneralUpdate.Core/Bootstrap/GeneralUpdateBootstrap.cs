@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -37,10 +38,18 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private Func<bool>? _customSkipOption;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private readonly List<Func<bool>> _customOptions = new();
+    private CancellationTokenSource? _cts;
 
     public GeneralUpdateBootstrap()
     {
         InitializeFromEnvironment();
+    }
+
+    /// <summary>Cancel the current update operation.</summary>
+    public void Cancel()
+    {
+        _cts?.Cancel();
+        GeneralTracer.Info("GeneralUpdateBootstrap: cancellation requested.");
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -69,8 +78,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private async Task<GeneralUpdateBootstrap> LaunchWithStrategy(IStrategy roleStrategy)
     {
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
         try
         {
+            token.ThrowIfCancellationRequested();
             ApplyRuntimeOptions();
 
             // Resolve hooks and reporter from extensions
@@ -106,6 +118,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             GeneralTracer.Error("LaunchWithStrategy failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        }
+        finally
+        {
+            _cts?.Dispose();
+            _cts = null;
         }
         return this;
     }
