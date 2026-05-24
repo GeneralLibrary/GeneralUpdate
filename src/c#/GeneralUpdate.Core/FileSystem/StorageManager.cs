@@ -283,6 +283,62 @@ namespace GeneralUpdate.Core.FileSystem
 
         private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
 
+        /// <summary>Restore files from backup directory to install path.</summary>
+        public static void Restore(string backupDir, string installPath)
+        {
+            if (!Directory.Exists(backupDir))
+                throw new DirectoryNotFoundException($"Backup directory not found: {backupDir}");
+
+            foreach (var file in Directory.GetFiles(backupDir, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = file.Substring(backupDir.Length).TrimStart(Path.DirectorySeparatorChar);
+                var dest = Path.Combine(installPath, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                File.Copy(file, dest, true);
+            }
+        }
+
+        /// <summary>Clean old backups, keeping only the N most recent versions.</summary>
+        public static void CleanBackup(string installPath, int keepVersions = 3)
+        {
+            var backupRoot = Path.Combine(installPath, "__backups");
+            if (!Directory.Exists(backupRoot)) return;
+
+            var dirs = Directory.GetDirectories(backupRoot)
+                .Select(d => new DirectoryInfo(d))
+                .OrderByDescending(d => d.CreationTime)
+                .Skip(keepVersions);
+
+            foreach (var dir in dirs)
+                dir.Delete(true);
+        }
+
+        /// <summary>List backup versions with metadata.</summary>
+        public static IReadOnlyList<BackupInfo> ListBackups(string installPath)
+        {
+            var backupRoot = Path.Combine(installPath, "__backups");
+            if (!Directory.Exists(backupRoot)) return Array.Empty<BackupInfo>();
+
+            return Directory.GetDirectories(backupRoot)
+                .Select(d => new DirectoryInfo(d))
+                .Select(d => new BackupInfo(
+                    d.Name, d.FullName, d.CreationTime,
+                    d.GetFiles("*", SearchOption.AllDirectories).Sum(f => f.Length)))
+                .ToList();
+        }
+
         #endregion
     }
+
+    /// <summary>Backup configuration.</summary>
+    public sealed class BackupConfig
+    {
+        public int KeepVersions { get; set; } = 3;
+        public string? BackupRoot { get; set; }
+        public List<string> SkipDirectories { get; set; } = new();
+        public bool Enabled { get; set; } = true;
+    }
+
+    /// <summary>Backup metadata.</summary>
+    public record BackupInfo(string Version, string Path, DateTime CreatedAt, long SizeBytes);
 }
