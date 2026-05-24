@@ -205,7 +205,7 @@ namespace GeneralUpdate.Core
 
             if (processInfo == null) return;
 
-            BlackListManager.Instance.AddBlackFileFormats(processInfo.BlackFileFormats);
+            BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);
             BlackListManager.Instance.AddBlackFiles(processInfo.BlackFiles);
             BlackListManager.Instance.AddSkipDirectorys(processInfo.SkipDirectorys);
 
@@ -245,7 +245,7 @@ namespace GeneralUpdate.Core
         private void InitBlackList()
         {
             BlackListManager.Instance.AddBlackFiles(_configInfo.BlackFiles);
-            BlackListManager.Instance.AddBlackFileFormats(_configInfo.BlackFormats);
+            BlackListManager.Instance.AddBlackFormats(_configInfo.BlackFormats);
             BlackListManager.Instance.AddSkipDirectorys(_configInfo.SkipDirectorys);
         }
 

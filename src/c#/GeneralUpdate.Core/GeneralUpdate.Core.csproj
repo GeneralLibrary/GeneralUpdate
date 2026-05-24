@@ -13,6 +13,7 @@
         <Version>10.0.0-preview</Version>
         <TargetFramework>netstandard2.0</TargetFramework>
     </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.1" />
         <PackageReference Include="System.Collections.Immutable" Version="10.0.1" />
@@ -21,16 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- DrivelutionMiddleware: requires net10.0 target, Core is netstandard2.0 -->
         <Compile Remove="Pipeline\DrivelutionMiddleware.cs" />
-        <Compile Remove="Pipeline\PatchMiddleware.cs" />
-        <Compile Remove="Strategy\WindowsStrategy.cs" />
-        <Compile Remove="Strategy\LinuxStrategy.cs" />
-        <Compile Remove="Strategy\OSSStrategy.cs" />
-        <Compile Remove="Strategy\MacStrategy.cs" />
-        <Compile Remove="Bootstrap\GeneralUpdateBootstrap.cs" />
-        <Compile Remove="Bootstrap\GeneralClientBootstrap.cs" />
-        <Compile Remove="Bootstrap\GeneralUpdateOSS.cs" />
-        <Compile Remove="Bootstrap\GeneralClientOSS.cs" />
-        <Compile Remove="Silent\SilentUpdateMode.cs" />
     </ItemGroup>
 </Project>

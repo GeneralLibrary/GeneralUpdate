@@ -180,7 +180,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
 
             //black list initialization.
             BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
-            BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
+            BlackListManager.Instance?.AddBlackFormats(_configInfo.BlackFormats);
             BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
 
             _configInfo.Encoding = GetOption(UpdateOption.Encoding) ?? Encoding.Default;
@@ -211,7 +211,7 @@ public class GeneralClientBootstrap : AbstractBootstrap<GeneralClientBootstrap, 
                 var processInfo = ConfigurationMapper.MapToProcessInfo(
                     _configInfo,
                     mainResp.Body,
-                    BlackListManager.Instance.BlackFileFormats.ToList(),
+                    BlackListManager.Instance.BlackFormats.ToList(),
                     BlackListManager.Instance.BlackFiles.ToList(),
                     BlackListManager.Instance.SkipDirectorys.ToList());
 
