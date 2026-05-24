@@ -85,13 +85,11 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadOrchestrator<T>() where T : Download.Abstractions.IDownloadOrchestrator, new()
         { _extensions[typeof(Download.Abstractions.IDownloadOrchestrator)] = typeof(T); return (TBootstrap)this; }
 
-        /// <summary>Register a custom clean strategy by type name (interface lives in GeneralUpdate.Differential).</summary>
-        public TBootstrap CleanStrategy<T>() where T : class, new()
-        { _extensions[typeof(T)] = typeof(T); return (TBootstrap)this; }
+        public TBootstrap CleanStrategy<T>() where T : Differential.ICleanStrategy, new()
+        { _extensions[typeof(Differential.ICleanStrategy)] = typeof(T); return (TBootstrap)this; }
 
-        /// <summary>Register a custom dirty strategy by type name (interface lives in GeneralUpdate.Differential).</summary>
-        public TBootstrap DirtyStrategy<T>() where T : class, new()
-        { _extensions[typeof(T)] = typeof(T); return (TBootstrap)this; }
+        public TBootstrap DirtyStrategy<T>() where T : Differential.IDirtyStrategy, new()
+        { _extensions[typeof(Differential.IDirtyStrategy)] = typeof(T); return (TBootstrap)this; }
 
         public TBootstrap ConfigureBlackList(BlackListConfig config)
         {
