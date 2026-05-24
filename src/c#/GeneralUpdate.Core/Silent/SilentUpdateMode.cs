@@ -116,7 +116,7 @@ internal sealed class SilentUpdateMode
         }
 
         BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
-        BlackListManager.Instance?.AddBlackFileFormats(_configInfo.BlackFormats);
+        BlackListManager.Instance?.AddBlackFormats(_configInfo.BlackFormats);
         BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
 
         _configInfo.Encoding = _encoding;
@@ -139,7 +139,7 @@ internal sealed class SilentUpdateMode
         var processInfo = ConfigurationMapper.MapToProcessInfo(
             _configInfo,
             versions,
-            BlackListManager.Instance.BlackFileFormats.ToList(),
+            BlackListManager.Instance.BlackFormats.ToList(),
             BlackListManager.Instance.BlackFiles.ToList(),
             BlackListManager.Instance.SkipDirectorys.ToList());
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);

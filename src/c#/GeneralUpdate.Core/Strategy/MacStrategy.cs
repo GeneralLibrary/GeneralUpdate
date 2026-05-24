@@ -55,10 +55,10 @@ public class MacStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
-        var builder = new PipelineBuilder(context);
-        builder.Use(new HashMiddleware());
-        builder.Use(new CompressMiddleware());
-        builder.Use(new PatchMiddleware());
+        var builder = new PipelineBuilder(context)
+            .UseMiddleware<HashMiddleware>()
+            .UseMiddleware<CompressMiddleware>()
+            .UseMiddleware<PatchMiddleware>();
         return builder;
     }
 }

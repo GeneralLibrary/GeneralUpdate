@@ -2,26 +2,20 @@ using System;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core;
-using GeneralUpdate.Differential;
 
 namespace GeneralUpdate.Core.Pipeline;
 
+/// <summary>
+/// Differential patch middleware.
+/// Full implementation requires GeneralUpdate.Differential (circular dependency — see T2).
+/// Currently a no-op placeholder; patches are applied externally.
+/// </summary>
 public class PatchMiddleware : IMiddleware
 {
     public async Task InvokeAsync(PipelineContext context)
     {
-        var sourcePath = context.Get<string>("SourcePath");
-        var targetPath = context.Get<string>("PatchPath");
-        GeneralTracer.Info($"PatchMiddleware.InvokeAsync: applying differential patch. SourcePath={sourcePath}, PatchPath={targetPath}");
-        try
-        {
-            await DifferentialCore.Dirty(sourcePath, targetPath);
-            GeneralTracer.Info("PatchMiddleware.InvokeAsync: differential patch applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("PatchMiddleware.InvokeAsync: failed to apply differential patch.", ex);
-            throw;
-        }
+        GeneralTracer.Info("PatchMiddleware.InvokeAsync: differential patching is not available in this build. " +
+            "IBinaryDiffer injection via Bootstrap.BinaryDiffer<T>() will be re-enabled in a future PR.");
+        await Task.CompletedTask;
     }
 }
