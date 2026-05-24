@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Compress;
-using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Download.Abstractions;
+using GeneralUpdate.Core.Download.Models;
+using GeneralUpdate.Core.Download.Orchestrators;
+using GeneralUpdate.Core.Download.Sources;
 using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Strategy;
@@ -32,6 +35,10 @@ public class OSSUpdateStrategy : IStrategy
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+    /// <summary>Download source for OSS version listing. Override via <c>.DownloadSource&lt;OssDownloadSource&gt;()</c>.</summary>
+    public IDownloadSource? DownloadSource { get; set; }
+    /// <summary>Download orchestrator. Override via <c>.DownloadOrchestrator&lt;T&gt;()</c>.</summary>
+    public IDownloadOrchestrator? DownloadOrchestrator { get; set; }
 
     public void Create(GlobalConfigInfo parameter)
     {
@@ -48,18 +55,10 @@ public class OSSUpdateStrategy : IStrategy
         {
             var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.AppName}_versions.json";
 
-            GeneralTracer.Debug("OSSUpdateStrategy: 1. Reading version configuration file.");
+            GeneralTracer.Debug("OSSUpdateStrategy: 1. Reading version configuration.");
             var jsonPath = Path.Combine(_appPath, versionFileName);
-            if (!File.Exists(jsonPath))
-                throw new FileNotFoundException(jsonPath);
-
-            GeneralTracer.Debug("OSSUpdateStrategy: 2. Parsing version configuration.");
-            var versions = StorageManager.GetJson<List<VersionOSS>>(jsonPath,
-                VersionOSSJsonContext.Default.ListVersionOSS);
-            if (versions == null || versions.Count == 0)
-                throw new InvalidOperationException("No versions found in OSS configuration.");
-
-            versions = versions.OrderBy(v => v.PubTime).ToList();
+            if (!File.Exists(jsonPath) && DownloadSource == null)
+                throw new FileNotFoundException($"Version config not found: {jsonPath}");
 
             // Hooks: allow cancellation before download
             if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
@@ -71,11 +70,44 @@ public class OSSUpdateStrategy : IStrategy
             // Report: update started
             await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
 
-            GeneralTracer.Debug($"OSSUpdateStrategy: 3. Downloading {versions.Count} version(s).");
-            await DownloadVersionsAsync(versions);
+            List<DownloadAsset> assets;
+            if (DownloadSource != null)
+            {
+                GeneralTracer.Debug("OSSUpdateStrategy: 2. Using injected IDownloadSource.");
+                var sourceAssets = await DownloadSource.ListAsync().ConfigureAwait(false);
+                assets = sourceAssets.ToList();
+            }
+            else
+            {
+                GeneralTracer.Debug("OSSUpdateStrategy: 2. Parsing version configuration from local JSON.");
+                var versions = System.Text.Json.JsonSerializer.Deserialize(
+                    File.ReadAllText(jsonPath),
+                    JsonContext.VersionOSSJsonContext.Default.ListVersionOSS);
+                if (versions == null || versions.Count == 0)
+                    throw new InvalidOperationException("No versions found in OSS configuration.");
+
+                assets = versions.OrderBy(v => v.PubTime).Select(v =>
+                {
+                    if (string.IsNullOrWhiteSpace(v.Url))
+                        throw new InvalidOperationException(
+                            $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
+                    var zipName = $"{v.PacketName ?? v.Version}zip";
+                    if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        zipName += ".zip";
+                    return new Download.Models.DownloadAsset(
+                        Name: zipName, Url: v.Url, Size: 0,
+                        SHA256: v.Hash, Version: v.Version ?? "0.0.0");
+                }).ToList();
+            }
+
+            if (assets.Count == 0)
+                throw new InvalidOperationException("No assets to download.");
+
+            GeneralTracer.Debug($"OSSUpdateStrategy: 3. Downloading {assets.Count} asset(s).");
+            await DownloadAssetsAsync(assets);
 
             GeneralTracer.Debug("OSSUpdateStrategy: 4. Decompressing packages.");
-            Decompress(versions);
+            DecompressAssets(assets);
 
             // Report: update applied
             await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
@@ -115,48 +147,28 @@ public class OSSUpdateStrategy : IStrategy
 
     #region Helpers
 
-    private async Task DownloadVersionsAsync(List<VersionOSS> versions)
+    private async Task DownloadAssetsAsync(List<DownloadAsset> assets)
     {
-        var assets = versions.Select(v =>
+        var plan = new DownloadPlan(assets, false);
+
+        if (DownloadOrchestrator != null)
         {
-            if (string.IsNullOrWhiteSpace(v.Url))
-                throw new InvalidOperationException(
-                    $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
-
-            // Use PacketName.zip as the filename to match Decompress() expectations.
-            // The orchestrator falls back to {Name}.{Version} when URL-based extraction fails,
-            // so we set Version to "zip" to produce e.g. "myapp.zip.zip".
-            // Better: set Name to the zip filename directly.
-            var zipName = $"{v.PacketName ?? v.Version}zip";
-            if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                zipName += ".zip";
-
-            return new Download.Models.DownloadAsset(
-                Name: zipName,
-                Url: v.Url,
-                Size: 0,
-                SHA256: v.Hash,
-                Version: v.Version ?? "0.0.0"
-            );
-        }).ToList();
-
-        var plan = new Download.Models.DownloadPlan(assets, false);
-
-        var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(TimeOut) };
-        try
+            await DownloadOrchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
+        }
+        else
         {
-            var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(TimeOut) };
+            var orchestrator = new DefaultDownloadOrchestrator(httpClient);
             await orchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
         }
-        finally { httpClient.Dispose(); }
     }
 
-    private void Decompress(List<VersionOSS> versions)
+    private void DecompressAssets(List<DownloadAsset> assets)
     {
         var encoding = Encoding.GetEncoding(_configInfo?.Encoding?.CodePage ?? Encoding.UTF8.CodePage);
-        foreach (var version in versions)
+        foreach (var asset in assets)
         {
-            var zipFilePath = Path.Combine(_appPath, $"{version.PacketName}{Format.ZIP}");
+            var zipFilePath = Path.Combine(_appPath, $"{asset.Name}{Format.ZIP}");
             CompressProvider.Decompress(Format.ZIP, zipFilePath, _appPath, encoding);
 
             if (!File.Exists(zipFilePath)) continue;
