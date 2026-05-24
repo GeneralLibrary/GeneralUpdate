@@ -6,53 +6,9 @@ namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
     /// Provides centralized mapping utilities for converting between configuration objects.
-    /// This class ensures consistent field mapping across Configinfo, GlobalConfigInfo, and ProcessInfo,
-    /// reducing the risk of missing or incorrectly mapped fields during maintenance.
     /// </summary>
     public static class ConfigurationMapper
     {
-        /// <summary>
-        /// Maps user-provided configuration (Configinfo) to internal runtime configuration (GlobalConfigInfo).
-        /// This method performs a one-to-one field mapping for all shared configuration properties.
-        /// </summary>
-        /// <param name="source">The user-provided configuration object containing initial settings.</param>
-        /// <param name="target">The internal configuration object to be populated. If null, a new instance is created.</param>
-        /// <returns>A GlobalConfigInfo object populated with values from the source Configinfo.</returns>
-        public static GlobalConfigInfo MapToGlobalConfigInfo(Configinfo source, GlobalConfigInfo target = null)
-        {
-            // Create new instance if both source and target are not provided
-            if (target == null)
-                target = new GlobalConfigInfo();
-
-            // Return empty target if source is null
-            if (source == null)
-                return target;
-
-            // Map common fields from base configuration
-            target.AppName = source.AppName;
-            target.MainAppName = source.MainAppName;
-            target.ClientVersion = source.ClientVersion;
-            target.InstallPath = source.InstallPath;
-            target.UpdateLogUrl = source.UpdateLogUrl;
-            target.AppSecretKey = source.AppSecretKey;
-            target.BlackFiles = source.BlackFiles;
-            target.BlackFormats = source.BlackFormats;
-            target.SkipDirectorys = source.SkipDirectorys;
-            target.ReportUrl = source.ReportUrl;
-            target.Bowl = source.Bowl;
-            target.Scheme = source.Scheme;
-            target.Token = source.Token;
-            target.Script = source.Script;
-            target.DriverDirectory = source.DriverDirectory;
-
-            // Map GlobalConfigInfo-specific fields
-            target.UpdateUrl = source.UpdateUrl;
-            target.UpgradeClientVersion = source.UpgradeClientVersion;
-            target.ProductId = source.ProductId;
-
-            return target;
-        }
-
         /// <summary>
         /// Maps internal runtime configuration (GlobalConfigInfo) to process transfer parameters (ProcessInfo).
         /// This method consolidates the complex parameter passing logic previously scattered in bootstrap code.
@@ -74,62 +30,28 @@ namespace GeneralUpdate.Core.Configuration
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "GlobalConfigInfo source cannot be null");
 
-            // Create ProcessInfo with all required parameters in a single location
-            // Centralized parameter mapping for ProcessInfo creation
             return new ProcessInfo(
-                appName: source.MainAppName,              // Maps MainAppName to ProcessInfo.AppName
+                appName: source.MainAppName,
                 installPath: source.InstallPath,
-                currentVersion: source.ClientVersion,     // Maps ClientVersion to ProcessInfo.CurrentVersion
-                lastVersion: source.LastVersion,          // Computed value set before calling this method
+                currentVersion: source.ClientVersion,
+                lastVersion: source.LastVersion,
                 updateLogUrl: source.UpdateLogUrl,
-                compressEncoding: source.Encoding,        // Computed value set before calling this method
-                compressFormat: source.Format,            // Computed value set before calling this method
-                downloadTimeOut: source.DownloadTimeOut,  // Computed value set before calling this method
+                compressEncoding: source.Encoding,
+                compressFormat: source.Format,
+                downloadTimeOut: source.DownloadTimeOut,
                 appSecretKey: source.AppSecretKey,
-                updateVersions: updateVersions,           // From API response
+                updateVersions: updateVersions,
                 reportUrl: source.ReportUrl,
-                backupDirectory: source.BackupDirectory,  // Computed value set before calling this method
+                backupDirectory: source.BackupDirectory,
                 bowl: source.Bowl,
                 scheme: source.Scheme,
                 token: source.Token,
                 script: source.Script,
-                driverDirectory: source.DriverDirectory,  // Driver directory for driver updates
-                blackFileFormats: blackFileFormats,       // From BlackListManager
-                blackFiles: blackFiles,                   // From BlackListManager
-                skipDirectories: skipDirectories          // From BlackListManager
+                driverDirectory: source.DriverDirectory,
+                blackFileFormats: blackFileFormats,
+                blackFiles: blackFiles,
+                skipDirectories: skipDirectories
             );
-        }
-
-        /// <summary>
-        /// Copies common configuration fields from a base configuration object to another.
-        /// This utility method helps maintain consistency when transferring configuration data.
-        /// </summary>
-        /// <typeparam name="TSource">The source configuration type (must inherit from BaseConfigInfo).</typeparam>
-        /// <typeparam name="TTarget">The target configuration type (must inherit from BaseConfigInfo).</typeparam>
-        /// <param name="source">The source configuration object to copy from.</param>
-        /// <param name="target">The target configuration object to copy to.</param>
-        public static void CopyBaseFields<TSource, TTarget>(TSource source, TTarget target)
-            where TSource : BaseConfigInfo
-            where TTarget : BaseConfigInfo
-        {
-            if (source == null || target == null)
-                return;
-
-            target.AppName = source.AppName;
-            target.MainAppName = source.MainAppName;
-            target.InstallPath = source.InstallPath;
-            target.UpdateLogUrl = source.UpdateLogUrl;
-            target.AppSecretKey = source.AppSecretKey;
-            target.ClientVersion = source.ClientVersion;
-            target.BlackFiles = source.BlackFiles;
-            target.BlackFormats = source.BlackFormats;
-            target.SkipDirectorys = source.SkipDirectorys;
-            target.ReportUrl = source.ReportUrl;
-            target.Bowl = source.Bowl;
-            target.Scheme = source.Scheme;
-            target.Token = source.Token;
-            target.Script = source.Script;
-            target.DriverDirectory = source.DriverDirectory;
         }
     }
 }
