@@ -1,29 +1,33 @@
 using System;
-using GeneralUpdate.Core.Download.Models;
+using IProgress = System.IProgress<GeneralUpdate.Core.Download.Models.DownloadProgress>;
 
 namespace GeneralUpdate.Core.Download.Progress;
 
-/// <summary>Bridges IProgress<DownloadProgress> to event-based listeners.</summary>
-public class DownloadProgressReporter : IProgress<DownloadProgress>
+/// <summary>Bridges IProgress to event-based callbacks for download status.</summary>
+public class DownloadProgressReporter : IProgress
 {
-    private readonly Action<DownloadProgress>? _onProgress;
-    private readonly Action<DownloadResult>? _onCompleted;
-    private readonly Action<DownloadResult, Exception>? _onError;
+    private readonly Action<Download.Models.DownloadProgress>? _onProgress;
+    private readonly Action? _onCompleted;
+    private readonly Action? _onAllCompleted;
 
     public DownloadProgressReporter(
-        Action<DownloadProgress>? onProgress = null,
-        Action<DownloadResult>? onCompleted = null,
-        Action<DownloadResult, Exception>? onError = null)
+        Action<Download.Models.DownloadProgress>? onProgress = null,
+        Action? onCompleted = null,
+        Action? onAllCompleted = null)
     {
         _onProgress = onProgress;
         _onCompleted = onCompleted;
-        _onError = onError;
+        _onAllCompleted = onAllCompleted;
     }
 
-    public void Report(DownloadProgress value)
+    public void Report(Download.Models.DownloadProgress value)
     {
         _onProgress?.Invoke(value);
-        if (value.Status == DownloadStatus.Completed)
-            _onCompleted?.Invoke(null!); // result will be set by caller
+        if (value.Status == Download.Models.DownloadStatus.Completed)
+        {
+            _onCompleted?.Invoke();
+            if (value.Percentage >= 100)
+                _onAllCompleted?.Invoke();
+        }
     }
 }

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core.Download.Abstractions;
 
@@ -19,7 +17,7 @@ public record PacketDTO
     public bool? IsForcibly { get; set; }
     public bool? IsFreeze { get; set; }
     public string? Format { get; set; }
-    public long Size { get; set; }
+    public long? Size { get; set; }
     public string? FromVersion { get; set; }
     public bool? IsCrossVersion { get; set; }
     public string? MinClientVersion { get; set; }

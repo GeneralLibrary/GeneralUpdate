@@ -22,23 +22,31 @@ public class OssDownloadExecutor : IDownloadExecutor
         CancellationToken token = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        long lastReport = 0;
         try
         {
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
+            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token)
+                .ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var total = response.Content.Headers.ContentLength ?? -1;
+            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             using var fs = new FileStream(destPath, FileMode.Create);
-            using var stream = await response.Content.ReadAsStreamAsync();
+            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var buffer = new byte[8192];
             long downloaded = 0;
             int read;
-            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
+            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
             {
-                await fs.WriteAsync(buffer, 0, read, token);
+                await fs.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
                 downloaded += read;
-                var pct = total > 0 ? (double)downloaded / total * 100 : -1;
-                progress?.Report(new DownloadProgress(
-                    Path.GetFileName(destPath), downloaded, total > 0 ? total : null, pct, DownloadStatus.Downloading));
+                var now = sw.ElapsedMilliseconds;
+                if (now - lastReport >= 250 || downloaded == total)
+                {
+                    lastReport = now;
+                    var pct = total > 0 ? (double)downloaded / total * 100 : -1;
+                    progress?.Report(new DownloadProgress(
+                        Path.GetFileName(destPath), downloaded, total > 0 ? total : null, pct, DownloadStatus.Downloading));
+                }
             }
             sw.Stop();
             progress?.Report(new DownloadProgress(Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100, DownloadStatus.Completed));

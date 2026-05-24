@@ -29,7 +29,7 @@ public class DefaultDownloadPipeline : IDownloadPipeline
     private static async Task<string> ComputeSha256Async(string path, CancellationToken token)
     {
         using var sha = SHA256.Create();
-        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var hash = await Task.Run(() => sha.ComputeHash(fs), token).ConfigureAwait(false);
         return System.BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
