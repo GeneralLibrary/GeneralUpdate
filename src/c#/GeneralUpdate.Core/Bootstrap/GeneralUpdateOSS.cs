@@ -9,6 +9,7 @@ using GeneralUpdate.Core.Strategy;
 
 namespace GeneralUpdate.Core
 {
+    [Obsolete("Use GeneralUpdateBootstrap with AppType=AppType.OSS instead. See UpdateOptions.AppType.")]
     public sealed class GeneralUpdateOSS
     {
         private GeneralUpdateOSS() { }

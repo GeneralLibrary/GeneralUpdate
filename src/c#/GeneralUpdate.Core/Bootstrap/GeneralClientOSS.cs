@@ -15,7 +15,7 @@ using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core;
 
-public sealed class GeneralClientOSS
+[Obsolete("Use GeneralUpdateBootstrap with AppType=AppType.OSS instead.")] public sealed class GeneralClientOSS
 {
     private GeneralClientOSS() { }
 
