@@ -13,7 +13,7 @@ namespace GeneralUpdate.Core.Configuration
            where TBootstrap : AbstractBootstrap<TBootstrap, TStrategy>
            where TStrategy : IStrategy
     {
-        protected readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
+        private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
 
         /// <summary>User-registered extension types for lazy instantiation.</summary>
         private readonly Dictionary<Type, Type> _extensions = new();

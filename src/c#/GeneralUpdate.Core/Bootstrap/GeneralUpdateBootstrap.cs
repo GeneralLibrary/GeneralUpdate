@@ -218,31 +218,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     // Configuration
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Set configuration from a Configinfo object. Fields are mapped to both the internal
-    /// GlobalConfigInfo and the UpdateOptions registry, enabling fluent Option() overrides.
-    /// <c>.Option()</c> calls placed before <c>SetConfig()</c> take priority when the same field is set.
-    /// </summary>
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
     {
         _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
-
-        // Bidirectional sync: populate UpdateOptions from Configinfo.
-        // .Option() values set before SetConfig() take priority — only seed if not already present.
-        SeedOption(UpdateOptions.AppName, configInfo.AppName);
-        SeedOption(UpdateOptions.MainAppName, configInfo.MainAppName);
-        SeedOption(UpdateOptions.InstallPath, configInfo.InstallPath);
-        SeedOption(UpdateOptions.ClientVersion, configInfo.ClientVersion);
-        SeedOption(UpdateOptions.UpdateLogUrl, configInfo.UpdateLogUrl);
-        SeedOption(UpdateOptions.AppSecretKey, configInfo.AppSecretKey);
-        SeedOption(UpdateOptions.ReportUrl, configInfo.ReportUrl);
-        SeedOption(UpdateOptions.Bowl, configInfo.Bowl);
-        SeedOption(UpdateOptions.Scheme, configInfo.Scheme);
-        SeedOption(UpdateOptions.Token, configInfo.Token);
-        SeedOption(UpdateOptions.Script, configInfo.Script);
-        SeedOption(UpdateOptions.UpdateUrl, configInfo.UpdateUrl);
-        SeedOption(UpdateOptions.UpgradeClientVersion, configInfo.UpgradeClientVersion);
-        SeedOption(UpdateOptions.ProductId, configInfo.ProductId);
 
         var appType = GetOption(UpdateOptions.AppType);
         if (appType != AppType.Upgrade)
@@ -252,13 +230,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         }
 
         return this;
-    }
-
-    /// <summary>Seed an UpdateOption from Configinfo only if not already set by .Option().</summary>
-    private void SeedOption<T>(UpdateOption<T> option, T? value)
-    {
-        if (value != null && !_options.ContainsKey(option))
-            Option(option, value);
     }
 
     public GeneralUpdateBootstrap SetCustomSkipOption(Func<bool>? func)
