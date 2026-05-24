@@ -111,22 +111,31 @@ public class ClientUpdateStrategy : IStrategy
     {
         GeneralTracer.Info($"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
-        var mainResp = await VersionService.Validate(_configInfo.UpdateUrl,
-            _configInfo.ClientVersion, AppType.ClientApp, _configInfo.AppSecretKey,
-            GetPlatform(), _configInfo.ProductId, _configInfo.Scheme, _configInfo.Token);
+        // Use HttpDownloadSource to validate versions and get download assets
+        var downloadSource = new Download.Sources.HttpDownloadSource(
+            _configInfo.UpdateUrl,
+            _configInfo.ClientVersion,
+            _configInfo.UpgradeClientVersion,
+            _configInfo.AppSecretKey,
+            GetPlatform(),
+            _configInfo.ProductId,
+            _configInfo.Scheme,
+            _configInfo.Token);
 
-        var upgradeResp = await VersionService.Validate(_configInfo.UpdateUrl,
-            _configInfo.UpgradeClientVersion, AppType.UpgradeApp, _configInfo.AppSecretKey,
-            GetPlatform(), _configInfo.ProductId, _configInfo.Scheme, _configInfo.Token);
+        var assets = await downloadSource.ListAsync().ConfigureAwait(false);
+        var downloadPlan = Download.DownloadPlanBuilder.Build(assets, _configInfo.ClientVersion);
 
-        _configInfo.IsUpgradeUpdate = CheckUpgrade(upgradeResp);
-        _configInfo.IsMainUpdate = CheckUpgrade(mainResp);
-        GeneralTracer.Info($"ClientUpdateStrategy: IsMainUpdate={_configInfo.IsMainUpdate}, IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}");
+        // Detect update status
+        _configInfo.IsMainUpdate = downloadPlan.HasAssets;
+        _configInfo.IsUpgradeUpdate = assets.Any(a => a.Version != _configInfo.ClientVersion);
+        _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
+        GeneralTracer.Info($"ClientUpdateStrategy: IsMainUpdate={_configInfo.IsMainUpdate}, IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}, AssetCount={downloadPlan.Assets.Count}");
 
-        var updateInfoArgs = new UpdateInfoEventArgs(mainResp);
+        // Dispatch update info event
+        var updateInfoArgs = new UpdateInfoEventArgs(null);
         EventManager.Instance.Dispatch(this, updateInfoArgs);
 
-        var isForcibly = CheckForcibly(mainResp.Body) || CheckForcibly(upgradeResp.Body);
+        var isForcibly = downloadPlan.IsForcibly;
         if (CanSkip(isForcibly, updateInfoArgs))
         {
             GeneralTracer.Info("ClientUpdateStrategy: update skipped.");
@@ -151,60 +160,52 @@ public class ClientUpdateStrategy : IStrategy
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
             $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
 
-        _configInfo.UpdateVersions = _configInfo.IsUpgradeUpdate
-            ? upgradeResp.Body.OrderBy(x => x.ReleaseDate).ToList()
-            : new List<VersionInfo>();
-
-        if (_configInfo.IsMainUpdate)
+        if (!_configInfo.IsMainUpdate)
         {
-            _configInfo.LastVersion = mainResp.Body.OrderBy(x => x.ReleaseDate).Last().Version;
-            GeneralTracer.Info($"ClientUpdateStrategy: main update LastVersion={_configInfo.LastVersion}");
+            GeneralTracer.Info("ClientUpdateStrategy: no update available.");
+            return;
+        }
 
-            if (CheckFail(_configInfo.LastVersion))
-            {
-                GeneralTracer.Warn($"ClientUpdateStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
-                return;
-            }
+        // Check failed version
+        if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
+        {
+            GeneralTracer.Warn($"ClientUpdateStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
+            return;
+        }
 
-            var processInfo = ConfigurationMapper.MapToProcessInfo(
-                _configInfo, mainResp.Body,
+        // Build process info for the upgrade process
+        _configInfo.ProcessInfo = JsonSerializer.Serialize(
+            ConfigurationMapper.MapToProcessInfo(
+                _configInfo, new List<VersionInfo>(),
                 BlackListManager.Instance.BlackFormats.ToList(),
                 BlackListManager.Instance.BlackFiles.ToList(),
-                BlackListManager.Instance.SkipDirectorys.ToList());
-
-            _configInfo.ProcessInfo = JsonSerializer.Serialize(
-                processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-        }
+                BlackListManager.Instance.SkipDirectorys.ToList()),
+            ProcessInfoJsonContext.Default.ProcessInfo);
 
         // Backup
         Backup();
 
         _osStrategy!.Create(_configInfo);
 
-        GeneralTracer.Info($"ClientUpdateStrategy: IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}, IsMainUpdate={_configInfo.IsMainUpdate}");
-
-        switch (_configInfo.IsUpgradeUpdate)
+        // Download via orchestrator (replaces old DownloadManager)
+        GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
+        var httpClient = new System.Net.Http.HttpClient();
+        try
         {
-            case true when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: both upgrade+main -- downloading and executing.");
-                await DownloadAsync();
-                await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
-                await _osStrategy.ExecuteAsync();
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                _osStrategy.StartApp();
-                break;
-            case true when !_configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: upgrade-only -- downloading and executing.");
-                await DownloadAsync();
-                await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
-                await _osStrategy.ExecuteAsync();
-                break;
-            case false when _configInfo.IsMainUpdate:
-                GeneralTracer.Info("ClientUpdateStrategy: main-only -- starting updater.");
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                _osStrategy.StartApp();
-                break;
+            var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
+            await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
         }
+        finally
+        {
+            httpClient.Dispose();
+        }
+
+        await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
+
+        // Apply updates and start app
+        await _osStrategy.ExecuteAsync();
+        await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+        _osStrategy.StartApp();
     }
 
     #endregion
@@ -243,15 +244,6 @@ public class ClientUpdateStrategy : IStrategy
             BlackListManager.Instance.SkipDirectorys);
     }
 
-    private async Task DownloadAsync()
-    {
-        var manager = new DownloadManager(
-            _configInfo!.TempPath, _configInfo.Format, _configInfo.DownloadTimeOut);
-        foreach (var version in _configInfo.UpdateVersions)
-            manager.Add(new DownloadTask(manager, version));
-        await manager.LaunchTasksAsync();
-    }
-
     private bool CanSkip(bool isForcibly, UpdateInfoEventArgs updateInfo)
     {
         if (isForcibly) return false;
@@ -265,12 +257,6 @@ public class ClientUpdateStrategy : IStrategy
             return false;
         return new Version(fail) >= new Version(version);
     }
-
-    private static bool CheckUpgrade(VersionRespDTO? response)
-        => response?.Code == 200 && response.Body?.Count > 0;
-
-    private static bool CheckForcibly(IEnumerable<VersionInfo>? versions)
-        => versions?.Any(v => v.IsForcibly == true) == true;
 
     private static int GetPlatform()
     {

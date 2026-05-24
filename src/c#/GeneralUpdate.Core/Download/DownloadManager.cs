@@ -7,6 +7,7 @@ using System.Linq;
 
 namespace GeneralUpdate.Core.Download
 {
+    [Obsolete("Use IDownloadOrchestrator + DefaultDownloadOrchestrator instead. Will be removed in v11.")]
     public class DownloadManager(string path, string format, int timeOut)
     {
         #region Private Members
