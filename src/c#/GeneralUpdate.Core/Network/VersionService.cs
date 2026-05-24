@@ -46,20 +46,20 @@ namespace GeneralUpdate.Core.Network
         }
         private VersionService() { }
 
-        // Static API (backward-compatible)
+        // Static API (backward-compatible, CancellationToken optional)
         public static Task Report(string url, int recordId, int status, int? type,
-            string scheme = null, string token = null)
+            string scheme = null, string token = null, CancellationToken ct = default)
         {
             var a = HttpAuthProviderFactory.Create(scheme, token, null);
-            return new VersionService(a).ReportAsync(url, recordId, status, type);
+            return new VersionService(a).ReportAsync(url, recordId, status, type, ct);
         }
 
         public static Task<VersionRespDTO> Validate(string url, string version,
             int appType, string appKey, int platform, string productId,
-            string scheme = null, string token = null)
+            string scheme = null, string token = null, CancellationToken ct = default)
         {
             var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
-            return new VersionService(a).ValidateAsync(url, version, appType, platform, productId);
+            return new VersionService(a).ValidateAsync(url, version, appType, platform, productId, ct);
         }
 
         private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
