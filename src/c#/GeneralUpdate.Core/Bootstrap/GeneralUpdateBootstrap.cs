@@ -14,6 +14,8 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.Hooks;
+using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core;
 
@@ -63,14 +65,30 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             ApplyRuntimeOptions();
 
+            // Resolve hooks and reporter from extensions
+            var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
+            var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
+
             // Configure client-specific callbacks
             if (roleStrategy is ClientUpdateStrategy clientStrat)
             {
+                clientStrat.Hooks = hooks;
+                clientStrat.Reporter = reporter;
                 if (_updatePrecheck != null)
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
                 foreach (var opt in _customOptions)
                     clientStrat.UseCustomOption(opt);
                 await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
+            }
+            else if (roleStrategy is UpgradeUpdateStrategy upgradeStrat)
+            {
+                upgradeStrat.Hooks = hooks;
+                upgradeStrat.Reporter = reporter;
+            }
+            else if (roleStrategy is OSSUpdateStrategy ossStrat)
+            {
+                ossStrat.Hooks = hooks;
+                ossStrat.Reporter = reporter;
             }
 
             roleStrategy.Create(_configInfo);
