@@ -90,24 +90,9 @@ public class ClientUpdateStrategy : IStrategy
     private async Task ExecuteWorkflowAsync()
     {
         // Standard mode — silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
-        // Encoding, Format, and DownloadTimeOut are normally set by
-        // Bootstrap.ApplyRuntimeOptions(); the fallback ensures sensible defaults
-        // when the strategy is used without Bootstrap wiring.
-        ApplyStrategyDefaults();
+        // Runtime options (Encoding, Format, DownloadTimeOut, etc.) are already
+        // populated on _configInfo by Bootstrap.ApplyRuntimeOptions().
         await ExecuteStandardWorkflowAsync();
-    }
-
-    /// <summary>
-    /// Applies sensible fallback defaults for runtime options that may not
-    /// have been set by Bootstrap.ApplyRuntimeOptions(). Uses null-coalescing
-    /// so previously-assigned values (from UpdateOptions) are never overwritten.
-    /// </summary>
-    private void ApplyStrategyDefaults()
-    {
-        _configInfo!.Encoding ??= Encoding.UTF8;
-        _configInfo.Format ??= "ZIP";
-        if (_configInfo.DownloadTimeOut <= 0)
-            _configInfo.DownloadTimeOut = 60;
     }
 
     private async Task ExecuteStandardWorkflowAsync()

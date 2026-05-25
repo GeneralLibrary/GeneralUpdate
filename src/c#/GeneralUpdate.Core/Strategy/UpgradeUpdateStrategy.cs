@@ -52,7 +52,6 @@ public class UpgradeUpdateStrategy : IStrategy
                 return;
             }
 
-            ApplyRuntimeOptions();
             _osStrategy!.Create(_configInfo);
 
             // Apply updates via OS-specific pipeline (Hash -> Compress -> Patch)
@@ -107,17 +106,6 @@ public class UpgradeUpdateStrategy : IStrategy
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             return new MacStrategy();
         throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
-
-    /// <summary>
-    /// Applies sensible fallback defaults for runtime options that may not
-    /// have been set by Bootstrap.ApplyRuntimeOptions(). Uses null-coalescing
-    /// so previously-assigned values (from UpdateOptions) are never overwritten.
-    /// </summary>
-    private void ApplyRuntimeOptions()
-    {
-        _configInfo!.Encoding ??= Encoding.UTF8;
-        _configInfo.Format ??= Format.ZIP;
     }
 
     // ════════════════════════════════════════════════════════════════
