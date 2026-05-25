@@ -182,7 +182,7 @@ public class ClientUpdateStrategy : IStrategy
             ProcessInfoJsonContext.Default.ProcessInfo);
 
         // Wire ProcessInfo via AES-encrypted file IPC.
-        await new EncryptedFileProcessInfoProvider().SendAsync(processInfo).ConfigureAwait(false);
+        new EncryptedFileProcessInfoProvider().Send(processInfo);
         GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via encrypted file IPC.");
 
         // Backup — conditionally skipped when BackupEnabled is false

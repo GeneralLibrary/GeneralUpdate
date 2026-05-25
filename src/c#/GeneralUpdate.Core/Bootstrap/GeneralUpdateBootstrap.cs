@@ -258,9 +258,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private void InitializeFromEnvironment()
     {
         // Read ProcessInfo via AES-encrypted file IPC.
-        // Sync wait is acceptable here — the constructor runs once and
-        // EncryptedFileProcessInfoProvider is synchronous.
-        var processInfo = new EncryptedFileProcessInfoProvider().ReceiveAsync().GetAwaiter().GetResult();
+        var processInfo = new EncryptedFileProcessInfoProvider().Receive();
         if (processInfo == null) return;
 
         BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);

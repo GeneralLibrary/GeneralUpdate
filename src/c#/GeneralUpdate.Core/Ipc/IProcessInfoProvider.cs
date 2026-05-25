@@ -38,7 +38,13 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 
     public Task SendAsync(ProcessInfo info, CancellationToken token = default)
     {
-        token.ThrowIfCancellationRequested();
+        Send(info);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Synchronous send — all I/O is synchronous under the hood.</summary>
+    public void Send(ProcessInfo info)
+    {
         var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
         var plainBytes = Encoding.UTF8.GetBytes(json);
         using var aes = Aes.Create();
@@ -46,12 +52,15 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
         using var enc = aes.CreateEncryptor();
         var cipher = enc.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
         File.WriteAllBytes(_filePath, cipher);
-        return Task.CompletedTask;
     }
 
     public Task<ProcessInfo?> ReceiveAsync(CancellationToken token = default)
+        => Task.FromResult(Receive());
+
+    /// <summary>Synchronous receive — reads and deletes the encrypted file.</summary>
+    public ProcessInfo? Receive()
     {
-        if (!File.Exists(_filePath)) return Task.FromResult<ProcessInfo?>(null);
+        if (!File.Exists(_filePath)) return null;
         try
         {
             var cipher = File.ReadAllBytes(_filePath);
@@ -60,8 +69,7 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
             using var dec = aes.CreateDecryptor();
             var plain = dec.TransformFinalBlock(cipher, 0, cipher.Length);
             var json = Encoding.UTF8.GetString(plain);
-            return Task.FromResult<ProcessInfo?>(
-                JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo));
+            return JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo);
         }
         finally { try { File.Delete(_filePath); } catch { } }
     }

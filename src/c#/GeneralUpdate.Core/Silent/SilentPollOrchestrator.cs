@@ -328,7 +328,7 @@ public class SilentPollOrchestrator : IDisposable
             // Send ProcessInfo via AES-encrypted file IPC.
             if (_preparedProcessInfo != null)
             {
-                new EncryptedFileProcessInfoProvider().SendAsync(_preparedProcessInfo).GetAwaiter().GetResult();
+                new EncryptedFileProcessInfoProvider().Send(_preparedProcessInfo);
                 GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via encrypted file IPC.");
             }
         }
