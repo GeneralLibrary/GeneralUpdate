@@ -105,20 +105,6 @@ public class OSSUpdateStrategy : IStrategy
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Upgrade application not found: {upgradeAppName}");
 
-        // Pass config to the upgrade process via AES-encrypted file
-        var ossConfig = new GlobalConfigInfoOSS
-        {
-            AppName = _configInfo.MainAppName ?? _configInfo.AppName,
-            CurrentVersion = _configInfo.ClientVersion,
-            VersionFileName = versionFileName,
-            Encoding = (_configInfo.Encoding?.CodePage ?? Encoding.UTF8.CodePage).ToString(),
-            Url = _configInfo.UpdateUrl
-        };
-
-        Environments.SetEnvironmentVariable("GlobalConfigInfoOSS",
-            JsonSerializer.Serialize(ossConfig,
-                JsonContext.GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS));
-
         Process.Start(appPath);
         await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
     }
