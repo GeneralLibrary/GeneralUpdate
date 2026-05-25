@@ -42,7 +42,7 @@ public class OssDownloadExecutor : IDownloadExecutor
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
-            return new DownloadResult(asset, null, 0, sw.Elapsed, 0, false, ex.Message);
+            return new DownloadResult(asset, destPath, 0, sw.Elapsed, 0, false, ex.Message);
         }
     }
 }

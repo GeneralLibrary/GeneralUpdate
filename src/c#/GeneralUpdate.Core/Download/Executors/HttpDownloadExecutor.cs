@@ -79,7 +79,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
-            return new DownloadResult(asset, null, existingBytes, sw.Elapsed, retries, false, ex.Message);
+            return new DownloadResult(asset, destPath, existingBytes, sw.Elapsed, retries, false, ex.Message);
         }
     }
 

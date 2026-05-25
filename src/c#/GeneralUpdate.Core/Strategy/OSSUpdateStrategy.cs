@@ -74,7 +74,7 @@ public class OSSUpdateStrategy : IStrategy
 
         if (!string.IsNullOrEmpty(_configInfo.UpdateUrl))
         {
-            DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath);
+            await DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath).ConfigureAwait(false);
         }
 
         if (!File.Exists(versionsFilePath))
@@ -210,7 +210,7 @@ public class OSSUpdateStrategy : IStrategy
 
     #region Helpers
 
-    private static void DownloadVersionConfig(string url, string path)
+    private static async Task DownloadVersionConfig(string url, string path)
     {
         if (File.Exists(path))
         {
@@ -218,7 +218,7 @@ public class OSSUpdateStrategy : IStrategy
             File.Delete(path);
         }
         using var httpClient = new HttpClient();
-        var bytes = httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
+        var bytes = await httpClient.GetByteArrayAsync(url).ConfigureAwait(false);
         File.WriteAllBytes(path, bytes);
     }
 
