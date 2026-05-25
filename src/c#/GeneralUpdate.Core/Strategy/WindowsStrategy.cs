@@ -15,27 +15,17 @@ namespace GeneralUpdate.Core.Strategy
     {
         protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
         {
-            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}, driveEnabled={_configinfo.DriveEnabled}");
-            var context = base.CreatePipelineContext(version, patchPath);
-            
-            // Driver middleware (Windows-specific)
-            if (_configinfo.DriveEnabled == true)
-            {
-                context.Add("DriverDirectory", _configinfo.DriverDirectory);
-                GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.CreatePipelineContext: driver update enabled, DriverDirectory={_configinfo.DriverDirectory}");
-            }
-            
-            return context;
+            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");
+            return base.CreatePipelineContext(version, patchPath);
         }
 
         protected override PipelineBuilder BuildPipeline(PipelineContext context)
         {
-            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}, DriveEnabled={_configinfo.DriveEnabled}");
+            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
             var builder = new PipelineBuilder(context)
                 .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
                 .UseMiddleware<CompressMiddleware>()
                 .UseMiddleware<HashMiddleware>();
-            // DrivelutionMiddleware: add GeneralUpdate.Drivelution project reference to enable
             return builder;
         }
 

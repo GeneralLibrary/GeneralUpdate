@@ -96,12 +96,6 @@ public class GlobalConfigInfo : BaseConfigInfo
     public string ProcessInfo { get; set; }
 
     /// <summary>
-    /// Indicates whether driver update functionality is enabled.
-    /// Computed from UpdateOption.Drive or defaults to false.
-    /// </summary>
-    public bool? DriveEnabled { get; set; }
-
-    /// <summary>
     /// Directory path containing driver files for update.
     /// Used when DriveEnabled is true to locate driver files for installation.
     /// </summary>
