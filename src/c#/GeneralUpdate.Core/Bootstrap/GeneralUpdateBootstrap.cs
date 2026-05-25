@@ -16,6 +16,7 @@ using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core.Network;
 using GeneralUpdate.Core.Hooks;
+using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core;
@@ -256,11 +257,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitializeFromEnvironment()
     {
-        var json = Environments.GetEnvironmentVariable("ProcessInfo");
-        if (string.IsNullOrWhiteSpace(json)) return;
-
-        var processInfo = JsonSerializer.Deserialize(
-            json, ProcessInfoJsonContext.Default.ProcessInfo);
+        // Read ProcessInfo via IPC (NamedPipe > SharedMemory > EncryptedFile auto-fallback).
+        // Sync wait is acceptable here — the constructor runs once and the
+        // IPC providers use short timeouts (5s NamedPipe, immediate MMF/file).
+        var processInfo = new AutoProcessInfoProvider().ReceiveAsync().GetAwaiter().GetResult();
         if (processInfo == null) return;
 
         BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);
