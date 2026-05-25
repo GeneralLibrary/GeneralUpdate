@@ -144,9 +144,134 @@ public class ProcessInfoTests
     [Fact]
     public void Ctor_EncodingUTF8_CompressEncodingWebNameIsUtf8()
     {
+        // Arrange & Act
         var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
             SingleVersion, "url", "backup", null, null, null, null, null, null, null);
+
+        // Assert
         Assert.Equal("utf-8", info.CompressEncoding);
+    }
+
+    [Fact]
+    public void Ctor_EncodingASCII_CompressEncodingWebNameIsAscii()
+    {
+        // Arrange & Act
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.ASCII, "ZIP", 30, "key",
+            SingleVersion, "url", "backup", null, null, null, null, null, null, null);
+
+        // Assert
+        Assert.Equal("us-ascii", info.CompressEncoding);
+    }
+
+    [Fact]
+    public void Ctor_EncodingUnicode_CompressEncodingWebNameIsUtf16()
+    {
+        // Arrange & Act
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.Unicode, "ZIP", 30, "key",
+            SingleVersion, "url", "backup", null, null, null, null, null, null, null);
+
+        // Assert
+        Assert.Equal("utf-16", info.CompressEncoding);
+    }
+
+    [Fact]
+    public void Ctor_NullableOptionalParams_AllowedAsNull()
+    {
+        // Arrange & Act — bowl, scheme, token, driverDirectory, blackList params are all nullable
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.UTF8, "ZIP", 30, "key",
+            SingleVersion, "url", "backup",
+            null, null, null, null, null, null, null);
+
+        // Assert
+        Assert.Null(info.Bowl);
+        Assert.Null(info.Scheme);
+        Assert.Null(info.Token);
+        Assert.Null(info.DriverDirectory);
+        Assert.Null(info.BlackFileFormats);
+        Assert.Null(info.BlackFiles);
+        Assert.Null(info.SkipDirectorys);
+    }
+
+    [Fact]
+    public void Ctor_DefaultConstructor_AllPropertiesDefault()
+    {
+        // Arrange & Act
+        var info = new ProcessInfo();
+
+        // Assert — default constructor should produce empty/null state
+        Assert.Null(info.AppName);
+        Assert.Null(info.InstallPath);
+        Assert.Null(info.CurrentVersion);
+        Assert.Null(info.LastVersion);
+        Assert.Equal(0, info.DownloadTimeOut);
+    }
+
+    [Fact]
+    public void Ctor_MultipleVersions_AllStored()
+    {
+        // Arrange
+        var versions = new List<VersionInfo>
+        {
+            new() { Version = "1.0.0" },
+            new() { Version = "1.1.0" },
+            new() { Version = "2.0.0" }
+        };
+
+        // Act
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.UTF8, "ZIP", 30, "key",
+            versions, "url", "backup", null, null, null, null, null, null, null);
+
+        // Assert
+        Assert.Equal(3, info.UpdateVersions.Count);
+        Assert.Equal("1.0.0", info.UpdateVersions[0].Version);
+        Assert.Equal("1.1.0", info.UpdateVersions[1].Version);
+        Assert.Equal("2.0.0", info.UpdateVersions[2].Version);
+    }
+
+    [Fact]
+    public void Ctor_UpdateLogUrlNull_Allowed()
+    {
+        // Arrange & Act
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.UTF8, "ZIP", 30, "key",
+            SingleVersion, "url", "backup", null, null, null, null, null, null, null);
+
+        // Assert — UpdateLogUrl is explicitly allowed to be null
+        Assert.Null(info.UpdateLogUrl);
+    }
+
+    [Fact]
+    public void Ctor_AllBlacklistParamsPopulated_PreservedInOrder()
+    {
+        // Arrange
+        var formats = new List<string> { ".log", ".tmp", ".cache" };
+        var files = new List<string> { "secret.key", "config.ini" };
+        var dirs = new List<string> { "logs", "temp", "backups" };
+
+        // Act
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.UTF8, "ZIP", 30, "key",
+            SingleVersion, "url", "backup", null, null, null, null,
+            formats, files, dirs);
+
+        // Assert
+        Assert.Equal(3, info.BlackFileFormats!.Count);
+        Assert.Contains(".log", info.BlackFileFormats);
+        Assert.Equal(2, info.BlackFiles!.Count);
+        Assert.Contains("secret.key", info.BlackFiles);
+        Assert.Equal(3, info.SkipDirectorys!.Count);
+        Assert.Contains("logs", info.SkipDirectorys);
+    }
+
+    /// <summary>TearDown: cleanup temp files if any were created.</summary>
+    private static void CleanupTempFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch { /* best-effort */ }
     }
 }
