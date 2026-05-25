@@ -20,7 +20,7 @@ namespace DifferentialTest
     /// <summary>
     /// Comprehensive differential upgrade integration tests.
     /// Covers:
-    ///   - Client ??Upgrade mesh update: generate patches in client context, apply in upgrade context
+    ///   - Client  — Upgrade mesh update: generate patches in client context, apply in upgrade context
     ///   - All file operations: modified, added, deleted, unchanged, binary
     ///   - Complex directory structures
     ///   - Push upgrade simulation via differential pipeline
@@ -44,7 +44,7 @@ namespace DifferentialTest
             try { Directory.Delete(_testDir, true); } catch { /* ignore */ }
         }
 
-        #region Clean ??Dirty Full Cycle (Client ??Upgrade Mesh Update)
+        #region Clean  — Dirty Full Cycle (Client  — Upgrade Mesh Update)
 
         /// <summary>
         /// Scenario: Client generates patches (Clean), Upgrade applies them (Dirty).
@@ -53,7 +53,7 @@ namespace DifferentialTest
         [Fact]
         public async Task CleanAndDirty_FullMeshUpdate_CorrectlyUpdatesApp()
         {
-            // Arrange ??emulate client-side source (current version) and target (new version)
+            // Arrange  — emulate client-side source (current version) and target (new version)
             var sourceDir = Path.Combine(_testDir, "source_v1.0.0");
             var targetDir = Path.Combine(_testDir, "target_v2.0.0");
             var patchDir = Path.Combine(_testDir, "patch");
@@ -69,7 +69,7 @@ namespace DifferentialTest
             File.WriteAllText(Path.Combine(sourceDir, "main.dll"), "DLL content v1.0.0");
             File.WriteAllText(Path.Combine(sourceDir, "readme.txt"), "README v1.0.0");
 
-            // New version files (v2.0.0) ??config modified, readme deleted, new file added
+            // New version files (v2.0.0)  — config modified, readme deleted, new file added
             File.WriteAllText(Path.Combine(targetDir, "config.json"), @"{""version"":""2.0.0"",""theme"":""light"",""newFeature"":true}");
             File.WriteAllText(Path.Combine(targetDir, "main.dll"), "DLL content v2.0.0");
             File.WriteAllText(Path.Combine(targetDir, "whatsnew.txt"), "What's New in v2.0.0!");
@@ -78,10 +78,10 @@ namespace DifferentialTest
             foreach (var file in Directory.GetFiles(sourceDir))
                 File.Copy(file, Path.Combine(appDir, Path.GetFileName(file)));
 
-            // Act ??Step 1: Client generates patches (Clean)
+            // Act  — Step 1: Client generates patches (Clean)
             await DifferentialCore.Clean(sourceDir, targetDir, patchDir);
 
-            // Assert ??patches generated
+            // Assert  — patches generated
             // config.json.patch generation depends on differ; verified by Dirty assertions below
             Assert.True(File.Exists(Path.Combine(patchDir, "main.dll.patch")));
             Assert.True(File.Exists(Path.Combine(patchDir, "whatsnew.txt"))); // new file copied directly
@@ -96,7 +96,7 @@ namespace DifferentialTest
             Assert.NotNull(deleteList);
             Assert.Contains(deleteList, f => f.Name == "readme.txt");
 
-            // Act ??Step 2: Upgrade applies patches (Dirty)
+            // Act  — Step 2: Upgrade applies patches (Dirty)
             await DifferentialCore.Dirty(appDir, patchDir);
 
             // Assert - core files should still exist after Dirty
@@ -148,7 +148,7 @@ namespace DifferentialTest
             File.Copy(Path.Combine(sourceDir, "app.exe"), Path.Combine(appDir, "app.exe"));
             File.Copy(Path.Combine(sourceDir, "icon.png"), Path.Combine(appDir, "icon.png"));
 
-            // Act ??generate and apply patches
+            // Act  — generate and apply patches
             await DifferentialCore.Clean(sourceDir, targetDir, patchDir);
             await DifferentialCore.Dirty(appDir, patchDir);
 
@@ -249,7 +249,7 @@ namespace DifferentialTest
             await DifferentialCore.Clean(sourceDir, targetDir, patchDir);
             await DifferentialCore.Dirty(appDir, patchDir);
 
-            // Assert ??all files updated
+            // Assert  — all files updated
             foreach (var path in paths)
             {
                 var appFilePath = Path.Combine(appDir, path);
@@ -282,7 +282,7 @@ namespace DifferentialTest
             // 2. Deleted file
             File.WriteAllText(Path.Combine(sourceDir, "deprecated.dll"), "Old DLL");
 
-            // 3. New file (top-level only ??subdirectory new files tested separately)
+            // 3. New file (top-level only  — subdirectory new files tested separately)
             File.WriteAllText(Path.Combine(targetDir, "new_feature.dll"), "New feature DLL");
 
             // 4. Unchanged file
@@ -655,17 +655,17 @@ namespace DifferentialTest
             File.WriteAllText(Path.Combine(appDir, "app.exe"), "v1.0.0");
             File.WriteAllText(Path.Combine(appDir, "lib.dll"), "lib_v1");
 
-            // Step 1: v1.0.0 ??v1.0.1
+            // Step 1: v1.0.0  — v1.0.1
             var step1 = await ApplyIncrementalUpdate(appDir, "app.exe", "v1.0.0", "v1.0.1");
             Assert.True(step1);
             Assert.Equal("v1.0.1", File.ReadAllText(Path.Combine(appDir, "app.exe")));
 
-            // Step 2: v1.0.1 ??v1.0.2
+            // Step 2: v1.0.1  — v1.0.2
             var step2 = await ApplyIncrementalUpdate(appDir, "app.exe", "v1.0.1", "v1.0.2");
             Assert.True(step2);
             Assert.Equal("v1.0.2", File.ReadAllText(Path.Combine(appDir, "app.exe")));
 
-            // Step 3: v1.0.2 ??v1.0.3
+            // Step 3: v1.0.2  — v1.0.3
             var step3 = await ApplyIncrementalUpdate(appDir, "app.exe", "v1.0.2", "v1.0.3");
             Assert.True(step3);
             Assert.Equal("v1.0.3", File.ReadAllText(Path.Combine(appDir, "app.exe")));
@@ -765,7 +765,7 @@ namespace DifferentialTest
 
             var nonExistent = Path.Combine(_testDir, "does_not_exist");
 
-            // Act & Assert ??should not throw
+            // Act & Assert  — should not throw
             await DifferentialCore.Dirty(nonExistent, patchDir);
         }
 
@@ -781,7 +781,7 @@ namespace DifferentialTest
 
             var nonExistent = Path.Combine(_testDir, "does_not_exist_patch");
 
-            // Act & Assert ??should not throw
+            // Act & Assert  — should not throw
             await DifferentialCore.Dirty(appDir, nonExistent);
         }
 
@@ -807,7 +807,7 @@ namespace DifferentialTest
             await DifferentialCore.Clean(src, tgt, patch);
             await DifferentialCore.Dirty(app, patch);
 
-            // Assert ??no leftover temp files
+            // Assert  — no leftover temp files
             var filesInApp = Directory.GetFiles(app);
             Assert.Single(filesInApp);
             Assert.EndsWith("file.txt", filesInApp[0]);
