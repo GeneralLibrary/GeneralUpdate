@@ -181,74 +181,34 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
-    /// Load settings from IConfiguration (e.g. appsettings.json).
-    /// Sets UpdateOptions and Configinfo fields from the configuration section.
-    /// Values set via <c>.Option()</c> or <c>.SetConfig()</c> before this call
-    /// are preserved (code has higher priority than config).
+    /// Load configuration from a local JSON file.
     /// </summary>
-    /// <param name="config">The configuration (e.g. builder.Configuration).</param>
-    /// <param name="section">Config section name, default "GeneralUpdate".</param>
-    /// <example>
-    /// <code>
-    /// new GeneralUpdateBootstrap()
-    ///     .LoadFromConfiguration(builder.Configuration)
-    ///     .Option(UpdateOptions.Silent, true)  // overrides appsettings
-    ///     .LaunchAsync();
-    /// </code>
-    /// </example>
-    public GeneralUpdateBootstrap LoadFromConfiguration(Microsoft.Extensions.Configuration.IConfiguration config, string section = "GeneralUpdate")
+    /// <param name="filePath">
+    /// Config file path.
+    /// If just a filename (no directory separator), resolves relative to the current directory.
+    /// Relative or absolute paths are used as-is.
+    /// </param>
+    public GeneralUpdateBootstrap SetConfig(string filePath)
     {
-        if (config == null) return this;
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentNullException(nameof(filePath));
 
-        var sec = config.GetSection(section);
+        // Resolve filename-only paths to current directory
+        var hasPathChar = filePath.Contains(Path.DirectorySeparatorChar)
+                       || filePath.Contains(Path.AltDirectorySeparatorChar);
+        var fullPath = hasPathChar
+            ? Path.GetFullPath(filePath)
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
 
-        // UpdateOptions — only set if key exists in config
-        TrySetOptionIfMissing(sec, "AppType", v => Option(UpdateOptions.AppType, Enum.Parse<AppType>(v)));
-        TrySetOptionIfMissing(sec, "DiffMode", v => Option(UpdateOptions.DiffMode, Enum.Parse<DiffMode>(v)));
-        TrySetOptionIfMissing(sec, "Silent", v => Option(UpdateOptions.Silent, bool.Parse(v)));
-        TrySetOptionIfMissing(sec, "SilentAutoInstall", v => Option(UpdateOptions.SilentAutoInstall, bool.Parse(v)));
-        TrySetOptionIfMissing(sec, "SilentPollIntervalMinutes", v => Option(UpdateOptions.SilentPollIntervalMinutes, int.Parse(v)));
-        TrySetOptionIfMissing(sec, "MaxConcurrency", v => Option(UpdateOptions.MaxConcurrency, int.Parse(v)));
-        TrySetOptionIfMissing(sec, "EnableResume", v => Option(UpdateOptions.EnableResume, bool.Parse(v)));
-        TrySetOptionIfMissing(sec, "RetryCount", v => Option(UpdateOptions.RetryCount, int.Parse(v)));
-        TrySetOptionIfMissing(sec, "RetryIntervalSeconds", v => Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(double.Parse(v))));
-        TrySetOptionIfMissing(sec, "VerifyChecksum", v => Option(UpdateOptions.VerifyChecksum, bool.Parse(v)));
-        TrySetOptionIfMissing(sec, "DownloadTimeout", v => Option(UpdateOptions.DownloadTimeout, int.Parse(v)));
-        TrySetOptionIfMissing(sec, "PatchEnabled", v => Option(UpdateOptions.PatchEnabled, bool.Parse(v)));
-        TrySetOptionIfMissing(sec, "BackupEnabled", v => Option(UpdateOptions.BackupEnabled, bool.Parse(v)));
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException($"Config file not found: {fullPath}");
 
-        // Configinfo fields — only set if not already configured
-        TrySetConfigField(sec, "UpdateUrl", v => _configInfo.UpdateUrl = v);
-        TrySetConfigField(sec, "AppSecretKey", v => _configInfo.AppSecretKey = v);
-        TrySetConfigField(sec, "AppName", v => _configInfo.AppName = v);
-        TrySetConfigField(sec, "MainAppName", v => _configInfo.MainAppName = v);
-        TrySetConfigField(sec, "InstallPath", v => _configInfo.InstallPath = v);
-        TrySetConfigField(sec, "ClientVersion", v => _configInfo.ClientVersion = v);
-        TrySetConfigField(sec, "UpgradeClientVersion", v => _configInfo.UpgradeClientVersion = v);
-        TrySetConfigField(sec, "ProductId", v => _configInfo.ProductId = v);
-        TrySetConfigField(sec, "ReportUrl", v => _configInfo.ReportUrl = v);
-        TrySetConfigField(sec, "UpdateLogUrl", v => _configInfo.UpdateLogUrl = v);
-        TrySetConfigField(sec, "Bowl", v => _configInfo.Bowl = v);
-        TrySetConfigField(sec, "Scheme", v => _configInfo.Scheme = v);
-        TrySetConfigField(sec, "Token", v => _configInfo.Token = v);
-        TrySetConfigField(sec, "DriverDirectory", v => _configInfo.DriverDirectory = v);
+        var json = File.ReadAllText(fullPath);
+        var config = JsonSerializer.Deserialize(json, JsonContext.HttpParameterJsonContext.Default.Configinfo);
+        if (config == null)
+            throw new InvalidOperationException($"Failed to parse config file: {fullPath}");
 
-        GeneralTracer.Info($"GeneralUpdateBootstrap: loaded configuration from section '{section}'.");
-        return this;
-    }
-
-    private void TrySetOptionIfMissing(Microsoft.Extensions.Configuration.IConfigurationSection sec, string key, Action<string> setter)
-    {
-        var v = sec[key];
-        if (!string.IsNullOrEmpty(v))
-            setter(v);
-    }
-
-    private static void TrySetConfigField(Microsoft.Extensions.Configuration.IConfigurationSection sec, string key, Action<string> setter)
-    {
-        var v = sec[key];
-        if (!string.IsNullOrEmpty(v))
-            setter(v);
+        return SetConfig(config);
     }
 
     public GeneralUpdateBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
