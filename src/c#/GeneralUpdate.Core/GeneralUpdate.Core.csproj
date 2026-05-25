@@ -14,8 +14,7 @@
         <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
         <IsAotCompatible Condition="'$(TargetFramework)' != 'netstandard2.0'">true</IsAotCompatible>
         <EnableTrimAnalyzer Condition="'$(TargetFramework)' != 'netstandard2.0'">true</EnableTrimAnalyzer>
-        <!-- AOT constant for conditional compilation (exclude SignalR, etc.) -->
-        <DefineConstants Condition="'$(PublishAot)' == 'true'">$(DefineConstants);AOT</DefineConstants>
+
     </PropertyGroup>
 
     <!-- Compatibility packages for netstandard2.0 -->
@@ -23,24 +22,21 @@
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.1" />
         <PackageReference Include="System.Collections.Immutable" Version="10.0.1" />
         <PackageReference Include="System.Text.Json" Version="10.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" Condition="'$(PublishAot)' != 'true'" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
     </ItemGroup>
 
     <!-- Packages only needed for net8.0 (built-in in net10.0) -->
     <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" Condition="'$(PublishAot)' != 'true'" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" Condition="'$(PublishAot)' != 'true'" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
     </ItemGroup>
 
     <ItemGroup>
         <!-- IsExternalInit is built-in for net8.0+ (C# 9 records) -->
         <Compile Remove="Configuration\IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
-        <!-- SignalR Hub code excluded in AOT builds -->
-        <Compile Remove="Hubs\*.cs" Condition="'$(PublishAot)' == 'true'" />
-        <Compile Remove="Download\Sources\HubDownloadSource.cs" Condition="'$(PublishAot)' == 'true'" />
-        <Compile Remove="Silent\SilentPollOrchestrator.cs" Condition="'$(PublishAot)' == 'true'" />
+
     </ItemGroup>
 </Project>

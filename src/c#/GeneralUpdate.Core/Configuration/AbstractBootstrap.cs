@@ -26,9 +26,6 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         public abstract Task<TBootstrap> LaunchAsync();
-        protected abstract void ExecuteStrategy();
-        protected abstract Task ExecuteStrategyAsync();
-        protected abstract TBootstrap StrategyFactory();
 
         public TBootstrap Option<T>(UpdateOption<T> option, T value)
         {

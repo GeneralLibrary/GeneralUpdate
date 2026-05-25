@@ -96,8 +96,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 // Resolve DownloadSource from extension registry (Hub, custom, etc.)
                 var resolvedSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
 
-                // Inject SignalR Hub download source if configured (not available in AOT)
-#if !AOT
+                // Inject SignalR Hub download source if configured
                 if (resolvedSource == null)
                 {
                     var hubConfig = GetOption(UpdateOptions.Hub);
@@ -110,7 +109,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                         GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource started from HubConfig.");
                     }
                 }
-#endif
                 clientStrat.DownloadSource = resolvedSource;
                 if (_updatePrecheck != null)
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
@@ -316,11 +314,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// Silent update mode — starts a background poll loop and returns immediately.
     /// The orchestrator checks for updates periodically and prepares them.
     /// When the host process exits, the prepared update is applied.
-    /// Not available in AOT builds (SignalR dependency).
     /// </summary>
     private async Task LaunchSilentAsync()
     {
-#if !AOT
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
 
         var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
@@ -341,10 +337,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
-#else
-        GeneralTracer.Warn("GeneralUpdateBootstrap: silent update not available in AOT builds.");
-        await Task.CompletedTask;
-#endif
     }
 
     private void InitBlackList()
@@ -395,12 +387,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     // ════════════════════════════════════════════════════════════════
     // Strategy & Events
     // ════════════════════════════════════════════════════════════════
-
-    protected override GeneralUpdateBootstrap StrategyFactory()
-        => throw new NotImplementedException("Role strategies handle this.");
-
-    protected override Task ExecuteStrategyAsync() => throw new NotImplementedException();
-    protected override void ExecuteStrategy() => throw new NotImplementedException();
 
     private GeneralUpdateBootstrap AddListener<TArgs>(Action<object, TArgs> action) where TArgs : EventArgs
     {

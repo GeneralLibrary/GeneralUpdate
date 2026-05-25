@@ -55,16 +55,9 @@ public class UpgradeHubService : IUpgradeHubService
 
     public async Task StartAsync()
     {
-        try
-        {
-            GeneralTracer.Info($"UpgradeHubService.StartAsync: connecting to SignalR hub. State={_connection?.State}");
-            await _connection!.StartAsync();
-            GeneralTracer.Info($"UpgradeHubService.StartAsync: SignalR hub connection established. State={_connection?.State}");
-        }
-        catch (Exception e)
-        {
-            GeneralTracer.Error("The StartAsync method in the UpgradeHubService class throws an exception." , e);
-        }
+        GeneralTracer.Info($"UpgradeHubService.StartAsync: connecting to SignalR hub. State={_connection?.State}");
+        await _connection!.StartAsync();
+        GeneralTracer.Info($"UpgradeHubService.StartAsync: SignalR hub connection established. State={_connection?.State}");
     }
 
     public async Task StopAsync()
