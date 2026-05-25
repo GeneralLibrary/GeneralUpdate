@@ -173,9 +173,9 @@ public class ClientUpdateStrategy : IStrategy
 
         var processInfo = ConfigurationMapper.MapToProcessInfo(
             _configInfo, downloadVersions,
-            BlackListManager.Instance.BlackFormats.ToList(),
-            BlackListManager.Instance.BlackFiles.ToList(),
-            BlackListManager.Instance.SkipDirectorys.ToList());
+            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
+            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
 
         // Keep JSON string for backward compatibility (GlobalConfigInfo.ProcessInfo)
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
@@ -243,16 +243,19 @@ public class ClientUpdateStrategy : IStrategy
 
     private void InitBlackList()
     {
-        BlackListManager.Instance.AddBlackFiles(_configInfo!.BlackFiles);
-        BlackListManager.Instance.AddBlackFormats(_configInfo.BlackFormats);
-        BlackListManager.Instance.AddSkipDirectorys(_configInfo.SkipDirectorys);
+        var effectiveConfig = new BlackListConfig(
+            _configInfo!.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
+            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
+            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+        );
+        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }
 
     private void Backup()
     {
         GeneralTracer.Info($"ClientUpdateStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            BlackListManager.Instance.SkipDirectorys);
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
     }
 
     private bool CanSkip(bool isForcibly, UpdateInfoEventArgs updateInfo)

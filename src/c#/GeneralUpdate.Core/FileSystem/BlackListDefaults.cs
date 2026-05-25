@@ -1,0 +1,25 @@
+using System.Collections.Generic;
+
+namespace GeneralUpdate.Core.FileSystem;
+
+/// <summary>Built-in default blacklist items — previously hardcoded in BlackListManager.</summary>
+public static class BlackListDefaults
+{
+    /// <summary>Default blacklisted files (system DLLs that ship with the runtime).</summary>
+    public static readonly List<string> DefaultBlackFiles = new()
+    {
+        "Microsoft.Bcl.AsyncInterfaces.dll",
+        "System.Collections.Immutable.dll",
+        "System.IO.Pipelines.dll",
+        "System.Text.Encodings.Web.dll",
+        "System.Text.Json.dll"
+    };
+
+    /// <summary>Default blacklisted file extensions.</summary>
+    public static readonly List<string> DefaultBlackFormats = new()
+        { ".patch", ".pdb", ".rar", ".tar", ".json", Configuration.Format.ZIP };
+
+    /// <summary>Default skipped directory prefixes.</summary>
+    public static readonly List<string> DefaultSkipDirectories = new()
+        { "app-", "fail" };
+}

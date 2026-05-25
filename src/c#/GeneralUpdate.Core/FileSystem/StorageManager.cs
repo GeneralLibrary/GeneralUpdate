@@ -13,6 +13,9 @@ namespace GeneralUpdate.Core.FileSystem
     {
         private long _fileCount = 0;
         public const string DirectoryName = "app-";
+
+        /// <summary>Optional blacklist matcher. When set, takes precedence over BlackListManager.</summary>
+        public static IBlackListMatcher? BlackListMatcher { get; set; }
         
         private ComparisonResult ComparisonResult { get; set; }
 
@@ -264,7 +267,9 @@ namespace GeneralUpdate.Core.FileSystem
 
             foreach (var subPath in Directory.EnumerateFiles(path))
             {
-                if (BlackListManager.Instance.IsBlacklisted(subPath)) continue;
+#pragma warning disable CS0618 // Obsolete fallback
+                if ((BlackListMatcher ?? BlackListManager.Instance).IsBlacklisted(subPath)) continue;
+#pragma warning restore CS0618
 
                 var hashAlgorithm = new Sha256HashAlgorithm();
                 var hash = hashAlgorithm.ComputeHash(subPath);
@@ -283,7 +288,9 @@ namespace GeneralUpdate.Core.FileSystem
 
             foreach (var subPath in Directory.EnumerateDirectories(path))
             {
-                if (BlackListManager.Instance.ShouldSkipDirectory(subPath)) continue;
+#pragma warning disable CS0618 // Obsolete fallback
+                if ((BlackListMatcher ?? BlackListManager.Instance).ShouldSkipDirectory(subPath)) continue;
+#pragma warning restore CS0618
                 resultFiles.AddRange(ReadFileNode(subPath, rootPath));
             }
 
