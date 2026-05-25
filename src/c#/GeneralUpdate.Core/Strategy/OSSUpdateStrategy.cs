@@ -109,6 +109,10 @@ public class OSSUpdateStrategy : IStrategy
             GeneralTracer.Debug("OSSUpdateStrategy: 4. Decompressing packages.");
             DecompressAssets(assets);
 
+            // Hooks: download + decompress completed
+            await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
+            await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
+
             // Report: update applied
             await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
 
@@ -208,6 +212,25 @@ public class OSSUpdateStrategy : IStrategy
     {
         try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
+    {
+        try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            var downloadCtx = new Hooks.DownloadContext(
+                _configInfo?.MainAppName ?? _configInfo?.AppName ?? "unknown",
+                _configInfo?.LastVersion ?? "",
+                0, TimeSpan.Zero, _appPath, true);
+            await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}"); }
     }
 
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)

@@ -208,9 +208,12 @@ public class ClientUpdateStrategy : IStrategy
         }
 
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
+        await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
 
         // Apply updates and start app
         await _osStrategy.ExecuteAsync();
+        await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+        await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
         _osStrategy.StartApp();
     }
@@ -318,6 +321,25 @@ public class ClientUpdateStrategy : IStrategy
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
     }
 
+    private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
+    {
+        try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
+    }
+
+    private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            var downloadCtx = new Hooks.DownloadContext(
+                _configInfo?.MainAppName ?? _configInfo?.AppName ?? "unknown",
+                _configInfo?.LastVersion ?? "",
+                0, TimeSpan.Zero, _configInfo?.TempPath, true);
+            await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}"); }
+    }
+
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -353,6 +375,18 @@ public class ClientUpdateStrategy : IStrategy
             )).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
+    }
+
+    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
+                Download.Reporting.UpdateEvent.UpdateApplied, ctx.AppType, DateTimeOffset.UtcNow
+            )).ConfigureAwait(false);
+        }
+        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }
 
     #endregion
