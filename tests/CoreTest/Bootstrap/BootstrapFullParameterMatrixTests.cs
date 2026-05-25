@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using GeneralUpdate.Core;
@@ -10,10 +9,9 @@ using Xunit;
 namespace CoreTest.Bootstrap
 {
     /// <summary>
-    /// Full parameter matrix tests — verifies ALL UpdateOptions constants
-    /// can be set via .Option() without throwing. Covers 39 options across
-    /// core, deployment, silent, download, security, reporting, OSS, and
-    /// blacklist categories.
+    /// Full parameter matrix tests -- verifies ALL framework-level UpdateOptions
+    /// can be set via .Option() without throwing. Business fields (UpdateUrl, Token, etc.)
+    /// are now stored in Configinfo, not in UpdateOptions.
     /// </summary>
     public class BootstrapFullParameterMatrixTests : IDisposable
     {
@@ -42,7 +40,7 @@ namespace CoreTest.Bootstrap
                 Token = "token"
             });
 
-        #region Core (9)
+        #region Core
         [Fact] public void AppType_Client() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Client));
         [Fact] public void AppType_Upgrade() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Upgrade));
         [Fact] public void AppType_OSS() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OSS));
@@ -51,8 +49,7 @@ namespace CoreTest.Bootstrap
         [Fact] public void Encoding_Utf8() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.UTF8));
         [Fact] public void Encoding_Ascii() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.ASCII));
         [Fact] public void Format_ZIP() => Assert.NotNull(B().Option(UpdateOptions.Format, "ZIP"));
-        [Theory]
-        [InlineData(10)][InlineData(30)][InlineData(60)][InlineData(300)]
+        [Theory][InlineData(10)][InlineData(30)][InlineData(60)][InlineData(300)]
         public void DownloadTimeout_Various(int t) => Assert.NotNull(B().Option(UpdateOptions.DownloadTimeout, t));
         [Fact] public void DriveEnabled_True() => Assert.NotNull(B().Option(UpdateOptions.DriveEnabled, true));
         [Fact] public void DriveEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.DriveEnabled, false));
@@ -64,25 +61,13 @@ namespace CoreTest.Bootstrap
         [Fact] public void Mode_Scripts() => Assert.NotNull(B().Option(UpdateOptions.Mode, UpdateMode.Scripts));
         #endregion
 
-        #region Deployment (9)
-        [Fact] public void UpdateUrl_Custom() => Assert.NotNull(B().Option(UpdateOptions.UpdateUrl, "https://update.company.com/api"));
-        [Fact] public void AppSecretKey_Custom() => Assert.NotNull(B().Option(UpdateOptions.AppSecretKey, "prod-secret"));
-        [Fact] public void AppName_Custom() => Assert.NotNull(B().Option(UpdateOptions.AppName, "Update.exe"));
-        [Fact] public void MainAppName_Custom() => Assert.NotNull(B().Option(UpdateOptions.MainAppName, "ProductApp.exe"));
-        [Fact] public void InstallPath_Custom() => Assert.NotNull(B().Option(UpdateOptions.InstallPath, _testDir));
-        [Fact] public void ClientVersion_Custom() => Assert.NotNull(B().Option(UpdateOptions.ClientVersion, "3.1.0-beta"));
-        [Fact] public void UpgradeClientVersion_Custom() => Assert.NotNull(B().Option(UpdateOptions.UpgradeClientVersion, "2.0.0"));
-        [Fact] public void Platform_Windows() => Assert.NotNull(B().Option(UpdateOptions.Platform, PlatformType.Windows));
-        [Fact] public void Platform_Linux() => Assert.NotNull(B().Option(UpdateOptions.Platform, PlatformType.Linux));
-        #endregion
-
-        #region Silent (2)
+        #region Silent
         [Fact] public void SilentAutoInstall_True() => Assert.NotNull(B().Option(UpdateOptions.SilentAutoInstall, true));
         [Theory][InlineData(15)][InlineData(30)][InlineData(60)]
         public void SilentPollInterval_Various(int m) => Assert.NotNull(B().Option(UpdateOptions.SilentPollIntervalMinutes, m));
         #endregion
 
-        #region Download Performance (6)
+        #region Download Performance
         [Theory][InlineData(1)][InlineData(3)][InlineData(5)][InlineData(10)]
         public void MaxConcurrency_Various(int c) => Assert.NotNull(B().Option(UpdateOptions.MaxConcurrency, c));
         [Fact] public void EnableResume_False() => Assert.NotNull(B().Option(UpdateOptions.EnableResume, false));
@@ -92,38 +77,22 @@ namespace CoreTest.Bootstrap
         [Fact] public void RetryInterval_Custom() => Assert.NotNull(B().Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(3)));
         #endregion
 
-        #region Security (5)
-        [Fact] public void Scheme_Bearer() => Assert.NotNull(B().Option(UpdateOptions.Scheme, "Bearer"));
-        [Fact] public void Scheme_ApiKey() => Assert.NotNull(B().Option(UpdateOptions.Scheme, "ApiKey"));
-        [Fact] public void Scheme_HMAC() => Assert.NotNull(B().Option(UpdateOptions.Scheme, "HMAC"));
-        [Fact] public void Token_Custom() => Assert.NotNull(B().Option(UpdateOptions.Token, "jwt-token-xyz"));
-        [Fact] public void PermissionScript_Custom() => Assert.NotNull(B().Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x"));
-        #endregion
-
-        #region Reporting (3)
-        [Fact] public void ReportUrl_Custom() => Assert.NotNull(B().Option(UpdateOptions.ReportUrl, "https://telemetry.example.com/report"));
-        [Fact] public void ProductId_Custom() => Assert.NotNull(B().Option(UpdateOptions.ProductId, "enterprise-pro"));
-        [Fact] public void UpdateLogUrl_Custom() => Assert.NotNull(B().Option(UpdateOptions.UpdateLogUrl, "https://myapp.com/releases"));
-        #endregion
-
-        #region OSS (3)
+        #region OSS
         [Fact] public void OSS_AliYun() => Assert.NotNull(B().Option(UpdateOptions.OSSProvider, OssProvider.AliYun));
         [Fact] public void OSS_AWS() => Assert.NotNull(B().Option(UpdateOptions.OSSProvider, OssProvider.AWS));
         [Fact] public void OSSBucketRegion() => Assert.NotNull(B().Option(UpdateOptions.OSSBucketRegion, "cn-shanghai"));
         #endregion
 
-        #region Blacklist/Misc (5)
+        #region Blacklist/Misc
         [Fact] public void BlackList_Empty() => Assert.NotNull(B().Option(UpdateOptions.BlackList, BlackListConfig.Empty));
         [Fact] public void BlackList_Configured() => Assert.NotNull(B().Option(UpdateOptions.BlackList,
             new BlackListConfig(new List<string> { "*.pdb" }, new List<string> { ".log" }, new List<string> { "logs" })));
-        [Fact] public void Bowl_Custom() => Assert.NotNull(B().Option(UpdateOptions.Bowl, "Bowl.exe"));
-        [Fact] public void Script_Custom() => Assert.NotNull(B().Option(UpdateOptions.Script, "chmod +x /app/Update"));
         [Fact] public void Hub_Configured() => Assert.NotNull(B().Option(UpdateOptions.Hub,
             new HubConfig { Url = "https://signalr.example.com/hub" }));
         #endregion
 
-        #region Full Combination Chains (6)
-        [Fact] public void Chain_All33Options()
+        #region Full Combination Chains
+        [Fact] public void Chain_AllFrameworkOptions()
         {
             var b = new GeneralUpdateBootstrap()
                 .Option(UpdateOptions.AppType, AppType.Client)
@@ -136,13 +105,6 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.BackupEnabled, true)
                 .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.Silent, false)
-                .Option(UpdateOptions.UpdateUrl, "https://update.example.com/api/v2")
-                .Option(UpdateOptions.AppSecretKey, "secret-key-2026")
-                .Option(UpdateOptions.AppName, "Update.exe")
-                .Option(UpdateOptions.MainAppName, "MyProduct.exe")
-                .Option(UpdateOptions.InstallPath, _testDir)
-                .Option(UpdateOptions.ClientVersion, "1.0.0")
-                .Option(UpdateOptions.UpgradeClientVersion, "0.5.0")
                 .Option(UpdateOptions.MaxConcurrency, 4)
                 .Option(UpdateOptions.EnableResume, true)
                 .Option(UpdateOptions.RetryCount, 5)
@@ -150,15 +112,7 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
                 .Option(UpdateOptions.SilentAutoInstall, false)
                 .Option(UpdateOptions.SilentPollIntervalMinutes, 30)
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.example.com/report")
-                .Option(UpdateOptions.ProductId, "my-product-001")
-                .Option(UpdateOptions.Scheme, "Bearer")
-                .Option(UpdateOptions.Token, "jwt-token-xyz")
-                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x")
                 .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
-                .Option(UpdateOptions.Bowl, "Bowl.exe")
-                .Option(UpdateOptions.UpdateLogUrl, "https://example.com/changelog")
-                .Option(UpdateOptions.Script, "chmod +x /opt/app/Update")
                 .SetConfig(new Configinfo
                 {
                     UpdateUrl = "https://update.example.com/api/v2",
@@ -200,66 +154,25 @@ namespace CoreTest.Bootstrap
             Assert.NotNull(b);
         }
 
-        [Fact] public void Chain_FullSecurity()
+        [Fact] public void Chain_ClientAndUpgrade_BothFullyConfigured()
         {
-            var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.Scheme, "HMAC").Option(UpdateOptions.Token, "hmac-secret")
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.example.com/report")
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x /opt/app/Update")
-                .SetConfig(new Configinfo { UpdateUrl = "https://secure.example.com/api", MainAppName = "SecureApp.exe", ClientVersion = "2.0.0", InstallPath = _testDir, AppSecretKey = "secure-key", Scheme = "HMAC", Token = "hmac-secret", ReportUrl = "https://telemetry.example.com/report" });
-            Assert.NotNull(b);
-        }
-
-        [Fact] public void Chain_UpgradeWithExtensions()
-        {
-            var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Upgrade)
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.example.com/report")
-                .Option(UpdateOptions.Scheme, "Bearer").Option(UpdateOptions.Token, "jwt")
-                .SetConfig(new Configinfo { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "Bearer", Token = "jwt" })
-                .AddListenerException((s, e) => { }).AddListenerUpdateInfo((s, e) => { })
-                .AddCustomOption(new List<Func<bool>> { () => true });
-            Assert.NotNull(b);
-        }
-
-        /// <summary>
-        /// Complete production deployment: Client + Upgrade bootstraps configured
-        /// simultaneously with ALL non-conflicting parameters, hooks, listeners,
-        /// and extension points. This is the closest equivalent to a real-world
-        /// enterprise deployment where the developer configures both roles at once.
-        /// </summary>
-        [Fact]
-        public void Chain_ClientAndUpgrade_BothFullyConfigured()
-        {
-            // Shared configuration used by both client and upgrade
             var sharedConfig = new Configinfo
             {
                 UpdateUrl = "https://update.enterprise.com/api/v2",
-                AppName = "Update.exe",
-                MainAppName = "EnterpriseApp.exe",
-                ClientVersion = "4.2.1",
-                UpgradeClientVersion = "2.0.0",
-                InstallPath = _testDir,
-                AppSecretKey = "enterprise-prod-key-2026",
+                AppName = "Update.exe", MainAppName = "EnterpriseApp.exe",
+                ClientVersion = "4.2.1", UpgradeClientVersion = "2.0.0",
+                InstallPath = _testDir, AppSecretKey = "enterprise-prod-key-2026",
                 ProductId = "enterprise-app-v4",
                 UpdateLogUrl = "https://enterprise.com/releases",
                 ReportUrl = "https://telemetry.enterprise.com/api/report",
-                Scheme = "HMAC",
-                Token = "hmac-prod-secret",
-                Bowl = "Bowl.exe",
-                Script = "#!/bin/bash\nset -e\nchmod +x /opt/enterprise/Update",
-                DriverDirectory = "/opt/enterprise/drivers",
-                BlackFiles = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
-                BlackFormats = new List<string> { ".log", ".tmp", ".cache", ".etl" },
-                SkipDirectorys = new List<string> { "logs", "temp", "cache", "diagnostics", "__backups__" }
+                Scheme = "HMAC", Token = "hmac-prod-secret", Bowl = "Bowl.exe",
+                Script = "#!/bin/bash\nchmod +x /opt/enterprise/Update",
+                BlackFiles = new List<string> { "*.pdb" },
+                BlackFormats = new List<string> { ".log", ".tmp" },
+                SkipDirectorys = new List<string> { "logs", "temp" }
             };
 
-            // ==========================================
-            // CLIENT bootstrap — full production config
-            // ==========================================
-            var clientBootstrap = new GeneralUpdateBootstrap()
-                // --- Core ---
+            var client = new GeneralUpdateBootstrap()
                 .Option(UpdateOptions.AppType, AppType.Client)
                 .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
@@ -270,224 +183,45 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.BackupEnabled, true)
                 .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.Silent, false)
-                // --- Deployment ---
-                .Option(UpdateOptions.UpdateUrl, "https://update.enterprise.com/api/v2")
-                .Option(UpdateOptions.AppSecretKey, "enterprise-prod-key-2026")
-                .Option(UpdateOptions.AppName, "Update.exe")
-                .Option(UpdateOptions.MainAppName, "EnterpriseApp.exe")
-                .Option(UpdateOptions.InstallPath, _testDir)
-                .Option(UpdateOptions.ClientVersion, "4.2.1")
-                .Option(UpdateOptions.UpgradeClientVersion, "2.0.0")
-                .Option(UpdateOptions.Platform, PlatformType.Windows)
-                // --- Download Performance ---
                 .Option(UpdateOptions.MaxConcurrency, 4)
                 .Option(UpdateOptions.EnableResume, true)
                 .Option(UpdateOptions.RetryCount, 5)
                 .Option(UpdateOptions.VerifyChecksum, true)
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
-                // --- Security ---
-                .Option(UpdateOptions.Scheme, "HMAC")
-                .Option(UpdateOptions.Token, "hmac-prod-secret")
-                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x /opt/enterprise/Update")
-                // --- Reporting ---
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.enterprise.com/api/report")
-                .Option(UpdateOptions.ProductId, "enterprise-app-v4")
-                .Option(UpdateOptions.UpdateLogUrl, "https://enterprise.com/releases")
-                // --- Blacklist ---
                 .Option(UpdateOptions.BlackList, new BlackListConfig(
-                    new List<string> { "*.pdb", "*.config" },
-                    new List<string> { ".log", ".tmp" },
-                    new List<string> { "logs", "temp" }))
-                .Option(UpdateOptions.Bowl, "Bowl.exe")
-                .Option(UpdateOptions.Script, "chmod +x /opt/enterprise/Update")
-                // --- Config ---
+                    new List<string> { "*.pdb" }, new List<string> { ".log" }, new List<string> { "logs" }))
                 .SetConfig(sharedConfig)
-                // --- Hooks simulation (precheck) ---
                 .AddListenerUpdatePrecheck(args =>
                 {
                     var hour = DateTime.Now.Hour;
-                    return hour < 2 || hour > 6; // Auto-approve updates during off-hours
+                    return hour < 2 || hour > 6;
                 })
-                // --- All event listeners ---
                 .AddListenerUpdateInfo((s, e) => { })
                 .AddListenerMultiAllDownloadCompleted((s, e) => { })
                 .AddListenerMultiDownloadCompleted((s, e) => { })
                 .AddListenerMultiDownloadError((s, e) => { })
                 .AddListenerMultiDownloadStatistics((s, e) => { })
-                .AddListenerException((s, e) => { })
-                // --- Custom pre-update checks ---
-                .AddCustomOption(new List<Func<bool>>
-                {
-                    () => true,  // Disk space check
-                    () => true,  // Network connectivity check
-                    () => true   // Service availability check
-                });
-
-            Assert.NotNull(clientBootstrap);
-
-            // ==========================================
-            // UPGRADE bootstrap — full production config
-            // ==========================================
-            var upgradeBootstrap = new GeneralUpdateBootstrap()
-                // --- Core (Upgrade role) ---
-                .Option(UpdateOptions.AppType, AppType.Upgrade)
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, "ZIP")
-                .Option(UpdateOptions.DownloadTimeout, 30)  // Upgrade needs shorter timeout
-                .Option(UpdateOptions.DriveEnabled, true)     // Upgrade may install drivers
-                .Option(UpdateOptions.PatchEnabled, true)     // Apply differential patches
-                .Option(UpdateOptions.BackupEnabled, false)   // Upgrade doesn't need backup (client did it)
-                .Option(UpdateOptions.Mode, UpdateMode.Default)
-                // --- Deployment ---
-                .Option(UpdateOptions.AppName, "Update.exe")
-                .Option(UpdateOptions.MainAppName, "EnterpriseApp.exe")
-                .Option(UpdateOptions.InstallPath, _testDir)
-                .Option(UpdateOptions.ClientVersion, "4.2.1")
-                .Option(UpdateOptions.Platform, PlatformType.Windows)
-                // --- Download (Upgrade doesn't download in new design, but options available) ---
-                .Option(UpdateOptions.MaxConcurrency, 2)
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
-                // --- Security ---
-                .Option(UpdateOptions.Scheme, "HMAC")
-                .Option(UpdateOptions.Token, "hmac-prod-secret")
-                .Option(UpdateOptions.PermissionScript, "#!/bin/bash\nchmod +x /opt/enterprise/Update")
-                // --- Reporting (Upgrade reports its own status) ---
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.enterprise.com/api/report")
-                .Option(UpdateOptions.ProductId, "enterprise-app-v4")
-                // --- Blacklist ---
-                .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
-                .Option(UpdateOptions.Script, "chmod +x /opt/enterprise/Update")
-                // --- Config ---
-                .SetConfig(sharedConfig)
-                // --- Event listeners (Upgrade reports failures) ---
-                .AddListenerException((s, e) => { })
-                .AddListenerUpdateInfo((s, e) => { });
-
-            Assert.NotNull(upgradeBootstrap);
-
-            // Both bootstraps coexist without interference
-            Assert.NotSame(clientBootstrap, upgradeBootstrap);
-        }
-
-        /// <summary>
-        /// Real-world developer workflow: configure both bootstraps with
-        /// hooks, reporter, and full extension chain in a single method.
-        /// Demonstrates the complete API surface a developer would use.
-        /// </summary>
-        [Fact]
-        public void Chain_ClientAndUpgrade_CompleteDeveloperWorkflow()
-        {
-            var installPath = _testDir;
-            var updateUrl = "https://update.myapp.com/api";
-            var mainApp = "MyApp.exe";
-            var currentVersion = "3.0.0";
-
-            // Step 1: Developer configures the Client bootstrap
-            var client = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Client)
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.UpdateUrl, updateUrl)
-                .Option(UpdateOptions.AppName, "Update.exe")
-                .Option(UpdateOptions.MainAppName, mainApp)
-                .Option(UpdateOptions.InstallPath, installPath)
-                .Option(UpdateOptions.ClientVersion, currentVersion)
-                .Option(UpdateOptions.UpgradeClientVersion, "2.0.0")
-                .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, "ZIP")
-                .Option(UpdateOptions.DownloadTimeout, 120)
-                .Option(UpdateOptions.PatchEnabled, true)
-                .Option(UpdateOptions.BackupEnabled, true)
-                .Option(UpdateOptions.MaxConcurrency, 4)
-                .Option(UpdateOptions.EnableResume, true)
-                .Option(UpdateOptions.RetryCount, 5)
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
-                .Option(UpdateOptions.Scheme, "Bearer")
-                .Option(UpdateOptions.Token, "client-jwt")
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.myapp.com/report")
-                .Option(UpdateOptions.ProductId, "myapp-pro")
-                .Option(UpdateOptions.UpdateLogUrl, "https://myapp.com/changelog")
-                .Option(UpdateOptions.BlackList, new BlackListConfig(
-                    new List<string> { "*.pdb" },
-                    new List<string> { ".log", ".tmp" },
-                    new List<string> { "logs", "temp" }))
-                .Option(UpdateOptions.Bowl, "Bowl.exe")
-                .Option(UpdateOptions.Platform, PlatformType.Windows)
-                .SetConfig(new Configinfo
-                {
-                    UpdateUrl = updateUrl,
-                    AppName = "Update.exe",
-                    MainAppName = mainApp,
-                    ClientVersion = currentVersion,
-                    UpgradeClientVersion = "2.0.0",
-                    InstallPath = installPath,
-                    AppSecretKey = "myapp-key",
-                    ProductId = "myapp-pro",
-                    Scheme = "Bearer",
-                    Token = "client-jwt",
-                    ReportUrl = "https://telemetry.myapp.com/report",
-                    UpdateLogUrl = "https://myapp.com/changelog",
-                    Bowl = "Bowl.exe",
-                    BlackFiles = new List<string> { "*.pdb" },
-                    BlackFormats = new List<string> { ".log", ".tmp" },
-                    SkipDirectorys = new List<string> { "logs", "temp" }
-                })
-                .AddListenerUpdateInfo((s, e) => { })        // UI: show update available toast
-                .AddListenerMultiDownloadCompleted((s, e) => { })  // UI: update progress bar
-                .AddListenerMultiAllDownloadCompleted((s, e) => { }) // UI: ready to restart
-                .AddListenerMultiDownloadError((s, e) => { })       // UI: show error dialog
-                .AddListenerMultiDownloadStatistics((s, e) => { })   // UI: speed/ETA
-                .AddListenerException((s, e) => { })                // Log to telemetry
-                .AddListenerUpdatePrecheck(args => false)           // Don't skip (default)
-                .AddCustomOption(new List<Func<bool>>
-                {
-                    () => Directory.Exists(installPath),
-                    () => true
-                });
-
+                .AddListenerException((s, e) => { });
             Assert.NotNull(client);
 
-            // Step 2: Developer configures the Upgrade bootstrap
             var upgrade = new GeneralUpdateBootstrap()
                 .Option(UpdateOptions.AppType, AppType.Upgrade)
                 .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.AppName, "Update.exe")
-                .Option(UpdateOptions.MainAppName, mainApp)
-                .Option(UpdateOptions.InstallPath, installPath)
-                .Option(UpdateOptions.ClientVersion, currentVersion)
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
                 .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.DownloadTimeout, 30)
+                .Option(UpdateOptions.DriveEnabled, true)
                 .Option(UpdateOptions.PatchEnabled, true)
-                .Option(UpdateOptions.VerifyChecksum, true)
+                .Option(UpdateOptions.BackupEnabled, false)
+                .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.MaxConcurrency, 2)
-                .Option(UpdateOptions.RetryCount, 3)
+                .Option(UpdateOptions.VerifyChecksum, true)
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
-                .Option(UpdateOptions.Scheme, "Bearer")
-                .Option(UpdateOptions.Token, "upgrade-jwt")
-                .Option(UpdateOptions.ReportUrl, "https://telemetry.myapp.com/report")
-                .Option(UpdateOptions.ProductId, "myapp-pro")
                 .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
-                .Option(UpdateOptions.Platform, PlatformType.Windows)
-                .SetConfig(new Configinfo
-                {
-                    UpdateUrl = updateUrl,
-                    AppName = "Update.exe",
-                    MainAppName = mainApp,
-                    ClientVersion = currentVersion,
-                    InstallPath = installPath,
-                    AppSecretKey = "myapp-key",
-                    Scheme = "Bearer",
-                    Token = "upgrade-jwt",
-                    ReportUrl = "https://telemetry.myapp.com/report"
-                })
-                .AddListenerException((s, e) => { })   // Upgrade logs its own errors
+                .SetConfig(sharedConfig)
+                .AddListenerException((s, e) => { })
                 .AddListenerUpdateInfo((s, e) => { });
-
             Assert.NotNull(upgrade);
-
-            // Step 3: Verify independent instances
             Assert.NotSame(client, upgrade);
         }
         #endregion

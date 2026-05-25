@@ -6,7 +6,6 @@ using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Strategy
