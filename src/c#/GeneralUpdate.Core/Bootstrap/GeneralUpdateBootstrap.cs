@@ -292,6 +292,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         // Preserve Upgrade path values set by InitializeFromEnvironment()
         _configInfo.Encoding ??= GetOption(UpdateOptions.Encoding);
         _configInfo.Format ??= GetOption(UpdateOptions.Format);
+        // Normalize legacy "ZIP" default (UpdateOptions) to Format.ZIP (".zip")
+        // so the pipeline constructs correct paths and CompressProvider matches its switch.
+        if (_configInfo.Format == "ZIP")
+            _configInfo.Format = Format.ZIP;
         if (_configInfo.DownloadTimeOut <= 0)
             _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
 
