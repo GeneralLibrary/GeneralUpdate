@@ -325,13 +325,11 @@ public class SilentPollOrchestrator : IDisposable
                 Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
             }
 
-            // Send ProcessInfo via IPC — 5s NamedPipe timeout to allow upgrade to connect,
-            // then SharedMemory/EncryptedFile auto-fallback if pipe isn't ready.
+            // Send ProcessInfo via AES-encrypted file IPC.
             if (_preparedProcessInfo != null)
             {
-                using var ipcCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                new AutoProcessInfoProvider().SendAsync(_preparedProcessInfo, ipcCts.Token).GetAwaiter().GetResult();
-                GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via IPC.");
+                new EncryptedFileProcessInfoProvider().SendAsync(_preparedProcessInfo).GetAwaiter().GetResult();
+                GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via encrypted file IPC.");
             }
         }
         catch (Exception ex)

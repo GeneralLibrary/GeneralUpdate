@@ -257,10 +257,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitializeFromEnvironment()
     {
-        // Read ProcessInfo via IPC (NamedPipe > SharedMemory > EncryptedFile auto-fallback).
-        // Sync wait is acceptable here — the constructor runs once and the
-        // IPC providers use short timeouts (5s NamedPipe, immediate MMF/file).
-        var processInfo = new AutoProcessInfoProvider().ReceiveAsync().GetAwaiter().GetResult();
+        // Read ProcessInfo via AES-encrypted file IPC.
+        // Sync wait is acceptable here — the constructor runs once and
+        // EncryptedFileProcessInfoProvider is synchronous.
+        var processInfo = new EncryptedFileProcessInfoProvider().ReceiveAsync().GetAwaiter().GetResult();
         if (processInfo == null) return;
 
         BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);

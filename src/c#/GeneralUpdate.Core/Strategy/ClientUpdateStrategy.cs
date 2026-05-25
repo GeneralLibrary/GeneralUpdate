@@ -181,12 +181,9 @@ public class ClientUpdateStrategy : IStrategy
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
 
-        // Wire ProcessInfo via IPC (NamedPipe > SharedMemory > EncryptedFile auto-fallback).
-        // 3s timeout on NamedPipe: if no upgrade process connects (normal client flow),
-        // falls back to SharedMemory/EncryptedFile without blocking the pipeline.
-        using var ipcCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        await new AutoProcessInfoProvider().SendAsync(processInfo, ipcCts.Token).ConfigureAwait(false);
-        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via IPC (AutoProcessInfoProvider).");
+        // Wire ProcessInfo via AES-encrypted file IPC.
+        await new EncryptedFileProcessInfoProvider().SendAsync(processInfo).ConfigureAwait(false);
+        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via encrypted file IPC.");
 
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
