@@ -16,9 +16,13 @@ using GeneralUpdate.Core.Download.Orchestrators;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS (Object Storage Service) update strategy — single-process, no separate upgrade.
-/// Downloads version configuration, fetches update packages from OSS,
-/// decompresses them, starts the main application, and exits.
+/// OSS (Object Storage Service) update strategy — client/upgrade split.
+/// <list type="bullet">
+///   <item><b>Client side</b>: downloads version config, checks for updates,
+///        starts the upgrade process with config, and exits.</item>
+///   <item><b>Upgrade side</b>: reads version config, downloads packages from OSS,
+///        decompresses them, starts the main app, and exits.</item>
+/// </list>
 /// </summary>
 public class OSSUpdateStrategy : IStrategy
 {
@@ -26,13 +30,9 @@ public class OSSUpdateStrategy : IStrategy
     private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
     private const int DefaultTimeOut = 60;
 
-    /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
-    /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
-    /// <summary>Download source for OSS version listing. Override via <c>.DownloadSource&lt;OssDownloadSource&gt;()</c>.</summary>
     public IDownloadSource? DownloadSource { get; set; }
-    /// <summary>Download orchestrator. Override via <c>.DownloadOrchestrator&lt;T&gt;()</c>.</summary>
     public IDownloadOrchestrator? DownloadOrchestrator { get; set; }
 
     public void Create(GlobalConfigInfo parameter)
@@ -45,82 +45,143 @@ public class OSSUpdateStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OSSUpdateStrategy not configured. Call Create() first.");
 
+        // Upgrade side: GlobalConfigInfoOSS env var was set by the client process.
+        // We download packages, decompress, start the main app, and exit.
+        var ossJson = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
+        if (!string.IsNullOrWhiteSpace(ossJson))
+        {
+            await ExecuteUpgradeAsync();
+            return;
+        }
+
+        // Client side: download version config, check for update,
+        // start the upgrade process, and exit.
+        await ExecuteClientAsync();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Client side: check version, start upgrade process
+    // ════════════════════════════════════════════════════════════════
+
+    private async Task ExecuteClientAsync()
+    {
+        GeneralTracer.Debug("OSSUpdateStrategy (client): checking for updates.");
+
+        var versionFileName = $"{_configInfo!.MainAppName ?? _configInfo.AppName}_versions.json";
+        var versionsFilePath = Path.Combine(_appPath, versionFileName);
+
+        DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath);
+        if (!File.Exists(versionsFilePath))
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: version config download failed, aborting.");
+            return;
+        }
+
+        var versions = JsonSerializer.Deserialize(
+            File.ReadAllText(versionsFilePath),
+            JsonContext.VersionOSSJsonContext.Default.ListVersionOSS);
+        if (versions == null || versions.Count == 0)
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: no versions found, aborting.");
+            return;
+        }
+
+        versions = versions.OrderByDescending(x => x.PubTime).ToList();
+        var latest = versions.First();
+
+        if (!IsOssUpgrade(_configInfo.ClientVersion, latest.Version))
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: no upgrade needed.");
+            return;
+        }
+
+        // Use user-configured AppName or default upgrade exe
+        var upgradeAppName = !string.IsNullOrWhiteSpace(_configInfo.AppName) && _configInfo.AppName != "Update.exe"
+            ? _configInfo.AppName
+            : "GeneralUpdate.Upgrade.exe";
+        var appPath = Path.Combine(_appPath, upgradeAppName);
+        if (!File.Exists(appPath))
+            throw new FileNotFoundException($"Upgrade application not found: {upgradeAppName}");
+
+        // Pass config to the upgrade process via AES-encrypted file
+        var ossConfig = new GlobalConfigInfoOSS
+        {
+            AppName = _configInfo.MainAppName ?? _configInfo.AppName,
+            CurrentVersion = _configInfo.ClientVersion,
+            VersionFileName = versionFileName,
+            Encoding = (_configInfo.Encoding?.CodePage ?? Encoding.UTF8.CodePage).ToString(),
+            Url = _configInfo.UpdateUrl
+        };
+
+        Environments.SetEnvironmentVariable("GlobalConfigInfoOSS",
+            JsonSerializer.Serialize(ossConfig,
+                JsonContext.GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS));
+
+        Process.Start(appPath);
+        await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Upgrade side: download packages, decompress, start main app
+    // ════════════════════════════════════════════════════════════════
+
+    private async Task ExecuteUpgradeAsync()
+    {
         var ctx = BuildUpdateContext();
         try
         {
-            // 1. Download version configuration from server
-            GeneralTracer.Debug("OSSUpdateStrategy: 1. Downloading version configuration.");
-            var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.AppName}_versions.json";
-            var versionsFilePath = Path.Combine(_appPath, versionFileName);
+            var versionFileName = $"{_configInfo!.MainAppName ?? _configInfo.AppName}_versions.json";
+            var jsonPath = Path.Combine(_appPath, versionFileName);
 
-            DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath);
-            if (!File.Exists(versionsFilePath))
-            {
-                GeneralTracer.Info("OSSUpdateStrategy: version config download failed, aborting.");
-                return;
-            }
-
-            var versions = JsonSerializer.Deserialize(
-                File.ReadAllText(versionsFilePath),
-                JsonContext.VersionOSSJsonContext.Default.ListVersionOSS);
-            if (versions == null || versions.Count == 0)
-            {
-                GeneralTracer.Info("OSSUpdateStrategy: no versions found, aborting.");
-                return;
-            }
-
-            // 2. Check if upgrade is needed
-            versions = versions.OrderByDescending(x => x.PubTime).ToList();
-            var latest = versions.First();
-            if (!IsOssUpgrade(_configInfo.ClientVersion, latest.Version))
-            {
-                GeneralTracer.Info("OSSUpdateStrategy: no upgrade needed.");
-                return;
-            }
+            if (!File.Exists(jsonPath) && DownloadSource == null)
+                throw new FileNotFoundException($"Version config not found: {jsonPath}");
 
             // Hooks: allow cancellation before download
             if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
             {
-                GeneralTracer.Info("OSSUpdateStrategy: update cancelled by hook.");
+                GeneralTracer.Info("OSSUpdateStrategy (upgrade): cancelled by hook.");
                 return;
             }
 
-            // Report: update started
             await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
 
-            // 3. Build download assets
+            // Build download assets from version config or injected source
             List<DownloadAsset> assets;
             if (DownloadSource != null)
             {
-                GeneralTracer.Debug("OSSUpdateStrategy: 2. Using injected IDownloadSource.");
                 assets = (await DownloadSource.ListAsync().ConfigureAwait(false)).ToList();
             }
             else
             {
-                GeneralTracer.Debug("OSSUpdateStrategy: 2. Building assets from version config.");
-                assets = versions.OrderBy(v => v.PubTime).Select(v =>
-                {
-                    if (string.IsNullOrWhiteSpace(v.Url))
-                        throw new InvalidOperationException(
-                            $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
-                    var zipName = $"{v.PacketName ?? v.Version}zip";
-                    if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                        zipName += ".zip";
-                    return new DownloadAsset(
-                        Name: zipName, Url: v.Url, Size: 0,
-                        SHA256: v.Hash, Version: v.Version ?? "0.0.0");
-                }).ToList();
+                var versions = JsonSerializer.Deserialize(
+                    File.ReadAllText(jsonPath),
+                    JsonContext.VersionOSSJsonContext.Default.ListVersionOSS);
+                if (versions == null || versions.Count == 0)
+                    throw new InvalidOperationException("No versions found in OSS configuration.");
+
+                assets = versions.OrderBy(v => v.PubTime)
+                    .Where(v => new Version(v.Version ?? "0.0.0") > new Version(_configInfo.ClientVersion))
+                    .Select(v =>
+                    {
+                        if (string.IsNullOrWhiteSpace(v.Url))
+                            throw new InvalidOperationException(
+                                $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
+                        var zipName = $"{v.PacketName ?? v.Version}zip";
+                        if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                            zipName += ".zip";
+                        return new DownloadAsset(
+                            Name: zipName, Url: v.Url, Size: 0,
+                            SHA256: v.Hash, Version: v.Version ?? "0.0.0");
+                    }).ToList();
             }
 
             if (assets.Count == 0)
                 throw new InvalidOperationException("No assets to download.");
 
-            // 4. Download packages
-            GeneralTracer.Debug($"OSSUpdateStrategy: 3. Downloading {assets.Count} asset(s).");
+            GeneralTracer.Debug($"OSSUpdateStrategy (upgrade): downloading {assets.Count} asset(s).");
             await DownloadAssetsAsync(assets).ConfigureAwait(false);
 
-            // 5. Decompress
-            GeneralTracer.Debug("OSSUpdateStrategy: 4. Decompressing packages.");
+            GeneralTracer.Debug("OSSUpdateStrategy (upgrade): decompressing.");
             DecompressAssets(assets);
 
             await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
@@ -128,24 +189,19 @@ public class OSSUpdateStrategy : IStrategy
             await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            // 6. Start main app and exit
-            GeneralTracer.Debug("OSSUpdateStrategy: 5. Launching main application.");
+            GeneralTracer.Debug("OSSUpdateStrategy (upgrade): launching main app.");
             StartApp();
-            await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
-            GeneralTracer.Error("OSSUpdateStrategy.ExecuteAsync failed.", ex);
+            GeneralTracer.Error("OSSUpdateStrategy.ExecuteUpgradeAsync failed.", ex);
             throw;
         }
     }
 
-    public void Execute()
-    {
-        ExecuteAsync().GetAwaiter().GetResult();
-    }
+    public void Execute() => ExecuteAsync().GetAwaiter().GetResult();
 
     public void StartApp()
     {
@@ -157,7 +213,7 @@ public class OSSUpdateStrategy : IStrategy
             throw new FileNotFoundException($"Application not found: {appPath}");
 
         Process.Start(appPath);
-        GeneralTracer.Debug("OSSUpdateStrategy: application started.");
+        GeneralTracer.Debug("OSSUpdateStrategy: main application started.");
     }
 
     #region Helpers
@@ -186,14 +242,16 @@ public class OSSUpdateStrategy : IStrategy
     private async Task DownloadAssetsAsync(List<DownloadAsset> assets)
     {
         var plan = new DownloadPlan(assets, false);
-
         if (DownloadOrchestrator != null)
         {
             await DownloadOrchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
         }
         else
         {
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(_configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut) };
+            using var httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(_configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut)
+            };
             var orchestrator = new DefaultDownloadOrchestrator(httpClient);
             await orchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
         }
@@ -213,10 +271,6 @@ public class OSSUpdateStrategy : IStrategy
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // Hooks & Reporter safe wrappers
-    // ════════════════════════════════════════════════════════════════
-
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
@@ -233,38 +287,32 @@ public class OSSUpdateStrategy : IStrategy
         try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
     }
-
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
         try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
     }
-
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
     }
-
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
         try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
     }
-
     private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
             var downloadCtx = new Hooks.DownloadContext(
                 _configInfo?.MainAppName ?? _configInfo?.AppName ?? "unknown",
-                _configInfo?.LastVersion ?? "",
-                0, TimeSpan.Zero, _appPath, true);
+                _configInfo?.LastVersion ?? "", 0, TimeSpan.Zero, _appPath, true);
             await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}"); }
     }
-
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -276,7 +324,6 @@ public class OSSUpdateStrategy : IStrategy
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
-
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -288,7 +335,6 @@ public class OSSUpdateStrategy : IStrategy
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }
-
     private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try
