@@ -17,6 +17,7 @@ using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Strategy;
 
 namespace GeneralUpdate.Core.Silent;
@@ -36,6 +37,7 @@ public class SilentPollOrchestrator : IDisposable
     private int _updaterStarted;
     private IUpdateHooks? _hooks;
     private IUpdateReporter? _reporter;
+    private Configuration.ProcessInfo? _preparedProcessInfo;
 
     public SilentPollOrchestrator(GlobalConfigInfo configInfo, SilentOptions options)
     {
@@ -160,13 +162,13 @@ public class SilentPollOrchestrator : IDisposable
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
             BlackListManager.Instance.SkipDirectorys);
 
-        // Build ProcessInfo
-        var processInfo = ConfigurationMapper.MapToProcessInfo(
+        // Build ProcessInfo and store for IPC delivery on process exit
+        _preparedProcessInfo = ConfigurationMapper.MapToProcessInfo(
             _configInfo, new List<VersionInfo>(),
             BlackListManager.Instance.BlackFormats.ToList(),
             BlackListManager.Instance.BlackFiles.ToList(),
             BlackListManager.Instance.SkipDirectorys.ToList());
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
+        _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
 
         // ═══ Reporter: update started ═══
         var startTime = DateTimeOffset.UtcNow;
@@ -311,12 +313,23 @@ public class SilentPollOrchestrator : IDisposable
 
         try
         {
-            Environments.SetEnvironmentVariable("ProcessInfo", _configInfo.ProcessInfo ?? string.Empty);
             var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+
+            // Start the upgrade process first — it will call ReceiveAsync in its constructor.
+            // We then call SendAsync which creates the NamedPipe server; the upgrade's
+            // client connects to it. Auto-fallback (SharedMemory > EncryptedFile) handles
+            // timing gaps where the named pipe handshake doesn't complete in time.
             if (File.Exists(updaterPath))
             {
                 GeneralTracer.Info($"SilentPollOrchestrator: launching updater {updaterPath}");
                 Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
+            }
+
+            // Send ProcessInfo via AES-encrypted file IPC.
+            if (_preparedProcessInfo != null)
+            {
+                new EncryptedFileProcessInfoProvider().Send(_preparedProcessInfo);
+                GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via encrypted file IPC.");
             }
         }
         catch (Exception ex)

@@ -6,12 +6,14 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Strategy;
@@ -169,13 +171,19 @@ public class ClientUpdateStrategy : IStrategy
             Format = _configInfo.Format ?? "ZIP"
         }).ToList();
 
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(
-            ConfigurationMapper.MapToProcessInfo(
-                _configInfo, downloadVersions,
-                BlackListManager.Instance.BlackFormats.ToList(),
-                BlackListManager.Instance.BlackFiles.ToList(),
-                BlackListManager.Instance.SkipDirectorys.ToList()),
+        var processInfo = ConfigurationMapper.MapToProcessInfo(
+            _configInfo, downloadVersions,
+            BlackListManager.Instance.BlackFormats.ToList(),
+            BlackListManager.Instance.BlackFiles.ToList(),
+            BlackListManager.Instance.SkipDirectorys.ToList());
+
+        // Keep JSON string for backward compatibility (GlobalConfigInfo.ProcessInfo)
+        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
+
+        // Wire ProcessInfo via AES-encrypted file IPC.
+        new EncryptedFileProcessInfoProvider().Send(processInfo);
+        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via encrypted file IPC.");
 
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)

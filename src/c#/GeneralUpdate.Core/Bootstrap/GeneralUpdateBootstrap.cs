@@ -16,6 +16,7 @@ using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core.Network;
 using GeneralUpdate.Core.Hooks;
+using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core;
@@ -256,11 +257,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitializeFromEnvironment()
     {
-        var json = Environments.GetEnvironmentVariable("ProcessInfo");
-        if (string.IsNullOrWhiteSpace(json)) return;
-
-        var processInfo = JsonSerializer.Deserialize(
-            json, ProcessInfoJsonContext.Default.ProcessInfo);
+        // Read ProcessInfo via AES-encrypted file IPC.
+        var processInfo = new EncryptedFileProcessInfoProvider().Receive();
         if (processInfo == null) return;
 
         BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);
