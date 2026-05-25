@@ -36,9 +36,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- DrivelutionMiddleware: conditionally compiled when Drivelution reference is present.
-             Add <ProjectReference> to GeneralUpdate.Drivelution to enable automatically. -->
-        <Compile Remove="Pipeline\DrivelutionMiddleware.cs" Condition="'$(HasDrivelutionReference)' != 'true'" />
         <!-- IsExternalInit is built-in for net8.0+ (C# 9 records) -->
         <Compile Remove="Configuration\IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
         <!-- SignalR Hub code excluded in AOT builds -->
