@@ -11,6 +11,9 @@ public enum AppType
     /// <summary>Upgrade application — applies downloaded update packages, starts main app.</summary>
     Upgrade = 2,
 
-    /// <summary>OSS (Object Storage Service) update mode — downloads from cloud storage.</summary>
-    OSS = 3
+    /// <summary>OSS client mode — checks version config, starts upgrade process.</summary>
+    OSSClient = 3,
+
+    /// <summary>OSS upgrade mode — downloads packages from OSS, deploys to client.</summary>
+    OSSUpgrade = 4
 }
