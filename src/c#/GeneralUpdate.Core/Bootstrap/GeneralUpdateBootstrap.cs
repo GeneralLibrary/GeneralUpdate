@@ -71,7 +71,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             AppType.Client  => await LaunchWithStrategy(new ClientUpdateStrategy()),
             AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OSS     => await LaunchOssAsync(),
+            AppType.OSS     => await LaunchWithStrategy(new OSSUpdateStrategy()),
             _ => await LaunchWithStrategy(new ClientUpdateStrategy())
         };
     }
@@ -153,73 +153,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         return this;
     }
 
-    /// <summary>OSS workflow: download packages from cloud storage, apply updates.</summary>
-    private async Task<GeneralUpdateBootstrap> LaunchOssAsync()
-    {
-        try
-        {
-            GeneralTracer.Debug("LaunchOssAsync start.");
-
-            var json = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
-            if (!string.IsNullOrWhiteSpace(json))
-            {
-                var strategy = new OSSUpdateStrategy();
-                strategy.Create(_configInfo);
-                await strategy.ExecuteAsync();
-                return this;
-            }
-
-            // Client-side OSS
-            var basePath = AppDomain.CurrentDomain.BaseDirectory;
-            var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.AppName}_versions.json";
-            var versionsFilePath = Path.Combine(basePath, versionFileName);
-
-            DownloadOssFile(_configInfo.UpdateUrl, versionsFilePath);
-            if (!File.Exists(versionsFilePath)) return this;
-
-            var versions = StorageManager.GetJson<List<VersionOSS>>(versionsFilePath,
-                VersionOSSJsonContext.Default.ListVersionOSS);
-            if (versions == null || versions.Count == 0) return this;
-
-            versions = versions.OrderByDescending(x => x.PubTime).ToList();
-            var newVersion = versions.First();
-
-            if (!IsOssUpgrade(_configInfo.ClientVersion, newVersion.Version))
-            {
-                GeneralTracer.Info("LaunchOssAsync: no upgrade needed.");
-                return this;
-            }
-
-            // Use user-configured AppName, fall back to default updater name
-            var upgradeAppName = !string.IsNullOrWhiteSpace(_configInfo.AppName) && _configInfo.AppName != "Update.exe"
-                ? _configInfo.AppName
-                : "GeneralUpdate.Upgrade.exe";
-            var appPath = Path.Combine(basePath, upgradeAppName);
-            if (!File.Exists(appPath))
-                throw new Exception($"Upgrade application not found: {upgradeAppName}");
-
-            var ossConfig = new GlobalConfigInfoOSS
-            {
-                AppName = _configInfo.MainAppName ?? _configInfo.AppName,
-                CurrentVersion = _configInfo.ClientVersion,
-                VersionFileName = versionFileName,
-                Encoding = (_configInfo.Encoding?.CodePage ?? Encoding.UTF8.CodePage).ToString(),
-                Url = _configInfo.UpdateUrl
-            };
-
-            var serialized = JsonSerializer.Serialize(ossConfig,
-                GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS);
-            Environments.SetEnvironmentVariable("GlobalConfigInfoOSS", serialized);
-            Process.Start(appPath);
-            await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("LaunchOssAsync failed.", ex);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
-        }
-        return this;
-    }
 
     // ════════════════════════════════════════════════════════════════
     // Configuration
@@ -371,26 +304,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
         }
-    }
-
-    private static void DownloadOssFile(string url, string path)
-    {
-        if (File.Exists(path))
-        {
-            File.SetAttributes(path, FileAttributes.Normal);
-            File.Delete(path);
-        }
-        using var webClient = new System.Net.WebClient();
-        webClient.DownloadFile(new Uri(url), path);
-    }
-
-    private static bool IsOssUpgrade(string clientVersion, string serverVersion)
-    {
-        if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion))
-            return false;
-        return Version.TryParse(clientVersion, out var cv)
-            && Version.TryParse(serverVersion, out var sv)
-            && cv < sv;
     }
 
     // ════════════════════════════════════════════════════════════════

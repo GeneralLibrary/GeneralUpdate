@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Compress;
 using GeneralUpdate.Core.Download;
@@ -17,11 +19,13 @@ using GeneralUpdate.Core.Configuration;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS (Object Storage Service) update strategy.
-/// Downloads version configuration, fetches update packages from OSS,
-/// decompresses them, and launches the main application.
-/// </summary>
-/// <remarks>
+/// OSS (Object Storage Service) update strategy — handles both client and upgrade roles.
+/// <list type="bullet">
+///   <item><b>Client side</b>: downloads version configuration from server, checks for new
+///        version, starts the upgrade process, and exits.</item>
+///   <item><b>Upgrade side</b>: reads version config, downloads update packages from OSS,
+///        decompresses them, and launches the main application.</item>
+/// </list>
 /// This replaces the legacy <c>OSSStrategy</c> and <c>GeneralUpdateOSS</c> classes.
 /// The OSS workflow is OS-agnostic — no platform-specific pipeline is required.
 /// </remarks>
@@ -50,6 +54,107 @@ public class OSSUpdateStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OSSUpdateStrategy not configured. Call Create() first.");
 
+        // Upgrade side: GlobalConfigInfoOSS env var was set by the client,
+        // so we download packages, decompress, and start the main app.
+        var ossJson = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
+        if (!string.IsNullOrWhiteSpace(ossJson))
+        {
+            await ExecuteUpgradeAsync();
+            return;
+        }
+
+        // Client side: download version config, check for new version,
+        // start the upgrade process, and exit.
+        await ExecuteClientAsync();
+    }
+
+    #region Client-side OSS
+
+    private async Task ExecuteClientAsync()
+    {
+        GeneralTracer.Debug("OSSUpdateStrategy: client-side OSS flow.");
+
+        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var versionFileName = $"{_configInfo!.MainAppName ?? _configInfo.AppName}_versions.json";
+        var versionsFilePath = Path.Combine(basePath, versionFileName);
+
+        DownloadOssVersionFile(_configInfo.UpdateUrl, versionsFilePath);
+        if (!File.Exists(versionsFilePath))
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: version config download failed, aborting.");
+            return;
+        }
+
+        var versions = JsonSerializer.Deserialize(
+            File.ReadAllText(versionsFilePath),
+            JsonContext.VersionOSSJsonContext.Default.ListVersionOSS);
+        if (versions == null || versions.Count == 0)
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: no versions found, aborting.");
+            return;
+        }
+
+        versions = versions.OrderByDescending(x => x.PubTime).ToList();
+        var newVersion = versions.First();
+
+        if (!IsOssUpgrade(_configInfo.ClientVersion, newVersion.Version))
+        {
+            GeneralTracer.Info("OSSUpdateStrategy: no upgrade needed.");
+            return;
+        }
+
+        // Use user-configured AppName or default upgrade exe
+        var upgradeAppName = !string.IsNullOrWhiteSpace(_configInfo.AppName) && _configInfo.AppName != "Update.exe"
+            ? _configInfo.AppName
+            : "GeneralUpdate.Upgrade.exe";
+        var appPath = Path.Combine(basePath, upgradeAppName);
+        if (!File.Exists(appPath))
+            throw new FileNotFoundException($"Upgrade application not found: {upgradeAppName}");
+
+        var ossConfig = new GlobalConfigInfoOSS
+        {
+            AppName = _configInfo.MainAppName ?? _configInfo.AppName,
+            CurrentVersion = _configInfo.ClientVersion,
+            VersionFileName = versionFileName,
+            Encoding = (_configInfo.Encoding?.CodePage ?? Encoding.UTF8.CodePage).ToString(),
+            Url = _configInfo.UpdateUrl
+        };
+
+        Environments.SetEnvironmentVariable("GlobalConfigInfoOSS",
+            JsonSerializer.Serialize(ossConfig,
+                JsonContext.GlobalConfigInfoOSSJsonContext.Default.GlobalConfigInfoOSS));
+
+        Process.Start(appPath);
+        await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
+    }
+
+    private static void DownloadOssVersionFile(string url, string path)
+    {
+        if (File.Exists(path))
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+            File.Delete(path);
+        }
+        using var httpClient = new HttpClient();
+        var bytes = httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
+        File.WriteAllBytes(path, bytes);
+    }
+
+    private static bool IsOssUpgrade(string clientVersion, string serverVersion)
+    {
+        if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion))
+            return false;
+        return Version.TryParse(clientVersion, out var cv)
+            && Version.TryParse(serverVersion, out var sv)
+            && cv < sv;
+    }
+
+    #endregion
+
+    #region Upgrade-side OSS
+
+    private async Task ExecuteUpgradeAsync()
+    {
         var ctx = BuildUpdateContext();
         try
         {
@@ -148,6 +253,8 @@ public class OSSUpdateStrategy : IStrategy
         Process.Start(appPath);
         GeneralTracer.Debug("OSSUpdateStrategy: application started.");
     }
+
+    #endregion
 
     #region Helpers
 
