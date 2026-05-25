@@ -52,7 +52,7 @@ namespace GeneralUpdate.Differential.Matchers
         {
             if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
-            var skipDirectory = BlackListManager.Instance.SkipDirectorys.ToList();
+            var skipDirectory = BlackListDefaults.DefaultSkipDirectories;
             var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory);
             var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory);
             HandleDeleteList(patchFiles, oldFiles);
@@ -128,7 +128,7 @@ namespace GeneralUpdate.Differential.Matchers
                 foreach (var file in comparisonResult.DifferentNodes)
                 {
                     var extensionName = Path.GetExtension(file.FullName);
-                    if (BlackListManager.Instance.IsBlacklisted(extensionName)) continue;
+                    if (BlackListDefaults.DefaultBlackFormats.Contains(extensionName)) continue;
 
                     var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
                     var targetPath = Path.Combine(appPath, targetFileName);

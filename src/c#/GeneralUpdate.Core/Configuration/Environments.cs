@@ -9,10 +9,11 @@ namespace GeneralUpdate.Core.Configuration;
 /// <summary>
 /// Secure IPC environment variable provider.
 /// AES-encrypted temp files in a dedicated subdirectory, auto-deleted after read.
-/// Encryption is delegated to <see cref="IpcEncryption"/>.
 /// </summary>
 public static class Environments
 {
+    // Fixed key/IV derived from a constant — not crypto-grade, but sufficient for
+    // ephemeral IPC where the file lives < 1 second and is in a per-user directory.
     private static readonly byte[] _aesKey = SHA256.Create()
         .ComputeHash(Encoding.UTF8.GetBytes("GeneralUpdate.IPC.EnvironmentProvider.v1"));
     private static readonly byte[] _aesIV = new byte[16] { 0x47, 0x55, 0x50, 0x44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

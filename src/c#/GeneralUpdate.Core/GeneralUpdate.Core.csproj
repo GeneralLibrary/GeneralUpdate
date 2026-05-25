@@ -4,7 +4,7 @@
         <Nullable>enable</Nullable>
         <Title>GeneralUpdate.Core</Title>
         <Authors>JusterZhu</Authors>
-        <Description>GeneralUpdate unified core �?client and upgrade bootstrap, download, pipeline, strategies, utilities.</Description>
+        <Description>GeneralUpdate unified core — client and upgrade bootstrap, download, pipeline, strategies, utilities.</Description>
         <Copyright>Copyright 2020-2026 JusterZhu</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
@@ -30,7 +30,6 @@
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
     </ItemGroup>
 
-    <!-- net10.0: IHttpClientFactory built-in; add Http package for ServiceCollection -->
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
     </ItemGroup>

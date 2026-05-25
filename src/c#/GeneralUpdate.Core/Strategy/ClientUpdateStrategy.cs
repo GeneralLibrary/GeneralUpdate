@@ -89,7 +89,7 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        // Standard mode �?silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
+        // Standard mode — silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
         // Runtime options (Encoding, Format, DownloadTimeOut, etc.) are already
         // populated on _configInfo by Bootstrap.ApplyRuntimeOptions().
         await ExecuteStandardWorkflowAsync();
@@ -185,7 +185,7 @@ public class ClientUpdateStrategy : IStrategy
         new EncryptedFileProcessInfoProvider().Send(processInfo);
         GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via encrypted file IPC.");
 
-        // Backup �?conditionally skipped when BackupEnabled is false
+        // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
         {
             Backup();
@@ -197,7 +197,7 @@ public class ClientUpdateStrategy : IStrategy
 
         _osStrategy!.Create(_configInfo);
 
-        // Download via orchestrator �?wired with options from GlobalConfigInfo
+        // Download via orchestrator — wired with options from GlobalConfigInfo
         var orchOptions = Download.Models.DownloadOrchestratorOptions.From(_configInfo);
         GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
         if (_orchestrator != null)
