@@ -180,6 +180,37 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         return this;
     }
 
+    /// <summary>
+    /// Load configuration from a local JSON file.
+    /// </summary>
+    /// <param name="filePath">
+    /// Config file path.
+    /// If just a filename (no directory separator), resolves relative to the current directory.
+    /// Relative or absolute paths are used as-is.
+    /// </param>
+    public GeneralUpdateBootstrap SetConfig(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentNullException(nameof(filePath));
+
+        // Resolve filename-only paths to current directory
+        var hasPathChar = filePath.Contains(Path.DirectorySeparatorChar)
+                       || filePath.Contains(Path.AltDirectorySeparatorChar);
+        var fullPath = hasPathChar
+            ? Path.GetFullPath(filePath)
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
+
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException($"Config file not found: {fullPath}");
+
+        var json = File.ReadAllText(fullPath);
+        var config = JsonSerializer.Deserialize(json, JsonContext.HttpParameterJsonContext.Default.Configinfo);
+        if (config == null)
+            throw new InvalidOperationException($"Failed to parse config file: {fullPath}");
+
+        return SetConfig(config);
+    }
+
     public GeneralUpdateBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));

@@ -72,8 +72,9 @@ public class OssIntegrationTests
     }
 
     [Fact]
-    public async Task OSSUpdateStrategy_RequiresConfig()
+    public async Task OSSUpdateStrategy_WithoutConfig_ReturnsWithoutError()
     {
+        // OSS client without UpdateUrl or local version config: no exception, just returns
         var strategy = new OSSUpdateStrategy();
         var config = new GlobalConfigInfo
         {
@@ -83,8 +84,8 @@ public class OssIntegrationTests
         };
         strategy.Create(config);
 
-        await Assert.ThrowsAsync<System.IO.FileNotFoundException>(() =>
-            strategy.ExecuteAsync());
+        var ex = await Record.ExceptionAsync(() => strategy.ExecuteAsync());
+        Assert.Null(ex);
     }
 
     [Fact]
