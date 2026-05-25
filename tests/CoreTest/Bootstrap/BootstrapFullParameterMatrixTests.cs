@@ -51,14 +51,10 @@ namespace CoreTest.Bootstrap
         [Fact] public void Format_ZIP() => Assert.NotNull(B().Option(UpdateOptions.Format, "ZIP"));
         [Theory][InlineData(10)][InlineData(30)][InlineData(60)][InlineData(300)]
         public void DownloadTimeout_Various(int t) => Assert.NotNull(B().Option(UpdateOptions.DownloadTimeout, t));
-        [Fact] public void DriveEnabled_True() => Assert.NotNull(B().Option(UpdateOptions.DriveEnabled, true));
-        [Fact] public void DriveEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.DriveEnabled, false));
         [Fact] public void PatchEnabled_True() => Assert.NotNull(B().Option(UpdateOptions.PatchEnabled, true));
         [Fact] public void PatchEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.PatchEnabled, false));
         [Fact] public void BackupEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.BackupEnabled, false));
         [Fact] public void Silent_True() => Assert.NotNull(B().Option(UpdateOptions.Silent, true));
-        [Fact] public void Mode_Default() => Assert.NotNull(B().Option(UpdateOptions.Mode, UpdateMode.Default));
-        [Fact] public void Mode_Scripts() => Assert.NotNull(B().Option(UpdateOptions.Mode, UpdateMode.Scripts));
         #endregion
 
         #region Silent
@@ -77,16 +73,7 @@ namespace CoreTest.Bootstrap
         [Fact] public void RetryInterval_Custom() => Assert.NotNull(B().Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(3)));
         #endregion
 
-        #region OSS
-        [Fact] public void OSS_AliYun() => Assert.NotNull(B().Option(UpdateOptions.OSSProvider, OssProvider.AliYun));
-        [Fact] public void OSS_AWS() => Assert.NotNull(B().Option(UpdateOptions.OSSProvider, OssProvider.AWS));
-        [Fact] public void OSSBucketRegion() => Assert.NotNull(B().Option(UpdateOptions.OSSBucketRegion, "cn-shanghai"));
-        #endregion
-
         #region Blacklist/Misc
-        [Fact] public void BlackList_Empty() => Assert.NotNull(B().Option(UpdateOptions.BlackList, BlackListConfig.Empty));
-        [Fact] public void BlackList_Configured() => Assert.NotNull(B().Option(UpdateOptions.BlackList,
-            new BlackListConfig(new List<string> { "*.pdb" }, new List<string> { ".log" }, new List<string> { "logs" })));
         [Fact] public void Hub_Configured() => Assert.NotNull(B().Option(UpdateOptions.Hub,
             new HubConfig { Url = "https://signalr.example.com/hub" }));
         #endregion
@@ -100,10 +87,8 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
                 .Option(UpdateOptions.Format, "ZIP")
                 .Option(UpdateOptions.DownloadTimeout, 120)
-                .Option(UpdateOptions.DriveEnabled, false)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, true)
-                .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.Silent, false)
                 .Option(UpdateOptions.MaxConcurrency, 4)
                 .Option(UpdateOptions.EnableResume, true)
@@ -112,7 +97,6 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
                 .Option(UpdateOptions.SilentAutoInstall, false)
                 .Option(UpdateOptions.SilentPollIntervalMinutes, 30)
-                .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
                 .SetConfig(new Configinfo
                 {
                     UpdateUrl = "https://update.example.com/api/v2",
@@ -178,18 +162,14 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
                 .Option(UpdateOptions.Format, "ZIP")
                 .Option(UpdateOptions.DownloadTimeout, 120)
-                .Option(UpdateOptions.DriveEnabled, false)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, true)
-                .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.Silent, false)
                 .Option(UpdateOptions.MaxConcurrency, 4)
                 .Option(UpdateOptions.EnableResume, true)
                 .Option(UpdateOptions.RetryCount, 5)
                 .Option(UpdateOptions.VerifyChecksum, true)
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
-                .Option(UpdateOptions.BlackList, new BlackListConfig(
-                    new List<string> { "*.pdb" }, new List<string> { ".log" }, new List<string> { "logs" }))
                 .SetConfig(sharedConfig)
                 .AddListenerUpdatePrecheck(args =>
                 {
@@ -210,14 +190,11 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
                 .Option(UpdateOptions.Format, "ZIP")
                 .Option(UpdateOptions.DownloadTimeout, 30)
-                .Option(UpdateOptions.DriveEnabled, true)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, false)
-                .Option(UpdateOptions.Mode, UpdateMode.Default)
                 .Option(UpdateOptions.MaxConcurrency, 2)
                 .Option(UpdateOptions.VerifyChecksum, true)
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
-                .Option(UpdateOptions.BlackList, BlackListConfig.Empty)
                 .SetConfig(sharedConfig)
                 .AddListenerException((s, e) => { })
                 .AddListenerUpdateInfo((s, e) => { });

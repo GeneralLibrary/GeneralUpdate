@@ -29,17 +29,11 @@ namespace GeneralUpdate.Core.Configuration
         /// <summary>Download timeout in seconds.</summary>
         public static UpdateOption<int?> DownloadTimeout { get; } = UpdateOption.ValueOf<int?>("DOWNLOADTIMEOUT", 30);
 
-        /// <summary>Whether driver update mode is enabled.</summary>
-        public static UpdateOption<bool?> DriveEnabled { get; } = UpdateOption.ValueOf<bool?>("DRIVE", false);
-
         /// <summary>Whether differential patch update is enabled.</summary>
         public static UpdateOption<bool?> PatchEnabled { get; } = UpdateOption.ValueOf<bool?>("PATCH", true);
 
         /// <summary>Whether backup before update is enabled.</summary>
         public static UpdateOption<bool?> BackupEnabled { get; } = UpdateOption.ValueOf<bool?>("BACKUP", true);
-
-        /// <summary>Update mode override.</summary>
-        public static UpdateOption<UpdateMode?> Mode { get; } = UpdateOption.ValueOf<UpdateMode?>("MODE", null);
 
         /// <summary>Whether silent background update is enabled.</summary>
         public static UpdateOption<bool> Silent { get; } = UpdateOption.ValueOf<bool>("ENABLESILENTUPDATE", false);
@@ -67,17 +61,6 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>Initial retry interval for exponential back-off. Default 1 second.</summary>
         public static UpdateOption<TimeSpan> RetryInterval { get; } = UpdateOption.ValueOf<TimeSpan>("RETRYINTERVAL", TimeSpan.FromSeconds(1));
-
-        // ═══ OSS ═══
-        /// <summary>Object Storage Service provider type.</summary>
-        public static UpdateOption<OssProvider?> OSSProvider { get; } = UpdateOption.ValueOf<OssProvider?>("OSSPROVIDER", null);
-
-        /// <summary>OSS bucket region identifier.</summary>
-        public static UpdateOption<string?> OSSBucketRegion { get; } = UpdateOption.ValueOf<string?>("OSSBUCKETREGION", null);
-
-        // ═══ Blacklist ═══
-        /// <summary>Blacklist configuration for files and directories to exclude from updates.</summary>
-        public static UpdateOption<BlackListConfig> BlackList { get; } = UpdateOption.ValueOf<BlackListConfig>("BLACKLIST", BlackListConfig.Empty);
 
         // ═══ SignalR Hub ═══
         /// <summary>SignalR Hub configuration for push-based updates.</summary>

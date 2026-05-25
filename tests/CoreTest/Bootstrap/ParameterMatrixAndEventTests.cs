@@ -298,8 +298,6 @@ namespace CoreTest.Bootstrap
             Assert.NotNull(UpdateOptions.DownloadTimeout);
             Assert.NotNull(UpdateOptions.PatchEnabled);
             Assert.NotNull(UpdateOptions.BackupEnabled);
-            Assert.NotNull(UpdateOptions.DriveEnabled);
-            Assert.NotNull(UpdateOptions.Mode);
             Assert.NotNull(UpdateOptions.Silent);
         }
 

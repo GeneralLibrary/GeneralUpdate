@@ -268,14 +268,6 @@ namespace CoreTest.Configuration
         }
 
         [Fact]
-        public void UpdateMode_HasDefaultAndScripts()
-        {
-            var values = Enum.GetValues<UpdateMode>();
-            Assert.Contains(UpdateMode.Default, values);
-            Assert.Contains(UpdateMode.Scripts, values);
-        }
-
-        [Fact]
         public void PlatformType_AllFour()
         {
             var values = Enum.GetValues<PlatformType>();
