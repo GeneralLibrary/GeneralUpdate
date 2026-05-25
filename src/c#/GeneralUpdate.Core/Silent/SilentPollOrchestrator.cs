@@ -314,27 +314,24 @@ public class SilentPollOrchestrator : IDisposable
         try
         {
             var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+
+            // Start the upgrade process first — it will call ReceiveAsync in its constructor.
+            // We then call SendAsync which creates the NamedPipe server; the upgrade's
+            // client connects to it. Auto-fallback (SharedMemory > EncryptedFile) handles
+            // timing gaps where the named pipe handshake doesn't complete in time.
             if (File.Exists(updaterPath))
             {
-                // Start the upgrade process first (it will block on ReceiveAsync)
                 GeneralTracer.Info($"SilentPollOrchestrator: launching updater {updaterPath}");
                 Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
-
-                // Send ProcessInfo via IPC — the upgrade process connects as client
-                if (_preparedProcessInfo != null)
-                {
-                    new AutoProcessInfoProvider().SendAsync(_preparedProcessInfo).GetAwaiter().GetResult();
-                    GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via IPC.");
-                }
             }
-            else
+
+            // Send ProcessInfo via IPC — 5s NamedPipe timeout to allow upgrade to connect,
+            // then SharedMemory/EncryptedFile auto-fallback if pipe isn't ready.
+            if (_preparedProcessInfo != null)
             {
-                // No separate updater exe — write via IPC for fallback compatibility
-                if (_preparedProcessInfo != null)
-                {
-                    new AutoProcessInfoProvider().SendAsync(_preparedProcessInfo).GetAwaiter().GetResult();
-                    GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via IPC (no updater exe).");
-                }
+                using var ipcCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                new AutoProcessInfoProvider().SendAsync(_preparedProcessInfo, ipcCts.Token).GetAwaiter().GetResult();
+                GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via IPC.");
             }
         }
         catch (Exception ex)
