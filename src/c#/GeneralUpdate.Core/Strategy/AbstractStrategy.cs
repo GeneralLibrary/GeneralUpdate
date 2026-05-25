@@ -7,6 +7,8 @@ using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.Hooks;
+using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
 
 namespace GeneralUpdate.Core.Strategy
 {
@@ -14,6 +16,12 @@ namespace GeneralUpdate.Core.Strategy
     {
         private const string Patchs = "patchs";
         protected GlobalConfigInfo _configinfo = new();
+
+        /// <summary>Optional hooks for pre/post update callbacks.</summary>
+        protected IUpdateHooks? Hooks { get; set; }
+
+        /// <summary>Optional reporter for update status reporting.</summary>
+        protected IUpdateReporter? Reporter { get; set; }
         
         public virtual void Execute() => throw new NotImplementedException();
         
@@ -120,6 +128,12 @@ namespace GeneralUpdate.Core.Strategy
             var tempPath = Path.Combine(path, name);
             return File.Exists(tempPath) ? tempPath : string.Empty;
         }
+
+        // ═══ Safe hooks/reporter wrappers (shared by all strategy subclasses) ═══
+        // Note: Each subclass builds its own UpdateContext via BuildUpdateContext().
+        // Subclasses should call hooks/reporter through their own context-aware wrappers.
+        // The Hooks and Reporter properties are declared here so subclasses inherit them
+        // without redeclaring.
 
         private static void Clear(string path)
         {

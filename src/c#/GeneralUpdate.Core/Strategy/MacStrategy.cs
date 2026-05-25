@@ -11,26 +11,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// <summary>macOS update strategy — follows Linux conventions.</summary>
 public class MacStrategy : AbstractStrategy
 {
-    public override void Execute()
-    {
-        GeneralTracer.Info("MacStrategy: executing macOS update");
-        try
-        {
-            if (!string.IsNullOrEmpty(_configinfo.MainAppName))
-            {
-                var mainApp = Path.Combine(
-                    _configinfo.InstallPath ?? string.Empty,
-                    _configinfo.MainAppName);
-                if (File.Exists(mainApp))
-                    StartApp();
-            }
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("MacStrategy.Execute failed", ex);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
-        }
-    }
+    public override void Execute() => ExecuteAsync().GetAwaiter().GetResult();
 
     public override async Task ExecuteAsync()
     {

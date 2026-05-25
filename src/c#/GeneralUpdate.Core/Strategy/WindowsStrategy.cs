@@ -13,6 +13,10 @@ namespace GeneralUpdate.Core.Strategy
     /// </summary>
     public class WindowsStrategy : AbstractStrategy
     {
+        public override void Execute()
+        {
+            ExecuteAsync().GetAwaiter().GetResult();
+        }
         protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
         {
             GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");

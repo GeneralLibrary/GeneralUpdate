@@ -6,20 +6,18 @@ namespace GeneralUpdate.Core.Compress;
 
 public class CompressProvider
 {
-    private static ICompressionStrategy _compressionStrategy;
-
     private CompressProvider() { }
 
-    public static void Compress(string compressType,string sourcePath, string destinationPath, bool includeRootDirectory, Encoding encoding)
+    public static void Compress(string compressType, string sourcePath, string destinationPath, bool includeRootDirectory, Encoding encoding)
     {
-        _compressionStrategy = GetCompressionStrategy(compressType);
-        _compressionStrategy.Compress(sourcePath, destinationPath, includeRootDirectory, encoding);
+        var strategy = GetCompressionStrategy(compressType);
+        strategy.Compress(sourcePath, destinationPath, includeRootDirectory, encoding);
     }
 
     public static void Decompress(string compressType, string archivePath, string destinationPath, Encoding encoding)
     {
-        _compressionStrategy = GetCompressionStrategy(compressType);
-        _compressionStrategy.Decompress(archivePath, destinationPath, encoding);
+        var strategy = GetCompressionStrategy(compressType);
+        strategy.Decompress(archivePath, destinationPath, encoding);
     }
 
     private static ICompressionStrategy GetCompressionStrategy(string compressType) => compressType switch

@@ -105,7 +105,7 @@ public class EventListenerTests
 
         var downloadDone = new MultiDownloadCompletedEventArgs(new object(), true);
         Assert.NotNull(downloadDone.Version);
-        Assert.True(downloadDone.IsComplated);
+        Assert.True(downloadDone.IsCompleted);
 
         var ex = new Exception("boom");
         var err = new MultiDownloadErrorEventArgs(ex, new object());

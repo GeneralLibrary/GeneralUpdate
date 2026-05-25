@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -126,6 +126,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             }
 
             roleStrategy.Create(_configInfo);
+
+            // Check custom skip condition before executing update
+            if (_customSkipOption?.Invoke() == true)
+            {
+                GeneralTracer.Info("GeneralUpdateBootstrap: update skipped by custom skip option.");
+                return this;
+            }
+
             await roleStrategy.ExecuteAsync();
         }
         catch (Exception ex)

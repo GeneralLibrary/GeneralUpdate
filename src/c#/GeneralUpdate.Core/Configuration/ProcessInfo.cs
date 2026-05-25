@@ -42,7 +42,6 @@ namespace GeneralUpdate.Core.Configuration
         /// <param name="bowl">The process name to terminate before updating</param>
         /// <param name="scheme">The URL scheme for update requests</param>
         /// <param name="token">The authentication token</param>
-        /// <param name="script">The Linux permission script</param>
         /// <param name="driverDirectory">The directory path containing driver files</param>
         /// <param name="blackFileFormats">List of file format extensions to skip</param>
         /// <param name="blackFiles">List of specific files to skip</param>

@@ -153,7 +153,7 @@ namespace GeneralUpdate.Core.FileSystem
             }
             catch (Exception)
             {
-                return null;
+                return new List<FileInfo>();
             }
         }
 
