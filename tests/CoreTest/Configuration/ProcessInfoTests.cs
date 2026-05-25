@@ -268,10 +268,4 @@ public class ProcessInfoTests
         Assert.Contains("logs", info.SkipDirectorys);
     }
 
-    /// <summary>TearDown: cleanup temp files if any were created.</summary>
-    private static void CleanupTempFile(string path)
-    {
-        try { if (File.Exists(path)) File.Delete(path); }
-        catch { /* best-effort */ }
-    }
 }

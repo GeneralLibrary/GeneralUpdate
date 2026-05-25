@@ -29,10 +29,10 @@ public class RandomRetryPolicyTests
 
         // Assert
         Assert.NotNull(delay);
-        Assert.True(delay >= TimeSpan.Zero,
+        Assert.True(delay!.Value >= TimeSpan.Zero,
             $"Expected delay >= 0, but got {delay}");
-        Assert.True(delay <= TimeSpan.FromSeconds(10),
-            $"Expected delay <= 10 seconds, but got {delay?.TotalSeconds}s");
+        Assert.True(delay.Value <= TimeSpan.FromSeconds(10),
+            $"Expected delay <= 10 seconds, but got {delay.Value.TotalSeconds}s");
     }
 
     [Fact]
@@ -51,8 +51,8 @@ public class RandomRetryPolicyTests
 
         // Assert
         Assert.NotNull(delay);
-        Assert.True(delay >= TimeSpan.Zero);
-        Assert.True(delay <= TimeSpan.FromSeconds(10));
+        Assert.True(delay!.Value >= TimeSpan.Zero);
+        Assert.True(delay.Value <= TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class RandomRetryPolicyTests
 
         // Assert
         Assert.NotNull(delay);
-        Assert.True(delay <= TimeSpan.FromSeconds(10));
+        Assert.True(delay!.Value <= TimeSpan.FromSeconds(10));
     }
 
     #endregion
@@ -182,7 +182,7 @@ public class RandomRetryPolicyTests
 
         // Assert
         Assert.NotNull(delay);
-        Assert.True(delay <= TimeSpan.FromSeconds(10));
+        Assert.True(delay!.Value <= TimeSpan.FromSeconds(10));
     }
 
     #endregion

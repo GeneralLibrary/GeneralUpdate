@@ -103,10 +103,9 @@ public class EventListenerBatchTests : IDisposable
                     manager.RemoveListener<System.EventArgs>(Handler);
             });
         }
-        Task.WaitAll(tasks);
-
-        // Assert — no exceptions thrown during concurrent operations
-        Assert.True(true);
+        // Act & Assert — no exceptions thrown during concurrent operations
+        var ex = Record.Exception(() => Task.WaitAll(tasks));
+        Assert.Null(ex);
     }
 
     [Fact]

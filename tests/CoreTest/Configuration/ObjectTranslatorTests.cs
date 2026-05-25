@@ -5,9 +5,26 @@ namespace CoreTest.Configuration;
 
 /// <summary>
 /// Unit tests for <see cref="ObjectTranslator"/> following AAAT (Arrange-Act-Assert-TearDown).
+/// Implements <see cref="IDisposable"/> to restore <see cref="GeneralTracer"/> global state
+/// after each test, preventing cross-test leakage.
 /// </summary>
-public class ObjectTranslatorTests
+public class ObjectTranslatorTests : IDisposable
 {
+    private readonly bool _originalTracingEnabled;
+
+    public ObjectTranslatorTests()
+    {
+        // Capture original tracing state before any test modifies it
+        _originalTracingEnabled = GeneralTracer.IsTracingEnabled();
+    }
+
+    /// <summary>TearDown: restore tracing state to original value for test isolation.</summary>
+    public void Dispose()
+    {
+        GeneralTracer.SetTracingEnabled(_originalTracingEnabled);
+        GC.SuppressFinalize(this);
+    }
+
     #region GetPacketHash
 
     [Fact]
