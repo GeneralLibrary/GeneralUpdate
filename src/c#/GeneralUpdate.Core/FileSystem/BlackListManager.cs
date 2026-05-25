@@ -15,9 +15,10 @@ public interface IBlackListMatcher
 }
 
 /// <summary>
-/// Thread-safe blacklist manager. Uses Lazy<T> singleton.
+/// Thread-safe blacklist manager. Uses Lazy&lt;T&gt; singleton.
 /// Matching is case-insensitive and supports prefix matching for skip directories.
 /// </summary>
+[Obsolete("Use DefaultBlackListMatcher + StorageManager.BlackListMatcher instead. See #412.")]
 public class BlackListManager : IBlackListMatcher
 {
     private static readonly Lazy<BlackListManager> _lazy = new(() => new BlackListManager());

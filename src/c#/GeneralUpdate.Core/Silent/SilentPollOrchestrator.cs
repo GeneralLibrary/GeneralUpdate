@@ -147,10 +147,13 @@ public class SilentPollOrchestrator : IDisposable
             catch (Exception ex) { GeneralTracer.Warn($"Hook OnBeforeUpdateAsync failed: {ex.Message}"); }
         }
 
-        // Configure for update
-        BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
-        BlackListManager.Instance?.AddBlackFormats(_configInfo.BlackFormats);
-        BlackListManager.Instance?.AddSkipDirectorys(_configInfo.SkipDirectorys);
+        // Configure matcher from config with defaults
+        var effectiveConfig = new BlackListConfig(
+            _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
+            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
+            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+        );
+        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
 
         _configInfo.LastVersion = latestVersion;
         _configInfo.UpdateVersions = new List<VersionInfo>(); // legacy compat
@@ -160,14 +163,14 @@ public class SilentPollOrchestrator : IDisposable
 
         // Backup
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            BlackListManager.Instance.SkipDirectorys);
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
 
         // Build ProcessInfo and store for IPC delivery on process exit
         _preparedProcessInfo = ConfigurationMapper.MapToProcessInfo(
             _configInfo, new List<VersionInfo>(),
-            BlackListManager.Instance.BlackFormats.ToList(),
-            BlackListManager.Instance.BlackFiles.ToList(),
-            BlackListManager.Instance.SkipDirectorys.ToList());
+            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
+            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
         _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
 
         // ═══ Reporter: update started ═══

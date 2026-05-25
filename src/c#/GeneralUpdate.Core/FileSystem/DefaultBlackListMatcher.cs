@@ -13,6 +13,16 @@ public class DefaultBlackListMatcher : IBlackListMatcher
     public DefaultBlackListMatcher(BlackListConfig config)
         => _config = config ?? throw new ArgumentNullException(nameof(config));
 
+    /// <summary>Create a matcher from GlobalConfigInfo blacklist properties.</summary>
+    public static DefaultBlackListMatcher FromConfigInfo(GlobalConfigInfo config)
+    {
+        var cfg = new BlackListConfig(
+            config.BlackFiles?.Count > 0 ? config.BlackFiles : null,
+            config.BlackFormats?.Count > 0 ? config.BlackFormats : null,
+            config.SkipDirectorys?.Count > 0 ? config.SkipDirectorys : null);
+        return new DefaultBlackListMatcher(cfg);
+    }
+
     public bool IsBlacklisted(string relativeFilePath)
     {
         var fileName = Path.GetFileName(relativeFilePath);

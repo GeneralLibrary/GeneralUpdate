@@ -196,10 +196,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var processInfo = new EncryptedFileProcessInfoProvider().Receive();
         if (processInfo == null) return;
 
-        BlackListManager.Instance.AddBlackFormats(processInfo.BlackFileFormats);
-        BlackListManager.Instance.AddBlackFiles(processInfo.BlackFiles);
-        BlackListManager.Instance.AddSkipDirectorys(processInfo.SkipDirectorys);
-
         _configInfo = new GlobalConfigInfo
         {
             MainAppName = processInfo.AppName,
@@ -217,8 +213,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             BackupDirectory = processInfo.BackupDirectory,
             Scheme = processInfo.Scheme,
             Token = processInfo.Token,
-            DriverDirectory = processInfo.DriverDirectory
+            DriverDirectory = processInfo.DriverDirectory,
+            BlackFiles = processInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
+            BlackFormats = processInfo.BlackFileFormats ?? BlackListDefaults.DefaultBlackFormats,
+            SkipDirectorys = processInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories
         };
+
+        StorageManager.BlackListMatcher = DefaultBlackListMatcher.FromConfigInfo(_configInfo);
     }
 
     /// <summary>
@@ -285,9 +286,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitBlackList()
     {
-        BlackListManager.Instance.AddBlackFiles(_configInfo.BlackFiles);
-        BlackListManager.Instance.AddBlackFormats(_configInfo.BlackFormats);
-        BlackListManager.Instance.AddSkipDirectorys(_configInfo.SkipDirectorys);
+        // Build blacklist matcher from GlobalConfigInfo and set on StorageManager.
+        // The matcher combines user config with system defaults.
+        var effectiveConfig = new BlackListConfig(
+            _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
+            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
+            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+        );
+        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }
 
     private async Task CallSmallBowlHomeAsync(string processName)
