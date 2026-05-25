@@ -16,7 +16,7 @@ public record DownloadProgress(
 
 public record DownloadResult(
     DownloadAsset Asset,
-    string? LocalPath,
+    string LocalPath,
     long DownloadedBytes,
     TimeSpan Duration,
     int RetryCount,

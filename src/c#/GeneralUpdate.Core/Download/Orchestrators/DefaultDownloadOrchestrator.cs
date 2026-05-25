@@ -122,7 +122,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         // Dispatch all-completed event ONCE after all assets finish (only failed results)
         var failedDetails = results.Where(r => !r.Success)
-            .Select(r => ((object)r.Asset.Url, r.ErrorMessage ?? "failed")).ToList();
+            .Select(r => ((object)r.Asset, r.ErrorMessage ?? "failed")).ToList();
         DownloadProgressReporter.DispatchAllCompleted(
             this,
             results.All(r => r.Success),
