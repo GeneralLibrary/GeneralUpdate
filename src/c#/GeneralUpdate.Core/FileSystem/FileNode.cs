@@ -131,7 +131,7 @@ public class FileNode
                string.Equals(Name, tempNode.Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    public override int GetHashCode() => (Name?.GetHashCode() ?? 0) ^ (Hash?.GetHashCode() ?? 0);
+    public override int GetHashCode() => (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) ^ (Hash != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Hash) : 0);
 
     #endregion Public Methods
 }

@@ -6,6 +6,6 @@ namespace GeneralUpdate.Core.Download
     {
         public object Version { get; private set; } = version;
 
-        public bool isCompleted { get; private set; } = isCompleted;
+        public bool IsCompleted { get; private set; } = isCompleted;
     }
 }

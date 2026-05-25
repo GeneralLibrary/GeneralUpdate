@@ -45,9 +45,9 @@ public class DownloadProgressReporter : IProgress
     /// Fires the all-completed event. Should be called once after all downloads finish,
     /// not per-asset. Called from the download orchestrator.
     /// </summary>
-    public static void DispatchAllCompleted(bool success, List<(object, string)> details)
+    public static void DispatchAllCompleted(object sender, bool success, List<(object, string)> details)
     {
-        EventManager.Instance.Dispatch(null!,
+        EventManager.Instance.Dispatch(sender,
             new MultiAllDownloadCompletedEventArgs(success, details ?? new List<(object, string)>()));
     }
 

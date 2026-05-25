@@ -120,11 +120,13 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
         await Task.WhenAll(tasks).ConfigureAwait(false);
         sw.Stop();
 
-        // Dispatch all-completed event ONCE after all assets finish
-        var details = results.Select(r => ((object)r.Url, r.Success ? "success" : r.ErrorMessage ?? "failed")).ToList();
+        // Dispatch all-completed event ONCE after all assets finish (only failed results)
+        var failedDetails = results.Where(r => !r.Success)
+            .Select(r => ((object)r.Url, r.ErrorMessage ?? "failed")).ToList();
         DownloadProgressReporter.DispatchAllCompleted(
+            this,
             results.All(r => r.Success),
-            details);
+            failedDetails);
 
         return new DownloadReport(
             results,
