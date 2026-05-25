@@ -89,16 +89,28 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        var defaultEncoding = Encoding.UTF8;
-        var defaultTimeout = 60;
-        if (true /* silent check would read from options */)
-        {
-            // Standard mode
-            await ExecuteStandardWorkflowAsync(defaultEncoding, defaultTimeout);
-        }
+        // Standard mode — silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
+        // Encoding, Format, and DownloadTimeOut are normally set by
+        // Bootstrap.ApplyRuntimeOptions(); the fallback ensures sensible defaults
+        // when the strategy is used without Bootstrap wiring.
+        ApplyStrategyDefaults();
+        await ExecuteStandardWorkflowAsync();
     }
 
-    private async Task ExecuteStandardWorkflowAsync(Encoding encoding, int timeout)
+    /// <summary>
+    /// Applies sensible fallback defaults for runtime options that may not
+    /// have been set by Bootstrap.ApplyRuntimeOptions(). Uses null-coalescing
+    /// so previously-assigned values (from UpdateOptions) are never overwritten.
+    /// </summary>
+    private void ApplyStrategyDefaults()
+    {
+        _configInfo!.Encoding ??= Encoding.UTF8;
+        _configInfo.Format ??= "ZIP";
+        if (_configInfo.DownloadTimeOut <= 0)
+            _configInfo.DownloadTimeOut = 60;
+    }
+
+    private async Task ExecuteStandardWorkflowAsync()
     {
         GeneralTracer.Info($"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
@@ -145,7 +157,6 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportUpdateStartedAsync(hooksCtx).ConfigureAwait(false);
 
         InitBlackList();
-        ApplyRuntimeOptions(encoding, timeout);
 
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
@@ -172,7 +183,7 @@ public class ClientUpdateStrategy : IStrategy
             Hash = a.SHA256,
             Url = a.Url,
             Version = a.Version,
-            Format = "ZIP"
+            Format = _configInfo.Format ?? "ZIP"
         }).ToList();
 
         _configInfo.ProcessInfo = JsonSerializer.Serialize(
@@ -234,13 +245,6 @@ public class ClientUpdateStrategy : IStrategy
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             return new MacStrategy();
         throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
-
-    private void ApplyRuntimeOptions(Encoding encoding, int timeout)
-    {
-        _configInfo!.Encoding = encoding;
-        _configInfo.Format = Format.ZIP;
-        _configInfo.DownloadTimeOut = timeout;
     }
 
     private void InitBlackList()

@@ -109,10 +109,15 @@ public class UpgradeUpdateStrategy : IStrategy
         throw new PlatformNotSupportedException("The current operating system is not supported!");
     }
 
+    /// <summary>
+    /// Applies sensible fallback defaults for runtime options that may not
+    /// have been set by Bootstrap.ApplyRuntimeOptions(). Uses null-coalescing
+    /// so previously-assigned values (from UpdateOptions) are never overwritten.
+    /// </summary>
     private void ApplyRuntimeOptions()
     {
-        _configInfo!.Encoding = Encoding.UTF8;
-        _configInfo.Format = Format.ZIP;
+        _configInfo!.Encoding ??= Encoding.UTF8;
+        _configInfo.Format ??= Format.ZIP;
     }
 
     // ════════════════════════════════════════════════════════════════
