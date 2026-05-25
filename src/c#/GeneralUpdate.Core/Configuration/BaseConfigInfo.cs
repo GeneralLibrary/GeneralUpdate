@@ -91,12 +91,6 @@ namespace GeneralUpdate.Core.Configuration
         public string Token { get; set; }
 
         /// <summary>
-        /// Shell script content used to grant file permissions on Linux/Unix systems.
-        /// This script is executed after update to ensure proper file permissions.
-        /// </summary>
-        public string Script { get; set; }
-        
-        /// <summary>
         /// The directory path containing driver files for driver update functionality.
         /// Used when DriveEnabled is true to locate and install driver files during updates.
         /// </summary>

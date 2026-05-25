@@ -112,8 +112,6 @@ namespace GeneralUpdate.Core.Configuration
                     builder.SetReportUrl(config.ReportUrl);
                 if (!string.IsNullOrWhiteSpace(config.Bowl))
                     builder.SetBowl(config.Bowl);
-                if (!string.IsNullOrWhiteSpace(config.Script))
-                    builder.SetScript(config.Script);
                 if (!string.IsNullOrWhiteSpace(config.DriverDirectory))
                     builder.SetDriverDirectory(config.DriverDirectory);
                 if (config.BlackFiles != null)
@@ -390,7 +388,6 @@ namespace GeneralUpdate.Core.Configuration
                 UpdateLogUrl = _updateLogUrl,
                 ReportUrl = _reportUrl,
                 Bowl = _bowl,
-                Script = _script,
                 DriverDirectory = _driverDirectory,
                 BlackFiles = _blackFiles ?? new List<string>(),
                 BlackFormats = _blackFormats ?? new List<string>(),

@@ -1,16 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core;
-using Xunit;
 
 namespace CoreTest.Bootstrap
 {
@@ -243,7 +235,6 @@ namespace CoreTest.Bootstrap
                 SkipDirectorys = new List<string> { "logs", "cache", "__backups__" },
                 Scheme = "Bearer",
                 Token = "jwt-token-xyz",
-                Script = "#!/bin/bash\nchmod +x",
                 DriverDirectory = @"C:\drivers"
             };
 
@@ -408,7 +399,6 @@ namespace CoreTest.Bootstrap
                 Scheme = "Bearer",
                 Token = "jwt-token",
                 Bowl = "Bowl.exe",
-                Script = "chmod +x /app/Update",
                 DriverDirectory = @"C:\drivers",
                 BlackFiles = new List<string> { "*.pdb" },
                 BlackFormats = new List<string> { ".log" },
@@ -431,7 +421,6 @@ namespace CoreTest.Bootstrap
             Assert.Equal("Bearer", globalConfig.Scheme);
             Assert.Equal("jwt-token", globalConfig.Token);
             Assert.Equal("Bowl.exe", globalConfig.Bowl);
-            Assert.Equal("chmod +x /app/Update", globalConfig.Script);
             Assert.Equal(@"C:\drivers", globalConfig.DriverDirectory);
             Assert.NotNull(globalConfig.BlackFiles);
             Assert.Contains("*.pdb", globalConfig.BlackFiles);
@@ -533,7 +522,6 @@ namespace CoreTest.Bootstrap
                     Scheme = "Bearer",
                     Token = "eyJhbGciOiJIUzI1NiIs...",
                     Bowl = "Bowl.exe",
-                    Script = "chmod +x /opt/myproduct/Update",
                     DriverDirectory = @"C:\Program Files\MyProduct\drivers",
                     BlackFiles = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
                     BlackFormats = new List<string> { ".log", ".tmp", ".cache" },

@@ -42,7 +42,6 @@ namespace GeneralUpdate.Core.Configuration
             target.Bowl = source.Bowl;
             target.Scheme = source.Scheme;
             target.Token = source.Token;
-            target.Script = source.Script;
             target.DriverDirectory = source.DriverDirectory;
 
             // Map GlobalConfigInfo-specific fields
@@ -92,7 +91,6 @@ namespace GeneralUpdate.Core.Configuration
                 bowl: source.Bowl,
                 scheme: source.Scheme,
                 token: source.Token,
-                script: source.Script,
                 driverDirectory: source.DriverDirectory,  // Driver directory for driver updates
                 blackFileFormats: blackFileFormats,       // From BlackListManager
                 blackFiles: blackFiles,                   // From BlackListManager
@@ -128,7 +126,6 @@ namespace GeneralUpdate.Core.Configuration
             target.Bowl = source.Bowl;
             target.Scheme = source.Scheme;
             target.Token = source.Token;
-            target.Script = source.Script;
             target.DriverDirectory = source.DriverDirectory;
         }
     }

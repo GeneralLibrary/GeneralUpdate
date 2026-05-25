@@ -64,7 +64,6 @@ namespace GeneralUpdate.Core.Configuration
             , string bowl
             , string scheme
             , string token
-            , string script
             , string driverDirectory
             , List<string> blackFileFormats
             , List<string> blackFiles
@@ -99,7 +98,6 @@ namespace GeneralUpdate.Core.Configuration
             Bowl = bowl;
             Scheme = scheme;
             Token = token;
-            Script = script;
             DriverDirectory = driverDirectory;
             
             // Set blacklist parameters
@@ -225,13 +223,6 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("SkipDirectorys")]
         public List<string> SkipDirectorys { get; set; }
-        
-        /// <summary>
-        /// Shell script content for granting file permissions on Linux/Unix systems.
-        /// Executed after update to ensure updated files have correct permissions.
-        /// </summary>
-        [JsonPropertyName("Script")]
-        public string Script { get; set; }
         
         /// <summary>
         /// The directory path containing driver files for driver update functionality.

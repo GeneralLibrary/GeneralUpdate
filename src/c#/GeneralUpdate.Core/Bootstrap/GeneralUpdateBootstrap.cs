@@ -275,7 +275,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             BackupDirectory = processInfo.BackupDirectory,
             Scheme = processInfo.Scheme,
             Token = processInfo.Token,
-            Script = processInfo.Script,
             DriverDirectory = processInfo.DriverDirectory
         };
     }

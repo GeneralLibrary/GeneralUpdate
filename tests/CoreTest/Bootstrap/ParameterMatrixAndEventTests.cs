@@ -503,7 +503,6 @@ namespace CoreTest.Bootstrap
                 Scheme = "HMAC",
                 Token = "hmac-secret-key",
                 Bowl = "Bowl.exe",
-                Script = "#!/bin/bash\nset -e\nchmod +x /opt/app/Update",
                 DriverDirectory = @"C:\Program Files\EnterpriseApp\drivers",
                 BlackFiles = new List<string> { "*.pdb", "*.config", "*.Development.json" },
                 BlackFormats = new List<string> { ".log", ".tmp", ".cache", ".etl" },

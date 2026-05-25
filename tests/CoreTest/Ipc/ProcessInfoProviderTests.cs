@@ -34,7 +34,6 @@ public class ProcessInfoProviderTests
                 bowl: "",
                 scheme: "",
                 token: "",
-                script: "",
                 driverDirectory: "",
                 blackFileFormats: new List<string> { ".pdb" },
                 blackFiles: new List<string> { "test.dll" },

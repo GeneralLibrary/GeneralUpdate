@@ -493,23 +493,6 @@ namespace CoreTest.Shared
         }
 
         /// <summary>
-        /// Tests that SetScript correctly sets the shell script.
-        /// </summary>
-        [Fact]
-        public void SetScript_WithValidValue_SetsScript()
-        {
-            // Arrange
-            var builder = CreateBuilderWithRequiredFields();
-            var customScript = "#!/bin/bash\necho 'Hello'";
-
-            // Act
-            var config = builder.SetScript(customScript).Build();
-
-            // Assert
-            Assert.Equal(customScript, config.Script);
-        }
-
-        /// <summary>
         /// Tests that SetDriverDirectory correctly sets the driver directory.
         /// </summary>
         [Fact]

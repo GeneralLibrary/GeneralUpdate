@@ -150,7 +150,6 @@ namespace CoreTest.Bootstrap
                 UpdateLogUrl = "https://enterprise.com/releases",
                 ReportUrl = "https://telemetry.enterprise.com/api/report",
                 Scheme = "HMAC", Token = "hmac-prod-secret", Bowl = "Bowl.exe",
-                Script = "#!/bin/bash\nchmod +x /opt/enterprise/Update",
                 BlackFiles = new List<string> { "*.pdb" },
                 BlackFormats = new List<string> { ".log", ".tmp" },
                 SkipDirectorys = new List<string> { "logs", "temp" }
