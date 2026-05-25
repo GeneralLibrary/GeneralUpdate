@@ -6,8 +6,15 @@ using Xunit;
 
 namespace CoreTest.Event;
 
-public class EventListenerTests
+public class EventListenerTests : IDisposable
 {
+    /// <summary>TearDown: clear singleton state after each test for isolation.</summary>
+    public void Dispose()
+    {
+        EventManager.Instance.Clear();
+        GC.SuppressFinalize(this);
+    }
+
     private class TestListener : IUpdateEventListener
     {
         public int AllDownloadCompletedCalls;

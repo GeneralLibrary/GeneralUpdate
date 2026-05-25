@@ -6,8 +6,15 @@ using Xunit;
 
 namespace CoreTest.Event;
 
-public class EventManagerConcurrencyTests
+public class EventManagerConcurrencyTests : IDisposable
 {
+    /// <summary>TearDown: clear singleton state after each test for isolation.</summary>
+    public void Dispose()
+    {
+        EventManager.Instance.Clear();
+        GC.SuppressFinalize(this);
+    }
+
     [Fact]
     public async Task ConcurrentAddRemoveDispatch_NoExceptions()
     {
@@ -66,9 +73,7 @@ public class EventManagerConcurrencyTests
 
         Assert.True(handler2Called);
 
-        // Cleanup
-        EventManager.Instance.RemoveListener(handler1);
-        EventManager.Instance.RemoveListener(handler2);
+
     }
 
     [Fact]
@@ -82,6 +87,6 @@ public class EventManagerConcurrencyTests
         EventManager.Instance.RemoveListener(handler);
         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(null, "test"));
 
-        Assert.Equal(1, callCount); // Only first dispatch should trigger
+        Assert.Equal(1, callCount);
     }
 }
