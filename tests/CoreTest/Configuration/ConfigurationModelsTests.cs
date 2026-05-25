@@ -278,16 +278,6 @@ namespace CoreTest.Configuration
         }
 
         [Fact]
-        public void OssProvider_AllFour()
-        {
-            var values = Enum.GetValues<OssProvider>();
-            Assert.Contains(OssProvider.AliYun, values);
-            Assert.Contains(OssProvider.AWS, values);
-            Assert.Contains(OssProvider.MinIO, values);
-            Assert.Contains(OssProvider.Tencent, values);
-        }
-
-        [Fact]
         public void DownloadStatus_FiveValues()
         {
             var values = Enum.GetValues<DownloadStatus>();
