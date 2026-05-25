@@ -219,7 +219,7 @@ namespace CoreTest.Configuration
         public void DownloadResult_Success()
         {
             var result = new DownloadResult(
-                "https://cdn.example.com/update.zip",
+                null!,
                 "/tmp/update.zip",
                 50L * 1024 * 1024,
                 TimeSpan.FromSeconds(30),
@@ -236,7 +236,7 @@ namespace CoreTest.Configuration
         public void DownloadResult_FailureWithRetries()
         {
             var result = new DownloadResult(
-                "https://cdn.example.com/update.zip",
+                null!,
                 null,
                 0,
                 TimeSpan.FromSeconds(15),
