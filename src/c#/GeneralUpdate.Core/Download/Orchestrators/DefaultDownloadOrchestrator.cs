@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Executors;
 using GeneralUpdate.Core.Download.Policy;
@@ -16,17 +17,22 @@ namespace GeneralUpdate.Core.Download.Orchestrators;
 
 /// <summary>
 /// Default download orchestrator with parallel execution, concurrency limit,
-/// SHA256 verification, and progress reporting.
+/// SHA256 verification, resume support, and progress reporting.
+///
+/// All configurable behaviour is driven by <see cref="DownloadOrchestratorOptions"/>,
+/// which maps to the <see cref="UpdateOptions"/> defined in the bootstrap layer.
 /// </summary>
 public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 {
     private readonly HttpClient _httpClient;
     private readonly IDownloadPolicy _policy;
+    private readonly DownloadOrchestratorOptions _options;
 
-    public DefaultDownloadOrchestrator(HttpClient httpClient, IDownloadPolicy? policy = null)
+    public DefaultDownloadOrchestrator(HttpClient httpClient, DownloadOrchestratorOptions? options = null, IDownloadPolicy? policy = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _policy = policy ?? new DefaultRetryPolicy();
+        _options = options ?? new DownloadOrchestratorOptions();
+        _policy = policy ?? new DefaultRetryPolicy(_options.RetryCount, _options.RetryInterval);
     }
 
     /// <summary>Execute downloads for all assets in the plan.</summary>
@@ -42,9 +48,17 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         Directory.CreateDirectory(destDir);
 
+        // Resolve effective concurrency: Serial mode forces 1
+        var effectiveConcurrency = _options.DiffMode == DiffMode.Serial
+            ? 1
+            : DownloadOrchestratorOptions.SanitizeMaxConcurrency(Math.Max(1, maxConcurrency));
+
+        GeneralTracer.Info($"DefaultDownloadOrchestrator.ExecuteAsync: concurrency={effectiveConcurrency}, " +
+            $"resume={_options.EnableResume}, verifyChecksum={_options.VerifyChecksum}, diffMode={_options.DiffMode}");
+
         var sw = Stopwatch.StartNew();
         var results = new List<DownloadResult>();
-        using var sem = new SemaphoreSlim(maxConcurrency);
+        using var sem = new SemaphoreSlim(effectiveConcurrency);
         long totalBytes = 0;
 
         var tasks = plan.Assets.Select(async asset =>
@@ -55,7 +69,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                 var fileName = GetFileName(asset);
                 var destPath = Path.Combine(destDir, fileName);
 
-                var executor = new HttpDownloadExecutor(_httpClient);
+                var executor = new HttpDownloadExecutor(_httpClient, _options.DownloadTimeout, _options.EnableResume);
                 var pipeline = new DefaultDownloadPipeline(asset.SHA256);
 
                 var result = await _policy.ExecuteAsync(async ct =>
@@ -69,7 +83,13 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                     if (!downloadResult.Success)
                         return downloadResult;
 
-                    // Verify (SHA256)
+                    // Verify (SHA256) — conditionally skipped when VerifyChecksum is false
+                    if (!_options.VerifyChecksum)
+                    {
+                        GeneralTracer.Info($"DefaultDownloadOrchestrator: checksum verification skipped for {asset.Name} (VerifyChecksum=false).");
+                        return downloadResult;
+                    }
+
                     try
                     {
                         await pipeline.ProcessAsync(destPath, ct).ConfigureAwait(false);

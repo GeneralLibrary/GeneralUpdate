@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -113,8 +114,53 @@ public class GlobalConfigInfo : BaseConfigInfo
     public bool? PatchEnabled { get; set; }
 
     /// <summary>
+    /// Whether to back up the current version before applying an update.
+    /// Computed from UpdateOption.BackupEnabled, defaults to true.
+    /// </summary>
+    public bool? BackupEnabled { get; set; }
+
+    /// <summary>
     /// Directory path where the current version files are backed up before update.
     /// Computed by combining InstallPath with a versioned directory name.
     /// </summary>
     public string BackupDirectory { get; set; }
+
+    // ═══ Download/update behaviour options (wired from UpdateOptions) ═══
+
+    /// <summary>
+    /// Maximum number of concurrent download operations.
+    /// Computed from UpdateOption.MaxConcurrency, defaults to 3.
+    /// Valid range: 1 to <see cref="Environment.ProcessorCount"/> * 2.
+    /// </summary>
+    public int MaxConcurrency { get; set; } = 3;
+
+    /// <summary>
+    /// Whether to resume interrupted downloads via HTTP Range requests.
+    /// Computed from UpdateOption.EnableResume, defaults to true.
+    /// </summary>
+    public bool EnableResume { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of retry attempts for failed download operations.
+    /// Computed from UpdateOption.RetryCount, defaults to 3.
+    /// </summary>
+    public int RetryCount { get; set; } = 3;
+
+    /// <summary>
+    /// Initial retry interval for exponential back-off.
+    /// Computed from UpdateOption.RetryInterval, defaults to 1 second.
+    /// </summary>
+    public TimeSpan RetryInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Whether to perform SHA256 checksum verification after download.
+    /// Computed from UpdateOption.VerifyChecksum, defaults to true.
+    /// </summary>
+    public bool VerifyChecksum { get; set; } = true;
+
+    /// <summary>
+    /// Diff/patch generation mode — Serial or Parallel.
+    /// Computed from UpdateOption.DiffMode, defaults to <see cref="Configuration.DiffMode.Serial"/>.
+    /// </summary>
+    public DiffMode DiffMode { get; set; } = DiffMode.Serial;
 }

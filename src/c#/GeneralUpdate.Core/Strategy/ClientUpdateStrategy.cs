@@ -183,12 +183,20 @@ public class ClientUpdateStrategy : IStrategy
                 BlackListManager.Instance.SkipDirectorys.ToList()),
             ProcessInfoJsonContext.Default.ProcessInfo);
 
-        // Backup
-        Backup();
+        // Backup — conditionally skipped when BackupEnabled is false
+        if (_configInfo.BackupEnabled != false)
+        {
+            Backup();
+        }
+        else
+        {
+            GeneralTracer.Info("ClientUpdateStrategy: backup skipped (BackupEnabled=false).");
+        }
 
         _osStrategy!.Create(_configInfo);
 
-        // Download via orchestrator
+        // Download via orchestrator — wired with options from GlobalConfigInfo
+        var orchOptions = Download.Models.DownloadOrchestratorOptions.From(_configInfo);
         GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
         if (_orchestrator != null)
         {
@@ -199,7 +207,7 @@ public class ClientUpdateStrategy : IStrategy
             var httpClient = new System.Net.Http.HttpClient();
             try
             {
-                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
+                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient, orchOptions);
                 await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
             }
             finally { httpClient.Dispose(); }

@@ -285,6 +285,18 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
         _configInfo.Format = GetOption(UpdateOptions.Format);
         _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
+
+        // Download behaviour
+        _configInfo.MaxConcurrency = GetOption(UpdateOptions.MaxConcurrency);
+        _configInfo.EnableResume = GetOption(UpdateOptions.EnableResume);
+        _configInfo.RetryCount = GetOption(UpdateOptions.RetryCount);
+        _configInfo.RetryInterval = GetOption(UpdateOptions.RetryInterval);
+        _configInfo.VerifyChecksum = GetOption(UpdateOptions.VerifyChecksum);
+
+        // Update behaviour
+        _configInfo.BackupEnabled = GetOption(UpdateOptions.BackupEnabled);
+        _configInfo.PatchEnabled = GetOption(UpdateOptions.PatchEnabled);
+        _configInfo.DiffMode = GetOption(UpdateOptions.DiffMode);
     }
 
     /// <summary>
