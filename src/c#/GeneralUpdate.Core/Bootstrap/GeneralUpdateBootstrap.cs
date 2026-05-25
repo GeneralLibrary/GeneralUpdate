@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -126,6 +126,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             }
 
             roleStrategy.Create(_configInfo);
+
+            // Check custom skip condition before executing update
+            if (_customSkipOption?.Invoke() == true)
+            {
+                GeneralTracer.Info("GeneralUpdateBootstrap: update skipped by custom skip option.");
+                return this;
+            }
+
             await roleStrategy.ExecuteAsync();
         }
         catch (Exception ex)
@@ -328,12 +336,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             AutoInstall = autoInstall
         };
 
-        var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
-        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
-
-        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions)
-            .WithHooks(hooks)
-            .WithReporter(reporter);
+        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions);
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");

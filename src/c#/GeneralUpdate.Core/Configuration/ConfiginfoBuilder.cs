@@ -29,7 +29,6 @@ namespace GeneralUpdate.Core.Configuration
         private string _updateLogUrl;
         private string _reportUrl;
         private string _bowl;
-        private string _script;
         private string _driverDirectory;
         private List<string> _blackFiles;
         private List<string> _blackFormats;
@@ -313,14 +312,6 @@ namespace GeneralUpdate.Core.Configuration
         /// <summary>
         /// Sets the shell script content.
         /// </summary>
-        /// <param name="script">Shell script content used to grant file permissions on Linux/Unix systems.</param>
-        /// <returns>The current ConfiginfoBuilder instance for method chaining.</returns>
-        public ConfiginfoBuilder SetScript(string script)
-        {
-            _script = script;
-            return this;
-        }
-
         /// <summary>
         /// Sets the driver directory.
         /// </summary>

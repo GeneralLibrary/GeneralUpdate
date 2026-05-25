@@ -31,8 +31,6 @@ public class ClientUpdateStrategy : IStrategy
     private IStrategy? _osStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
-    private readonly DiffMode _diffMode = DiffMode.Serial;
-
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     /// <summary>Update status reporter injected by the bootstrap.</summary>

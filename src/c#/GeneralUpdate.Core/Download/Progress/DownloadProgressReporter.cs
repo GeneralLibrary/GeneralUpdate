@@ -11,16 +11,13 @@ public class DownloadProgressReporter : IProgress
 {
     private readonly Action<Models.DownloadProgress>? _onProgress;
     private readonly Action? _onCompleted;
-    private readonly Action? _onAllCompleted;
 
     public DownloadProgressReporter(
         Action<Models.DownloadProgress>? onProgress = null,
-        Action? onCompleted = null,
-        Action? onAllCompleted = null)
+        Action? onCompleted = null)
     {
         _onProgress = onProgress;
         _onCompleted = onCompleted;
-        _onAllCompleted = onAllCompleted;
     }
 
     public void Report(Models.DownloadProgress value)
@@ -42,13 +39,16 @@ public class DownloadProgressReporter : IProgress
             EventManager.Instance.Dispatch(this,
                 new MultiDownloadErrorEventArgs(new Exception("Download failed"), value.AssetName ?? "unknown"));
         }
+    }
 
-        if (value.Percentage >= 100)
-        {
-            _onAllCompleted?.Invoke();
-            EventManager.Instance.Dispatch(this,
-                new MultiAllDownloadCompletedEventArgs(true, new List<(object, string)>()));
-        }
+    /// <summary>
+    /// Fires the all-completed event. Should be called once after all downloads finish,
+    /// not per-asset. Called from the download orchestrator.
+    /// </summary>
+    public static void DispatchAllCompleted(bool success, List<(object, string)> details)
+    {
+        EventManager.Instance.Dispatch(null!,
+            new MultiAllDownloadCompletedEventArgs(success, details ?? new List<(object, string)>()));
     }
 
     /// <summary>

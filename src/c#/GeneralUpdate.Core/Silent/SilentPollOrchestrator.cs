@@ -34,18 +34,12 @@ public class SilentPollOrchestrator : IDisposable
     private Task? _pollingTask;
     private int _prepared;
     private int _updaterStarted;
-    private IUpdateHooks? _hooks;
-    private Download.Reporting.IUpdateReporter? _reporter;
 
     public SilentPollOrchestrator(GlobalConfigInfo configInfo, SilentOptions options)
     {
         _configInfo = configInfo ?? throw new ArgumentNullException(nameof(configInfo));
         _options = options ?? throw new ArgumentNullException(nameof(options));
     }
-
-    /// <summary>Inject hooks and reporter.</summary>
-    public SilentPollOrchestrator WithHooks(IUpdateHooks? hooks) { _hooks = hooks; return this; }
-    public SilentPollOrchestrator WithReporter(Download.Reporting.IUpdateReporter? reporter) { _reporter = reporter; return this; }
 
     /// <summary>Start background polling loop.</summary>
     public Task StartAsync()

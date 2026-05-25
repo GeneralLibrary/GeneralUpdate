@@ -71,19 +71,6 @@ public class FileNode
         }
     }
 
-    public void InfixOrder()
-    {
-        if (Left != null)
-        {
-            Left.InfixOrder();
-        }
-
-        if (Right != null)
-        {
-            Right.InfixOrder();
-        }
-    }
-
     public FileNode Search(long id)
     {
         if (id == Id)
@@ -144,7 +131,7 @@ public class FileNode
                string.Equals(Name, tempNode.Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    public override int GetHashCode() => base.GetHashCode();
+    public override int GetHashCode() => (Name?.GetHashCode() ?? 0) ^ (Hash?.GetHashCode() ?? 0);
 
     #endregion Public Methods
 }

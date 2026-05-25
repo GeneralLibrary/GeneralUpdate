@@ -22,7 +22,6 @@ public class OssDownloadExecutor : IDownloadExecutor
         CancellationToken token = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        long lastReport = 0;
         try
         {
             using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token)
@@ -32,25 +31,13 @@ public class OssDownloadExecutor : IDownloadExecutor
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             using var fs = new FileStream(destPath, FileMode.Create);
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            var buffer = new byte[8192];
-            long downloaded = 0;
-            int read;
-            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
-            {
-                await fs.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
-                downloaded += read;
-                var now = sw.ElapsedMilliseconds;
-                if (now - lastReport >= 250 || downloaded == total)
-                {
-                    lastReport = now;
-                    var pct = total > 0 ? (double)downloaded / total * 100 : -1;
-                    progress?.Report(new DownloadProgress(
-                        Path.GetFileName(destPath), downloaded, total > 0 ? total : null, pct, DownloadStatus.Downloading));
-                }
-            }
-            sw.Stop();
-            progress?.Report(new DownloadProgress(Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100, DownloadStatus.Completed));
-            return new DownloadResult(url, destPath, downloaded, sw.Elapsed, 0, true, null);
+
+            var (downloaded, elapsed) = await HttpDownloadExecutor.StreamDownloadAsync(
+                stream, fs, total, 0, destPath, progress, sw, token).ConfigureAwait(false);
+
+            progress?.Report(new DownloadProgress(
+                Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100, DownloadStatus.Completed));
+            return new DownloadResult(url, destPath, downloaded, elapsed, 0, true, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

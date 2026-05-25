@@ -12,6 +12,7 @@ using GeneralUpdate.Core.Download.Executors;
 using GeneralUpdate.Core.Download.Policy;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Pipeline;
+using GeneralUpdate.Core.Download.Progress;
 
 namespace GeneralUpdate.Core.Download.Orchestrators;
 
@@ -118,6 +119,12 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
         sw.Stop();
+
+        // Dispatch all-completed event ONCE after all assets finish
+        var details = results.Select(r => ((object)r.Url, r.Success ? "success" : r.ErrorMessage ?? "failed")).ToList();
+        DownloadProgressReporter.DispatchAllCompleted(
+            results.All(r => r.Success),
+            details);
 
         return new DownloadReport(
             results,

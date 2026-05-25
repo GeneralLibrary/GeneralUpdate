@@ -40,18 +40,6 @@ namespace GeneralUpdate.Core.FileSystem;
             }
         }
 
-        public void InfixOrder()
-        {
-            if (_root != null)
-            {
-                _root.InfixOrder();
-            }
-            else
-            {
-                GeneralTracer.Info("The binary sort tree is empty and cannot be traversed£¡");
-            }
-        }
-
         public FileNode Search(long id) => _root == null ? null : _root.Search(id);
 
         public FileNode SearchParent(long id) => _root == null ? null : _root.SearchParent(id);

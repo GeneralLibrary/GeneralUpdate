@@ -11,7 +11,6 @@ namespace GeneralUpdate.Core.Download.Executors;
 
 /// <summary>
 /// HTTP-based download executor with optional Range/resume support.
-/// Uses the shared HttpClient from VersionService for consistent SSL/auth handling.
 /// </summary>
 public class HttpDownloadExecutor : IDownloadExecutor
 {
@@ -33,7 +32,6 @@ public class HttpDownloadExecutor : IDownloadExecutor
     {
         var sw = Stopwatch.StartNew();
         int retries = 0;
-        long totalBytes = -1;
         long existingBytes = 0;
 
         // Check for existing partial file (resume support; skip when disabled)
@@ -45,8 +43,6 @@ public class HttpDownloadExecutor : IDownloadExecutor
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            // Request resume from existing position (skip when resume is disabled)
             if (_enableResume && existingBytes > 0)
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
 
@@ -57,7 +53,6 @@ public class HttpDownloadExecutor : IDownloadExecutor
                 request, HttpCompletionOption.ResponseHeadersRead, cts.Token)
                 .ConfigureAwait(false);
 
-            // If server doesn't support Range, discard partial file
             if (_enableResume && existingBytes > 0 && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
             {
                 existingBytes = 0;
@@ -65,48 +60,60 @@ public class HttpDownloadExecutor : IDownloadExecutor
             }
 
             response.EnsureSuccessStatusCode();
-            totalBytes = response.Content.Headers.ContentLength ?? -1;
+            var totalBytes = response.Content.Headers.ContentLength ?? -1;
 
-            // Append or create file
             var mode = existingBytes > 0 ? FileMode.Append : FileMode.Create;
             using var fs = new FileStream(destPath, mode, FileAccess.Write, FileShare.None);
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
-            var buffer = new byte[8192];
-            long downloaded = existingBytes;
-            int read;
-            long lastReport = 0;
+            var (downloaded, elapsed) = await StreamDownloadAsync(stream, fs, totalBytes, existingBytes,
+                destPath, progress, sw, token).ConfigureAwait(false);
 
-            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
-            {
-                await fs.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
-                downloaded += read;
-
-                // Report progress every ~250ms
-                var now = sw.ElapsedMilliseconds;
-                if (now - lastReport >= 250 || downloaded == totalBytes + existingBytes)
-                {
-                    lastReport = now;
-                    var pct = totalBytes > 0 ? (double)downloaded / (totalBytes + existingBytes) * 100 : -1;
-                    progress?.Report(new DownloadProgress(
-                        Path.GetFileName(destPath), downloaded,
-                        totalBytes > 0 ? totalBytes + existingBytes : null,
-                        pct, DownloadStatus.Downloading));
-                }
-            }
-
-            sw.Stop();
             progress?.Report(new DownloadProgress(
                 Path.GetFileName(destPath), downloaded,
                 totalBytes > 0 ? totalBytes + existingBytes : null,
                 100, DownloadStatus.Completed));
 
-            return new DownloadResult(url, destPath, downloaded, sw.Elapsed, retries, true, null);
+            return new DownloadResult(url, destPath, downloaded, elapsed, retries, true, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             return new DownloadResult(url, null, existingBytes, sw.Elapsed, retries, false, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Shared download loop: reads from source stream, writes to dest, reports progress.
+    /// Used by both HTTP and OSS executors to avoid duplicated buffer/read/write/progress logic.
+    /// </summary>
+    internal static async Task<(long Downloaded, TimeSpan Elapsed)> StreamDownloadAsync(
+        Stream source, Stream dest, long totalBytes, long existingBytes,
+        string destPath, IProgress<DownloadProgress>? progress, Stopwatch sw, CancellationToken token)
+    {
+        var buffer = new byte[8192];
+        long downloaded = existingBytes;
+        long lastReport = 0;
+        int read;
+
+        while ((read = await source.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false)) > 0)
+        {
+            await dest.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
+            downloaded += read;
+
+            var now = sw.ElapsedMilliseconds;
+            if (now - lastReport >= 250 || downloaded == totalBytes + existingBytes)
+            {
+                lastReport = now;
+                var pct = totalBytes > 0 ? (double)downloaded / (totalBytes + existingBytes) * 100 : -1;
+                progress?.Report(new DownloadProgress(
+                    Path.GetFileName(destPath), downloaded,
+                    totalBytes > 0 ? totalBytes + existingBytes : null,
+                    pct, DownloadStatus.Downloading));
+            }
+        }
+
+        sw.Stop();
+        return (downloaded, sw.Elapsed);
     }
 }

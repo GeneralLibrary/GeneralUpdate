@@ -44,8 +44,6 @@ namespace GeneralUpdate.Core.Network
             _timeout = timeout ?? TimeSpan.FromSeconds(30);
             _maxRetries = maxRetries;
         }
-        private VersionService() { }
-
         // Static API (backward-compatible, CancellationToken optional)
         public static Task Report(string url, int recordId, int status, int? type,
             string scheme = null, string token = null, CancellationToken ct = default)
