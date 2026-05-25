@@ -28,6 +28,11 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
+  <!-- Expose internals to test project -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DrivelutionTest" />
+  </ItemGroup>
+
   <!-- Reference Core for GeneralTracer and shared types -->
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />

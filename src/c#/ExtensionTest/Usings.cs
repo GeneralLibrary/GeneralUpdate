@@ -1,0 +1,11 @@
+global using Xunit;
+global using GeneralUpdate.Extension.Common.Enums;
+global using GeneralUpdate.Extension.Common.Models;
+global using GeneralUpdate.Extension.Common.DTOs;
+global using GeneralUpdate.Extension.Compatibility;
+global using GeneralUpdate.Extension.Communication;
+global using GeneralUpdate.Extension.Core;
+global using GeneralUpdate.Extension.Dependencies;
+global using GeneralUpdate.Extension.Download;
+global using GeneralUpdate.Extension.Catalog;
+global using Moq;
