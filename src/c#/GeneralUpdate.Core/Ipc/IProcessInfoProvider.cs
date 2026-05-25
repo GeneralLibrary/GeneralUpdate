@@ -69,6 +69,7 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 
     public Task SendAsync(ProcessInfo info, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
         var plainBytes = Encoding.UTF8.GetBytes(json);
         using var aes = Aes.Create();
@@ -101,6 +102,7 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 public class SharedMemoryProcessInfoProvider : IProcessInfoProvider
 {
     private readonly string _mapName;
+    private MemoryMappedFile? _mmf;
     private const int MaxPayload = 4096;
 
     public SharedMemoryProcessInfoProvider(string mapName = "GeneralUpdate.IPC.Shm")
@@ -108,13 +110,14 @@ public class SharedMemoryProcessInfoProvider : IProcessInfoProvider
 
     public Task SendAsync(ProcessInfo info, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
         var bytes = Encoding.UTF8.GetBytes(json);
         if (bytes.Length > MaxPayload - 4)
             throw new InvalidOperationException($"ProcessInfo payload exceeds {MaxPayload - 4} bytes.");
 
-        using var mmf = MemoryMappedFile.CreateNew(_mapName, MaxPayload);
-        using var accessor = mmf.CreateViewAccessor(0, MaxPayload);
+        _mmf = MemoryMappedFile.CreateOrOpen(_mapName, MaxPayload);
+        using var accessor = _mmf.CreateViewAccessor(0, MaxPayload);
         accessor.Write(0, bytes.Length);
         accessor.WriteArray(4, bytes, 0, bytes.Length);
         return Task.CompletedTask;
