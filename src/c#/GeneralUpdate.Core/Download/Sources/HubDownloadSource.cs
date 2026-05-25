@@ -51,7 +51,7 @@ public class HubDownloadSource : IDownloadSource, IDisposable
     {
         try
         {
-            var packet = System.Text.Json.JsonSerializer.Deserialize<PacketDTO>(json);
+            var packet = System.Text.Json.JsonSerializer.Deserialize(json, HttpParameterJsonContext.Default.PacketDTO);
             if (packet != null)
             {
                 var asset = DownloadPlanBuilder.MapToAsset(packet);
