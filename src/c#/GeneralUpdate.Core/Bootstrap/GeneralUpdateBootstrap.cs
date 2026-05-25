@@ -27,7 +27,8 @@ namespace GeneralUpdate.Core;
 /// <list type="bullet">
 ///   <item><see cref="AppType.Client"/> — validate versions, download, start upgrade process</item>
 ///   <item><see cref="AppType.Upgrade"/> — receive ProcessInfo, apply updates, start main app</item>
-///   <item><see cref="AppType.OSS"/> — OSS-based cloud storage update</item>
+///   <item><see cref="AppType.OSSClient"/> — OSS client: download version config, start upgrade process</item>
+///   <item><see cref="AppType.OSSUpgrade"/> — OSS upgrade: download packages from cloud, start main app</item>
 /// </list>
 /// </summary>
 /// <remarks>
@@ -71,7 +72,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             AppType.Client  => await LaunchWithStrategy(new ClientUpdateStrategy()),
             AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OSS     => await LaunchWithStrategy(new OSSUpdateStrategy()),
+            AppType.OSSClient  => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSClient)),
+            AppType.OSSUpgrade => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSUpgrade)),
             _ => await LaunchWithStrategy(new ClientUpdateStrategy())
         };
     }

@@ -47,7 +47,8 @@ namespace CoreTest.Bootstrap
         #region Core
         [Fact] public void AppType_Client() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Client));
         [Fact] public void AppType_Upgrade() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Upgrade));
-        [Fact] public void AppType_OSS() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OSS));
+        [Fact] public void AppType_OSSClient() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OSSClient));
+        [Fact] public void AppType_OSSUpgrade() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OSSUpgrade));
         [Fact] public void DiffMode_Serial() => Assert.NotNull(B().Option(UpdateOptions.DiffMode, DiffMode.Serial));
         [Fact] public void DiffMode_Parallel() => Assert.NotNull(B().Option(UpdateOptions.DiffMode, DiffMode.Parallel));
         [Fact] public void Encoding_Utf8() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.UTF8));

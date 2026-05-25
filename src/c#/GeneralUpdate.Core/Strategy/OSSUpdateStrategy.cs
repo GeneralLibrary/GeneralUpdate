@@ -16,19 +16,25 @@ using GeneralUpdate.Core.Download.Orchestrators;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS (Object Storage Service) update strategy — client/upgrade split.
+/// OSS (Object Storage Service) update strategy — client/upgrade split via AppType.
 /// <list type="bullet">
-///   <item><b>Client side</b>: downloads version config, checks for updates,
-///        starts the upgrade process with config, and exits.</item>
-///   <item><b>Upgrade side</b>: reads version config, downloads packages from OSS,
+///   <item><see cref="AppType.OSSClient"/> — downloads version config, checks for updates,
+///        starts the upgrade process, and exits.</item>
+///   <item><see cref="AppType.OSSUpgrade"/> — reads version config, downloads packages from OSS,
 ///        decompresses them, starts the main app, and exits.</item>
 /// </list>
 /// </summary>
 public class OSSUpdateStrategy : IStrategy
 {
+    private readonly AppType _role;
     private GlobalConfigInfo? _configInfo;
     private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
     private const int DefaultTimeOut = 60;
+
+    public OSSUpdateStrategy(AppType role = AppType.OSSClient)
+    {
+        _role = role;
+    }
 
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
@@ -45,17 +51,13 @@ public class OSSUpdateStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OSSUpdateStrategy not configured. Call Create() first.");
 
-        // Upgrade side: GlobalConfigInfoOSS env var was set by the client process.
-        // We download packages, decompress, start the main app, and exit.
-        var ossJson = Environments.GetEnvironmentVariable("GlobalConfigInfoOSS");
-        if (!string.IsNullOrWhiteSpace(ossJson))
+        // Dispatch by role — no env-var detection needed.
+        if (_role == AppType.OSSUpgrade)
         {
             await ExecuteUpgradeAsync();
             return;
         }
 
-        // Client side: download version config, check for update,
-        // start the upgrade process, and exit.
         await ExecuteClientAsync();
     }
 
@@ -278,7 +280,7 @@ public class OSSUpdateStrategy : IStrategy
             _configInfo?.InstallPath ?? _appPath,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
-            AppType.OSS
+            AppType.OSSUpgrade
         );
     }
 
