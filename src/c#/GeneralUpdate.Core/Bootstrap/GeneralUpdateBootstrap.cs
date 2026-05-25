@@ -189,7 +189,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 return this;
             }
 
-            var upgradeAppName = "GeneralUpdate.Upgrade.exe";
+            // Use user-configured AppName, fall back to default updater name
+            var upgradeAppName = !string.IsNullOrWhiteSpace(_configInfo.AppName) && _configInfo.AppName != "Update.exe"
+                ? _configInfo.AppName
+                : "GeneralUpdate.Upgrade.exe";
             var appPath = Path.Combine(basePath, upgradeAppName);
             if (!File.Exists(appPath))
                 throw new Exception($"Upgrade application not found: {upgradeAppName}");
