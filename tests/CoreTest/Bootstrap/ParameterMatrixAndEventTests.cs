@@ -264,25 +264,26 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void BlackListManager_VariousConfigurations_AcceptsAllRules()
         {
-            var manager = BlackListManager.Instance;
+            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
 
             Assert.NotNull(manager);
-            Assert.NotNull(manager.BlackFiles);
-            Assert.NotNull(manager.BlackFormats);
-            Assert.NotNull(manager.SkipDirectorys);
+            Assert.NotNull(BlackListDefaults.DefaultBlackFiles);
+            Assert.NotNull(BlackListDefaults.DefaultBlackFormats);
+            Assert.NotNull(BlackListDefaults.DefaultSkipDirectories);
+            Assert.False(manager.IsBlacklisted("test.dll"));
         }
 
         [Fact]
         public void BlackListManager_EmptyLists_DoesNotThrow()
         {
-            var manager = BlackListManager.Instance;
+            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
             Assert.NotNull(manager);
         }
 
         [Fact]
         public void BlackListManager_NullList_DoesNotThrow()
         {
-            var manager = BlackListManager.Instance;
+            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
             Assert.NotNull(manager);
         }
 

@@ -20,7 +20,6 @@ public interface IProcessInfoProvider
 /// <summary>
 /// AES-encrypted temporary file IPC — simplest, most reliable cross-platform approach.
 /// File lives in %TEMP%/GeneralUpdate/ipc/ with a random name, auto-deleted after read.
-/// Encryption is delegated to <see cref="IpcEncryption"/>.
 /// </summary>
 public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 {

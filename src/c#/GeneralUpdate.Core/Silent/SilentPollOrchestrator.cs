@@ -23,7 +23,7 @@ using GeneralUpdate.Core.Strategy;
 namespace GeneralUpdate.Core.Silent;
 
 /// <summary>
-/// Silent update poll orchestrator �?periodically checks for updates,
+/// Silent update poll orchestrator — periodically checks for updates,
 /// downloads them in the background, and optionally auto-installs.
 /// Replaces the legacy <c>SilentUpdateMode</c> class.
 /// </summary>
@@ -126,7 +126,7 @@ public class SilentPollOrchestrator : IDisposable
             return;
         }
 
-        // ══�?Hooks: allow cancellation before starting update ══�?
+        // ══— Hooks: allow cancellation before starting update ══— 
         var updateCtx = new UpdateContext(
             _configInfo.MainAppName ?? _configInfo.AppName,
             _configInfo.InstallPath,
@@ -173,7 +173,7 @@ public class SilentPollOrchestrator : IDisposable
             _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
         _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
 
-        // ══�?Reporter: update started ══�?
+        // ══— Reporter: update started ══— 
         var startTime = DateTimeOffset.UtcNow;
         if (_reporter != null)
         {
@@ -203,7 +203,7 @@ public class SilentPollOrchestrator : IDisposable
             downloadElapsed = report.TotalDuration;
             GeneralTracer.Info($"SilentPollOrchestrator: download complete. Success={downloadSuccessCount}, Failed={downloadFailedCount}");
 
-            // ══�?Hooks + Reporter: download completed ══�?
+            // ══— Hooks + Reporter: download completed ══— 
             if (_hooks != null)
             {
                 try
@@ -268,7 +268,7 @@ public class SilentPollOrchestrator : IDisposable
             GeneralTracer.Info("SilentPollOrchestrator: update prepared.");
             Interlocked.Exchange(ref _prepared, 1);
 
-            // ══�?Hooks + Reporter: update applied ══�?
+            // ══— Hooks + Reporter: update applied ══— 
             if (_hooks != null)
             {
                 try { await _hooks.OnAfterUpdateAsync(updateCtx).ConfigureAwait(false); }
@@ -318,7 +318,7 @@ public class SilentPollOrchestrator : IDisposable
         {
             var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
 
-            // Start the upgrade process first �?it will call ReceiveAsync in its constructor.
+            // Start the upgrade process first — it will call ReceiveAsync in its constructor.
             // We then call SendAsync which creates the NamedPipe server; the upgrade's
             // client connects to it. Auto-fallback (SharedMemory > EncryptedFile) handles
             // timing gaps where the named pipe handshake doesn't complete in time.
