@@ -37,7 +37,9 @@ public class OrchestratorOptionsBehaviourTests
     [Fact]
     public async Task ExecuteAsync_SerialMode_ForcesConcurrencyToOne()
     {
-        using var httpClient = new HttpClient(new FakeSuccessHandler());
+        var fakeHandler = new FakeSuccessHandler();
+        var tracker = new ConcurrencyTracker(fakeHandler.PublicSendAsync);
+        using var httpClient = new HttpClient(tracker);
         var opts = new DownloadOrchestratorOptions
         {
             DiffMode = DiffMode.Serial,
@@ -60,6 +62,9 @@ public class OrchestratorOptionsBehaviourTests
             var orch = new DefaultDownloadOrchestrator(httpClient, opts);
             var report = await orch.ExecuteAsync(plan, destDir, token: CancellationToken.None);
             Assert.Equal(2, report.SuccessCount);
+            // Serial mode must never exceed 1 concurrent request
+            Assert.True(tracker.PeakConcurrency <= 1,
+                $"Expected peak concurrency <= 1 for Serial mode, got {tracker.PeakConcurrency}");
         }
         finally
         {
@@ -80,6 +85,42 @@ public class OrchestratorOptionsBehaviourTests
                 StatusCode = HttpStatusCode.OK,
                 Content = new ByteArrayContent(new byte[100]),
             });
+        }
+
+        /// <summary>Public wrapper for testing.</summary>
+        public Task<HttpResponseMessage> PublicSendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => SendAsync(request, cancellationToken);
+    }
+
+    /// <summary>Wraps an inner handler and tracks peak concurrent requests.</summary>
+    private sealed class ConcurrencyTracker : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
+        private int _current;
+        public int PeakConcurrency;
+
+        public ConcurrencyTracker(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync)
+            => _sendAsync = sendAsync;
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var current = Interlocked.Increment(ref _current);
+            InterlockedAddMax(ref PeakConcurrency, current);
+            try
+            {
+                return await _sendAsync(request, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _current);
+            }
+        }
+
+        private static void InterlockedAddMax(ref int target, int value)
+        {
+            int snapshot;
+            do { snapshot = Volatile.Read(ref target); }
+            while (value > snapshot && Interlocked.CompareExchange(ref target, value, snapshot) != snapshot);
         }
     }
 
@@ -270,8 +311,9 @@ public class OrchestratorOptionsBehaviourTests
             var result = await executor.ExecuteAsync(
                 "http://example.com/file.bin", destPath, token: CancellationToken.None);
             Assert.True(result.Success);
+            // Partial content (30 bytes) appended to existing (20 bytes) = 50 total
             var fileInfo = new FileInfo(destPath);
-            Assert.True(fileInfo.Length >= 20, $"Expected file >= 20 bytes, got {fileInfo.Length}");
+            Assert.Equal(50, fileInfo.Length);
         }
         finally
         {
@@ -323,7 +365,7 @@ public class OrchestratorOptionsBehaviourTests
     {
         using var httpClient = new HttpClient();
         var orch = new DefaultDownloadOrchestrator(httpClient);
-        var report = await orch.ExecuteAsync(DownloadPlan.Empty, "/tmp", token: CancellationToken.None);
+        var report = await orch.ExecuteAsync(DownloadPlan.Empty, Path.GetTempPath(), token: CancellationToken.None);
         Assert.Equal(0, report.SuccessCount);
         Assert.Equal(0, report.FailedCount);
     }

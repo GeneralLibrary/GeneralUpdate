@@ -48,10 +48,13 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         Directory.CreateDirectory(destDir);
 
-        // Resolve effective concurrency: Serial mode forces 1
+        // Resolve effective concurrency: Serial mode forces 1.
+        // Uses _options.MaxConcurrency as primary value; the method parameter
+        // maxConcurrency acts as an override (default 3).
+        var baseConcurrency = maxConcurrency > 0 ? maxConcurrency : _options.MaxConcurrency;
         var effectiveConcurrency = _options.DiffMode == DiffMode.Serial
             ? 1
-            : DownloadOrchestratorOptions.SanitizeMaxConcurrency(Math.Max(1, maxConcurrency));
+            : DownloadOrchestratorOptions.SanitizeMaxConcurrency(Math.Max(1, baseConcurrency));
 
         GeneralTracer.Info($"DefaultDownloadOrchestrator.ExecuteAsync: concurrency={effectiveConcurrency}, " +
             $"resume={_options.EnableResume}, verifyChecksum={_options.VerifyChecksum}, diffMode={_options.DiffMode}");

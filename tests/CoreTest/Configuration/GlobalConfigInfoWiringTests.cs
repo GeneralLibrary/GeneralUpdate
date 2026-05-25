@@ -86,75 +86,98 @@ public class GlobalConfigInfoWiringTests
 
     #region Bootstrap Option → GetOption Roundtrip
 
+    /// <summary>Test subclass that exposes the protected GetOption method.</summary>
+    private sealed class TestableBootstrap : GeneralUpdateBootstrap
+    {
+        public T PublicGetOption<T>(UpdateOption<T>? option) => GetOption(option);
+    }
+
     [Fact]
     public void Bootstrap_GetOption_MaxConcurrency_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.MaxConcurrency, 8);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.MaxConcurrency, 8);
+        Assert.Equal(8, b.PublicGetOption(UpdateOptions.MaxConcurrency));
     }
 
     [Fact]
     public void Bootstrap_GetOption_EnableResume_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.EnableResume, false);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.EnableResume, false);
+        Assert.False(b.PublicGetOption(UpdateOptions.EnableResume));
     }
 
     [Fact]
     public void Bootstrap_GetOption_RetryCount_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.RetryCount, 10);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.RetryCount, 10);
+        Assert.Equal(10, b.PublicGetOption(UpdateOptions.RetryCount));
     }
 
     [Fact]
     public void Bootstrap_GetOption_RetryInterval_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(5));
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(5));
+        Assert.Equal(TimeSpan.FromSeconds(5), b.PublicGetOption(UpdateOptions.RetryInterval));
     }
 
     [Fact]
     public void Bootstrap_GetOption_VerifyChecksum_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.VerifyChecksum, false);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.VerifyChecksum, false);
+        Assert.False(b.PublicGetOption(UpdateOptions.VerifyChecksum));
     }
 
     [Fact]
     public void Bootstrap_GetOption_BackupEnabled_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.BackupEnabled, false);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.BackupEnabled, false);
+        Assert.False(b.PublicGetOption(UpdateOptions.BackupEnabled));
     }
 
     [Fact]
     public void Bootstrap_GetOption_PatchEnabled_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.PatchEnabled, true);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.PatchEnabled, true);
+        Assert.True(b.PublicGetOption(UpdateOptions.PatchEnabled));
     }
 
     [Fact]
     public void Bootstrap_GetOption_DiffMode_ReturnsSetValue()
     {
-        var b = MakeBootstrap().Option(UpdateOptions.DiffMode, DiffMode.Parallel);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.DiffMode, DiffMode.Parallel);
+        Assert.Equal(DiffMode.Parallel, b.PublicGetOption(UpdateOptions.DiffMode));
     }
 
     [Fact]
     public void Bootstrap_AllEightOptions_SetWithoutError()
     {
-        var b = MakeBootstrap()
-            .Option(UpdateOptions.MaxConcurrency, 6)
-            .Option(UpdateOptions.EnableResume, false)
-            .Option(UpdateOptions.RetryCount, 5)
-            .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(3))
-            .Option(UpdateOptions.VerifyChecksum, false)
-            .Option(UpdateOptions.BackupEnabled, false)
-            .Option(UpdateOptions.PatchEnabled, true)
-            .Option(UpdateOptions.DiffMode, DiffMode.Parallel);
-        Assert.NotNull(b);
+        var b = new TestableBootstrap();
+        b.Option(UpdateOptions.MaxConcurrency, 6)
+         .Option(UpdateOptions.EnableResume, false)
+         .Option(UpdateOptions.RetryCount, 5)
+         .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(3))
+         .Option(UpdateOptions.VerifyChecksum, false)
+         .Option(UpdateOptions.BackupEnabled, false)
+         .Option(UpdateOptions.PatchEnabled, true)
+         .Option(UpdateOptions.DiffMode, DiffMode.Parallel);
+
+        // Verify each option was stored correctly
+        Assert.Equal(6, b.PublicGetOption(UpdateOptions.MaxConcurrency));
+        Assert.False(b.PublicGetOption(UpdateOptions.EnableResume));
+        Assert.Equal(5, b.PublicGetOption(UpdateOptions.RetryCount));
+        Assert.Equal(TimeSpan.FromSeconds(3), b.PublicGetOption(UpdateOptions.RetryInterval));
+        Assert.False(b.PublicGetOption(UpdateOptions.VerifyChecksum));
+        Assert.False(b.PublicGetOption(UpdateOptions.BackupEnabled));
+        Assert.True(b.PublicGetOption(UpdateOptions.PatchEnabled));
+        Assert.Equal(DiffMode.Parallel, b.PublicGetOption(UpdateOptions.DiffMode));
     }
 
     #endregion
