@@ -9,7 +9,7 @@ namespace GeneralUpdate.Core.Download.Abstractions;
 public interface IDownloadExecutor
 {
     Task<DownloadResult> ExecuteAsync(
-        string url, string destPath,
+        DownloadAsset asset, string destPath,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken token = default);
 }

@@ -129,9 +129,9 @@ namespace CoreTest.Bootstrap
 
         private sealed class StubDownloadExecutor : GeneralUpdate.Core.Download.Abstractions.IDownloadExecutor
         {
-            public Task<GeneralUpdate.Core.Download.Models.DownloadResult> ExecuteAsync(string url, string destPath,
+            public Task<GeneralUpdate.Core.Download.Models.DownloadResult> ExecuteAsync(GeneralUpdate.Core.Download.Models.DownloadAsset asset, string destPath,
                 IProgress<GeneralUpdate.Core.Download.Models.DownloadProgress>? progress = null, CancellationToken token = default)
-                => Task.FromResult(new GeneralUpdate.Core.Download.Models.DownloadResult(url, destPath, 0, TimeSpan.Zero, 0, true, null));
+                => Task.FromResult(new GeneralUpdate.Core.Download.Models.DownloadResult(asset, destPath, 0, TimeSpan.Zero, 0, true, null));
         }
 
         private sealed class StubDownloadSource : GeneralUpdate.Core.Download.Abstractions.IDownloadSource

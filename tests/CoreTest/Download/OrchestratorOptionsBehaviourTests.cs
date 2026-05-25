@@ -263,8 +263,9 @@ public class OrchestratorOptionsBehaviourTests
 
         try
         {
+            var asset = new DownloadAsset("file.bin", "http://example.com/file.bin", 0, null, "1.0.0");
             var result = await executor.ExecuteAsync(
-                "http://example.com/file.bin", destPath, token: CancellationToken.None);
+                asset, destPath, token: CancellationToken.None);
             Assert.True(result.Success, $"Download should succeed, error: {result.ErrorMessage}");
             Assert.True(File.Exists(destPath));
         }
@@ -308,8 +309,9 @@ public class OrchestratorOptionsBehaviourTests
 
         try
         {
+            var asset = new DownloadAsset("file.bin", "http://example.com/file.bin", 0, null, "1.0.0");
             var result = await executor.ExecuteAsync(
-                "http://example.com/file.bin", destPath, token: CancellationToken.None);
+                asset, destPath, token: CancellationToken.None);
             Assert.True(result.Success);
             // Partial content (30 bytes) appended to existing (20 bytes) = 50 total
             var fileInfo = new FileInfo(destPath);

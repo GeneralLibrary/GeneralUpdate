@@ -80,7 +80,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                 {
                     // Download
                     var downloadResult = await executor.ExecuteAsync(
-                        asset.Url, destPath,
+                        asset, destPath,
                         progress != null ? new AssetProgressReporter(progress, asset.Name) : null,
                         ct).ConfigureAwait(false);
 
@@ -100,7 +100,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                     }
                     catch (Exception ex)
                     {
-                        return new DownloadResult(asset.Url, destPath,
+                        return new DownloadResult(asset, destPath,
                             downloadResult.DownloadedBytes, downloadResult.Duration,
                             downloadResult.RetryCount, false, $"SHA256 verification failed: {ex.Message}");
                     }
@@ -122,7 +122,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         // Dispatch all-completed event ONCE after all assets finish (only failed results)
         var failedDetails = results.Where(r => !r.Success)
-            .Select(r => ((object)r.Url, r.ErrorMessage ?? "failed")).ToList();
+            .Select(r => ((object)r.Asset.Url, r.ErrorMessage ?? "failed")).ToList();
         DownloadProgressReporter.DispatchAllCompleted(
             this,
             results.All(r => r.Success),

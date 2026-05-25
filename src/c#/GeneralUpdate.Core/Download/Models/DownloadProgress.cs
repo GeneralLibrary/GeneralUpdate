@@ -15,7 +15,7 @@ public record DownloadProgress(
 );
 
 public record DownloadResult(
-    string? Url,
+    DownloadAsset Asset,
     string? LocalPath,
     long DownloadedBytes,
     TimeSpan Duration,

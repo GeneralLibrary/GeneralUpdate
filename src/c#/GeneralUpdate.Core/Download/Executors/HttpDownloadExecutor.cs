@@ -26,7 +26,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
     }
 
     public async Task<DownloadResult> ExecuteAsync(
-        string url, string destPath,
+        DownloadAsset asset, string destPath,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken token = default)
     {
@@ -42,7 +42,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, asset.Url);
             if (_enableResume && existingBytes > 0)
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
 
@@ -74,12 +74,12 @@ public class HttpDownloadExecutor : IDownloadExecutor
                 totalBytes > 0 ? totalBytes + existingBytes : null,
                 100, DownloadStatus.Completed));
 
-            return new DownloadResult(url, destPath, downloaded, elapsed, retries, true, null);
+            return new DownloadResult(asset, destPath, downloaded, elapsed, retries, true, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
-            return new DownloadResult(url, null, existingBytes, sw.Elapsed, retries, false, ex.Message);
+            return new DownloadResult(asset, null, existingBytes, sw.Elapsed, retries, false, ex.Message);
         }
     }
 

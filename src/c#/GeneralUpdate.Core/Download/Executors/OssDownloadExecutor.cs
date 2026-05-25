@@ -17,14 +17,14 @@ public class OssDownloadExecutor : IDownloadExecutor
         => _client = client ?? throw new ArgumentNullException(nameof(client));
 
     public async Task<DownloadResult> ExecuteAsync(
-        string url, string destPath,
+        DownloadAsset asset, string destPath,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken token = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token)
+            using var response = await _client.GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead, token)
                 .ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var total = response.Content.Headers.ContentLength ?? -1;
@@ -37,12 +37,12 @@ public class OssDownloadExecutor : IDownloadExecutor
 
             progress?.Report(new DownloadProgress(
                 Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100, DownloadStatus.Completed));
-            return new DownloadResult(url, destPath, downloaded, elapsed, 0, true, null);
+            return new DownloadResult(asset, destPath, downloaded, elapsed, 0, true, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
-            return new DownloadResult(url, null, 0, sw.Elapsed, 0, false, ex.Message);
+            return new DownloadResult(asset, null, 0, sw.Elapsed, 0, false, ex.Message);
         }
     }
 }
