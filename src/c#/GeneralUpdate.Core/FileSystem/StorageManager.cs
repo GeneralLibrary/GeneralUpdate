@@ -305,7 +305,11 @@ namespace GeneralUpdate.Core.FileSystem
 
             var dirs = Directory.GetDirectories(backupRoot)
                 .Select(d => new DirectoryInfo(d))
-                .OrderByDescending(d => d.CreationTime)
+                .OrderByDescending(d =>
+                {
+                    var name = d.Name;
+                    return Version.TryParse(name, out var v) ? v : new Version(0, 0);
+                })
                 .Skip(keepVersions);
 
             foreach (var dir in dirs)

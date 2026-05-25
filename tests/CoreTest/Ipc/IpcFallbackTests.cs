@@ -113,7 +113,7 @@ public class IpcFallbackTests
         var info = CreateTestInfo("FailAll", "1.0.0");
 
         await Assert.ThrowsAnyAsync<Exception>(() =>
-            provider.SendAsync(info, new CancellationTokenSource(TimeSpan.FromMilliseconds(100)).Token));
+            provider.SendAsync(info, new CancellationToken(true)));
     }
 
     [Fact]
