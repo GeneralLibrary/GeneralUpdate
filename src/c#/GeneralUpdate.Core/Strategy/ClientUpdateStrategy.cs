@@ -30,7 +30,6 @@ public class ClientUpdateStrategy : IStrategy
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
-    private readonly List<Func<bool>> _customOptions = new();
     private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
     private readonly DiffMode _diffMode = DiffMode.Serial;
 
@@ -57,7 +56,6 @@ public class ClientUpdateStrategy : IStrategy
         {
             GeneralTracer.Debug("ClientUpdateStrategy.ExecuteAsync start.");
             await CallSmallBowlHomeAsync(_configInfo.Bowl);
-            ExecuteCustomOptions();
             await ExecuteWorkflowAsync();
         }
         catch (Exception ex)
@@ -84,13 +82,6 @@ public class ClientUpdateStrategy : IStrategy
     public ClientUpdateStrategy UseUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));
-        return this;
-    }
-
-    /// <summary>Register custom pre-update operations.</summary>
-    public ClientUpdateStrategy UseCustomOption(Func<bool> func)
-    {
-        _customOptions.Add(func);
         return this;
     }
 
@@ -296,19 +287,6 @@ public class ClientUpdateStrategy : IStrategy
         catch (Exception ex)
         {
             GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
-        }
-    }
-
-    private void ExecuteCustomOptions()
-    {
-        foreach (var option in _customOptions)
-        {
-            if (!option.Invoke())
-            {
-                var ex = new Exception("Custom option execution failed.");
-                GeneralTracer.Error("ExecuteCustomOptions failed.", ex);
-                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
-            }
         }
     }
 

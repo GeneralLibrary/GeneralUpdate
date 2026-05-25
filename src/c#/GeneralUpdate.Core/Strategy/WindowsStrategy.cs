@@ -4,10 +4,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
-using GeneralUpdate.Core.Strategy;
-using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy
 {

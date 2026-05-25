@@ -1,13 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core;
-using GeneralUpdate.Core.Event;
-using GeneralUpdate.Core.Pipeline;
-using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy;
@@ -59,8 +54,7 @@ public class LinuxStrategy : AbstractStrategy
             if (string.IsNullOrEmpty(mainAppPath))
                 throw new Exception($"Can't find the app {mainAppPath}!");
 
-            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: executing startup script then launching main app={mainAppPath}");
-            ExecuteScript();
+            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: launching main app={mainAppPath}");
             Process.Start(mainAppPath);
             GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: main app launched successfully.");
         }
@@ -78,60 +72,4 @@ public class LinuxStrategy : AbstractStrategy
         }
     }
 
-    /// <summary>
-    /// Executes the user-specified script.
-    /// </summary>
-    private void ExecuteScript()
-    {
-        try
-        {
-            // Check if the script path is valid (_configinfo should come from the base class configuration)
-            if (string.IsNullOrEmpty(_configinfo.Script) || !File.Exists(_configinfo.Script))
-            {
-                GeneralTracer.Info("No valid script path specified, skipping script execution");
-                return;
-            }
-
-            GeneralTracer.Info($"Starting to execute script: {_configinfo.Script}");
-
-            // Start process to execute Linux script (using bash)
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"-c \"{_configinfo.Script}\"", // Execute the script
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(processStartInfo);
-            if (process == null)
-            {
-                GeneralTracer.Error("Failed to start script process");
-                return;
-            }
-
-            // Read script output logs
-            var output = process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            process.WaitForExit(); // Wait for the script to finish execution
-
-            if (!string.IsNullOrEmpty(output))
-                GeneralTracer.Info($"Script output: {output}");
-
-            if (!string.IsNullOrEmpty(error))
-                GeneralTracer.Warn($"Script warning: {error}");
-
-            if (process.ExitCode != 0)
-                throw new Exception($"Script execution failed, exit code: {process.ExitCode}");
-
-            GeneralTracer.Info("Script executed successfully");
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("An exception occurred while executing the script", ex);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Script execution failed"));
-        }
-    }
 }

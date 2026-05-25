@@ -37,7 +37,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private GlobalConfigInfo _configInfo = new();
     private Func<bool>? _customSkipOption;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
-    private readonly List<Func<bool>> _customOptions = new();
     private CancellationTokenSource? _cts;
 
     public GeneralUpdateBootstrap()
@@ -105,7 +104,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                     if (hubConfig != null && !string.IsNullOrEmpty(hubConfig.Url))
                     {
                         var hubSource = new Download.Sources.HubDownloadSource(
-                            hubConfig.Url, GetOption(UpdateOptions.Token), GetOption(UpdateOptions.AppSecretKey));
+                            hubConfig.Url, _configInfo.Token, _configInfo.AppSecretKey);
                         await hubSource.StartAsync().ConfigureAwait(false);
                         resolvedSource = hubSource;
                         GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource started from HubConfig.");
@@ -115,8 +114,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 clientStrat.DownloadSource = resolvedSource;
                 if (_updatePrecheck != null)
                     clientStrat.UseUpdatePrecheck(_updatePrecheck);
-                foreach (var opt in _customOptions)
-                    clientStrat.UseCustomOption(opt);
                 await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
             }
             else if (roleStrategy is UpgradeUpdateStrategy upgradeStrat)
@@ -241,13 +238,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     public GeneralUpdateBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));
-        return this;
-    }
-
-    public GeneralUpdateBootstrap AddCustomOption(List<Func<bool>> funcList)
-    {
-        Debug.Assert(funcList != null && funcList.Any());
-        _customOptions.AddRange(funcList);
         return this;
     }
 
