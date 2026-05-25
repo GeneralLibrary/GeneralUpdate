@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.FileSystem;
@@ -76,6 +80,133 @@ namespace CoreTest.Bootstrap
         #region Blacklist/Misc
         [Fact] public void Hub_Configured() => Assert.NotNull(B().Option(UpdateOptions.Hub,
             new HubConfig { Url = "https://signalr.example.com/hub" }));
+        #endregion
+
+        #region Extension Injection — Hooks / Strategy / Policy / Differ / Pipeline / etc.
+
+        private sealed class StubHooks : GeneralUpdate.Core.Hooks.IUpdateHooks
+        {
+            public Task<bool> OnBeforeUpdateAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.FromResult(true);
+            public Task OnDownloadCompletedAsync(GeneralUpdate.Core.Hooks.DownloadContext ctx) => Task.CompletedTask;
+            public Task OnAfterUpdateAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.CompletedTask;
+            public Task OnUpdateErrorAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx, Exception ex) => Task.CompletedTask;
+            public Task OnBeforeStartAppAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.CompletedTask;
+        }
+
+        private sealed class StubStrategy : GeneralUpdate.Core.Strategy.IStrategy
+        {
+            public void Create(GlobalConfigInfo parameter) { }
+            public void Execute() { }
+            public Task ExecuteAsync() => Task.CompletedTask;
+            public void StartApp() { }
+        }
+
+        private sealed class StubSslPolicy : GeneralUpdate.Core.Security.ISslValidationPolicy
+        {
+            public bool ValidateCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2? certificate,
+                System.Security.Cryptography.X509Certificates.X509Chain? chain,
+                System.Net.Security.SslPolicyErrors sslPolicyErrors) => true;
+        }
+
+        private sealed class StubBinaryDiffer : GeneralUpdate.Core.Differential.IBinaryDiffer
+        {
+            public Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath,
+                CancellationToken cancellationToken = default) => Task.CompletedTask;
+            public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath,
+                CancellationToken cancellationToken = default) => Task.CompletedTask;
+        }
+
+        private sealed class StubPipelineFactory : GeneralUpdate.Core.Pipeline.IUpdatePipelineFactory
+        {
+            public Task ExecutePipelineAsync(GeneralUpdate.Core.Pipeline.PipelineContext context, CancellationToken token = default) => Task.CompletedTask;
+        }
+
+        private sealed class StubDownloadPolicy : GeneralUpdate.Core.Download.Abstractions.IDownloadPolicy
+        {
+            public Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken token = default) => action(token);
+        }
+
+        private sealed class StubDownloadExecutor : GeneralUpdate.Core.Download.Abstractions.IDownloadExecutor
+        {
+            public Task<GeneralUpdate.Core.Download.Models.DownloadResult> ExecuteAsync(string url, string destPath,
+                IProgress<GeneralUpdate.Core.Download.Models.DownloadProgress>? progress = null, CancellationToken token = default)
+                => Task.FromResult(new GeneralUpdate.Core.Download.Models.DownloadResult(url, destPath, 0, TimeSpan.Zero, 0, true, null));
+        }
+
+        private sealed class StubDownloadSource : GeneralUpdate.Core.Download.Abstractions.IDownloadSource
+        {
+            public Task<IReadOnlyList<GeneralUpdate.Core.Download.Models.DownloadAsset>> ListAsync(CancellationToken token = default)
+                => Task.FromResult<IReadOnlyList<GeneralUpdate.Core.Download.Models.DownloadAsset>>(Array.Empty<GeneralUpdate.Core.Download.Models.DownloadAsset>());
+        }
+
+        private sealed class StubDownloadPipeline : GeneralUpdate.Core.Download.Abstractions.IDownloadPipeline
+        {
+            public Task<string> ProcessAsync(string downloadedPath, CancellationToken token = default) => Task.FromResult("");
+        }
+
+        private sealed class StubUpdateReporter : GeneralUpdate.Core.Download.Reporting.IUpdateReporter
+        {
+            public Task ReportAsync(GeneralUpdate.Core.Download.Reporting.UpdateReport report, CancellationToken token = default) => Task.CompletedTask;
+        }
+
+        private sealed class StubUpdateAuth : GeneralUpdate.Core.Security.IHttpAuthProvider
+        {
+            public Task ApplyAuthAsync(HttpRequestMessage request, CancellationToken token = default) => Task.CompletedTask;
+        }
+
+        private sealed class StubDownloadOrchestrator : GeneralUpdate.Core.Download.Abstractions.IDownloadOrchestrator
+        {
+            public Task<GeneralUpdate.Core.Download.Abstractions.DownloadReport> ExecuteAsync(
+                GeneralUpdate.Core.Download.Models.DownloadPlan plan, string destDir, int maxConcurrency = 3,
+                IProgress<GeneralUpdate.Core.Download.Models.DownloadProgress>? progress = null, CancellationToken token = default)
+                => Task.FromResult(new GeneralUpdate.Core.Download.Abstractions.DownloadReport(Array.Empty<GeneralUpdate.Core.Download.Models.DownloadResult>(), 0, TimeSpan.Zero, 0, 0));
+        }
+
+        private sealed class StubCleanStrategy : GeneralUpdate.Core.Differential.ICleanStrategy
+        {
+            public Task ExecuteAsync(string sourcePath, string targetPath, string patchPath) => Task.CompletedTask;
+        }
+
+        private sealed class StubDirtyStrategy : GeneralUpdate.Core.Differential.IDirtyStrategy
+        {
+            public Task ExecuteAsync(string appPath, string patchPath) => Task.CompletedTask;
+        }
+
+        [Fact] public void Inject_Hooks() => Assert.NotNull(B().Hooks<StubHooks>());
+        [Fact] public void Inject_Strategy() => Assert.NotNull(B().Strategy<StubStrategy>());
+        [Fact] public void Inject_SslPolicy() => Assert.NotNull(B().SslPolicy<StubSslPolicy>());
+        [Fact] public void Inject_BinaryDiffer() => Assert.NotNull(B().BinaryDiffer<StubBinaryDiffer>());
+        [Fact] public void Inject_PipelineFactory() => Assert.NotNull(B().PipelineFactory<StubPipelineFactory>());
+        [Fact] public void Inject_DownloadPolicy() => Assert.NotNull(B().DownloadPolicy<StubDownloadPolicy>());
+        [Fact] public void Inject_DownloadExecutor() => Assert.NotNull(B().DownloadExecutor<StubDownloadExecutor>());
+        [Fact] public void Inject_DownloadSource() => Assert.NotNull(B().DownloadSource<StubDownloadSource>());
+        [Fact] public void Inject_DownloadPipeline() => Assert.NotNull(B().DownloadPipeline<StubDownloadPipeline>());
+        [Fact] public void Inject_UpdateReporter() => Assert.NotNull(B().UpdateReporter<StubUpdateReporter>());
+        [Fact] public void Inject_UpdateAuth() => Assert.NotNull(B().UpdateAuth<StubUpdateAuth>());
+        [Fact] public void Inject_DownloadOrchestrator() => Assert.NotNull(B().DownloadOrchestrator<StubDownloadOrchestrator>());
+        [Fact] public void Inject_CleanStrategy() => Assert.NotNull(B().CleanStrategy<StubCleanStrategy>());
+        [Fact] public void Inject_DirtyStrategy() => Assert.NotNull(B().DirtyStrategy<StubDirtyStrategy>());
+
+        [Fact]
+        public void Chain_AllExtensionsInjected()
+        {
+            var b = B()
+                .Hooks<StubHooks>()
+                .UpdateReporter<StubUpdateReporter>()
+                .DownloadPolicy<StubDownloadPolicy>()
+                .DownloadExecutor<StubDownloadExecutor>()
+                .DownloadSource<StubDownloadSource>()
+                .DownloadPipeline<StubDownloadPipeline>()
+                .DownloadOrchestrator<StubDownloadOrchestrator>()
+                .BinaryDiffer<StubBinaryDiffer>()
+                .CleanStrategy<StubCleanStrategy>()
+                .DirtyStrategy<StubDirtyStrategy>()
+                .SslPolicy<StubSslPolicy>()
+                .UpdateAuth<StubUpdateAuth>()
+                .PipelineFactory<StubPipelineFactory>()
+                .Strategy<StubStrategy>();
+            Assert.NotNull(b);
+        }
         #endregion
 
         #region Full Combination Chains

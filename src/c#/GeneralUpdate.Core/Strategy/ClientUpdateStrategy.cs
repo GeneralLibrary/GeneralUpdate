@@ -89,16 +89,13 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        var defaultEncoding = Encoding.UTF8;
-        var defaultTimeout = 60;
-        if (true /* silent check would read from options */)
-        {
-            // Standard mode
-            await ExecuteStandardWorkflowAsync(defaultEncoding, defaultTimeout);
-        }
+        // Standard mode — silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
+        // Runtime options (Encoding, Format, DownloadTimeOut, etc.) are already
+        // populated on _configInfo by Bootstrap.ApplyRuntimeOptions().
+        await ExecuteStandardWorkflowAsync();
     }
 
-    private async Task ExecuteStandardWorkflowAsync(Encoding encoding, int timeout)
+    private async Task ExecuteStandardWorkflowAsync()
     {
         GeneralTracer.Info($"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
@@ -145,7 +142,6 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportUpdateStartedAsync(hooksCtx).ConfigureAwait(false);
 
         InitBlackList();
-        ApplyRuntimeOptions(encoding, timeout);
 
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
@@ -172,7 +168,7 @@ public class ClientUpdateStrategy : IStrategy
             Hash = a.SHA256,
             Url = a.Url,
             Version = a.Version,
-            Format = "ZIP"
+            Format = _configInfo.Format ?? "ZIP"
         }).ToList();
 
         _configInfo.ProcessInfo = JsonSerializer.Serialize(
@@ -234,13 +230,6 @@ public class ClientUpdateStrategy : IStrategy
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             return new MacStrategy();
         throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
-
-    private void ApplyRuntimeOptions(Encoding encoding, int timeout)
-    {
-        _configInfo!.Encoding = encoding;
-        _configInfo.Format = Format.ZIP;
-        _configInfo.DownloadTimeOut = timeout;
     }
 
     private void InitBlackList()

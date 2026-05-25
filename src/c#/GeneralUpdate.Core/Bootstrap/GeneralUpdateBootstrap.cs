@@ -279,22 +279,36 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         };
     }
 
+    /// <summary>
+    /// Applies UpdateOptions to _configInfo.
+    /// Uses ??= only for values that InitializeFromEnvironment() may have already
+    /// populated on the Upgrade path (Encoding, Format, DownloadTimeOut).
+    /// All other options are always applied from UpdateOptions — their defaults
+    /// are already functionally reasonable (e.g. MaxConcurrency=3, RetryCount=3).
+    /// </summary>
     private void ApplyRuntimeOptions()
     {
-        _configInfo.Encoding = GetOption(UpdateOptions.Encoding);
-        _configInfo.Format = GetOption(UpdateOptions.Format);
-        _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
+        // Preserve Upgrade path values set by InitializeFromEnvironment()
+        _configInfo.Encoding ??= GetOption(UpdateOptions.Encoding);
+        _configInfo.Format ??= GetOption(UpdateOptions.Format);
+        // Normalize legacy "ZIP" default (UpdateOptions) to Format.ZIP (".zip")
+        // so the pipeline constructs correct paths and CompressProvider matches its switch.
+        if (_configInfo.Format == "ZIP")
+            _configInfo.Format = Format.ZIP;
+        if (_configInfo.DownloadTimeOut <= 0)
+            _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
 
-        // Download behaviour
+        // bool? options: use ??= so user-configured false is preserved
+        _configInfo.PatchEnabled ??= GetOption(UpdateOptions.PatchEnabled);
+        _configInfo.BackupEnabled ??= GetOption(UpdateOptions.BackupEnabled);
+
+        // Always apply from UpdateOptions — no other code sets these before
+        // ApplyRuntimeOptions() runs. Defaults are functionally reasonable.
         _configInfo.MaxConcurrency = GetOption(UpdateOptions.MaxConcurrency);
         _configInfo.EnableResume = GetOption(UpdateOptions.EnableResume);
         _configInfo.RetryCount = GetOption(UpdateOptions.RetryCount);
         _configInfo.RetryInterval = GetOption(UpdateOptions.RetryInterval);
         _configInfo.VerifyChecksum = GetOption(UpdateOptions.VerifyChecksum);
-
-        // Update behaviour
-        _configInfo.BackupEnabled = GetOption(UpdateOptions.BackupEnabled);
-        _configInfo.PatchEnabled = GetOption(UpdateOptions.PatchEnabled);
         _configInfo.DiffMode = GetOption(UpdateOptions.DiffMode);
     }
 

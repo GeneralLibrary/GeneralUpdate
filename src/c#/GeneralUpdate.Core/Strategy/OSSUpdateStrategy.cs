@@ -29,7 +29,7 @@ public class OSSUpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
-    private const int TimeOut = 60;
+    private const int DefaultTimeOut = 60;
 
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
@@ -157,7 +157,7 @@ public class OSSUpdateStrategy : IStrategy
         }
         else
         {
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(TimeOut) };
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(_configInfo.DownloadTimeOut > 0 ? _configInfo.DownloadTimeOut : DefaultTimeOut) };
             var orchestrator = new DefaultDownloadOrchestrator(httpClient);
             await orchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
         }
