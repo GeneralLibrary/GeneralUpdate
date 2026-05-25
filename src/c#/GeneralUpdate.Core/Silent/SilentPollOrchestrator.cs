@@ -34,12 +34,18 @@ public class SilentPollOrchestrator : IDisposable
     private Task? _pollingTask;
     private int _prepared;
     private int _updaterStarted;
+    private IUpdateHooks? _hooks;
+    private IUpdateReporter? _reporter;
 
     public SilentPollOrchestrator(GlobalConfigInfo configInfo, SilentOptions options)
     {
         _configInfo = configInfo ?? throw new ArgumentNullException(nameof(configInfo));
         _options = options ?? throw new ArgumentNullException(nameof(options));
     }
+
+    /// <summary>Inject hooks and reporter for lifecycle callbacks during silent polling.</summary>
+    public SilentPollOrchestrator WithHooks(IUpdateHooks? hooks) { _hooks = hooks; return this; }
+    public SilentPollOrchestrator WithReporter(IUpdateReporter? reporter) { _reporter = reporter; return this; }
 
     /// <summary>Start background polling loop.</summary>
     public Task StartAsync()
@@ -118,6 +124,27 @@ public class SilentPollOrchestrator : IDisposable
             return;
         }
 
+        // ═══ Hooks: allow cancellation before starting update ═══
+        var updateCtx = new UpdateContext(
+            _configInfo.MainAppName ?? _configInfo.AppName,
+            _configInfo.InstallPath,
+            _configInfo.ClientVersion,
+            latestVersion,
+            AppType.Client);
+
+        if (_hooks != null)
+        {
+            try
+            {
+                if (!await _hooks.OnBeforeUpdateAsync(updateCtx).ConfigureAwait(false))
+                {
+                    GeneralTracer.Info("SilentPollOrchestrator: update cancelled by hooks.");
+                    return;
+                }
+            }
+            catch (Exception ex) { GeneralTracer.Warn($"Hook OnBeforeUpdateAsync failed: {ex.Message}"); }
+        }
+
         // Configure for update
         BlackListManager.Instance?.AddBlackFiles(_configInfo.BlackFiles);
         BlackListManager.Instance?.AddBlackFormats(_configInfo.BlackFormats);
@@ -141,24 +168,141 @@ public class SilentPollOrchestrator : IDisposable
             BlackListManager.Instance.SkipDirectorys.ToList());
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
 
+        // ═══ Reporter: update started ═══
+        var startTime = DateTimeOffset.UtcNow;
+        if (_reporter != null)
+        {
+            try
+            {
+                await _reporter.ReportAsync(new UpdateReport(
+                    updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
+                    UpdateEvent.UpdateStarted, AppType.Client, startTime), token).ConfigureAwait(false);
+            }
+            catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateStarted failed: {ex.Message}"); }
+        }
+
         // Download using new orchestrator
         GeneralTracer.Info($"SilentPollOrchestrator: downloading {plan.Assets.Count} asset(s).");
         var httpClient = new System.Net.Http.HttpClient();
+        var downloadSuccessCount = 0;
+        var downloadFailedCount = 0;
+        var downloadTotalBytes = 0L;
+        var downloadElapsed = TimeSpan.Zero;
         try
         {
             var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
             var report = await orchestrator.ExecuteAsync(plan, _configInfo.TempPath, token: token).ConfigureAwait(false);
-            GeneralTracer.Info($"SilentPollOrchestrator: download complete. Success={report.SuccessCount}, Failed={report.FailedCount}");
+            downloadSuccessCount = report.SuccessCount;
+            downloadFailedCount = report.FailedCount;
+            downloadTotalBytes = report.TotalBytes;
+            downloadElapsed = report.TotalDuration;
+            GeneralTracer.Info($"SilentPollOrchestrator: download complete. Success={downloadSuccessCount}, Failed={downloadFailedCount}");
+
+            // ═══ Hooks + Reporter: download completed ═══
+            if (_hooks != null)
+            {
+                try
+                {
+                    var downloadCtx = new DownloadContext(
+                        plan.Assets.FirstOrDefault()?.Name ?? "update", latestVersion ?? "",
+                        downloadTotalBytes, downloadElapsed,
+                        _configInfo.TempPath, downloadFailedCount == 0);
+                    await _hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
+                }
+                catch (Exception ex) { GeneralTracer.Warn($"Hook OnDownloadCompletedAsync failed: {ex.Message}"); }
+            }
+
+            if (_reporter != null)
+            {
+                try
+                {
+                    await _reporter.ReportAsync(new UpdateReport(
+                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
+                        UpdateEvent.DownloadCompleted, AppType.Client, DateTimeOffset.UtcNow,
+                        DurationMs: downloadElapsed.TotalMilliseconds), token).ConfigureAwait(false);
+                }
+                catch (Exception ex) { GeneralTracer.Warn($"Reporter DownloadCompleted failed: {ex.Message}"); }
+            }
+
+            if (downloadFailedCount > 0)
+            {
+                GeneralTracer.Error($"SilentPollOrchestrator: download had {downloadFailedCount} failures, aborting update.");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("SilentPollOrchestrator: download failed.", ex);
+            if (_hooks != null)
+            {
+                try { await _hooks.OnUpdateErrorAsync(updateCtx, ex).ConfigureAwait(false); }
+                catch (Exception hookEx) { GeneralTracer.Warn($"Hook OnUpdateErrorAsync failed: {hookEx.Message}"); }
+            }
+            if (_reporter != null)
+            {
+                try
+                {
+                    await _reporter.ReportAsync(new UpdateReport(
+                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
+                        UpdateEvent.UpdateFailed, AppType.Client, DateTimeOffset.UtcNow,
+                        ErrorMessage: ex.Message), token).ConfigureAwait(false);
+                }
+                catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
+            }
+            return;
         }
         finally { httpClient.Dispose(); }
 
         // Execute pipeline
-        var strategy = CreateStrategy();
-        strategy.Create(_configInfo);
-        await strategy.ExecuteAsync();
+        try
+        {
+            var strategy = CreateStrategy();
+            strategy.Create(_configInfo);
+            await strategy.ExecuteAsync();
 
-        GeneralTracer.Info("SilentPollOrchestrator: update prepared.");
-        Interlocked.Exchange(ref _prepared, 1);
+            GeneralTracer.Info("SilentPollOrchestrator: update prepared.");
+            Interlocked.Exchange(ref _prepared, 1);
+
+            // ═══ Hooks + Reporter: update applied ═══
+            if (_hooks != null)
+            {
+                try { await _hooks.OnAfterUpdateAsync(updateCtx).ConfigureAwait(false); }
+                catch (Exception ex) { GeneralTracer.Warn($"Hook OnAfterUpdateAsync failed: {ex.Message}"); }
+            }
+
+            if (_reporter != null)
+            {
+                try
+                {
+                    var elapsedMs = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+                    await _reporter.ReportAsync(new UpdateReport(
+                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
+                        UpdateEvent.UpdateApplied, AppType.Client, DateTimeOffset.UtcNow,
+                        DurationMs: elapsedMs), token).ConfigureAwait(false);
+                }
+                catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateApplied failed: {ex.Message}"); }
+            }
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("SilentPollOrchestrator: pipeline execution failed.", ex);
+            if (_hooks != null)
+            {
+                try { await _hooks.OnUpdateErrorAsync(updateCtx, ex).ConfigureAwait(false); }
+                catch (Exception hookEx) { GeneralTracer.Warn($"Hook OnUpdateErrorAsync failed: {hookEx.Message}"); }
+            }
+            if (_reporter != null)
+            {
+                try
+                {
+                    await _reporter.ReportAsync(new UpdateReport(
+                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
+                        UpdateEvent.UpdateFailed, AppType.Client, DateTimeOffset.UtcNow,
+                        ErrorMessage: ex.Message), token).ConfigureAwait(false);
+                }
+                catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
+            }
+        }
     }
 
     private void OnProcessExit(object? sender, EventArgs e)

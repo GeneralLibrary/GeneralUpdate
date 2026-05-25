@@ -336,7 +336,12 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             AutoInstall = autoInstall
         };
 
-        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions);
+        var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
+        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
+
+        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions)
+            .WithHooks(hooks)
+            .WithReporter(reporter);
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
