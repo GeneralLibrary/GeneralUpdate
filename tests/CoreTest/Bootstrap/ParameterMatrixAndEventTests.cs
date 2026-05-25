@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.FileSystem;

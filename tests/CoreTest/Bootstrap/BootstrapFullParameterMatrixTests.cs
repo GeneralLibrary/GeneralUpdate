@@ -10,7 +10,7 @@ using Xunit;
 namespace CoreTest.Bootstrap
 {
     /// <summary>
-    /// Full parameter matrix tests �?verifies ALL UpdateOptions constants
+    /// Full parameter matrix tests — verifies ALL UpdateOptions constants
     /// can be set via .Option() without throwing. Covers 39 options across
     /// core, deployment, silent, download, security, reporting, OSS, and
     /// blacklist categories.
@@ -256,7 +256,7 @@ namespace CoreTest.Bootstrap
             };
 
             // ==========================================
-            // CLIENT bootstrap �?full production config
+            // CLIENT bootstrap — full production config
             // ==========================================
             var clientBootstrap = new GeneralUpdateBootstrap()
                 // --- Core ---
@@ -326,7 +326,7 @@ namespace CoreTest.Bootstrap
             Assert.NotNull(clientBootstrap);
 
             // ==========================================
-            // UPGRADE bootstrap �?full production config
+            // UPGRADE bootstrap — full production config
             // ==========================================
             var upgradeBootstrap = new GeneralUpdateBootstrap()
                 // --- Core (Upgrade role) ---
