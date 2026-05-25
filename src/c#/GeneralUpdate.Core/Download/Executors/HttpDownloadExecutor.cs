@@ -10,18 +10,20 @@ using GeneralUpdate.Core.Download.Models;
 namespace GeneralUpdate.Core.Download.Executors;
 
 /// <summary>
-/// HTTP-based download executor with Range/resume support.
+/// HTTP-based download executor with optional Range/resume support.
 /// Uses the shared HttpClient from VersionService for consistent SSL/auth handling.
 /// </summary>
 public class HttpDownloadExecutor : IDownloadExecutor
 {
     private readonly HttpClient _client;
     private readonly TimeSpan _timeout;
+    private readonly bool _enableResume;
 
-    public HttpDownloadExecutor(HttpClient client, TimeSpan? timeout = null)
+    public HttpDownloadExecutor(HttpClient client, TimeSpan? timeout = null, bool enableResume = true)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _timeout = timeout ?? TimeSpan.FromSeconds(30);
+        _enableResume = enableResume;
     }
 
     public async Task<DownloadResult> ExecuteAsync(
@@ -34,8 +36,8 @@ public class HttpDownloadExecutor : IDownloadExecutor
         long totalBytes = -1;
         long existingBytes = 0;
 
-        // Check for existing partial file (resume support)
-        if (File.Exists(destPath))
+        // Check for existing partial file (resume support; skip when disabled)
+        if (_enableResume && File.Exists(destPath))
         {
             existingBytes = new FileInfo(destPath).Length;
         }
@@ -44,8 +46,8 @@ public class HttpDownloadExecutor : IDownloadExecutor
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-            // Request resume from existing position
-            if (existingBytes > 0)
+            // Request resume from existing position (skip when resume is disabled)
+            if (_enableResume && existingBytes > 0)
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -56,7 +58,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
                 .ConfigureAwait(false);
 
             // If server doesn't support Range, discard partial file
-            if (existingBytes > 0 && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
+            if (_enableResume && existingBytes > 0 && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
             {
                 existingBytes = 0;
                 File.Delete(destPath);
