@@ -72,7 +72,11 @@ public class OSSUpdateStrategy : IStrategy
         var versionFileName = $"{_configInfo!.MainAppName ?? _configInfo.AppName}_versions.json";
         var versionsFilePath = Path.Combine(_appPath, versionFileName);
 
-        DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath);
+        if (!string.IsNullOrEmpty(_configInfo.UpdateUrl))
+        {
+            DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath);
+        }
+
         if (!File.Exists(versionsFilePath))
         {
             GeneralTracer.Info("OSSUpdateStrategy: version config download failed, aborting.");
