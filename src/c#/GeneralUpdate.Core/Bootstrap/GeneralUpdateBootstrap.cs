@@ -281,36 +281,30 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
-    /// Applies configured UpdateOptions to _configInfo using null-coalescing or
-    /// conditional assignment to avoid overwriting values already populated by
-    /// InitializeFromEnvironment() (Upgrade path) or GlobalConfigInfo defaults.
+    /// Applies UpdateOptions to _configInfo.
+    /// Uses ??= only for values that InitializeFromEnvironment() may have already
+    /// populated on the Upgrade path (Encoding, Format, DownloadTimeOut).
+    /// All other options are always applied from UpdateOptions — their defaults
+    /// are already functionally reasonable (e.g. MaxConcurrency=3, RetryCount=3).
     /// </summary>
     private void ApplyRuntimeOptions()
     {
-        // Core runtime — use ??= so Upgrade path (InitializeFromEnvironment) values
-        // are not overwritten by GetOption defaults
+        // Preserve Upgrade path values set by InitializeFromEnvironment()
         _configInfo.Encoding ??= GetOption(UpdateOptions.Encoding);
         _configInfo.Format ??= GetOption(UpdateOptions.Format);
         if (_configInfo.DownloadTimeOut <= 0)
             _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
 
-        // PatchEnabled / BackupEnabled: use ??= so null stays null
-        // (bool? with ??= means false from user is preserved, null gets default)
+        // bool? options: use ??= so user-configured false is preserved
         _configInfo.PatchEnabled ??= GetOption(UpdateOptions.PatchEnabled);
         _configInfo.BackupEnabled ??= GetOption(UpdateOptions.BackupEnabled);
 
-        // Download behaviour — preserve existing values (Upgrade path or property initializers)
-        // and only apply UpdateOptions when the current value is at its unset default
-        if (_configInfo.MaxConcurrency <= 0)
-            _configInfo.MaxConcurrency = GetOption(UpdateOptions.MaxConcurrency);
-        if (_configInfo.RetryCount <= 0)
-            _configInfo.RetryCount = GetOption(UpdateOptions.RetryCount);
-        if (_configInfo.RetryInterval <= TimeSpan.Zero)
-            _configInfo.RetryInterval = GetOption(UpdateOptions.RetryInterval);
-
-        // Booleans: default "false" is meaningful, but property initializers set them to "true".
-        // Only apply from UpdateOptions when they differ from the property initializer default.
+        // Always apply from UpdateOptions — no other code sets these before
+        // ApplyRuntimeOptions() runs. Defaults are functionally reasonable.
+        _configInfo.MaxConcurrency = GetOption(UpdateOptions.MaxConcurrency);
         _configInfo.EnableResume = GetOption(UpdateOptions.EnableResume);
+        _configInfo.RetryCount = GetOption(UpdateOptions.RetryCount);
+        _configInfo.RetryInterval = GetOption(UpdateOptions.RetryInterval);
         _configInfo.VerifyChecksum = GetOption(UpdateOptions.VerifyChecksum);
         _configInfo.DiffMode = GetOption(UpdateOptions.DiffMode);
     }
