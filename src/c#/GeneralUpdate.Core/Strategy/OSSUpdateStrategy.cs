@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Compress;
 using GeneralUpdate.Core.Configuration;
@@ -16,11 +17,11 @@ using GeneralUpdate.Core.Download.Orchestrators;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS (Object Storage Service) update strategy — client/upgrade split via AppType.
+/// OSS (Object Storage Service) update strategy �?client/upgrade split via AppType.
 /// <list type="bullet">
-///   <item><see cref="AppType.OSSClient"/> — downloads version config, checks for updates,
+///   <item><see cref="AppType.OSSClient"/> �?downloads version config, checks for updates,
 ///        starts the upgrade process, and exits.</item>
-///   <item><see cref="AppType.OSSUpgrade"/> — reads version config, downloads packages from OSS,
+///   <item><see cref="AppType.OSSUpgrade"/> �?reads version config, downloads packages from OSS,
 ///        decompresses them, starts the main app, and exits.</item>
 /// </list>
 /// </summary>
@@ -51,7 +52,7 @@ public class OSSUpdateStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OSSUpdateStrategy not configured. Call Create() first.");
 
-        // Dispatch by role — no env-var detection needed.
+        // Dispatch by role �?no env-var detection needed.
         if (_role == AppType.OSSUpgrade)
         {
             await ExecuteUpgradeAsync();
@@ -217,7 +218,7 @@ public class OSSUpdateStrategy : IStrategy
             File.SetAttributes(path, FileAttributes.Normal);
             File.Delete(path);
         }
-        using var httpClient = new HttpClient();
+        using var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
         var bytes = await httpClient.GetByteArrayAsync(url).ConfigureAwait(false);
         File.WriteAllBytes(path, bytes);
     }
@@ -240,12 +241,11 @@ public class OSSUpdateStrategy : IStrategy
         }
         else
         {
-            using var httpClient = new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(_configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut)
-            };
+            using var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
+            using var cts = new CancellationTokenSource(
+                TimeSpan.FromSeconds(_configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut));
             var orchestrator = new DefaultDownloadOrchestrator(httpClient);
-            await orchestrator.ExecuteAsync(plan, _appPath).ConfigureAwait(false);
+            await orchestrator.ExecuteAsync(plan, _appPath, token: cts.Token).ConfigureAwait(false);
         }
     }
 

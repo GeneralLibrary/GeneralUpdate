@@ -20,6 +20,7 @@ public interface IProcessInfoProvider
 /// <summary>
 /// AES-encrypted temporary file IPC — simplest, most reliable cross-platform approach.
 /// File lives in %TEMP%/GeneralUpdate/ipc/ with a random name, auto-deleted after read.
+/// Encryption is delegated to <see cref="IpcEncryption"/>.
 /// </summary>
 public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 {
@@ -47,11 +48,7 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
     {
         var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
         var plainBytes = Encoding.UTF8.GetBytes(json);
-        using var aes = Aes.Create();
-        aes.Key = Key; aes.IV = IV;
-        using var enc = aes.CreateEncryptor();
-        var cipher = enc.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-        File.WriteAllBytes(_filePath, cipher);
+        IpcEncryption.EncryptToFile(plainBytes, _filePath, Key, IV);
     }
 
     public Task<ProcessInfo?> ReceiveAsync(CancellationToken token = default)
@@ -60,17 +57,9 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
     /// <summary>Synchronous receive — reads and deletes the encrypted file.</summary>
     public ProcessInfo? Receive()
     {
-        if (!File.Exists(_filePath)) return null;
-        try
-        {
-            var cipher = File.ReadAllBytes(_filePath);
-            using var aes = Aes.Create();
-            aes.Key = Key; aes.IV = IV;
-            using var dec = aes.CreateDecryptor();
-            var plain = dec.TransformFinalBlock(cipher, 0, cipher.Length);
-            var json = Encoding.UTF8.GetString(plain);
-            return JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo);
-        }
-        finally { try { File.Delete(_filePath); } catch { } }
+        var plain = IpcEncryption.DecryptFromFile(_filePath, Key, IV);
+        if (plain == null) return null;
+        var json = Encoding.UTF8.GetString(plain);
+        return JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo);
     }
 }

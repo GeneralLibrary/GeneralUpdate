@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.FileSystem;
 
-/// <summary>Built-in default blacklist items — previously hardcoded in BlackListManager.</summary>
+/// <summary>Built-in default blacklist items.</summary>
 public static class BlackListDefaults
 {
     /// <summary>Default blacklisted files (system DLLs that ship with the runtime).</summary>
