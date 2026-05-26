@@ -132,23 +132,17 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             roleStrategy.Create(_configInfo);
             
             var binaryDiffer = ResolveExtension<IBinaryDiffer>();
-            if (binaryDiffer != null)
-            {
-                if (roleStrategy is ClientUpdateStrategy cs2)
-                    cs2.SetBinaryDiffer(binaryDiffer);
-                else if (roleStrategy is UpgradeUpdateStrategy us2)
-                    us2.SetBinaryDiffer(binaryDiffer);
-            }
-
-            // Inject binary differ into OS-level strategy for differential patching
-            // Must be called after Create() since _osStrategy is initialized there.
             var dirtyStrategy = ResolveExtension<IDirtyStrategy>();
-            if (dirtyStrategy != null)
+
+            if (roleStrategy is ClientUpdateStrategy cs2)
             {
-                if (roleStrategy is ClientUpdateStrategy cs2)
-                    cs2.SetDirtyStrategy(dirtyStrategy);
-                else if (roleStrategy is UpgradeUpdateStrategy us2)
-                    us2.SetDirtyStrategy(dirtyStrategy);
+                if (binaryDiffer != null) cs2.SetBinaryDiffer(binaryDiffer);
+                if (dirtyStrategy != null) cs2.SetDirtyStrategy(dirtyStrategy);
+            }
+            else if (roleStrategy is UpgradeUpdateStrategy us2)
+            {
+                if (binaryDiffer != null) us2.SetBinaryDiffer(binaryDiffer);
+                if (dirtyStrategy != null) us2.SetDirtyStrategy(dirtyStrategy);
             }
 
             // Check custom skip condition before executing update
