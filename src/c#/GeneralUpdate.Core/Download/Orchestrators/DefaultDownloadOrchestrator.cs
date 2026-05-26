@@ -67,7 +67,10 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         var tasks = plan.Assets.Select(async asset =>
         {
-            await sem.WaitAsync(token).ConfigureAwait(false);
+            if (!await sem.WaitAsync(TimeSpan.FromMinutes(5), token).ConfigureAwait(false))
+            {
+                GeneralTracer.Warn("DefaultDownloadOrchestrator: semaphore wait timed out, proceeding anyway.");
+            }
             try
             {
                 var fileName = GetFileName(asset);

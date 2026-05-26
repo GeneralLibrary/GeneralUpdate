@@ -90,6 +90,13 @@ public class UpgradeUpdateStrategy : IStrategy
         ExecuteAsync().GetAwaiter().GetResult();
     }
 
+    /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.</summary>
+    public void SetDiffer(Differential.IBinaryDiffer? differ)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.Differ = differ;
+    }
+
     public void StartApp()
     {
         _osStrategy?.StartApp();

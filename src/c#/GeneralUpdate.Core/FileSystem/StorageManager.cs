@@ -82,7 +82,7 @@ namespace GeneralUpdate.Core.FileSystem
 
         public static string GetTempDirectory(string name)
         {
-            var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd}_{name}";
+            var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd-HHmmss-fff}_{System.Diagnostics.Process.GetCurrentProcess().Id}_{name}";
             var tempDir = Path.Combine(Path.GetTempPath(), path);
             if (!Directory.Exists(tempDir))
             {
