@@ -232,12 +232,17 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
 
-        // Apply updates and start app
-        await _osStrategy.ExecuteAsync();
-        await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-        await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
-        await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-        _osStrategy.StartApp();
+        // Launch the upgrade process to apply updates and restart the main application.
+        // The upgrade process (AppName, default "Update.exe") reads ProcessInfo via IPC
+        // and runs the pipeline (Hash -> Compress -> Patch) before launching the main app.
+        var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+        if (!File.Exists(updaterPath))
+            throw new FileNotFoundException($"Upgrade application not found: {updaterPath}");
+
+        GeneralTracer.Info($"ClientUpdateStrategy: launching upgrade process {updaterPath}");
+        Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
+        GeneralTracer.Info("ClientUpdateStrategy: upgrade process launched, exiting.");
+        await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
     }
 
     #endregion
