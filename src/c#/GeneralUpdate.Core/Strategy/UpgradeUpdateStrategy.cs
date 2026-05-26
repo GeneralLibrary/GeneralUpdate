@@ -1,3 +1,4 @@
+using GeneralUpdate.Core.Differential;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -34,8 +35,8 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
-        if (_pendingDiffer != null && _osStrategy is AbstractStrategy abs)
-            abs.Differ = _pendingDiffer;
+        if (_pendingDirtyStrategy != null && _osStrategy is AbstractStrategy abs)
+            abs.DirtyStrategy = _pendingDirtyStrategy;
     }
 
     public async Task ExecuteAsync()
@@ -92,16 +93,16 @@ public class UpgradeUpdateStrategy : IStrategy
         ExecuteAsync().GetAwaiter().GetResult();
     }
 
-    private Differential.IBinaryDiffer? _pendingDiffer;
+    private IDirtyStrategy? _pendingDirtyStrategy;
 
     /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.
     /// Safe to call before or after Create(). If called before, the differ is cached and applied when Create() resolves _osStrategy.</summary>
-    public void SetDiffer(Differential.IBinaryDiffer? differ)
+    public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
     {
         if (_osStrategy is AbstractStrategy abs)
-            abs.Differ = differ;
+            abs.DirtyStrategy = dirtyStrategy;
         else
-            _pendingDiffer = differ;
+            _pendingDirtyStrategy = dirtyStrategy;
     }
 
     public void StartApp()

@@ -25,7 +25,7 @@ namespace GeneralUpdate.Core.Strategy
         protected IUpdateReporter? Reporter { get; set; }
 
         /// <summary>Optional binary differ for differential patch updates.</summary>
-        public IBinaryDiffer? Differ { get; set; }
+        public IDirtyStrategy? DirtyStrategy { get; set; }
         
         public virtual void Execute() => throw new NotImplementedException();
         
@@ -95,7 +95,7 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("PatchPath", patchPath);
             context.Add("PatchEnabled", _configinfo.PatchEnabled);
             // Binary differ for differential patching
-            context.Add("BinaryDiffer", Differ);
+            context.Add("DirtyStrategy", DirtyStrategy);
             
             return context;
         }

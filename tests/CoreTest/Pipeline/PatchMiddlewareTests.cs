@@ -5,40 +5,28 @@ namespace CoreTest.Pipeline;
 
 /// <summary>
 /// AAAT unit tests for <see cref="PatchMiddleware"/>.
-/// Covers: null differ (skip), non-null differ (invoke), success path, exception propagation.
+/// Covers: null strategy (skip), non-null strategy (invoke), success path, exception propagation.
 /// </summary>
 public class PatchMiddlewareTests
 {
-    private sealed class StubDiffer : IBinaryDiffer
+    private sealed class StubDirtyStrategy : IDirtyStrategy
     {
         public bool Invoked { get; private set; }
         public bool ShouldThrow { get; set; }
 
-        public Task CleanAsync(
-            string oldFilePath, string newFilePath, string patchFilePath,
-            CancellationToken cancellationToken = default)
+        public Task ExecuteAsync(string appPath, string patchPath)
         {
             Invoked = true;
             if (ShouldThrow)
-                throw new InvalidOperationException("test differ failure");
-            return Task.CompletedTask;
-        }
-
-        public Task DirtyAsync(
-            string oldFilePath, string newFilePath, string patchFilePath,
-            CancellationToken cancellationToken = default)
-        {
-            Invoked = true;
-            if (ShouldThrow)
-                throw new InvalidOperationException("test differ failure");
+                throw new InvalidOperationException("test dirty strategy failure");
             return Task.CompletedTask;
         }
     }
 
-    #region No differ in context — skip
+    #region No strategy in context — skip
 
     [Fact]
-    public async Task InvokeAsync_NoDifferInContext_SkipsWithoutThrow()
+    public async Task InvokeAsync_NoDirtyStrategyInContext_SkipsWithoutThrow()
     {
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
@@ -63,32 +51,32 @@ public class PatchMiddlewareTests
 
     #endregion
 
-    #region Differ in context — invokes
+    #region Strategy in context — invokes
 
     [Fact]
-    public async Task InvokeAsync_DifferInContext_InvokesDirtyAsync()
+    public async Task InvokeAsync_DirtyStrategyInContext_InvokesExecuteAsync()
     {
-        var differ = new StubDiffer();
+        var strategy = new StubDirtyStrategy();
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src/a.txt");
         context.Add("PatchPath", "/patch/a.txt");
-        context.Add("BinaryDiffer", differ);
+        context.Add("DirtyStrategy", strategy);
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(differ.Invoked);
+        Assert.True(strategy.Invoked);
     }
 
     [Fact]
-    public async Task InvokeAsync_DifferInContext_ThrowsExceptionPropagates()
+    public async Task InvokeAsync_DirtyStrategyThrows_ExceptionPropagates()
     {
-        var differ = new StubDiffer { ShouldThrow = true };
+        var strategy = new StubDirtyStrategy { ShouldThrow = true };
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src");
         context.Add("PatchPath", "/patch");
-        context.Add("BinaryDiffer", differ);
+        context.Add("DirtyStrategy", strategy);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
     }
@@ -98,31 +86,31 @@ public class PatchMiddlewareTests
     #region PipelineContext values edge cases
 
     [Fact]
-    public async Task InvokeAsync_DifferInContext_NullPaths_InvokesStill()
+    public async Task InvokeAsync_DirtyStrategyInContext_NullPaths_InvokesStill()
     {
-        var differ = new StubDiffer();
+        var strategy = new StubDirtyStrategy();
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
-        context.Add("BinaryDiffer", differ);
+        context.Add("DirtyStrategy", strategy);
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(differ.Invoked);
+        Assert.True(strategy.Invoked);
     }
 
     [Fact]
-    public async Task InvokeAsync_DifferInContext_EmptyStringPaths_InvokesStill()
+    public async Task InvokeAsync_DirtyStrategyInContext_EmptyStringPaths_InvokesStill()
     {
-        var differ = new StubDiffer();
+        var strategy = new StubDirtyStrategy();
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", string.Empty);
         context.Add("PatchPath", string.Empty);
-        context.Add("BinaryDiffer", differ);
+        context.Add("DirtyStrategy", strategy);
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(differ.Invoked);
+        Assert.True(strategy.Invoked);
     }
 
     #endregion

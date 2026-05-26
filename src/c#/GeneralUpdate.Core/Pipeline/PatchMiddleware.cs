@@ -23,19 +23,19 @@ public class PatchMiddleware : IMiddleware
         var targetPath = context.Get<string>("PatchPath");
 
         // Resolve differ from pipeline context (injected via AbstractStrategy)
-        var differ = context.Get<IBinaryDiffer>("BinaryDiffer");
+        var dirtyStrategy = context.Get<IDirtyStrategy>("DirtyStrategy");
 
-        if (differ == null)
+        if (dirtyStrategy == null)
         {
-            GeneralTracer.Info("PatchMiddleware.InvokeAsync: no IBinaryDiffer injected — patch skipped. " +
-                "Use Bootstrap.BinaryDiffer<T>() to enable differential patching.");
+            GeneralTracer.Info("PatchMiddleware.InvokeAsync: no IDirtyStrategy injected — patch skipped. " +
+                "Use Bootstrap.DirtyStrategy<T>() to enable differential patching.");
             return;
         }
 
         GeneralTracer.Info($"PatchMiddleware.InvokeAsync: applying differential patch. SourcePath={sourcePath}, PatchPath={targetPath}");
         try
         {
-            await differ.DirtyAsync(sourcePath, targetPath, targetPath);
+            await dirtyStrategy.ExecuteAsync(sourcePath, targetPath);
             GeneralTracer.Info("PatchMiddleware.InvokeAsync: differential patch applied successfully.");
         }
         catch (Exception ex)

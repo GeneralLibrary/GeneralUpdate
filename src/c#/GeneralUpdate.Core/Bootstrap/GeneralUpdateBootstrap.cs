@@ -133,13 +133,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             // Inject binary differ into OS-level strategy for differential patching
             // Must be called after Create() since _osStrategy is initialized there.
-            var differ = ResolveExtension<IBinaryDiffer>();
-            if (differ != null)
+            var dirtyStrategy = ResolveExtension<IDirtyStrategy>();
+            if (dirtyStrategy != null)
             {
                 if (roleStrategy is ClientUpdateStrategy cs2)
-                    cs2.SetDiffer(differ);
+                    cs2.SetDirtyStrategy(dirtyStrategy);
                 else if (roleStrategy is UpgradeUpdateStrategy us2)
-                    us2.SetDiffer(differ);
+                    us2.SetDirtyStrategy(dirtyStrategy);
             }
 
             // Check custom skip condition before executing update

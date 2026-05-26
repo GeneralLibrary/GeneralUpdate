@@ -55,8 +55,6 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap SslPolicy<T>() where T : Security.ISslValidationPolicy, new()
         { _extensions[typeof(Security.ISslValidationPolicy)] = typeof(T); return (TBootstrap)this; }
 
-        public TBootstrap BinaryDiffer<T>() where T : Differential.IBinaryDiffer, new()
-        { _extensions[typeof(Differential.IBinaryDiffer)] = typeof(T); return (TBootstrap)this; }
 
         public TBootstrap PipelineFactory<T>() where T : Pipeline.IUpdatePipelineFactory, new()
         { _extensions[typeof(Pipeline.IUpdatePipelineFactory)] = typeof(T); return (TBootstrap)this; }
