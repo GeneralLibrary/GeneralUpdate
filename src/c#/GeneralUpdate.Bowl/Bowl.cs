@@ -260,30 +260,6 @@ public sealed class Bowl
     // ---- Backward Compatibility ----
 
     /// <summary>
-    /// Legacy synchronous entry point. Kept for backward compatibility with existing callers.
-    /// New code should use <see cref="LaunchAsync(BowlContext, CancellationToken)"/>.
-    /// </summary>
-    [Obsolete("Use instance.LaunchAsync(BowlContext, ct) instead. This method will be removed in v10.")]
-    public static void Launch(MonitorParameter? monitorParameter = null)
-    {
-        GeneralTracer.Info("Bowl.Launch(legacy): translating to new async API.");
-
-        BowlContext context;
-        if (monitorParameter != null)
-        {
-            context = MapToContext(monitorParameter);
-        }
-        else
-        {
-            var param = CreateParameter();
-            context = MapToContext(param);
-        }
-
-        var bowl = new Bowl();
-        bowl.LaunchAsync(context).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
     /// Converts legacy <see cref="MonitorParameter"/> to the new <see cref="BowlContext"/>.
     /// </summary>
     public static BowlContext MapToContext(MonitorParameter p)
