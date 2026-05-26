@@ -39,7 +39,7 @@ public class MacStrategy : AbstractStrategy
         var builder = new PipelineBuilder(context)
             .UseMiddleware<HashMiddleware>()
             .UseMiddleware<CompressMiddleware>()
-            .UseMiddleware<PatchMiddleware>();
+            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled);
         return builder;
     }
 }
