@@ -174,8 +174,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         finally
         {
             // Dispose HubDownloadSource if it was started
-            if (roleStrategy is ClientUpdateStrategy cs && cs.DownloadSource is IDisposable d)
-                d.Dispose();
+            if (roleStrategy is ClientUpdateStrategy cs && cs.DownloadSource is IAsyncDisposable ad)
+                await ad.DisposeAsync();
             _cts?.Dispose();
             _cts = null;
         }

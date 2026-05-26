@@ -97,9 +97,8 @@ namespace CoreTest.Bootstrap
         private sealed class StubStrategy : GeneralUpdate.Core.Strategy.IStrategy
         {
             public void Create(GlobalConfigInfo parameter) { }
-            public void Execute() { }
             public Task ExecuteAsync() => Task.CompletedTask;
-            public void StartApp() { }
+            public Task StartAppAsync() => Task.CompletedTask;
         }
 
         private sealed class StubSslPolicy : GeneralUpdate.Core.Security.ISslValidationPolicy

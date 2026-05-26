@@ -79,7 +79,7 @@ public class UpgradeUpdateStrategy : IStrategy
             // Hooks: before starting main app (e.g. chmod +x on Linux/macOS)
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            _osStrategy.StartApp();
+            await _osStrategy.StartAppAsync();
         }
         catch (Exception ex)
         {
@@ -88,11 +88,6 @@ public class UpgradeUpdateStrategy : IStrategy
             GeneralTracer.Error("UpgradeUpdateStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
-    }
-
-    public void Execute()
-    {
-        ExecuteAsync().GetAwaiter().GetResult();
     }
 
     private IDirtyStrategy? _pendingDirtyStrategy;
@@ -121,9 +116,10 @@ public class UpgradeUpdateStrategy : IStrategy
             abs.DiffPipeline = diffPipeline;
     }
 
-    public void StartApp()
+    public async Task StartAppAsync()
     {
-        _osStrategy?.StartApp();
+        if (_osStrategy != null)
+            await _osStrategy.StartAppAsync();
     }
 
     #region Helpers

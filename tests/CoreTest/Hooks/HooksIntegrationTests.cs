@@ -9,19 +9,19 @@ namespace CoreTest.Hooks;
 public class HooksIntegrationTests
 {
     [Fact]
-    public void NoOpUpdateHooks_AllReturnDefault()
+    public async Task NoOpUpdateHooks_AllReturnDefault()
     {
         var hooks = new NoOpUpdateHooks();
         var ctx = new UpdateContext("TestApp", "/path", "1.0.0", "1.0.1", AppType.Client);
 
-        var beforeResult = hooks.OnBeforeUpdateAsync(ctx).GetAwaiter().GetResult();
+        var beforeResult = await hooks.OnBeforeUpdateAsync(ctx);
         Assert.True(beforeResult);
 
         var dcx = new DownloadContext("pkg.zip", "1.0.1", 1000, TimeSpan.FromSeconds(1), null, true);
-        hooks.OnDownloadCompletedAsync(dcx).GetAwaiter().GetResult();
-        hooks.OnAfterUpdateAsync(ctx).GetAwaiter().GetResult();
-        hooks.OnUpdateErrorAsync(ctx, new Exception("test")).GetAwaiter().GetResult();
-        hooks.OnBeforeStartAppAsync(ctx).GetAwaiter().GetResult();
+        await hooks.OnDownloadCompletedAsync(dcx);
+        await hooks.OnAfterUpdateAsync(ctx);
+        await hooks.OnUpdateErrorAsync(ctx, new Exception("test"));
+        await hooks.OnBeforeStartAppAsync(ctx);
     }
 
     [Fact]
@@ -52,12 +52,12 @@ public class HooksIntegrationTests
     }
 
     [Fact]
-    public void CustomPermissionHooks_BeforeUpdate_Allows()
+    public async Task CustomPermissionHooks_BeforeUpdate_Allows()
     {
         var hooks = new CustomPermissionHooks("/bin/true");
         var ctx = new UpdateContext("app", "/path", "1.0.0", "1.0.1", AppType.Client);
 
-        var result = hooks.OnBeforeUpdateAsync(ctx).GetAwaiter().GetResult();
+        var result = await hooks.OnBeforeUpdateAsync(ctx);
         Assert.True(result);
     }
 

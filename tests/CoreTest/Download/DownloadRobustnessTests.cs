@@ -114,33 +114,33 @@ public class DownloadRobustnessTests
     }
 
     [Fact]
-    public void DefaultRetryPolicy_RetryableStatusCodes()
+    public async Task DefaultRetryPolicy_RetryableStatusCodes()
     {
         var policy = new DefaultRetryPolicy(maxRetries: 3);
         int attempts = 0;
 
-        Assert.ThrowsAsync<HttpRequestException>(() =>
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
             policy.ExecuteAsync<string>(_ =>
             {
                 attempts++;
                 throw new HttpRequestException("503 Service Unavailable");
-            }, CancellationToken.None)).GetAwaiter().GetResult();
+            }, CancellationToken.None));
 
         Assert.Equal(3, attempts);
     }
 
     [Fact]
-    public void DefaultRetryPolicy_NoRetryOn402()
+    public async Task DefaultRetryPolicy_NoRetryOn402()
     {
         var policy = new DefaultRetryPolicy(maxRetries: 3);
         int attempts = 0;
 
-        Assert.ThrowsAsync<HttpRequestException>(() =>
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
             policy.ExecuteAsync<string>(_ =>
             {
                 attempts++;
                 throw new HttpRequestException("402 Payment Required");
-            }, CancellationToken.None)).GetAwaiter().GetResult();
+            }, CancellationToken.None));
 
         Assert.Equal(1, attempts);
     }

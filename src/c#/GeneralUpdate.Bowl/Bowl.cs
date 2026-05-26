@@ -280,7 +280,7 @@ public sealed class Bowl
         }
 
         var bowl = new Bowl();
-        bowl.LaunchAsync(context).ConfigureAwait(false).GetAwaiter().GetResult();
+        bowl.LaunchAsync(context).GetAwaiter().GetResult();
     }
 
     /// <summary>
