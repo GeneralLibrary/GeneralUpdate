@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -111,6 +112,13 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.BinaryDiffer = binaryDiffer;
+    }
+
+    /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
+    public void SetDiffPipeline(DiffPipeline? diffPipeline)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.DiffPipeline = diffPipeline;
     }
 
     public void StartApp()

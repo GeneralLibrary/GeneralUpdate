@@ -19,7 +19,9 @@ using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Differential;
+using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Differential.Abstractions;
+using GeneralUpdate.Differential.Differ;
 
 namespace GeneralUpdate.Core;
 
@@ -42,6 +44,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private Func<bool>? _customSkipOption;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private CancellationTokenSource? _cts;
+    private DiffPipelineBuilder? _diffPipelineBuilder;
 
     public GeneralUpdateBootstrap()
     {
@@ -146,6 +149,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 if (dirtyStrategy != null) us2.SetDirtyStrategy(dirtyStrategy);
             }
 
+            // Build DiffPipeline — user‑configured or default with BsdiffDiffer,
+            // parallelism=2, and progress reporter wired to AddListenerProgress.
+            var diffPipeline = BuildDiffPipeline();
+            if (roleStrategy is ClientUpdateStrategy cs3)
+                cs3.SetDiffPipeline(diffPipeline);
+            else if (roleStrategy is UpgradeUpdateStrategy us3)
+                us3.SetDiffPipeline(diffPipeline);
+
             // Check custom skip condition before executing update
             if (_customSkipOption?.Invoke() == true)
             {
@@ -226,6 +237,20 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             throw new InvalidOperationException($"Failed to parse config file: {fullPath}");
 
         return SetConfig(config);
+    }
+
+    /// <summary>
+    /// Configure the <see cref="DiffPipeline"/> via a fluent builder action.
+    /// If not called, a default pipeline is built with <see cref="BsdiffDiffer"/>,
+    /// <see cref="DefaultDirtyMatcher"/>, <see cref="DefaultCleanMatcher"/>,
+    /// and max parallelism of 2.
+    /// </summary>
+    public GeneralUpdateBootstrap UseDiffPipeline(Action<DiffPipelineBuilder>? configure)
+    {
+        var builder = new DiffPipelineBuilder();
+        configure?.Invoke(builder);
+        _diffPipelineBuilder = builder;
+        return this;
     }
 
     public GeneralUpdateBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
@@ -330,6 +355,20 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
+    }
+
+    private DiffPipeline BuildDiffPipeline()
+    {
+        if (_diffPipelineBuilder != null)
+            return _diffPipelineBuilder.Build();
+
+        return new DiffPipelineBuilder()
+            .UseDiffer(new BsdiffDiffer())
+            .UseCleanMatcher(new DefaultCleanMatcher())
+            .UseDirtyMatcher(new DefaultDirtyMatcher())
+            .WithParallelism(2)
+            .WithProgress(new DiffProgressReporter(this))
+            .Build();
     }
 
     private void InitBlackList()

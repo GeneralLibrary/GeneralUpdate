@@ -1,116 +1,106 @@
-using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Pipeline;
 
 namespace CoreTest.Pipeline;
 
 /// <summary>
-/// AAAT unit tests for <see cref="PatchMiddleware"/>.
-/// Covers: null strategy (skip), non-null strategy (invoke), success path, exception propagation.
+/// Unit tests for <see cref="PatchMiddleware"/>.
+/// Covers: missing DiffPipeline (throws), DiffPipeline present (invokes), exception propagation.
 /// </summary>
 public class PatchMiddlewareTests
 {
-    private sealed class StubDirtyStrategy : IDirtyStrategy
-    {
-        public bool Invoked { get; private set; }
-        public bool ShouldThrow { get; set; }
-
-        public Task ExecuteAsync(string appPath, string patchPath)
-        {
-            Invoked = true;
-            if (ShouldThrow)
-                throw new InvalidOperationException("test dirty strategy failure");
-            return Task.CompletedTask;
-        }
-    }
-
-    #region No strategy in context — skip
+    #region No DiffPipeline in context — throws
 
     [Fact]
-    public async Task InvokeAsync_NoDirtyStrategyInContext_SkipsWithoutThrow()
+    public async Task InvokeAsync_NoDiffPipelineInContext_Throws()
     {
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src/path");
         context.Add("PatchPath", "/patch/path");
 
-        var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
-
-        Assert.Null(ex);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => middleware.InvokeAsync(context));
     }
 
     [Fact]
-    public async Task InvokeAsync_NullContextProperties_SkipsWithoutThrow()
+    public async Task InvokeAsync_NullContextProperties_Throws()
     {
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
 
-        var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
-
-        Assert.Null(ex);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => middleware.InvokeAsync(context));
     }
 
     #endregion
 
-    #region Strategy in context — invokes
+    #region DiffPipeline in context — invokes
 
     [Fact]
-    public async Task InvokeAsync_DirtyStrategyInContext_InvokesExecuteAsync()
+    public async Task InvokeAsync_DiffPipelineInContext_CompletesSuccessfully()
     {
-        var strategy = new StubDirtyStrategy();
-        var middleware = new PatchMiddleware();
-        var context = new PipelineContext();
-        context.Add("SourcePath", "/src/a.txt");
-        context.Add("PatchPath", "/patch/a.txt");
-        context.Add("DirtyStrategy", strategy);
+        var srcPath = NewTempDir();
+        var patchPath = NewTempDir();
+        try
+        {
+            var middleware = new PatchMiddleware();
+            var context = new PipelineContext();
+            context.Add("SourcePath", srcPath);
+            context.Add("PatchPath", patchPath);
+            context.Add("DiffPipeline", new DiffPipeline());
 
-        await middleware.InvokeAsync(context);
+            var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
 
-        Assert.True(strategy.Invoked);
+            Assert.Null(ex);
+        }
+        finally
+        {
+            DeleteDir(srcPath);
+            DeleteDir(patchPath);
+        }
     }
 
     [Fact]
-    public async Task InvokeAsync_DirtyStrategyThrows_ExceptionPropagates()
+    public async Task InvokeAsync_DiffPipelineInContext_NullPaths_CompletesSuccessfully()
     {
-        var strategy = new StubDirtyStrategy { ShouldThrow = true };
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
-        context.Add("SourcePath", "/src");
-        context.Add("PatchPath", "/patch");
-        context.Add("DirtyStrategy", strategy);
+        context.Add("DiffPipeline", new DiffPipeline());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
-    }
-
-    #endregion
-
-    #region PipelineContext values edge cases
-
-    [Fact]
-    public async Task InvokeAsync_DirtyStrategyInContext_NullPaths_InvokesStill()
-    {
-        var strategy = new StubDirtyStrategy();
-        var middleware = new PatchMiddleware();
-        var context = new PipelineContext();
-        context.Add("DirtyStrategy", strategy);
-
-        await middleware.InvokeAsync(context);
-
-        Assert.True(strategy.Invoked);
+        // DiffPipeline.DirtyAsync returns early when directories don't exist
+        var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
+        Assert.Null(ex);
     }
 
     [Fact]
-    public async Task InvokeAsync_DirtyStrategyInContext_EmptyStringPaths_InvokesStill()
+    public async Task InvokeAsync_DiffPipelineInContext_EmptyStringPaths_CompletesSuccessfully()
     {
-        var strategy = new StubDirtyStrategy();
         var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", string.Empty);
         context.Add("PatchPath", string.Empty);
-        context.Add("DirtyStrategy", strategy);
+        context.Add("DiffPipeline", new DiffPipeline());
 
-        await middleware.InvokeAsync(context);
+        // DiffPipeline.DirtyAsync returns early when directories don't exist
+        var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
+        Assert.Null(ex);
+    }
 
-        Assert.True(strategy.Invoked);
+    #endregion
+
+    #region Helpers
+
+    private static string NewTempDir()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pm_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void DeleteDir(string path)
+    {
+        if (Directory.Exists(path))
+            Directory.Delete(path, true);
     }
 
     #endregion
