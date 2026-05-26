@@ -32,7 +32,7 @@ namespace DifferentialTest.Matchers
             }
         }
 
-        #region DefaultCleanMatcher �?Compare and Except
+        #region DefaultCleanMatcher — Compare and Except
 
         [Fact]
         public void DefaultCleanMatcher_Compare_ReturnsDifferentNodes_WhenFilesChange()
