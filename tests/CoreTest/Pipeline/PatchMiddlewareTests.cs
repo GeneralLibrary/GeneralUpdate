@@ -5,7 +5,7 @@ namespace CoreTest.Pipeline;
 
 /// <summary>
 /// AAAT unit tests for <see cref="PatchMiddleware"/>.
-/// Covers: null differ (skip), non-null differ (invoke), success path, exception propagation, both constructors.
+/// Covers: null differ (skip), non-null differ (invoke), success path, exception propagation.
 /// </summary>
 public class PatchMiddlewareTests
 {
@@ -35,12 +35,12 @@ public class PatchMiddlewareTests
         }
     }
 
-    #region Parameterless constructor — null differ (skip)
+    #region No differ in context — skip
 
     [Fact]
-    public async Task InvokeAsync_NullDiffer_SkipsWithoutThrow()
+    public async Task InvokeAsync_NoDifferInContext_SkipsWithoutThrow()
     {
-        var middleware = new PatchMiddleware(); // paramless ctor = no differ
+        var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src/path");
         context.Add("PatchPath", "/patch/path");
@@ -63,33 +63,17 @@ public class PatchMiddlewareTests
 
     #endregion
 
-    #region Explicit null differ — also skip
+    #region Differ in context — invokes
 
     [Fact]
-    public async Task InvokeAsync_ExplicitNullDiffer_SkipsWithoutThrow()
-    {
-        var middleware = new PatchMiddleware(differ: null!);
-        var context = new PipelineContext();
-        context.Add("SourcePath", "/src");
-        context.Add("PatchPath", "/patch");
-
-        var ex = await Record.ExceptionAsync(() => middleware.InvokeAsync(context));
-
-        Assert.Null(ex);
-    }
-
-    #endregion
-
-    #region Non-null differ — invokes
-
-    [Fact]
-    public async Task InvokeAsync_ValidDiffer_InvokesDirtyAsync()
+    public async Task InvokeAsync_DifferInContext_InvokesDirtyAsync()
     {
         var differ = new StubDiffer();
-        var middleware = new PatchMiddleware(differ);
+        var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src/a.txt");
         context.Add("PatchPath", "/patch/a.txt");
+        context.Add("BinaryDiffer", differ);
 
         await middleware.InvokeAsync(context);
 
@@ -97,13 +81,14 @@ public class PatchMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_DifferThrows_ExceptionPropagates()
+    public async Task InvokeAsync_DifferInContext_ThrowsExceptionPropagates()
     {
         var differ = new StubDiffer { ShouldThrow = true };
-        var middleware = new PatchMiddleware(differ);
+        var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", "/src");
         context.Add("PatchPath", "/patch");
+        context.Add("BinaryDiffer", differ);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
     }
@@ -113,26 +98,27 @@ public class PatchMiddlewareTests
     #region PipelineContext values edge cases
 
     [Fact]
-    public async Task InvokeAsync_ValidDiffer_WithNullPaths_InvokesStill()
+    public async Task InvokeAsync_DifferInContext_NullPaths_InvokesStill()
     {
         var differ = new StubDiffer();
-        var middleware = new PatchMiddleware(differ);
+        var middleware = new PatchMiddleware();
         var context = new PipelineContext();
+        context.Add("BinaryDiffer", differ);
 
-        // SourcePath/PatchPath are null in context — differ is still called with null args
         await middleware.InvokeAsync(context);
 
         Assert.True(differ.Invoked);
     }
 
     [Fact]
-    public async Task InvokeAsync_ValidDiffer_EmptyStringPaths_InvokesStill()
+    public async Task InvokeAsync_DifferInContext_EmptyStringPaths_InvokesStill()
     {
         var differ = new StubDiffer();
-        var middleware = new PatchMiddleware(differ);
+        var middleware = new PatchMiddleware();
         var context = new PipelineContext();
         context.Add("SourcePath", string.Empty);
         context.Add("PatchPath", string.Empty);
+        context.Add("BinaryDiffer", differ);
 
         await middleware.InvokeAsync(context);
 

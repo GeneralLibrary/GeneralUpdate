@@ -189,7 +189,11 @@ public class OSSUpdateStrategy : IStrategy
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
             GeneralTracer.Error("OSSUpdateStrategy.ExecuteUpgradeAsync failed.", ex);
-            throw;
+            GeneralUpdate.Core.Event.EventManager.Instance.Dispatch(this, new GeneralUpdate.Core.Event.ExceptionEventArgs(ex, ex.Message));
+        }
+        finally
+        {
+            await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
         }
     }
 
