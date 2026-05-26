@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Binary;
+using GeneralUpdate.Differential.Differ;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Models;
 using Xunit;
@@ -39,7 +39,7 @@ namespace DifferentialTest.Pipeline
         [Fact]
         public void Builder_WithCustomDiffer_UsesProvidedDiffer()
         {
-            var differ = new BinaryHandler();
+            var differ = new BsdiffDiffer();
             var pipeline = new DiffPipelineBuilder().UseDiffer(differ).Build();
             Assert.NotNull(pipeline);
         }

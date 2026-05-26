@@ -2,20 +2,20 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using GeneralUpdate.Differential.Binary;
+using GeneralUpdate.Differential.Differ;
 using Xunit;
 
 namespace DifferentialTest.Binary
 {
     /// <summary>
-    /// Contains test cases for the BinaryHandler class.
+    /// Contains test cases for the BsdiffDiffer class.
     /// Tests binary diff generation (Clean) and patch application (Dirty) functionality.
     /// </summary>
-    public class BinaryHandlerTests : IDisposable
+    public class BsdiffDifferTests : IDisposable
     {
         private readonly string _testDirectory;
 
-        public BinaryHandlerTests()
+        public BsdiffDifferTests()
         {
             _testDirectory = Path.Combine(Path.GetTempPath(), $"DifferentialTest_{Guid.NewGuid()}");
             Directory.CreateDirectory(_testDirectory);
@@ -41,7 +41,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithInvalidOldFilePath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "patch.patch");
 
@@ -60,7 +60,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithInvalidNewFilePath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var patchPath = Path.Combine(_testDirectory, "patch.patch");
 
@@ -79,7 +79,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithInvalidPatchPath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
 
@@ -95,7 +95,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithDifferentFiles_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -118,7 +118,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithIdenticalFiles_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -140,7 +140,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithEmptyOldFile_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -163,7 +163,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithEmptyNewFile_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -185,7 +185,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithBinaryFiles_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.bin");
             var newFilePath = Path.Combine(_testDirectory, "new.bin");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -211,7 +211,7 @@ namespace DifferentialTest.Binary
         public async Task Clean_WithLargeTextChanges_GeneratesPatchFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -250,7 +250,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithInvalidOldFilePath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "patch.patch");
 
@@ -269,7 +269,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithInvalidNewFilePath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var patchPath = Path.Combine(_testDirectory, "patch.patch");
 
@@ -288,7 +288,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithInvalidPatchPath_ThrowsArgumentNullException(string invalidPath)
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
 
@@ -304,7 +304,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithValidPatch_CreatesNewFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -337,7 +337,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithBinaryPatch_CreatesNewBinaryFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.bin");
             var newFilePath = Path.Combine(_testDirectory, "new.bin");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -370,7 +370,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithEmptyOldFile_CreatesNewFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -402,7 +402,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithEmptyNewFile_CreatesEmptyFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -432,7 +432,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithIdenticalFiles_KeepsFileUnchanged()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -464,7 +464,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithCorruptPatch_ThrowsException()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var targetFilePath = Path.Combine(_testDirectory, "target.txt");
             var patchPath = Path.Combine(_testDirectory, "corrupt.patch");
@@ -487,7 +487,7 @@ namespace DifferentialTest.Binary
         public async Task Dirty_WithLargeFiles_CreatesNewFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");
@@ -530,7 +530,7 @@ namespace DifferentialTest.Binary
         public async Task CleanAndDirty_FullCycle_RecreatesOriginalFile()
         {
             // Arrange
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFilePath = Path.Combine(_testDirectory, "old.txt");
             var newFilePath = Path.Combine(_testDirectory, "new.txt");
             var patchPath = Path.Combine(_testDirectory, "test.patch");

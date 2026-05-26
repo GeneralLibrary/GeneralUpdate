@@ -8,7 +8,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Binary;
+using GeneralUpdate.Differential.Differ;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Models;
 using GeneralUpdate.Core.Pipeline;
@@ -497,7 +497,7 @@ namespace DifferentialTest
         public void DiffPipelineBuilder_CustomDiffer_UsesProvidedDiffer()
         {
             // Arrange
-            var customDiffer = new BinaryHandler();
+            var customDiffer = new BsdiffDiffer();
 
             // Act
             var pipeline = new DiffPipelineBuilder()
@@ -580,9 +580,9 @@ namespace DifferentialTest
             File.WriteAllText(Path.Combine(src, "code.cs"), "class A { }");
             File.WriteAllText(Path.Combine(tgt, "code.cs"), "class A { void B() { } }");
 
-            // Developer uses BinaryHandler (BSDIFF) as the differ
+            // Developer uses BsdiffDiffer (BSDIFF) as the differ
             var pipeline = new DiffPipelineBuilder()
-                .UseDiffer(new BinaryHandler())
+                .UseDiffer(new BsdiffDiffer())
                 .WithParallelism(1)
                 .Build();
 

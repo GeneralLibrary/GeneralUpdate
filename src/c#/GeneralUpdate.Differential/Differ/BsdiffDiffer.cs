@@ -4,10 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Abstractions;
 
-namespace GeneralUpdate.Differential.Binary
+namespace GeneralUpdate.Differential.Differ
 {
     /// <summary>
-    /// BSDIFF 4.0 file binary differential processing.
+    /// BSDIFF 4.0 file binary differential algorithm.
     /// Implements <see cref="IBinaryDiffer"/> for pluggable architecture compatibility.
     /// </summary>
     /// <remarks>
@@ -19,7 +19,7 @@ namespace GeneralUpdate.Differential.Binary
     /// A single instance MUST NOT be used concurrently by multiple callers.
     /// Create separate instances for concurrent operations.
     /// </remarks>
-    public class BinaryHandler : IBinaryDiffer
+    public class BsdiffDiffer : IBinaryDiffer
     {
         #region Private Members
 
@@ -39,18 +39,18 @@ namespace GeneralUpdate.Differential.Binary
         #region Constructors
 
         /// <summary>
-        /// Initialises a new BinaryHandler with BZip2 compression (backward compatible).
+        /// Initialises a new BsdiffDiffer with BZip2 compression (backward compatible).
         /// </summary>
-        public BinaryHandler()
+        public BsdiffDiffer()
             : this(new BZip2CompressionProvider())
         {
         }
 
         /// <summary>
-        /// Initialises a new BinaryHandler with the specified compression provider.
+        /// Initialises a new BsdiffDiffer with the specified compression provider.
         /// </summary>
         /// <param name="compressionProvider">The compression strategy to use for patch data.</param>
-        public BinaryHandler(ICompressionProvider compressionProvider)
+        public BsdiffDiffer(ICompressionProvider compressionProvider)
         {
             _compressionProvider = compressionProvider ?? throw new ArgumentNullException(nameof(compressionProvider));
         }
@@ -628,7 +628,7 @@ namespace GeneralUpdate.Differential.Binary
             // Allocate extra space for h-doubling access pattern in Split.
             // During suffix sort, v[I[k] + h] is accessed where h doubles
             // from 1 each iteration. I[k] is in [0, oldsize] and h can reach
-            // the next power of 2 >= oldsize (e.g. oldsize=3 â†?h reaches 4).
+            // the next power of 2 >= oldsize (e.g. oldsize=3 -> h reaches 4).
             // The original C BSDIFF relies on undefined behaviour here;
             // in managed code we must size the buffer to oldsize + maxH + 1.
             int maxH = 1;

@@ -1,6 +1,6 @@
 using Moq;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Binary;
+using GeneralUpdate.Differential.Differ;
 
 namespace DifferentialTest.Binary
 {
@@ -19,13 +19,13 @@ namespace DifferentialTest.Binary
     /// 触发条件：各种路径参数、CancellationToken状态
     /// 预期结果：正确异常抛出、正确委托
     /// </summary>
-    public class BinaryHandlerTests : IDisposable
+    public class BsdiffDifferTests : IDisposable
     {
         private readonly string _testDir;
 
-        public BinaryHandlerTests()
+        public BsdiffDifferTests()
         {
-            _testDir = Path.Combine(Path.GetTempPath(), $"BinaryHandlerTests_{Guid.NewGuid():N}");
+            _testDir = Path.Combine(Path.GetTempPath(), $"BsdiffDifferTests_{Guid.NewGuid():N}");
             Directory.CreateDirectory(_testDir);
         }
 
@@ -38,7 +38,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "构造函数_无参_使用BZip2CompressionProvider")]
         public void Constructor_NoArgs_UsesBZip2CompressionProvider()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
 
             Assert.NotNull(handler);
         }
@@ -49,7 +49,7 @@ namespace DifferentialTest.Binary
             var mockProvider = new Mock<ICompressionProvider>();
             mockProvider.Setup(p => p.FormatVersion).Returns(0x01);
 
-            var handler = new BinaryHandler(mockProvider.Object);
+            var handler = new BsdiffDiffer(mockProvider.Object);
 
             Assert.NotNull(handler);
         }
@@ -57,7 +57,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "构造函数_compressionProvider为null_抛出ArgumentNullException")]
         public void Constructor_NullProvider_ThrowsArgumentNullException()
         {
-            var ex = Assert.Throws<ArgumentNullException>(() => new BinaryHandler(null!));
+            var ex = Assert.Throws<ArgumentNullException>(() => new BsdiffDiffer(null!));
 
             Assert.Equal("compressionProvider", ex.ParamName);
         }
@@ -65,7 +65,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "CleanAsync_CancellationToken已取消_抛出OperationCanceledException")]
         public async Task CleanAsync_CancelledToken_ThrowsOperationCanceledException()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             using var cts = new CancellationTokenSource();
             cts.Cancel();
 
@@ -76,7 +76,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "DirtyAsync_CancellationToken已取消_抛出OperationCanceledException")]
         public async Task DirtyAsync_CancelledToken_ThrowsOperationCanceledException()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             using var cts = new CancellationTokenSource();
             cts.Cancel();
 
@@ -87,7 +87,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Clean_文件不存在_正常失败")]
         public async Task Clean_NonExistentFiles_ThrowsFileNotFound()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
 
             await Assert.ThrowsAsync<FileNotFoundException>(() =>
                 handler.Clean(
@@ -99,7 +99,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Dirty_文件不存在_正常失败")]
         public async Task Dirty_NonExistentFiles_ThrowsFileNotFound()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
 
             await Assert.ThrowsAsync<FileNotFoundException>(() =>
                 handler.Dirty(
@@ -111,7 +111,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Clean_源和目标文件相同_生成最小补丁")]
         public async Task Clean_IdenticalFiles_GeneratesMinimalPatch()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFile = Path.Combine(_testDir, "old.bin");
             var newFile = Path.Combine(_testDir, "new.bin");
             var patchFile = Path.Combine(_testDir, "patch.bin");
@@ -130,7 +130,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Clean_生成补丁后Dirty还原_文件内容一致")]
         public async Task CleanThenDirty_RoundTrip_ProducesIdenticalFile()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFile = Path.Combine(_testDir, "old.bin");
             var newFile = Path.Combine(_testDir, "new.bin");
             var patchedFile = Path.Combine(_testDir, "patched.bin");
@@ -161,7 +161,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Clean_空文件_能正确生成补丁")]
         public async Task Clean_EmptyFiles_GeneratesPatch()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFile = Path.Combine(_testDir, "empty_old.bin");
             var newFile = Path.Combine(_testDir, "empty_new.bin");
             var patchFile = Path.Combine(_testDir, "empty_patch.bin");
@@ -177,7 +177,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Dirty_旧文件空_应用补丁生成新文件")]
         public async Task Dirty_EmptyOldFile_AppliesPatchToNewFile()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFile = Path.Combine(_testDir, "empty_old.bin");
             var newFile = Path.Combine(_testDir, "full_new.bin");
             var patchedFile = Path.Combine(_testDir, "patched.bin");
@@ -196,7 +196,7 @@ namespace DifferentialTest.Binary
         [Fact(DisplayName = "Dirty_不存在的补丁文件_正常抛出异常")]
         public async Task Dirty_NonExistentPatch_Throws()
         {
-            var handler = new BinaryHandler();
+            var handler = new BsdiffDiffer();
             var oldFile = Path.Combine(_testDir, "old.bin");
             File.WriteAllBytes(oldFile, new byte[] { 1, 2, 3 });
 

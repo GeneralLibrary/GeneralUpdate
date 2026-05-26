@@ -11,7 +11,7 @@ namespace GeneralUpdate.Differential.Differ
     /// Streaming binary differ with block-level hash pre-filtering for faster matching.
     /// </summary>
     /// <remarks>
-    /// Key improvements over <see cref="Binary.BinaryHandler"/> (classic BSDIFF):
+    /// Key improvements over <see cref="BinaryDiffer"/> (classic BSDIFF):
     /// - Block hash index replaces suffix array for candidate lookup (O(n) typical vs O(n log n)).
     /// - Configurable memory budget via <see cref="MaxWindowSize"/> vs BSDIFF's O(oldSize * 17).
     /// - Fixed-size block hashing with stride-based sampling for dense coverage.
@@ -85,8 +85,8 @@ namespace GeneralUpdate.Differential.Differ
         public Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath, CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
-            // Patch application is identical to BSDIFF Dirty; delegate to BinaryHandler.
-            var handler = new Binary.BinaryHandler(_compressionProvider);
+            // Patch application is identical to BSDIFF Dirty; delegate to BinaryDiffer.
+            var handler = new BsdiffDiffer(_compressionProvider);
             return handler.DirtyAsync(oldFilePath, newFilePath, patchFilePath, ct);
         }
 

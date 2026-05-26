@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core;
 /// or a custom <see cref="ICleanStrategy"/> / <see cref="IDirtyStrategy"/>
 /// for full control over execution flow.
 ///
-/// Legacy BSDIFF patches remain readable via <see cref="GeneralUpdate.Differential.Binary.BinaryHandler"/>.
+/// Legacy BSDIFF patches remain readable via <see cref="GeneralUpdate.Differential.Differ.BinaryDiffer"/>.
 /// </remarks>
 public static class DifferentialCore
 {
