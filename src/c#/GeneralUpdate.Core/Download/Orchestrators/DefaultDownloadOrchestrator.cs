@@ -67,9 +67,15 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
 
         var tasks = plan.Assets.Select(async asset =>
         {
-            if (!await sem.WaitAsync(TimeSpan.FromMinutes(5), token).ConfigureAwait(false))
+            var acquired = await sem.WaitAsync(TimeSpan.FromMinutes(5), token).ConfigureAwait(false);
+            if (!acquired)
             {
-                GeneralTracer.Warn("DefaultDownloadOrchestrator: semaphore wait timed out, proceeding anyway.");
+                GeneralTracer.Warn("DefaultDownloadOrchestrator: semaphore wait timed out for " + asset.Name + ", skipping.");
+                lock (results)
+                {
+                    results.Add(new DownloadResult(asset, null, 0, TimeSpan.Zero, 0, false, "Semaphore wait timed out"));
+                }
+                return;
             }
             try
             {

@@ -12,7 +12,7 @@ namespace GeneralUpdate.Core.Pipeline;
 ///
 /// The <see cref="IBinaryDiffer"/> implementation is resolved from
 /// <see cref="PipelineContext"/> (key "BinaryDiffer"), set by
-/// <see cref="Strategy.AbstractStrategy"/> when the differ is injected via
+/// <see cref="GeneralUpdate.Core.Strategy.AbstractStrategy"/> when the differ is injected via
 /// <c>Bootstrap.BinaryDiffer&lt;T&gt;()</c>. Without injection, patches are skipped.
 /// </summary>
 public class PatchMiddleware : IMiddleware

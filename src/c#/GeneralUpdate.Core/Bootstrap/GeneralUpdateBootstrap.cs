@@ -129,7 +129,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 ossStrat.Reporter = reporter;
             }
 
+            roleStrategy.Create(_configInfo);
+
             // Inject binary differ into OS-level strategy for differential patching
+            // Must be called after Create() since _osStrategy is initialized there.
             var differ = ResolveExtension<IBinaryDiffer>();
             if (differ != null)
             {
@@ -138,8 +141,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 else if (roleStrategy is UpgradeUpdateStrategy us2)
                     us2.SetDiffer(differ);
             }
-
-            roleStrategy.Create(_configInfo);
 
             // Check custom skip condition before executing update
             if (_customSkipOption?.Invoke() == true)
