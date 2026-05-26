@@ -17,6 +17,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -94,6 +95,13 @@ public class ClientUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.BinaryDiffer = binaryDiffer;
+    }
+
+    /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
+    public void SetDiffPipeline(DiffPipeline? diffPipeline)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.DiffPipeline = diffPipeline;
     }
 
     public void StartApp()

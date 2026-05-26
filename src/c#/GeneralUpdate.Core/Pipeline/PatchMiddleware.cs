@@ -1,19 +1,13 @@
 using System;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.Differential;
-using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Pipeline;
 
 /// <summary>
-/// Differential patch middleware. Applies binary patches (BSDIFF, HDiffPatch, etc.)
-/// to bring files from an old version to a new version.
-///
-/// The <see cref="IDirtyStrategy"/> implementation is resolved from
-/// <see cref="PipelineContext"/> (key "DirtyStrategy"), set by
-/// <see cref="Strategy.AbstractStrategy"/> when the differ is injected via
-/// <c>Bootstrap.BinaryDiffer&lt;T&gt;()</c>. Without injection, patches are skipped.
+/// Differential patch middleware. Uses <see cref="DiffPipeline"/> to apply binary
+/// patches in parallel with progress reporting. The <see cref="DiffPipeline"/> is
+/// built by <see cref="GeneralUpdateBootstrap"/> and injected via the pipeline context.
 /// </summary>
 public class PatchMiddleware : IMiddleware
 {
@@ -22,20 +16,15 @@ public class PatchMiddleware : IMiddleware
         var sourcePath = context.Get<string>("SourcePath");
         var targetPath = context.Get<string>("PatchPath");
 
-        // Resolve differ from pipeline context (injected via AbstractStrategy)
-        var dirtyStrategy = context.Get<IDirtyStrategy>("DirtyStrategy");
-
-        if (dirtyStrategy == null)
-        {
-            GeneralTracer.Info("PatchMiddleware.InvokeAsync: no IDirtyStrategy injected — patch skipped. " +
-                "Use Bootstrap.DirtyStrategy<T>() to enable differential patching.");
-            return;
-        }
+        var diffPipeline = context.Get<DiffPipeline>("DiffPipeline")
+            ?? throw new InvalidOperationException(
+                "DiffPipeline not found in PipelineContext. " +
+                "Ensure GeneralUpdateBootstrap builds and injects the DiffPipeline.");
 
         GeneralTracer.Info($"PatchMiddleware.InvokeAsync: applying differential patch. SourcePath={sourcePath}, PatchPath={targetPath}");
         try
         {
-            await dirtyStrategy.ExecuteAsync(sourcePath, targetPath);
+            await diffPipeline.DirtyAsync(sourcePath, targetPath);
             GeneralTracer.Info("PatchMiddleware.InvokeAsync: differential patch applied successfully.");
         }
         catch (Exception ex)

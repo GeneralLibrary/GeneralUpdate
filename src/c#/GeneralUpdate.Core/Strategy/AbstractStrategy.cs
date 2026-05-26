@@ -30,6 +30,9 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>Optional file-level binary differ for patch application.</summary>
         public IBinaryDiffer? BinaryDiffer { get; set; }
+
+        /// <summary>DiffPipeline for parallel patch application with progress reporting.</summary>
+        public DiffPipeline? DiffPipeline { get; set; }
         
         public virtual void Execute() => throw new NotImplementedException();
         
@@ -101,6 +104,8 @@ namespace GeneralUpdate.Core.Strategy
             // Binary differ for differential patching
             context.Add("DirtyStrategy", DirtyStrategy);
             context.Add("BinaryDiffer", BinaryDiffer);
+            // DiffPipeline for parallel patch application with progress reporting
+            context.Add("DiffPipeline", DiffPipeline);
             
             return context;
         }
