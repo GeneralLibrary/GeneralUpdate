@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
