@@ -20,9 +20,9 @@ public class LinuxStrategy : AbstractStrategy
     {
         GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
         var builder = new PipelineBuilder(context)
-            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
+            .UseMiddleware<HashMiddleware>()
             .UseMiddleware<CompressMiddleware>()
-            .UseMiddleware<HashMiddleware>();
+            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled);
         return builder;
     }
 

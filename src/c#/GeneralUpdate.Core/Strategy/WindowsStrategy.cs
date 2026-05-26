@@ -27,9 +27,9 @@ namespace GeneralUpdate.Core.Strategy
         {
             GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
             var builder = new PipelineBuilder(context)
-                .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
+                .UseMiddleware<HashMiddleware>()
                 .UseMiddleware<CompressMiddleware>()
-                .UseMiddleware<HashMiddleware>();
+                .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled);
             return builder;
         }
 
