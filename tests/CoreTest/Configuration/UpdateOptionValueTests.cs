@@ -13,7 +13,7 @@ public class UpdateOptionValueTests
     [Fact]
     public void Ctor_IntValue_StoresCorrectly()
     {
-        var option = UpdateOption.ValueOf("INT_KEY", 0);
+        var option = UpdateOption.ValueOf("INT_KEY_UV", 0);
         var value = new UpdateOptionValue<int>(option, 42);
 
         Assert.Same(option, value.Option);
