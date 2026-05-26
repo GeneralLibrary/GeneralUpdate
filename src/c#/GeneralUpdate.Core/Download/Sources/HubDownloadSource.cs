@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core.Download.Sources;
 /// SignalR Hub download source — receives update push notifications
 /// and converts them to DownloadAssets for the orchestrator.
 /// </summary>
-public class HubDownloadSource : IDownloadSource, IDisposable
+public class HubDownloadSource : IDownloadSource, IAsyncDisposable
 {
     private readonly string _hubUrl;
     private readonly string? _token;
@@ -77,8 +77,9 @@ public class HubDownloadSource : IDownloadSource, IDisposable
         return _assets.ToList();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _hub?.DisposeAsync().GetAwaiter().GetResult();
+        if (_hub != null)
+            await _hub.DisposeAsync();
     }
 }

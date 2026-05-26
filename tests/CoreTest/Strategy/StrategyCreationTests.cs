@@ -115,7 +115,7 @@ public class StrategyCreationTests
     }
 
     [Fact]
-    public void OSSUpdateStrategy_StartApp_NullAppName_ReturnsWithoutException()
+    public async Task OSSUpdateStrategy_StartApp_NullAppName_ReturnsWithoutException()
     {
         var strategy = new OSSUpdateStrategy();
         strategy.Create(new GeneralUpdate.Core.Configuration.GlobalConfigInfo
@@ -124,7 +124,7 @@ public class StrategyCreationTests
             MainAppName = null,
             AppName = null
         });
-        var ex = Record.Exception(() => strategy.StartApp());
+        var ex = await Record.ExceptionAsync(() => strategy.StartAppAsync());
         Assert.Null(ex);
     }
 }

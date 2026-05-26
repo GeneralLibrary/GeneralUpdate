@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Event;
@@ -26,18 +27,13 @@ public class LinuxStrategy : AbstractStrategy
         return builder;
     }
 
-    public override void Execute()
-    {
-        ExecuteAsync().Wait();
-    }
-
-    protected override void OnExecuteComplete()
+    protected override async Task OnExecuteCompleteAsync()
     {
         GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.OnExecuteComplete: all versions processed, starting application.");
-        StartApp();
+        await StartAppAsync();
     }
 
-    public override void StartApp()
+    public override async Task StartAppAsync()
     {
         try
         {
@@ -59,7 +55,7 @@ public class LinuxStrategy : AbstractStrategy
         {
             GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: releasing tracer and terminating updater process.");
             GeneralTracer.Dispose();
-            GracefulExit.CurrentProcessAsync().GetAwaiter().GetResult();
+            await GracefulExit.CurrentProcessAsync();
         }
     }
 

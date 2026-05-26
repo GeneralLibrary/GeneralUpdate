@@ -34,9 +34,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <summary>DiffPipeline for parallel patch application with progress reporting.</summary>
         public DiffPipeline? DiffPipeline { get; set; }
         
-        public virtual void Execute() => throw new NotImplementedException();
-        
-        public virtual void StartApp() => throw new NotImplementedException();
+        public virtual Task StartAppAsync() => throw new NotImplementedException();
         
         public virtual async Task ExecuteAsync()
         {
@@ -72,7 +70,7 @@ namespace GeneralUpdate.Core.Strategy
 
                 Clear(patchPath);
                 Clear(_configinfo.TempPath);
-                OnExecuteComplete();
+                await OnExecuteCompleteAsync();
             }
             catch (Exception e)
             {
@@ -120,9 +118,9 @@ namespace GeneralUpdate.Core.Strategy
         /// Called after ExecuteAsync completes successfully.
         /// Override this method to add platform-specific post-execution logic.
         /// </summary>
-        protected virtual void OnExecuteComplete()
+        protected virtual Task OnExecuteCompleteAsync()
         {
-            // Default implementation does nothing
+            return Task.CompletedTask;
         }
 
         /// <summary>

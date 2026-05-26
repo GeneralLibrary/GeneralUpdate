@@ -182,7 +182,7 @@ public class OSSUpdateStrategy : IStrategy
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
             GeneralTracer.Debug("OSSUpdateStrategy (upgrade): launching main app.");
-            StartApp();
+            await StartAppAsync();
         }
         catch (Exception ex)
         {
@@ -197,12 +197,10 @@ public class OSSUpdateStrategy : IStrategy
         }
     }
 
-    public void Execute() => ExecuteAsync().GetAwaiter().GetResult();
-
-    public void StartApp()
+    public Task StartAppAsync()
     {
         var appName = _configInfo?.MainAppName ?? _configInfo?.AppName;
-        if (string.IsNullOrEmpty(appName)) return;
+        if (string.IsNullOrEmpty(appName)) return Task.CompletedTask;
 
         var appPath = Path.Combine(_appPath, appName);
         if (!File.Exists(appPath))
@@ -210,6 +208,7 @@ public class OSSUpdateStrategy : IStrategy
 
         Process.Start(appPath);
         GeneralTracer.Debug("OSSUpdateStrategy: main application started.");
+        return Task.CompletedTask;
     }
 
     #region Helpers

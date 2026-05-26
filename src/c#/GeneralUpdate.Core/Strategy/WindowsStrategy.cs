@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Event;
@@ -13,10 +14,6 @@ namespace GeneralUpdate.Core.Strategy
     /// </summary>
     public class WindowsStrategy : AbstractStrategy
     {
-        public override void Execute()
-        {
-            ExecuteAsync().GetAwaiter().GetResult();
-        }
         protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
         {
             GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");
@@ -33,20 +30,20 @@ namespace GeneralUpdate.Core.Strategy
             return builder;
         }
 
-        protected override void OnExecuteComplete()
+        protected override async Task OnExecuteCompleteAsync()
         {
             GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.OnExecuteComplete: all versions processed, starting application.");
-            StartApp();
+            await StartAppAsync();
         }
 
-        public override void StartApp()
+        public override async Task StartAppAsync()
         {
             try
             {
                 var mainAppPath = CheckPath(_configinfo.InstallPath, _configinfo.MainAppName);
                 if (string.IsNullOrEmpty(mainAppPath))
                     throw new Exception($"Can't find the app {mainAppPath}!");
-                
+
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching main app={mainAppPath}");
                 Process.Start(mainAppPath);
                 GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: main app launched successfully.");
@@ -67,7 +64,7 @@ namespace GeneralUpdate.Core.Strategy
             {
                 GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: releasing tracer and terminating updater process.");
                 GeneralTracer.Dispose();
-                GracefulExit.CurrentProcessAsync().GetAwaiter().GetResult();
+                await GracefulExit.CurrentProcessAsync();
             }
         }
     }

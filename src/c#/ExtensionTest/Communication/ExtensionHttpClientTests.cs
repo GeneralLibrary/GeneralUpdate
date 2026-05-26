@@ -81,7 +81,7 @@ public class ExtensionHttpClientTests
     }
 
     [Fact]
-    public void 构造函数_Scheme和Token非空_设置AuthorizationHeader()
+    public async Task 构造函数_Scheme和Token非空_设置AuthorizationHeader()
     {
         var handler = new Mock<HttpMessageHandler>();
         HttpRequestMessage? capturedRequest = null;
@@ -98,7 +98,7 @@ public class ExtensionHttpClientTests
         using var httpClient = new HttpClient(handler.Object);
         using var client = new ExtensionHttpClient("http://test", "Bearer", "my-token", httpClient);
 
-        client.QueryExtensionsAsync(new ExtensionQueryDTO()).GetAwaiter().GetResult();
+        await client.QueryExtensionsAsync(new ExtensionQueryDTO());
 
         Assert.NotNull(capturedRequest);
         Assert.NotNull(capturedRequest!.Headers.Authorization);
@@ -107,7 +107,7 @@ public class ExtensionHttpClientTests
     }
 
     [Fact]
-    public void 构造函数_Scheme为空_不设置Authorization()
+    public async Task 构造函数_Scheme为空_不设置Authorization()
     {
         var handler = new Mock<HttpMessageHandler>();
         HttpRequestMessage? capturedRequest = null;
@@ -123,7 +123,7 @@ public class ExtensionHttpClientTests
 
         using var httpClient = new HttpClient(handler.Object);
         using var client = new ExtensionHttpClient("http://test", "", "", httpClient);
-        client.QueryExtensionsAsync(new ExtensionQueryDTO()).GetAwaiter().GetResult();
+        await client.QueryExtensionsAsync(new ExtensionQueryDTO());
 
         Assert.Null(capturedRequest!.Headers.Authorization);
     }

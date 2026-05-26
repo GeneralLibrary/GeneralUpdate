@@ -11,17 +11,12 @@ namespace GeneralUpdate.Core.Strategy
         /// <summary>
         /// Execution strategy.
         /// </summary>
-        void Execute();
+        Task ExecuteAsync();
 
         /// <summary>
         /// After the update is complete.
         /// </summary>
-        void StartApp();
-        
-        /// <summary>
-        /// Execution strategy.
-        /// </summary>
-        Task ExecuteAsync();
+        Task StartAppAsync();
 
         /// <summary>
         /// Create a strategy.

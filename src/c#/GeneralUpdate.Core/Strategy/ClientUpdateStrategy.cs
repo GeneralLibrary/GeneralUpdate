@@ -73,11 +73,6 @@ public class ClientUpdateStrategy : IStrategy
         }
     }
 
-    public void Execute()
-    {
-        ExecuteAsync().GetAwaiter().GetResult();
-    }
-
     private IDirtyStrategy? _pendingDirtyStrategy;
 
     /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
@@ -104,9 +99,10 @@ public class ClientUpdateStrategy : IStrategy
             abs.DiffPipeline = diffPipeline;
     }
 
-    public void StartApp()
+    public async Task StartAppAsync()
     {
-        _osStrategy?.StartApp();
+        if (_osStrategy != null)
+            await _osStrategy.StartAppAsync();
     }
 
     /// <summary>Register a precheck callback invoked when update info is available.</summary>
