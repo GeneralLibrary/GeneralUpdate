@@ -364,6 +364,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return new DiffPipelineBuilder()
             .UseDiffer(new BsdiffDiffer())
+            .UseCleanMatcher(new DefaultCleanMatcher())
+            .UseDirtyMatcher(new DefaultDirtyMatcher())
             .WithParallelism(2)
             .WithProgress(new DiffProgressReporter(this))
             .Build();
