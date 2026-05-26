@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -55,36 +54,14 @@ public class UpgradeUpdateStrategy : IStrategy
                 return;
             }
 
-            var allVersions = _configInfo.UpdateVersions ?? Enumerable.Empty<VersionInfo>().ToList();
-            var upgradeVersions = allVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
-            var clientVersions = allVersions.Where(v => v.AppType != (int)AppType.Upgrade).ToList();
+            _osStrategy!.Create(_configInfo);
 
-            // Phase 1: update Upgrade.exe itself (if upgrade packages exist)
-            if (upgradeVersions.Count > 0)
+            // Apply MainApp updates — Client already applied Upgrade packages, IPC only has MainApp versions
+            if (_configInfo.UpdateVersions?.Count > 0)
             {
-                GeneralTracer.Info($"UpgradeUpdateStrategy: phase 1 — updating Upgrade itself ({upgradeVersions.Count} version(s)).");
-                var prevUpdateVersions = _configInfo.UpdateVersions;
-                _configInfo.UpdateVersions = upgradeVersions;
-                _osStrategy!.Create(_configInfo);
+                GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count + " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
-                _configInfo.UpdateVersions = prevUpdateVersions;
-                GeneralTracer.Info("UpgradeUpdateStrategy: phase 1 complete.");
             }
-
-            // Phase 2: update MainApp
-            if (clientVersions.Count > 0)
-            {
-                GeneralTracer.Info($"UpgradeUpdateStrategy: phase 2 — updating MainApp ({clientVersions.Count} version(s)).");
-                _configInfo.UpdateVersions = clientVersions;
-                _osStrategy!.Create(_configInfo);
-                await _osStrategy.ExecuteAsync();
-                GeneralTracer.Info("UpgradeUpdateStrategy: phase 2 complete.");
-            }
-            else if (upgradeVersions.Count == 0)
-            {
-                GeneralTracer.Info("UpgradeUpdateStrategy: no updates to apply, starting application directly.");
-            }
-
             else
             {
                 GeneralTracer.Info("UpgradeUpdateStrategy: no updates to apply, starting application directly.");
