@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
@@ -22,6 +23,9 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>Optional reporter for update status reporting.</summary>
         protected IUpdateReporter? Reporter { get; set; }
+
+        /// <summary>Optional binary differ for differential patch updates.</summary>
+        public IBinaryDiffer? Differ { get; set; }
         
         public virtual void Execute() => throw new NotImplementedException();
         
@@ -46,6 +50,7 @@ namespace GeneralUpdate.Core.Strategy
                     {
                         status = ReportType.Failure;
                         HandleExecuteException(e);
+                        TryRollback();
                     }
                     finally
                     {
@@ -89,6 +94,8 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("SourcePath", _configinfo.InstallPath);
             context.Add("PatchPath", patchPath);
             context.Add("PatchEnabled", _configinfo.PatchEnabled);
+            // Binary differ for differential patching
+            context.Add("BinaryDiffer", Differ);
             
             return context;
         }
@@ -134,6 +141,28 @@ namespace GeneralUpdate.Core.Strategy
         // Subclasses should call hooks/reporter through their own context-aware wrappers.
         // The Hooks and Reporter properties are declared here so subclasses inherit them
         // without redeclaring.
+
+        /// <summary>
+        /// Attempts to restore from backup when a pipeline execution fails.
+        /// Only restores if a backup directory exists for the current version.
+        /// </summary>
+        private void TryRollback()
+        {
+            try
+            {
+                var backupDir = _configinfo.BackupDirectory;
+                if (!string.IsNullOrWhiteSpace(backupDir) && Directory.Exists(backupDir))
+                {
+                    GeneralTracer.Warn($"AbstractStrategy.TryRollback: restoring from backup {backupDir} -> {_configinfo.InstallPath}");
+                    StorageManager.Restore(backupDir, _configinfo.InstallPath);
+                    GeneralTracer.Info("AbstractStrategy.TryRollback: restore completed.");
+                }
+            }
+            catch (Exception ex)
+            {
+                GeneralTracer.Error("AbstractStrategy.TryRollback: rollback failed.", ex);
+            }
+        }
 
         private static void Clear(string path)
         {

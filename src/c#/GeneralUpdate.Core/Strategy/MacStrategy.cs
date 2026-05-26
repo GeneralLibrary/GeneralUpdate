@@ -21,14 +21,28 @@ public class MacStrategy : AbstractStrategy
 
     public override void StartApp()
     {
-        var mainApp = Path.Combine(
-            _configinfo.InstallPath ?? string.Empty,
-            _configinfo.MainAppName ?? string.Empty);
-
-        if (!string.IsNullOrEmpty(_configinfo.MainAppName) && File.Exists(mainApp))
+        try
         {
-            GeneralTracer.Info($"MacStrategy: starting {mainApp}");
-            System.Diagnostics.Process.Start(mainApp);
+            var mainApp = Path.Combine(
+                _configinfo.InstallPath ?? string.Empty,
+                _configinfo.MainAppName ?? string.Empty);
+
+            if (!string.IsNullOrEmpty(_configinfo.MainAppName) && File.Exists(mainApp))
+            {
+                GeneralTracer.Info($"MacStrategy: starting {mainApp}");
+                System.Diagnostics.Process.Start(mainApp);
+            }
+        }
+        catch (Exception e)
+        {
+            GeneralTracer.Error("The StartApp method in MacStrategy threw an exception.", e);
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+        }
+        finally
+        {
+            GeneralTracer.Info("MacStrategy.StartApp: releasing tracer and terminating updater process.");
+            GeneralTracer.Dispose();
+            GracefulExit.CurrentProcessAsync().GetAwaiter().GetResult();
         }
     }
 
@@ -36,10 +50,11 @@ public class MacStrategy : AbstractStrategy
 
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
     {
+        GeneralTracer.Info($"MacStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
         var builder = new PipelineBuilder(context)
-            .UseMiddleware<HashMiddleware>()
+            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
             .UseMiddleware<CompressMiddleware>()
-            .UseMiddleware<PatchMiddleware>();
+            .UseMiddleware<HashMiddleware>();
         return builder;
     }
 }

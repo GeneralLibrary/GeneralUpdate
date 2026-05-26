@@ -34,6 +34,8 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
+        if (_pendingDiffer != null && _osStrategy is AbstractStrategy abs)
+            abs.Differ = _pendingDiffer;
     }
 
     public async Task ExecuteAsync()
@@ -88,6 +90,18 @@ public class UpgradeUpdateStrategy : IStrategy
     public void Execute()
     {
         ExecuteAsync().GetAwaiter().GetResult();
+    }
+
+    private Differential.IBinaryDiffer? _pendingDiffer;
+
+    /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.
+    /// Safe to call before or after Create(). If called before, the differ is cached and applied when Create() resolves _osStrategy.</summary>
+    public void SetDiffer(Differential.IBinaryDiffer? differ)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.Differ = differ;
+        else
+            _pendingDiffer = differ;
     }
 
     public void StartApp()

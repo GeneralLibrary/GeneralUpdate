@@ -18,6 +18,7 @@ using GeneralUpdate.Core.Network;
 using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Download.Reporting;
+using GeneralUpdate.Core.Differential;
 
 namespace GeneralUpdate.Core;
 
@@ -130,6 +131,17 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             roleStrategy.Create(_configInfo);
 
+            // Inject binary differ into OS-level strategy for differential patching
+            // Must be called after Create() since _osStrategy is initialized there.
+            var differ = ResolveExtension<IBinaryDiffer>();
+            if (differ != null)
+            {
+                if (roleStrategy is ClientUpdateStrategy cs2)
+                    cs2.SetDiffer(differ);
+                else if (roleStrategy is UpgradeUpdateStrategy us2)
+                    us2.SetDiffer(differ);
+            }
+
             // Check custom skip condition before executing update
             if (_customSkipOption?.Invoke() == true)
             {
@@ -161,8 +173,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     // ════════════════════════════════════════════════════════════════
 
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
-    {
-        _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
+        {
+            configInfo.Validate();
+            _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
         var appType = GetOption(UpdateOptions.AppType);
         if (appType != AppType.Upgrade)
