@@ -52,9 +52,9 @@ public class MacStrategy : AbstractStrategy
     {
         GeneralTracer.Info($"MacStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
         var builder = new PipelineBuilder(context)
-            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled)
+            .UseMiddleware<HashMiddleware>()
             .UseMiddleware<CompressMiddleware>()
-            .UseMiddleware<HashMiddleware>();
+            .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled);
         return builder;
     }
 }

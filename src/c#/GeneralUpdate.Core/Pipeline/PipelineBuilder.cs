@@ -5,19 +5,19 @@ using System.Threading.Tasks;
 namespace GeneralUpdate.Core.Pipeline
 {
     /// <summary>
-    /// Pipeline builder.
+    /// Pipeline builder â€” middleware execute in FIFO (registration) order.
     /// </summary>
     public sealed class PipelineBuilder(PipelineContext context)
     {
         /// <summary>
-        /// LIFO£¬Last In First Out.
+        /// LIFOÂ£Â¬Last In First Out.
         /// </summary>
-        private ImmutableStack<IMiddleware> _middlewareStack = ImmutableStack<IMiddleware>.Empty;
+        private ImmutableQueue<IMiddleware> _middlewareQueue = ImmutableQueue<IMiddleware>.Empty;
 
         public PipelineBuilder UseMiddleware<TMiddleware>() where TMiddleware : IMiddleware, new()
         {
             var middleware = new TMiddleware();
-            _middlewareStack = _middlewareStack.Push(middleware);
+            _middlewareQueue = _middlewareQueue.Enqueue(middleware);
             return this;
         }
 
@@ -28,13 +28,13 @@ namespace GeneralUpdate.Core.Pipeline
                 return this;
             
             var middleware = new TMiddleware();
-            _middlewareStack = _middlewareStack.Push(middleware);
+            _middlewareQueue = _middlewareQueue.Enqueue(middleware);
             return this;
         }
 
         public async Task Build()
         {
-            foreach (var middleware in _middlewareStack)
+            foreach (var middleware in _middlewareQueue)
             {
                 await middleware.InvokeAsync(context);
             }
