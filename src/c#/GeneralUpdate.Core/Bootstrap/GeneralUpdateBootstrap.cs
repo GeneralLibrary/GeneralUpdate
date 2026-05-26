@@ -130,6 +130,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             }
 
             roleStrategy.Create(_configInfo);
+            
+            var binaryDiffer = ResolveExtension<IBinaryDiffer>();
+            if (binaryDiffer != null)
+            {
+                if (roleStrategy is ClientUpdateStrategy cs2)
+                    cs2.SetBinaryDiffer(binaryDiffer);
+                else if (roleStrategy is UpgradeUpdateStrategy us2)
+                    us2.SetBinaryDiffer(binaryDiffer);
+            }
 
             // Inject binary differ into OS-level strategy for differential patching
             // Must be called after Create() since _osStrategy is initialized there.
