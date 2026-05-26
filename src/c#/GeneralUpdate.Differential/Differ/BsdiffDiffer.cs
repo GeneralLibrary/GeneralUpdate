@@ -15,9 +15,11 @@ namespace GeneralUpdate.Differential.Differ
     /// Default: <see cref="BZip2CompressionProvider"/> (backward compatible).
     /// Use <see cref="DeflateCompressionProvider"/> (0x01) for faster decompression.
     ///
-    /// Thread-safety: this class stores per-call state in instance fields.
-    /// A single instance MUST NOT be used concurrently by multiple callers.
-    /// Create separate instances for concurrent operations.
+    /// Thread-safety: this class is safe for concurrent calls provided the
+    /// configured <see cref="ICompressionProvider"/> is thread-safe.
+    /// The built-in providers (<see cref="BZip2CompressionProvider"/>,
+    /// <see cref="DeflateCompressionProvider"/>, <see cref="BrotliCompressionProvider"/>)
+    /// are all safe for concurrent use.
     /// </remarks>
     public class BsdiffDiffer : IBinaryDiffer
     {
@@ -31,8 +33,6 @@ namespace GeneralUpdate.Differential.Differ
         private const int ExtendedHeaderSize = 33;
 
         private readonly ICompressionProvider _compressionProvider;
-        // Per-call mutable state. NOT thread-safe for concurrent calls on the same instance.
-        private string _oldfilePath, _newfilePath, _patchPath;
 
         #endregion Private Members
 
@@ -84,15 +84,12 @@ namespace GeneralUpdate.Differential.Differ
         {
             await Task.Run(() =>
             {
-                _oldfilePath = oldfilePath;
-                _newfilePath = newfilePath;
-                _patchPath = patchPath;
-                ValidationParameters();
+                ValidationParameters(oldfilePath, newfilePath, patchPath);
 
                 using (var output = new FileStream(patchPath, FileMode.Create))
                 {
-                    var oldBytes = File.ReadAllBytes(_oldfilePath);
-                    var newBytes = File.ReadAllBytes(_newfilePath);
+                    var oldBytes = File.ReadAllBytes(oldfilePath);
+                    var newBytes = File.ReadAllBytes(newfilePath);
 
                     // Header layout:
                     //   0    8   "BSDIFF40" (magic)
@@ -270,13 +267,10 @@ namespace GeneralUpdate.Differential.Differ
         {
             await Task.Run(() =>
             {
-                _oldfilePath = oldfilePath;
-                _newfilePath = newfilePath;
-                _patchPath = patchPath;
-                ValidationParameters();
+                ValidationParameters(oldfilePath, newfilePath, patchPath);
 
-                using (var input = new FileStream(_oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                using (var output = new FileStream(_newfilePath, FileMode.Create))
+                using (var input = new FileStream(oldfilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var output = new FileStream(newfilePath, FileMode.Create))
                 {
                     long controlLength, diffLength, newSize;
                     byte formatVersion;
@@ -432,7 +426,6 @@ namespace GeneralUpdate.Differential.Differ
                     }
                 }
 
-                // The result is left at _newfilePath.
                 // Atomic replacement (if needed) is handled by the caller
                 // (e.g. DefaultDirtyStrategy.ApplyPatch).
             });
@@ -450,14 +443,14 @@ namespace GeneralUpdate.Differential.Differ
             return new FileStream(patchPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 
-        private void ValidationParameters()
+        private static void ValidationParameters(string oldfilePath, string newfilePath, string patchPath)
         {
-            if (string.IsNullOrWhiteSpace(_oldfilePath))
-                throw new ArgumentNullException(nameof(_oldfilePath), "Old file path must not be empty.");
-            if (string.IsNullOrWhiteSpace(_newfilePath))
-                throw new ArgumentNullException(nameof(_newfilePath), "New file path must not be empty.");
-            if (string.IsNullOrWhiteSpace(_patchPath))
-                throw new ArgumentNullException(nameof(_patchPath), "Patch path must not be empty.");
+            if (string.IsNullOrWhiteSpace(oldfilePath))
+                throw new ArgumentNullException(nameof(oldfilePath), "Old file path must not be empty.");
+            if (string.IsNullOrWhiteSpace(newfilePath))
+                throw new ArgumentNullException(nameof(newfilePath), "New file path must not be empty.");
+            if (string.IsNullOrWhiteSpace(patchPath))
+                throw new ArgumentNullException(nameof(patchPath), "Patch path must not be empty.");
         }
 
         private static int CompareBytes(byte[] left, int leftOffset, byte[] right, int rightOffset)
