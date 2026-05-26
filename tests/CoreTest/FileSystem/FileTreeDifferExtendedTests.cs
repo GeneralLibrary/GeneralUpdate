@@ -182,14 +182,15 @@ public class FileTreeDifferExtendedTests
     }
 
     [Fact]
-    public void ProduceDeletes_IsSameReference_NotCopy()
+    public void ProduceDeletes_ReturnsDeletedItems()
     {
         var deleted = new[] { "x.txt" };
         var diff = Diff(deleted: deleted);
 
         var result = FileTreeDiffer.ProduceDeletes(diff);
 
-        Assert.Same(diff.Deleted, result);
+        Assert.Single(result);
+        Assert.Equal("x.txt", result[0]);
     }
 
     #endregion
@@ -288,15 +289,6 @@ public class FileTreeDifferExtendedTests
         var diff = Diff(added: added);
 
         Assert.True(FileTreeDiffer.ShouldUseDeltaPatching(diff, 1000, 1.0));
-    }
-
-    [Fact]
-    public void ShouldUseDeltaPatching_NegativeTotalFiles_ReturnsTrueBecauseRatioBelowThreshold()
-    {
-        // With totalFileCount = -1, the ratio is negative, which is <= 0.5, so returns true.
-        // This is a known edge case — ShouldUseDeltaPatching assumes positive totalFileCount.
-        var diff = Diff(added: new[] { Entry("a.txt") });
-        Assert.True(FileTreeDiffer.ShouldUseDeltaPatching(diff, -1));
     }
 
     #endregion

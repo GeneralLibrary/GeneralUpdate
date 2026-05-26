@@ -2,20 +2,12 @@ using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Progress;
 using GeneralUpdate.Core.Event;
-using Xunit.Abstractions;
 
 namespace CoreTest.Download;
 
-/// <summary>
-/// AAAT unit tests for <see cref="DownloadProgressReporter"/>.
-/// Covers: progress callback, completed callback, failed status, status Completed/Failed dispatch, all-downloads-completed static.
-/// </summary>
+[Collection("NonParallel_EventManager")]
 public class DownloadProgressReporterTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
-
-    public DownloadProgressReporterTests(ITestOutputHelper output) => _output = output;
-
     public void Dispose()
     {
         EventManager.Instance.Clear();

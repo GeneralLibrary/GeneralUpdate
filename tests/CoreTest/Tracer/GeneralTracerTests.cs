@@ -2,11 +2,7 @@ using GeneralUpdate.Core;
 
 namespace CoreTest.Tracer;
 
-/// <summary>
-/// AAAT unit tests for <see cref="GeneralTracer"/> static tracing utility.
-/// Covers: all log levels (Debug, Info, Warn, Error, Fatal), Error/Fatal with Exception,
-/// IsTracingEnabled/SetTracingEnabled toggle, Dispose lifecycle, thread safety.
-/// </summary>
+[Collection("NonParallel_EventManager")]
 public class GeneralTracerTests : IDisposable
 {
     private readonly bool _originalTracingEnabled;

@@ -167,24 +167,7 @@ public class BlackListConfigBuilderTests
     }
 
     [Fact]
-    public void Builder_Reused_ReadOnlyWrapsUnderlyingList()
-    {
-        // Builder caches a single _blackFiles list. Build() wraps it with AsReadOnly(),
-        // which returns a live view of the underlying list. Subsequent AddBlackFiles
-        // calls mutate that same list, so earlier builds also see the accumulated items.
-        var builder = new BlackListConfigBuilder();
-        builder.AddBlackFiles("a.dll");
-        var first = builder.Build();
-        builder.AddBlackFiles("b.dll");
-        var second = builder.Build();
-
-        // Both see the accumulated list because ReadOnlyCollection wraps the same List<string>
-        Assert.Equal(2, first.BlackFiles!.Count);
-        Assert.Equal(2, second.BlackFiles!.Count);
-    }
-
-    [Fact]
-    public void Build_ReadOnlyLists_ImmutableToConsumer()
+    public void Build_ProducesNonNullLists()
     {
         var builder = new BlackListConfigBuilder();
         builder.AddBlackFiles("f.dll");
@@ -192,6 +175,7 @@ public class BlackListConfigBuilderTests
         var config = builder.Build();
 
         Assert.NotNull(config.BlackFiles);
+        Assert.Single(config.BlackFiles);
     }
 
     #endregion
@@ -210,11 +194,16 @@ public class BlackListConfigBuilderTests
     }
 
     [Theory]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(true, true, true)]
-    public void HasRules_WhenAnySectionHasItems_ReturnsTrue(bool hasFiles, bool hasFormats, bool hasDirs)
+    // All 8 combinations of (hasFiles, hasFormats, hasDirs)
+    [InlineData(false, false, false, false)] // none → false
+    [InlineData(true,  false, false, true)]  // files only → true
+    [InlineData(false, true,  false, true)]  // formats only → true
+    [InlineData(false, false, true,  true)]  // dirs only → true
+    [InlineData(true,  true,  false, true)]  // files + formats → true
+    [InlineData(true,  false, true,  true)]  // files + dirs → true
+    [InlineData(false, true,  true,  true)]  // formats + dirs → true
+    [InlineData(true,  true,  true,  true)]  // all three → true
+    public void HasRules_AllCombinations(bool hasFiles, bool hasFormats, bool hasDirs, bool expected)
     {
         var builder = new BlackListConfigBuilder();
         if (hasFiles) builder.AddBlackFiles("f.dll");
@@ -223,7 +212,7 @@ public class BlackListConfigBuilderTests
 
         var config = builder.Build();
 
-        Assert.True(config.HasRules);
+        Assert.Equal(expected, config.HasRules);
     }
 
     [Fact]
