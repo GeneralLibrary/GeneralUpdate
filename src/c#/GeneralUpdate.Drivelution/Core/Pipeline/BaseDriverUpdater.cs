@@ -1,4 +1,4 @@
-using GeneralUpdate.Core;
+using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Configuration;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;

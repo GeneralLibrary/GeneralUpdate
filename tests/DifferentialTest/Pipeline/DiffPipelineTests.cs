@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
-using GeneralUpdate.Differential.Pipeline;
-using GeneralUpdate.Differential.Models;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Models;
 using Xunit;
 
 namespace DifferentialTest.Pipeline

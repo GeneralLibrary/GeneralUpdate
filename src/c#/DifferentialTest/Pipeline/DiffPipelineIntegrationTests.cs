@@ -1,9 +1,9 @@
 using System.IO.Compression;
 using Moq;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Matchers;
-using GeneralUpdate.Differential.Models;
-using GeneralUpdate.Differential.Pipeline;
+using GeneralUpdate.Core.Differential;
+using GeneralUpdate.Core.Models;
+using GeneralUpdate.Core.Pipeline;
 
 namespace DifferentialTest.Pipeline
 {

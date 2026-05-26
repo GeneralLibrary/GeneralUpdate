@@ -19,6 +19,7 @@ using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Differential;
+using GeneralUpdate.Differential.Abstractions;
 
 namespace GeneralUpdate.Core;
 

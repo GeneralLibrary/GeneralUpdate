@@ -1,4 +1,4 @@
-using GeneralUpdate.Differential.Pipeline;
+using GeneralUpdate.Core.Pipeline;
 
 namespace DifferentialTest.Pipeline
 {

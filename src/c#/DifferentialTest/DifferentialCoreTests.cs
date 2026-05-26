@@ -1,7 +1,7 @@
 using Moq;
-using GeneralUpdate.Differential;
+using GeneralUpdate.Core;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Matchers;
+using GeneralUpdate.Core.Differential;
 
 namespace DifferentialTest
 {

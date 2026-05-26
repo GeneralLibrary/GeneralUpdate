@@ -6,12 +6,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
-using GeneralUpdate.Differential;
+using GeneralUpdate.Core;
 using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Binary;
-using GeneralUpdate.Differential.Matchers;
-using GeneralUpdate.Differential.Models;
-using GeneralUpdate.Differential.Pipeline;
+using GeneralUpdate.Core.Differential;
+using GeneralUpdate.Core.Models;
+using GeneralUpdate.Core.Pipeline;
 using Xunit;
 using Xunit.Abstractions;
 

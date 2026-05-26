@@ -19,9 +19,6 @@
     <TargetFrameworks>netstandard2.0;</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="../../../imgs/GeneralUpdate.ico">
       <Pack>True</Pack>
       <Link>%(Filename)%(Extension)</Link>

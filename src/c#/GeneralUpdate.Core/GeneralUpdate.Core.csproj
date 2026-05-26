@@ -39,4 +39,8 @@
         <Compile Remove="Configuration\IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
 
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\GeneralUpdate.Differential\GeneralUpdate.Differential.csproj" />
+    </ItemGroup>
 </Project>

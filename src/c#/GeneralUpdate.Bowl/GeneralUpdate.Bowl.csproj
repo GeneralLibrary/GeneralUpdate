@@ -19,10 +19,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="System.Collections.Immutable" Version="10.0.1" />
       <PackageReference Include="System.Text.Json" Version="10.0.1" />
     </ItemGroup>

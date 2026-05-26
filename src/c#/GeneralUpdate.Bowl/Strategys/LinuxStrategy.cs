@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategys;
 

@@ -4,9 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl.Configuration;
+using GeneralUpdate.Bowl.Ipc;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
@@ -85,7 +86,7 @@ internal class WindowStrategy : AbstractStrategy
             ProcdumpOutPutLines = OutputList
         };
         var failJsonPath = Path.Combine(_parameter.FailDirectory, _parameter.FailFileName);
-        StorageManager.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
+        StorageHelper.CreateJson(failJsonPath, crash);
         GeneralTracer.Info($"WindowStrategy.CreateCrash: crash report written to {failJsonPath}.");
     }
 
@@ -115,7 +116,7 @@ internal class WindowStrategy : AbstractStrategy
         if (string.Equals(_parameter.WorkModel, WorkModel))
         {
             GeneralTracer.Info($"WindowStrategy.Restore: restoring backup from {_parameter.BackupDirectory} to {_parameter.TargetPath}.");
-            StorageManager.Restore(_parameter.BackupDirectory, _parameter.TargetPath);
+            StorageHelper.Restore(_parameter.BackupDirectory, _parameter.TargetPath);
             GeneralTracer.Info("WindowStrategy.Restore: restore completed successfully.");
         }
         else

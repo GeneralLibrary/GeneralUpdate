@@ -7,7 +7,7 @@ using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Dependencies;
 using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
-using GeneralUpdate.Core;
+using GeneralUpdate.Extension;
 using Newtonsoft.Json;
 
 using System;
