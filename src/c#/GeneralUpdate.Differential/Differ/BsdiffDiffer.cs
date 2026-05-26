@@ -15,8 +15,11 @@ namespace GeneralUpdate.Differential.Differ
     /// Default: <see cref="BZip2CompressionProvider"/> (backward compatible).
     /// Use <see cref="DeflateCompressionProvider"/> (0x01) for faster decompression.
     ///
-    /// Thread-safety: this class is stateless beyond the compression provider.
-    /// A single instance is safe for concurrent calls.
+    /// Thread-safety: this class is safe for concurrent calls provided the
+    /// configured <see cref="ICompressionProvider"/> is thread-safe.
+    /// The built-in providers (<see cref="BZip2CompressionProvider"/>,
+    /// <see cref="DeflateCompressionProvider"/>, <see cref="BrotliCompressionProvider"/>)
+    /// are all safe for concurrent use.
     /// </remarks>
     public class BsdiffDiffer : IBinaryDiffer
     {

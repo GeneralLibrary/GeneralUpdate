@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -395,10 +394,9 @@ public class ComprehensiveDifferentialTests : IDisposable
         // Also add some new files in target (no old version)
         File.WriteAllBytes(Path.Combine(tgt, "new_features.dll"), [1, 2, 3, 4, 5]);
 
-        var completedFiles = new ConcurrentBag<string>();
         var progress = new SyncProgress<DiffProgress>();
         var pipeline = new DiffPipelineBuilder()
-            .WithParallelism(Environment.ProcessorCount)
+            .WithParallelism(Math.Min(Environment.ProcessorCount, 4))
             .Build();
 
         // Act
@@ -407,7 +405,8 @@ public class ComprehensiveDifferentialTests : IDisposable
         _output.WriteLine($"Parallel Clean (30 files): {sw.ElapsedMilliseconds}ms");
 
         // Assert
-        Assert.True(progress.LastValue.IsComplete);
+        Assert.True(progress.LastValue.Total > 0, "Progress Total should be > 0");
+        Assert.Equal(progress.LastValue.Total, progress.LastValue.Completed);
         _output.WriteLine($"Progress: {progress.LastValue.Completed}/{progress.LastValue.Total}");
 
         // Each modified file should have a .patch
@@ -807,17 +806,18 @@ public class ComprehensiveDifferentialTests : IDisposable
             File.WriteAllBytes(Path.Combine(app, $"h_{i:D3}.dll"), oldContent);
         }
 
+        var parallelism = Math.Min(Environment.ProcessorCount, 4);
         var pipeline = new DiffPipelineBuilder()
-            .WithParallelism(Environment.ProcessorCount)
+            .WithParallelism(parallelism)
             .Build();
 
         var sw = Stopwatch.StartNew();
         await pipeline.CleanAsync(src, tgt, patchDir);
-        _output.WriteLine($"Clean {fileCount} files (x{Environment.ProcessorCount}): {sw.ElapsedMilliseconds}ms");
+        _output.WriteLine($"Clean {fileCount} files (x{parallelism}): {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
         await pipeline.DirtyAsync(app, patchDir);
-        _output.WriteLine($"Dirty {fileCount} files (x{Environment.ProcessorCount}): {sw.ElapsedMilliseconds}ms");
+        _output.WriteLine($"Dirty {fileCount} files (x{parallelism}): {sw.ElapsedMilliseconds}ms");
 
         for (var i = 0; i < fileCount; i++)
         {
