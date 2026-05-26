@@ -10,9 +10,9 @@ namespace GeneralUpdate.Core.Pipeline;
 /// Differential patch middleware. Applies binary patches (BSDIFF, HDiffPatch, etc.)
 /// to bring files from an old version to a new version.
 ///
-/// The <see cref="IBinaryDiffer"/> implementation is resolved from
-/// <see cref="PipelineContext"/> (key "BinaryDiffer"), set by
-/// <see cref="GeneralUpdate.Core.Strategy.AbstractStrategy"/> when the differ is injected via
+/// The <see cref="IDirtyStrategy"/> implementation is resolved from
+/// <see cref="PipelineContext"/> (key "DirtyStrategy"), set by
+/// <see cref="Strategy.AbstractStrategy"/> when the differ is injected via
 /// <c>Bootstrap.BinaryDiffer&lt;T&gt;()</c>. Without injection, patches are skipped.
 /// </summary>
 public class PatchMiddleware : IMiddleware
@@ -23,19 +23,19 @@ public class PatchMiddleware : IMiddleware
         var targetPath = context.Get<string>("PatchPath");
 
         // Resolve differ from pipeline context (injected via AbstractStrategy)
-        var differ = context.Get<IBinaryDiffer>("BinaryDiffer");
+        var dirtyStrategy = context.Get<IDirtyStrategy>("DirtyStrategy");
 
-        if (differ == null)
+        if (dirtyStrategy == null)
         {
-            GeneralTracer.Info("PatchMiddleware.InvokeAsync: no IBinaryDiffer injected — patch skipped. " +
-                "Use Bootstrap.BinaryDiffer<T>() to enable differential patching.");
+            GeneralTracer.Info("PatchMiddleware.InvokeAsync: no IDirtyStrategy injected — patch skipped. " +
+                "Use Bootstrap.DirtyStrategy<T>() to enable differential patching.");
             return;
         }
 
         GeneralTracer.Info($"PatchMiddleware.InvokeAsync: applying differential patch. SourcePath={sourcePath}, PatchPath={targetPath}");
         try
         {
-            await differ.DirtyAsync(sourcePath, targetPath, targetPath);
+            await dirtyStrategy.ExecuteAsync(sourcePath, targetPath);
             GeneralTracer.Info("PatchMiddleware.InvokeAsync: differential patch applied successfully.");
         }
         catch (Exception ex)

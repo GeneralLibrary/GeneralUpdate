@@ -1,3 +1,4 @@
+using GeneralUpdate.Core.Differential;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -46,8 +47,8 @@ public class ClientUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
-        if (_pendingDiffer != null && _osStrategy is AbstractStrategy abs)
-            abs.Differ = _pendingDiffer;
+        if (_pendingDirtyStrategy != null && _osStrategy is AbstractStrategy abs)
+            abs.DirtyStrategy = _pendingDirtyStrategy;
     }
 
     public async Task ExecuteAsync()
@@ -75,16 +76,23 @@ public class ClientUpdateStrategy : IStrategy
         ExecuteAsync().GetAwaiter().GetResult();
     }
 
-    private Differential.IBinaryDiffer? _pendingDiffer;
+    private IDirtyStrategy? _pendingDirtyStrategy;
 
-    /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.
-    /// Safe to call before or after Create(). If called before, the differ is cached and applied when Create() resolves _osStrategy.</summary>
-    public void SetDiffer(Differential.IBinaryDiffer? differ)
+    /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
+    /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
+    public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
     {
         if (_osStrategy is AbstractStrategy abs)
-            abs.Differ = differ;
+            abs.DirtyStrategy = dirtyStrategy;
         else
-            _pendingDiffer = differ;
+            _pendingDirtyStrategy = dirtyStrategy;
+    }
+
+    /// <summary>Sets the file-level binary differ on the underlying OS-level strategy.</summary>
+    public void SetBinaryDiffer(IBinaryDiffer? binaryDiffer)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.BinaryDiffer = binaryDiffer;
     }
 
     public void StartApp()
@@ -174,31 +182,6 @@ public class ClientUpdateStrategy : IStrategy
             return;
         }
 
-        // Build process info for the upgrade process
-        // Convert DownloadAsset list to VersionInfo for ProcessInfo compatibility
-        var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
-        {
-            Name = a.Name,
-            Hash = a.SHA256,
-            Url = a.Url,
-            Version = a.Version,
-            Format = _configInfo.Format ?? "ZIP"
-        }).ToList();
-
-        var processInfo = ConfigurationMapper.MapToProcessInfo(
-            _configInfo, downloadVersions,
-            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
-            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
-
-        // Keep JSON string for backward compatibility (GlobalConfigInfo.ProcessInfo)
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
-            ProcessInfoJsonContext.Default.ProcessInfo);
-
-        // Wire ProcessInfo via AES-encrypted file IPC.
-        new EncryptedFileProcessInfoProvider().Send(processInfo);
-        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent via encrypted file IPC.");
-
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
         {
@@ -232,12 +215,70 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
 
-        // Apply updates and start app
-        await _osStrategy.ExecuteAsync();
+        // Phase: apply Upgrade packages — update Upgrade.exe itself before launching it.
+        // Safe because MainApp and Upgrade.exe are different files (no lock conflict).
+        var allVersions = downloadPlan.Assets.Select(a => new VersionInfo
+        {
+            Name = a.Name,
+            Hash = a.SHA256,
+            Url = a.Url,
+            Version = a.Version,
+            Format = _configInfo.Format ?? "ZIP",
+            AppType = a.IsForcibly ? null : null // preserve original AppType
+        }).ToList();
+
+        // Rebuild the full VersionInfo list with AppType preserved from download source
+        var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
+        {
+            Name = a.Name,
+            Hash = a.SHA256,
+            Url = a.Url,
+            Version = a.Version,
+            Format = _configInfo.Format ?? "ZIP",
+            AppType = _configInfo.IsUpgradeUpdate == true && a.Version != _configInfo.ClientVersion
+                ? (int)AppType.Upgrade : (int)AppType.Client
+        }).ToList();
+
+        // Split: Upgrade versions vs MainApp versions
+        var upgradeVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
+        var clientVersions = downloadVersions.Where(v => v.AppType != (int)AppType.Upgrade).ToList();
+
+        GeneralTracer.Info($"ClientUpdateStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
+
+        // Apply Upgrade packages now (update Upgrade.exe before launching it)
+        if (upgradeVersions.Count > 0)
+        {
+            GeneralTracer.Info("ClientUpdateStrategy: applying Upgrade packages.");
+            _configInfo.UpdateVersions = upgradeVersions;
+            _osStrategy!.Create(_configInfo);
+            await _osStrategy.ExecuteAsync();
+        }
+
+        // Send IPC with remaining MainApp versions for the upgrade process
+        var processInfo = ConfigurationMapper.MapToProcessInfo(
+            _configInfo, clientVersions,
+            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
+            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+
+        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
+            ProcessInfoJsonContext.Default.ProcessInfo);
+        new EncryptedFileProcessInfoProvider().Send(processInfo);
+        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent with MainApp versions only.");
+
         await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
         await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-        _osStrategy.StartApp();
+
+        // Launch the upgrade process to apply MainApp updates
+        var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+        if (!File.Exists(updaterPath))
+            throw new FileNotFoundException($"Upgrade application not found: {updaterPath}");
+
+        GeneralTracer.Info($"ClientUpdateStrategy: launching upgrade process {updaterPath}");
+        Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
+        GeneralTracer.Info("ClientUpdateStrategy: upgrade process launched, exiting.");
+        await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
     }
 
     #endregion

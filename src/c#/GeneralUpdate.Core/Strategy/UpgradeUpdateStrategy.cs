@@ -1,3 +1,4 @@
+using GeneralUpdate.Core.Differential;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -34,8 +35,8 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
-        if (_pendingDiffer != null && _osStrategy is AbstractStrategy abs)
-            abs.Differ = _pendingDiffer;
+        if (_pendingDirtyStrategy != null && _osStrategy is AbstractStrategy abs)
+            abs.DirtyStrategy = _pendingDirtyStrategy;
     }
 
     public async Task ExecuteAsync()
@@ -56,10 +57,10 @@ public class UpgradeUpdateStrategy : IStrategy
 
             _osStrategy!.Create(_configInfo);
 
-            // Apply updates via OS-specific pipeline (Hash -> Compress -> Patch)
+            // Apply MainApp updates — Client already applied Upgrade packages, IPC only has MainApp versions
             if (_configInfo.UpdateVersions?.Count > 0)
             {
-                GeneralTracer.Info($"UpgradeUpdateStrategy: applying {_configInfo.UpdateVersions.Count} update(s).");
+                GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count + " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
             }
             else
@@ -92,16 +93,23 @@ public class UpgradeUpdateStrategy : IStrategy
         ExecuteAsync().GetAwaiter().GetResult();
     }
 
-    private Differential.IBinaryDiffer? _pendingDiffer;
+    private IDirtyStrategy? _pendingDirtyStrategy;
 
-    /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.
-    /// Safe to call before or after Create(). If called before, the differ is cached and applied when Create() resolves _osStrategy.</summary>
-    public void SetDiffer(Differential.IBinaryDiffer? differ)
+    /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
+    /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
+    public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
     {
         if (_osStrategy is AbstractStrategy abs)
-            abs.Differ = differ;
+            abs.DirtyStrategy = dirtyStrategy;
         else
-            _pendingDiffer = differ;
+            _pendingDirtyStrategy = dirtyStrategy;
+    }
+
+    /// <summary>Sets the file-level binary differ on the underlying OS-level strategy.</summary>
+    public void SetBinaryDiffer(IBinaryDiffer? binaryDiffer)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.BinaryDiffer = binaryDiffer;
     }
 
     public void StartApp()
