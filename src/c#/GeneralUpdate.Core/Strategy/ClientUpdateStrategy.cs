@@ -78,14 +78,21 @@ public class ClientUpdateStrategy : IStrategy
 
     private IDirtyStrategy? _pendingDirtyStrategy;
 
-    /// <summary>Sets the binary differ on the underlying OS-level strategy for differential patch updates.
-    /// Safe to call before or after Create(). If called before, the differ is cached and applied when Create() resolves _osStrategy.</summary>
+    /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
+    /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
     public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.DirtyStrategy = dirtyStrategy;
         else
             _pendingDirtyStrategy = dirtyStrategy;
+    }
+
+    /// <summary>Sets the file-level binary differ on the underlying OS-level strategy.</summary>
+    public void SetBinaryDiffer(IBinaryDiffer? binaryDiffer)
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            abs.BinaryDiffer = binaryDiffer;
     }
 
     public void StartApp()

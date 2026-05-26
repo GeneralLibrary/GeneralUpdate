@@ -86,6 +86,9 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DirtyStrategy<T>() where T : Differential.IDirtyStrategy, new()
         { _extensions[typeof(Differential.IDirtyStrategy)] = typeof(T); return (TBootstrap)this; }
 
+        public TBootstrap BinaryDiffer<T>() where T : Differential.IBinaryDiffer, new()
+        { _extensions[typeof(Differential.IBinaryDiffer)] = typeof(T); return (TBootstrap)this; }
+
         public TBootstrap ConfigureBlackList(BlackListConfig config)
         {
             _instances[typeof(BlackListConfig)] = config ?? BlackListConfig.Empty;
