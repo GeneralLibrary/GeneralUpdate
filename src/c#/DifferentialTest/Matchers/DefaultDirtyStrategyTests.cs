@@ -3,7 +3,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Differential.Abstractions;
-using GeneralUpdate.Differential.Matchers;
+using GeneralUpdate.Core.Differential;
 
 namespace DifferentialTest.Matchers
 {

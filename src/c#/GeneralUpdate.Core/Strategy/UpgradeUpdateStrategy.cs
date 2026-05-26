@@ -1,4 +1,5 @@
 using GeneralUpdate.Core.Differential;
+using GeneralUpdate.Differential.Abstractions;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;

@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl.Strategies;
 using GeneralUpdate.Bowl.Strategys;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.JsonContext;
-using GeneralUpdate.Core;
-using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl.Configuration;
+using GeneralUpdate.Bowl.Ipc;
 
 namespace GeneralUpdate.Bowl;
 
@@ -163,7 +161,7 @@ public sealed class Bowl
             {
                 GeneralTracer.Info($"Bowl.HandleCrashAsync: restoring backup from " +
                     $"'{context.BackupDirectory}' to '{context.TargetPath}'.");
-                StorageManager.Restore(context.BackupDirectory, context.TargetPath);
+                StorageHelper.Restore(context.BackupDirectory, context.TargetPath);
                 restored = true;
                 GeneralTracer.Info("Bowl.HandleCrashAsync: restore completed.");
             }
@@ -322,8 +320,7 @@ public sealed class Bowl
                 "ProcessInfo environment variable not set.");
         }
 
-        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(
-            json, ProcessInfoJsonContext.Default.ProcessInfo);
+        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
         if (processInfo == null)
         {
             GeneralTracer.Fatal("Bowl.CreateParameter: failed to deserialize ProcessInfo JSON.");

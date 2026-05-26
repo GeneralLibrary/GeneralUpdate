@@ -1,4 +1,4 @@
-using GeneralUpdate.Differential.Matchers;
+using GeneralUpdate.Core.Differential;
 
 namespace DifferentialTest.Matchers
 {

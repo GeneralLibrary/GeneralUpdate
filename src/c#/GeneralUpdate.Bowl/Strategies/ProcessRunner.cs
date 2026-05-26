@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategies;
 

@@ -1,15 +1,18 @@
 using System.Threading;
 using System.Threading.Tasks;
-using CoreBinaryDiffer = GeneralUpdate.Core.Differential.IBinaryDiffer;
 
 namespace GeneralUpdate.Differential.Abstractions;
 
 /// <summary>
-/// Binary differential algorithm with both patch generation and application.
-/// Extends <see cref="CoreBinaryDiffer"/> (DirtyAsync) with CleanAsync.
+/// Pluggable file-level binary patch algorithm.
+/// Implement this to customize how individual files are patched (BSDIFF, HDiffPatch, etc.).
 /// </summary>
-public interface IBinaryDiffer : CoreBinaryDiffer
+public interface IBinaryDiffer
 {
+    /// <summary>Applies a binary patch: oldFile + patchFile → newFile.</summary>
+    Task DirtyAsync(string oldFilePath, string newFilePath, string patchFilePath,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Generates a patch: oldFile vs newFile → patchFile.</summary>
     Task CleanAsync(string oldFilePath, string newFilePath, string patchFilePath,
         CancellationToken cancellationToken = default);

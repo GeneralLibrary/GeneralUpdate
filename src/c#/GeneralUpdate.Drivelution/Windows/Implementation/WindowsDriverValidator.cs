@@ -1,5 +1,5 @@
 using System.Runtime.Versioning;
-using GeneralUpdate.Core;
+using GeneralUpdate.Drivelution;
 using GeneralUpdate.Drivelution.Abstractions;
 using GeneralUpdate.Drivelution.Abstractions.Exceptions;
 using GeneralUpdate.Drivelution.Abstractions.Models;

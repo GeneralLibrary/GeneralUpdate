@@ -4,8 +4,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategies;
 
@@ -64,7 +64,7 @@ internal sealed class WindowsBowlStrategy : IBowlStrategy
     private static void EnsureDirectory(string path)
     {
         if (Directory.Exists(path))
-            StorageManager.DeleteDirectory(path);
+            StorageHelper.DeleteDirectory(path);
         Directory.CreateDirectory(path);
     }
 }

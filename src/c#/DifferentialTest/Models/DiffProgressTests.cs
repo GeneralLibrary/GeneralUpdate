@@ -1,4 +1,4 @@
-using GeneralUpdate.Differential.Models;
+using GeneralUpdate.Core.Models;
 
 namespace DifferentialTest.Models
 {

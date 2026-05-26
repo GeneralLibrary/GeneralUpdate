@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategys;
 
@@ -27,7 +27,7 @@ internal abstract class AbstractStrategy : IStrategy
         if (Directory.Exists(_parameter.FailDirectory))
         {
             GeneralTracer.Info($"AbstractStrategy.Startup: removing existing fail directory: {_parameter.FailDirectory}");
-            StorageManager.DeleteDirectory(_parameter.FailDirectory);
+            StorageHelper.DeleteDirectory(_parameter.FailDirectory);
         }
         Directory.CreateDirectory(_parameter.FailDirectory);
         GeneralTracer.Info($"AbstractStrategy.Startup: fail directory created: {_parameter.FailDirectory}");

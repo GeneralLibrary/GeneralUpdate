@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core;

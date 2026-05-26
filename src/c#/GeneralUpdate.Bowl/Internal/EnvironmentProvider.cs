@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Bowl.Configuration;
+using GeneralUpdate.Bowl.Ipc;
 
 namespace GeneralUpdate.Bowl.Internal;
 

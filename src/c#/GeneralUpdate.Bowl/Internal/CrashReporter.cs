@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core;
+using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Internal;
 
@@ -38,7 +38,7 @@ internal sealed class CrashReporter : ICrashReporter
         };
 
         var failJsonPath = Path.Combine(context.FailDirectory, context.FailFileName);
-        StorageManager.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
+        StorageHelper.CreateJson(failJsonPath, crash);
 
         GeneralTracer.Info($"CrashReporter.GenerateReportAsync: report written to {failJsonPath}.");
         return Task.FromResult(failJsonPath);
