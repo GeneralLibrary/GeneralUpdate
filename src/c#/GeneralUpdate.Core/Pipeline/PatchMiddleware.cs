@@ -10,9 +10,9 @@ namespace GeneralUpdate.Core.Pipeline;
 /// Differential patch middleware. Applies binary patches (BSDIFF, HDiffPatch, etc.)
 /// to bring files from an old version to a new version.
 ///
-/// The <see cref="IBinaryDiffer"/> implementation is resolved from
-/// <see cref="PipelineContext"/> (key "BinaryDiffer"), set by
-/// <see cref="GeneralUpdate.Core.Strategy.AbstractStrategy"/> when the differ is injected via
+/// The <see cref="IDirtyStrategy"/> implementation is resolved from
+/// <see cref="PipelineContext"/> (key "DirtyStrategy"), set by
+/// <see cref="Strategy.AbstractStrategy"/> when the differ is injected via
 /// <c>Bootstrap.BinaryDiffer&lt;T&gt;()</c>. Without injection, patches are skipped.
 /// </summary>
 public class PatchMiddleware : IMiddleware
