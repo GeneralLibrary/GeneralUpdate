@@ -1,4 +1,5 @@
 using GeneralUpdate.Core.Compress;
+using GeneralUpdate.Core.Configuration;
 
 namespace CoreTest.Compress;
 
@@ -14,7 +15,7 @@ public class CompressProviderTests
         try
         {
             var ex = Record.Exception(() =>
-                CompressProvider.Compress(".zip", tempDir, destZip, false, System.Text.Encoding.UTF8));
+                CompressProvider.Compress(Format.Zip, tempDir, destZip, false, System.Text.Encoding.UTF8));
             Assert.Null(ex);
             Assert.True(File.Exists(destZip));
         }
@@ -29,7 +30,7 @@ public class CompressProviderTests
     public void Compress_UnknownFormat_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            CompressProvider.Compress("RAR", "source", "dest", false, System.Text.Encoding.UTF8));
+            CompressProvider.Compress((Format)99, "source", "dest", false, System.Text.Encoding.UTF8));
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public class CompressProviderTests
         {
             System.IO.Compression.ZipFile.CreateFromDirectory(tempDir, zipPath);
             var ex = Record.Exception(() =>
-                CompressProvider.Decompress(".zip", zipPath, destDir, System.Text.Encoding.UTF8));
+                CompressProvider.Decompress(Format.Zip, zipPath, destDir, System.Text.Encoding.UTF8));
             Assert.Null(ex);
             Assert.True(File.Exists(Path.Combine(destDir, "test.txt")));
         }
@@ -60,6 +61,6 @@ public class CompressProviderTests
     public void Decompress_UnknownFormat_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            CompressProvider.Decompress("7z", "source", "dest", System.Text.Encoding.UTF8));
+            CompressProvider.Decompress((Format)99, "source", "dest", System.Text.Encoding.UTF8));
     }
 }

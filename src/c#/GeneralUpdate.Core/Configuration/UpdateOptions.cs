@@ -23,8 +23,8 @@ namespace GeneralUpdate.Core.Configuration
         /// <summary>Compression encoding for update packages.</summary>
         public static UpdateOption<Encoding> Encoding { get; } = UpdateOption.ValueOf<Encoding>("COMPRESSENCODING", System.Text.Encoding.UTF8);
 
-        /// <summary>Compression format (e.g., "ZIP").</summary>
-        public static UpdateOption<string> Format { get; } = UpdateOption.ValueOf<string>("COMPRESSFORMAT", "ZIP");
+        /// <summary>Compression format for update packages.</summary>
+        public static UpdateOption<Format> Format { get; } = UpdateOption.ValueOf<Format>("COMPRESSFORMAT", Configuration.Format.Zip);
 
         /// <summary>Download timeout in seconds.</summary>
         public static UpdateOption<int?> DownloadTimeout { get; } = UpdateOption.ValueOf<int?>("DOWNLOADTIMEOUT", 30);
@@ -39,9 +39,6 @@ namespace GeneralUpdate.Core.Configuration
         public static UpdateOption<bool> Silent { get; } = UpdateOption.ValueOf<bool>("ENABLESILENTUPDATE", false);
 
         // ═══ Silent mode ═══
-        /// <summary>Whether silent updates auto-install without user intervention.</summary>
-        public static UpdateOption<bool> SilentAutoInstall { get; } = UpdateOption.ValueOf<bool>("SILENTAUTOINSTALL", false);
-
         /// <summary>Polling interval in minutes for silent update checks.</summary>
         public static UpdateOption<int> SilentPollIntervalMinutes { get; } = UpdateOption.ValueOf<int>("SILENTPOLLINTERVALMINUTES", 60);
 
@@ -61,9 +58,5 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>Initial retry interval for exponential back-off. Default 1 second.</summary>
         public static UpdateOption<TimeSpan> RetryInterval { get; } = UpdateOption.ValueOf<TimeSpan>("RETRYINTERVAL", TimeSpan.FromSeconds(1));
-
-        // ═══ SignalR Hub ═══
-        /// <summary>SignalR Hub configuration for push-based updates.</summary>
-        public static UpdateOption<HubConfig?> Hub { get; } = UpdateOption.ValueOf<HubConfig?>("HUB", null);
     }
 }

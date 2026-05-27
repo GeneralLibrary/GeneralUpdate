@@ -42,10 +42,10 @@ public class GlobalConfigInfo : BaseConfigInfo
     // Runtime computed fields (calculated during workflow execution)
 
     /// <summary>
-    /// The compression format of update packages (e.g., "ZIP", "7Z").
+    /// The compression format of update packages.
     /// Computed from UpdateOption.Format or defaults to ZIP.
     /// </summary>
-    public string Format { get; set; }
+    public Format Format { get; set; }
 
     /// <summary>
     /// Indicates whether the upgrade application itself needs to be updated.
@@ -58,6 +58,12 @@ public class GlobalConfigInfo : BaseConfigInfo
     /// Computed by comparing ClientVersion with server response.
     /// </summary>
     public bool IsMainUpdate { get; set; }
+
+    /// <summary>
+    /// Whether to launch the client app after the upgrade process completes.
+    /// Default true. Set to false in silent mode when the caller wants to control restart timing.
+    /// </summary>
+    public bool LaunchClientAfterUpdate { get; set; } = true;
 
     /// <summary>
     /// List of version information objects to be updated.
@@ -117,10 +123,10 @@ public class GlobalConfigInfo : BaseConfigInfo
 
     /// <summary>
     /// Maximum number of concurrent download operations.
-    /// Computed from UpdateOption.MaxConcurrency, defaults to 3.
+    /// Computed from UpdateOption.MaxConcurrency, defaults to 2.
     /// Valid range: 1 to <see cref="Environment.ProcessorCount"/> * 2.
     /// </summary>
-    public int MaxConcurrency { get; set; } = 3;
+    public int MaxConcurrency { get; set; } = 2;
 
     /// <summary>
     /// Whether to resume interrupted downloads via HTTP Range requests.

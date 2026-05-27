@@ -28,7 +28,7 @@ namespace CoreTest.Shared
                 UpdateUrl = TestUpdateUrl,
                 Token = TestToken,
                 Scheme = TestScheme,
-                AppName = "Update.exe",
+                UpdateAppName = "Update.exe",
                 MainAppName = "TestApp.exe",
                 ClientVersion = "1.0.0",
                 AppSecretKey = "test-secret-key",
@@ -103,7 +103,7 @@ namespace CoreTest.Shared
                 Assert.Equal(config1.UpdateUrl, config2.UpdateUrl);
                 Assert.Equal(config1.Token, config2.Token);
                 Assert.Equal(config1.Scheme, config2.Scheme);
-                Assert.Equal(config1.AppName, config2.AppName);
+                Assert.Equal(config1.UpdateAppName, config2.UpdateAppName);
             }
             finally
             {
@@ -204,7 +204,7 @@ namespace CoreTest.Shared
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
                 Assert.Equal(TestToken, config.Token);
                 Assert.Equal(TestScheme, config.Scheme);
-                Assert.NotNull(config.AppName);
+                Assert.NotNull(config.UpdateAppName);
                 Assert.NotNull(config.MainAppName);
                 Assert.NotNull(config.ClientVersion);
                 Assert.NotNull(config.InstallPath);
@@ -236,8 +236,8 @@ namespace CoreTest.Shared
                 // InstallPath should be the current application's base directory
                 Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
                 
-                // According to requirements, AppName default is "Update.exe" regardless of platform
-                Assert.Equal("Update.exe", config.AppName);
+                // According to requirements, UpdateAppName default is "Update.exe" regardless of platform
+                Assert.Equal("Update.exe", config.UpdateAppName);
             }
             finally
             {
@@ -277,50 +277,50 @@ namespace CoreTest.Shared
         #region Setter Method Tests
 
         /// <summary>
-        /// Tests that SetAppName correctly sets the application name.
+        /// Tests that SetUpgradeAppName correctly sets the application name.
         /// </summary>
         [Fact]
-        public void SetAppName_WithValidValue_SetsAppName()
+        public void SetUpgradeAppName_WithValidValue_SetsUpgradeAppName()
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
-            var customAppName = "CustomApp.exe";
+            var customUpgradeAppName = "CustomApp.exe";
 
             // Act
-            var config = builder.SetAppName(customAppName).Build();
+            var config = builder.SetUpgradeAppName(customUpgradeAppName).Build();
 
             // Assert
-            Assert.Equal(customAppName, config.AppName);
+            Assert.Equal(customUpgradeAppName, config.UpdateAppName);
         }
 
         /// <summary>
-        /// Tests that SetAppName returns the builder for method chaining.
+        /// Tests that SetUpgradeAppName returns the builder for method chaining.
         /// </summary>
         [Fact]
-        public void SetAppName_ReturnsBuilder_ForMethodChaining()
+        public void SetUpgradeAppName_ReturnsBuilder_ForMethodChaining()
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
 
             // Act
-            var result = builder.SetAppName("Test.exe");
+            var result = builder.SetUpgradeAppName("Test.exe");
 
             // Assert
             Assert.Same(builder, result);
         }
 
         /// <summary>
-        /// Tests that SetAppName throws ArgumentException when value is null.
+        /// Tests that SetUpgradeAppName throws ArgumentException when value is null.
         /// </summary>
         [Fact]
-        public void SetAppName_WithNullValue_ThrowsArgumentException()
+        public void SetUpgradeAppName_WithNullValue_ThrowsArgumentException()
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => builder.SetAppName(null));
-            Assert.Contains("AppName", exception.Message);
+            var exception = Assert.Throws<ArgumentException>(() => builder.SetUpgradeAppName(null));
+            Assert.Contains("UpdateAppName", exception.Message);
         }
 
         /// <summary>
@@ -575,7 +575,7 @@ namespace CoreTest.Shared
                 // Arrange & Act
                 CreateTestConfigFile();
                 var config = ConfiginfoBuilder.Create()
-                    .SetAppName("CustomApp.exe")
+                    .SetUpgradeAppName("CustomApp.exe")
                     .SetMainAppName("MainCustomApp.exe")
                     .SetClientVersion("2.0.0")
                     .SetInstallPath("/custom/path")
@@ -583,7 +583,7 @@ namespace CoreTest.Shared
                     .Build();
 
                 // Assert
-                Assert.Equal("CustomApp.exe", config.AppName);
+                Assert.Equal("CustomApp.exe", config.UpdateAppName);
                 Assert.Equal("MainCustomApp.exe", config.MainAppName);
                 Assert.Equal("2.0.0", config.ClientVersion);
                 Assert.Equal("/custom/path", config.InstallPath);
@@ -618,8 +618,8 @@ namespace CoreTest.Shared
             var config = builder.Build();
 
             // Assert
-            // According to requirements, AppName default is "Update.exe" regardless of platform
-            Assert.Equal("Update.exe", config.AppName);
+            // According to requirements, UpdateAppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.UpdateAppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
         }
@@ -643,8 +643,8 @@ namespace CoreTest.Shared
             var config = builder.Build();
 
             // Assert
-            // According to requirements, AppName default is "Update.exe" regardless of platform
-            Assert.Equal("Update.exe", config.AppName);
+            // According to requirements, UpdateAppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.UpdateAppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
         }
@@ -668,8 +668,8 @@ namespace CoreTest.Shared
             var config = builder.Build();
 
             // Assert
-            // According to requirements, AppName default is "Update.exe" regardless of platform
-            Assert.Equal("Update.exe", config.AppName);
+            // According to requirements, UpdateAppName default is "Update.exe" regardless of platform
+            Assert.Equal("Update.exe", config.UpdateAppName);
             // Should use the current application's base directory
             Assert.Equal(AppDomain.CurrentDomain.BaseDirectory, config.InstallPath);
         }
@@ -700,7 +700,7 @@ namespace CoreTest.Shared
         /// and gracefully falls back to defaults if not found.
         /// </summary>
         [Fact]
-        public void Build_AttemptsToExtractAppNameFromProject()
+        public void Build_AttemptsToExtractUpgradeAppNameFromProject()
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
@@ -708,16 +708,16 @@ namespace CoreTest.Shared
             // Act
             var config = builder.Build();
 
-            // Assert - AppName should be set (either from project or fallback)
-            Assert.NotNull(config.AppName);
-            Assert.NotEmpty(config.AppName);
+            // Assert - UpdateAppName should be set (either from project or fallback)
+            Assert.NotNull(config.UpdateAppName);
+            Assert.NotEmpty(config.UpdateAppName);
             Assert.NotNull(config.MainAppName);
             Assert.NotEmpty(config.MainAppName);
             
             // On Windows, should have .exe extension
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Assert.EndsWith(".exe", config.AppName);
+                Assert.EndsWith(".exe", config.UpdateAppName);
             }
         }
 
@@ -758,7 +758,7 @@ namespace CoreTest.Shared
                     UpdateUrl = "https://api.example.com/updates",
                     Token = "Bearer abc123xyz",
                     Scheme = "https",
-                    AppName = "MyApplication.exe",
+                    UpgradeAppName = "MyApplication.exe",
                     MainAppName = "MyApplication.exe",
                     ClientVersion = "1.5.2",
                     UpgradeClientVersion = "1.0.0",
@@ -780,7 +780,7 @@ namespace CoreTest.Shared
                 Assert.Equal("https://api.example.com/updates", config.UpdateUrl);
                 Assert.Equal("Bearer abc123xyz", config.Token);
                 Assert.Equal("https", config.Scheme);
-                Assert.Equal("MyApplication.exe", config.AppName);
+                Assert.Equal("MyApplication.exe", config.UpdateAppName);
                 Assert.Equal("1.5.2", config.ClientVersion);
                 Assert.Equal("/opt/myapp", config.InstallPath);
                 
@@ -810,7 +810,7 @@ namespace CoreTest.Shared
                 UpdateUrl = "https://config-file.example.com/updates",
                 Token = "config-file-token",
                 Scheme = "https",
-                AppName = "ConfigFileApp.exe",
+                UpgradeAppName = "ConfigFileApp.exe",
                 MainAppName = "ConfigFileMain.exe",
                 ClientVersion = "9.9.9",
                 AppSecretKey = "config-file-secret",
@@ -829,7 +829,7 @@ namespace CoreTest.Shared
                 Assert.Equal("https://config-file.example.com/updates", config.UpdateUrl);
                 Assert.Equal("config-file-token", config.Token);
                 Assert.Equal("https", config.Scheme);
-                Assert.Equal("ConfigFileApp.exe", config.AppName);
+                Assert.Equal("ConfigFileApp.exe", config.UpdateAppName);
                 Assert.Equal("ConfigFileMain.exe", config.MainAppName);
                 Assert.Equal("9.9.9", config.ClientVersion);
                 Assert.Equal("/config/file/path", config.InstallPath);
@@ -866,7 +866,7 @@ namespace CoreTest.Shared
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
                 Assert.Equal(TestToken, config.Token);
                 Assert.Equal(TestScheme, config.Scheme);
-                Assert.Equal("Update.exe", config.AppName); // Default value
+                Assert.Equal("Update.exe", config.UpdateAppName); // Default value
             }
             finally
             {

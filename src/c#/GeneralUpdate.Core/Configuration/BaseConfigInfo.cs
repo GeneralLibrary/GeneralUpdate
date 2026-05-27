@@ -11,14 +11,14 @@ namespace GeneralUpdate.Core.Configuration
     public abstract class BaseConfigInfo
     {
         /// <summary>
-        /// The name of the application that needs to be started after update.
-        /// This is the executable name without extension (e.g., "MyApp" for MyApp.exe).
+        /// The name of the upgrade application executable (e.g., "Update.exe").
+        /// Used when the client launches the upgrade process.
         /// Default value is "Update.exe".
         /// </summary>
-        public string AppName { get; set; } = "Update.exe";
+        public string UpdateAppName { get; set; } = "Update.exe";
 
         /// <summary>
-        /// The name of the main application without file extension.
+        /// The name of the main application executable.
         /// Used to identify the primary application process that will be updated.
         /// </summary>
         public string MainAppName { get; set; }
@@ -29,6 +29,15 @@ namespace GeneralUpdate.Core.Configuration
         /// Default value is the current program's running directory.
         /// </summary>
         public string InstallPath { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
+
+        /// <summary>
+        /// Optional directory where the upgrade executable resides.
+        /// Can be an absolute path or a relative path (resolved against <see cref="InstallPath"/>).
+        /// When set, the upgrade process is launched from this directory instead of <see cref="InstallPath"/>.
+        /// When null or empty, falls back to <see cref="InstallPath"/> (backward-compatible).
+        /// Example: "Upgrade" → InstallPath/Upgrade/UpdateAppName
+        /// </summary>
+        public string UpdatePath { get; set; }
 
         /// <summary>
         /// The URL address for the update log webpage.
@@ -95,5 +104,12 @@ namespace GeneralUpdate.Core.Configuration
         /// Used when DriveEnabled is true to locate and install driver files during updates.
         /// </summary>
         public string DriverDirectory { get; set; }
+
+        /// <summary>
+        /// Current update role — determines which app <see cref="Strategy.AbstractStrategy.StartAppAsync"/> launches.
+        /// <see cref="AppType.Client"/> launches <c>UpdateAppName</c> (upgrade process).
+        /// <see cref="AppType.Upgrade"/> launches <c>MainAppName</c> + Bowl.
+        /// </summary>
+        public AppType? AppType { get; set; }
     }
 }

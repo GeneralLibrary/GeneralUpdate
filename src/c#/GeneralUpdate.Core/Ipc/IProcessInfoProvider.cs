@@ -18,22 +18,35 @@ public interface IProcessInfoProvider
 }
 
 /// <summary>
-/// AES-encrypted temporary file IPC — simplest, most reliable cross-platform approach.
-/// File lives in %TEMP%/GeneralUpdate/ipc/ with a random name, auto-deleted after read.
+/// AES-encrypted temporary file IPC. Writes to a <b>deterministic</b> path under
+/// %TEMP%/GeneralUpdate/ipc/ so that both the client (sender) and upgrade (receiver)
+/// processes agree on the file location without needing out-of-band coordination.
+/// File is deleted after a successful read.
 /// </summary>
 public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
 {
+    private const string FileName = "process_info.enc";
+
     private static readonly byte[] Key = SHA256.Create()
         .ComputeHash(Encoding.UTF8.GetBytes("GeneralUpdate.ProcessInfo.IPC.v1"));
     private static readonly byte[] IV = new byte[16] { 0x47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     private readonly string _filePath;
 
+    /// <summary>
+    /// Returns the deterministic IPC file path that both client and upgrade agree on.
+    /// </summary>
+    public static string GetDefaultFilePath(string? basePath = null)
+    {
+        var dir = basePath ?? Path.Combine(Path.GetTempPath(), "GeneralUpdate", "ipc");
+        return Path.Combine(dir, FileName);
+    }
+
     public EncryptedFileProcessInfoProvider(string? basePath = null)
     {
         var dir = basePath ?? Path.Combine(Path.GetTempPath(), "GeneralUpdate", "ipc");
         Directory.CreateDirectory(dir);
-        _filePath = Path.Combine(dir, $"{Guid.NewGuid():N}.enc");
+        _filePath = Path.Combine(dir, FileName);
     }
 
     public Task SendAsync(ProcessInfo info, CancellationToken token = default)
@@ -42,7 +55,10 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
         return Task.CompletedTask;
     }
 
-    /// <summary>Synchronous send — all I/O is synchronous under the hood.</summary>
+    /// <summary>
+    /// Encrypt <paramref name="info"/> and write to the deterministic IPC file.
+    /// Overwrites any existing file from a previous (stale) session.
+    /// </summary>
     public void Send(ProcessInfo info)
     {
         var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
@@ -53,11 +69,20 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
     public Task<ProcessInfo?> ReceiveAsync(CancellationToken token = default)
         => Task.FromResult(Receive());
 
-    /// <summary>Synchronous receive — reads and deletes the encrypted file.</summary>
+    /// <summary>
+    /// Read and decrypt the IPC file, then delete it so a stale file is never re-read.
+    /// Returns null if the file does not exist or decryption fails.
+    /// </summary>
     public ProcessInfo? Receive()
     {
+        if (!File.Exists(_filePath)) return null;
+
         var plain = IpcEncryption.DecryptFromFile(_filePath, Key, IV);
         if (plain == null) return null;
+
+        try { File.Delete(_filePath); }
+        catch { /* best-effort cleanup */ }
+
         var json = Encoding.UTF8.GetString(plain);
         return JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo);
     }

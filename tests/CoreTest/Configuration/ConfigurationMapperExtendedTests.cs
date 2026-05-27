@@ -31,7 +31,7 @@ public class ConfigurationMapperExtendedTests : IDisposable
             ClientVersion = "1.0.0",
             LastVersion = "2.0.0",
             Encoding = System.Text.Encoding.UTF8,
-            Format = ".zip",
+            Format = Format.Zip,
             AppSecretKey = "secret",
             ReportUrl = "https://report.example.com",
             BackupDirectory = Path.Combine(_tempInstallDir, "backup")
@@ -81,14 +81,14 @@ public class ConfigurationMapperExtendedTests : IDisposable
             BackupDirectory = "/custom/backup",
             MaxConcurrency = 8
         };
-        var source = new Configinfo { AppName = "NewApp.exe" };
+        var source = new Configinfo { UpdateAppName = "NewApp.exe" };
 
         var result = ConfigurationMapper.MapToGlobalConfigInfo(source, target);
 
         Assert.Equal("/custom/temp", result.TempPath);
         Assert.Equal("/custom/backup", result.BackupDirectory);
         Assert.Equal(8, result.MaxConcurrency);
-        Assert.Equal("NewApp.exe", result.AppName);
+        Assert.Equal("NewApp.exe", result.UpdateAppName);
     }
 
     #endregion
@@ -148,19 +148,19 @@ public class ConfigurationMapperExtendedTests : IDisposable
         var source = CreateValidSource();
         source.UpdateLogUrl = "https://logs.test.com";
         source.Encoding = System.Text.Encoding.ASCII;
-        source.Format = ".tar";
+        source.Format = Format.Zip;
         source.DownloadTimeOut = 120;
 
         var result = ConfigurationMapper.MapToProcessInfo(source,
             OneVersion(), new List<string>(), new List<string>(), new List<string>());
 
-        Assert.Equal("MainApp", result.AppName); // MainAppName -> AppName
+        Assert.Equal("MainApp", result.AppName); // MainAppName -> UpdateAppName
         Assert.Equal(source.InstallPath, result.InstallPath);
         Assert.Equal("1.0.0", result.CurrentVersion);
         Assert.Equal("2.0.0", result.LastVersion);
         Assert.Equal("secret", result.AppSecretKey);
         Assert.Equal("us-ascii", result.CompressEncoding);
-        Assert.Equal(".tar", result.CompressFormat);
+        Assert.Equal(".zip", result.CompressFormat);
         Assert.Equal(120, result.DownloadTimeOut);
         Assert.Equal("https://logs.test.com", result.UpdateLogUrl);
         Assert.Equal("https://report.example.com", result.ReportUrl);
@@ -176,7 +176,7 @@ public class ConfigurationMapperExtendedTests : IDisposable
     {
         var source = new Configinfo
         {
-            AppName = "App.exe",
+            UpdateAppName = "App.exe",
             MainAppName = "Main",
             InstallPath = "C:\\app",
             ClientVersion = "v1",
@@ -189,7 +189,7 @@ public class ConfigurationMapperExtendedTests : IDisposable
 
         ConfigurationMapper.CopyBaseFields(source, target);
 
-        Assert.Equal("App.exe", target.AppName);
+        Assert.Equal("App.exe", target.UpdateAppName);
         Assert.Equal("Main", target.MainAppName);
         Assert.Equal("C:\\app", target.InstallPath);
         Assert.Equal("v1", target.ClientVersion);
@@ -204,7 +204,7 @@ public class ConfigurationMapperExtendedTests : IDisposable
     {
         var source = new Configinfo
         {
-            AppName = "Source.exe",
+            UpdateAppName = "Source.exe",
             ClientVersion = "5.0.0",
             Scheme = "https"
         };
@@ -212,7 +212,7 @@ public class ConfigurationMapperExtendedTests : IDisposable
 
         ConfigurationMapper.CopyBaseFields(source, target);
 
-        Assert.Equal("Source.exe", target.AppName);
+        Assert.Equal("Source.exe", target.UpdateAppName);
         Assert.Equal("5.0.0", target.ClientVersion);
         Assert.Equal("https", target.Scheme);
     }
@@ -220,13 +220,13 @@ public class ConfigurationMapperExtendedTests : IDisposable
     [Fact]
     public void CopyBaseFields_NullSource_DoesNotThrow()
     {
-        var target = new GlobalConfigInfo { AppName = "keep" };
+        var target = new GlobalConfigInfo { UpdateAppName = "keep" };
 
         var ex = Record.Exception(() =>
             ConfigurationMapper.CopyBaseFields<Configinfo, GlobalConfigInfo>(null!, target));
 
         Assert.Null(ex);
-        Assert.Equal("keep", target.AppName);
+        Assert.Equal("keep", target.UpdateAppName);
     }
 
     #endregion

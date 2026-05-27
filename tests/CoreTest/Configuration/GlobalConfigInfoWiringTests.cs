@@ -16,10 +16,10 @@ public class GlobalConfigInfoWiringTests
     #region GlobalConfigInfo Default Values
 
     [Fact]
-    public void GlobalConfigInfo_MaxConcurrency_DefaultsTo3()
+    public void GlobalConfigInfo_MaxConcurrency_DefaultsTo2()
     {
         var config = new GlobalConfigInfo();
-        Assert.Equal(3, config.MaxConcurrency);
+        Assert.Equal(2, config.MaxConcurrency);
     }
 
     [Fact]

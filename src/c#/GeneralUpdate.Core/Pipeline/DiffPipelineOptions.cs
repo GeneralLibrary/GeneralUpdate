@@ -9,10 +9,10 @@ public sealed class DiffPipelineOptions
 {
     /// <summary>
     /// Gets or sets the maximum number of files to process concurrently.
-    /// Default: <see cref="Environment.ProcessorCount"/>.
+    /// Default: 2.
     /// Set to 1 for sequential processing.
     /// </summary>
-    public int MaxDegreeOfParallelism { get; set; } = Environment.ProcessorCount;
+    public int MaxDegreeOfParallelism { get; set; } = 2;
 
     /// <summary>
     /// Gets or sets whether to stop processing on first error.

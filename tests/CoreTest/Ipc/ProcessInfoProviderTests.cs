@@ -35,6 +35,7 @@ public class ProcessInfoProviderTests
                 scheme: "",
                 token: "",
                 driverDirectory: "",
+                tempPath: "",
                 blackFileFormats: new List<string> { ".pdb" },
                 blackFiles: new List<string> { "test.dll" },
                 skipDirectories: new List<string> { "logs" }

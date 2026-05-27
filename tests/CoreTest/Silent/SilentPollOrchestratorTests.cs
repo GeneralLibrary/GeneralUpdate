@@ -12,7 +12,7 @@ public class SilentPollOrchestratorTests
             UpdateUrl = "https://api.example.com/update",
             ClientVersion = "1.0.0",
             AppSecretKey = "secret",
-            AppName = "Update.exe",
+            UpdateAppName = "Update.exe",
             MainAppName = "MainApp",
             InstallPath = Path.GetTempPath()
         };
@@ -98,23 +98,9 @@ public class SilentPollOrchestratorTests
     }
 
     [Fact]
-    public void SilentOptions_AutoInstall_DefaultFalse()
-    {
-        var options = new SilentOptions();
-        Assert.False(options.AutoInstall);
-    }
-
-    [Fact]
     public void SilentOptions_CustomPollInterval_Stored()
     {
         var options = new SilentOptions { PollInterval = TimeSpan.FromMinutes(30) };
         Assert.Equal(TimeSpan.FromMinutes(30), options.PollInterval);
-    }
-
-    [Fact]
-    public void SilentOptions_CustomAutoInstall_Stored()
-    {
-        var options = new SilentOptions { AutoInstall = true };
-        Assert.True(options.AutoInstall);
     }
 }

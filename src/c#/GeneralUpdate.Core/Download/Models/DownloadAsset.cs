@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Download.Models;
 
-/// <summary>Download resource descriptor — maps from server PacketDTO.</summary>
+/// <summary>Download resource descriptor — maps from server PacketDTO / VerificationResultDTO.</summary>
 public record DownloadAsset(
     string Name,
     string Url,
@@ -16,7 +16,12 @@ public record DownloadAsset(
     string? SourceArchiveHash = null,
     string? TargetArchiveHash = null,
     bool IsForcibly = false,
-    bool IsFreeze = false
+    bool IsFreeze = false,
+    int RecordId = 0,
+    int? UpgradeMode = null,
+    int? AppType = null,
+    string? AuthScheme = null,
+    string? AuthToken = null
 );
 
 /// <summary>Ordered download plan built from server response.</summary>

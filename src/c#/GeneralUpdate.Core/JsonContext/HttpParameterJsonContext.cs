@@ -11,7 +11,5 @@ namespace GeneralUpdate.Core.JsonContext;
 [JsonSerializable(typeof(int?))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
-[JsonSerializable(typeof(PacketDTO))]
-[JsonSerializable(typeof(List<PacketDTO>))]
 [JsonSerializable(typeof(Configinfo))]
 public partial class HttpParameterJsonContext: JsonSerializerContext;

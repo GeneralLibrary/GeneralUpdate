@@ -20,7 +20,7 @@ public class DownloadOrchestratorOptionsTests
     {
         var opts = new DownloadOrchestratorOptions();
 
-        Assert.Equal(3, opts.MaxConcurrency);
+        Assert.Equal(2, opts.MaxConcurrency);
         Assert.True(opts.EnableResume);
         Assert.Equal(3, opts.RetryCount);
         Assert.Equal(TimeSpan.FromSeconds(1), opts.RetryInterval);
@@ -105,7 +105,7 @@ public class DownloadOrchestratorOptionsTests
 
         var opts = DownloadOrchestratorOptions.From(config);
 
-        Assert.Equal(3, opts.MaxConcurrency);
+        Assert.Equal(2, opts.MaxConcurrency);
         Assert.True(opts.EnableResume);
         Assert.Equal(3, opts.RetryCount);
     }

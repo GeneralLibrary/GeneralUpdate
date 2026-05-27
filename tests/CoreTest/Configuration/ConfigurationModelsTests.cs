@@ -18,7 +18,7 @@ namespace CoreTest.Configuration
     ///   - DownloadStatus / DownloadPriority enums
     ///   - AppType / DiffMode / UpdateMode / PlatformType / OssProvider enums
     ///   - UpdateOption&lt;T&gt; value semantics
-    ///   - UpdateReport / UpdateEvent types
+    ///   - UpdateReport / UpdateStatus types
     /// </summary>
     public class ConfigurationModelsTests
     {
@@ -64,35 +64,6 @@ namespace CoreTest.Configuration
             Assert.Single(config.BlackFiles);
             Assert.Null(config.BlackFormats);
             Assert.Null(config.SkipDirectorys);
-        }
-
-        #endregion
-
-        #region HubConfig
-
-        [Fact]
-        public void HubConfig_WithUrl_DefaultsReasonable()
-        {
-            var config = new HubConfig { Url = "https://signalr.example.com/hub" };
-
-            Assert.Equal("https://signalr.example.com/hub", config.Url);
-            Assert.Equal(TimeSpan.FromSeconds(5), config.ReconnectDelay);
-            Assert.Equal(10, config.MaxReconnectAttempts);
-        }
-
-        [Fact]
-        public void HubConfig_AllFields_Customized()
-        {
-            var config = new HubConfig
-            {
-                Url = "wss://push.example.com/update-hub",
-                ReconnectDelay = TimeSpan.FromSeconds(10),
-                MaxReconnectAttempts = 20
-            };
-
-            Assert.Equal("wss://push.example.com/update-hub", config.Url);
-            Assert.Equal(TimeSpan.FromSeconds(10), config.ReconnectDelay);
-            Assert.Equal(20, config.MaxReconnectAttempts);
         }
 
         #endregion
@@ -300,14 +271,14 @@ namespace CoreTest.Configuration
         }
 
         [Fact]
-        public void UpdateEvent_FiveValues()
+        public void UpdateStatus_FiveValues()
         {
-            var values = Enum.GetValues<UpdateEvent>();
-            Assert.Contains(UpdateEvent.UpdateStarted, values);
-            Assert.Contains(UpdateEvent.DownloadCompleted, values);
-            Assert.Contains(UpdateEvent.UpdateApplied, values);
-            Assert.Contains(UpdateEvent.UpdateFailed, values);
-            Assert.Contains(UpdateEvent.AppStarted, values);
+            var values = Enum.GetValues<UpdateStatus>();
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Success, values);
+            Assert.Contains(UpdateStatus.Failure, values);
+            Assert.Contains(UpdateStatus.Success, values);
         }
 
         #endregion

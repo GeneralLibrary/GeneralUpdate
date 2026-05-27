@@ -14,7 +14,7 @@ public class StrategyCreationTests
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
             AppSecretKey = "key",
-            AppName = "app",
+            UpdateAppName = "app",
             MainAppName = "main"
         };
         var ex = Record.Exception(() => strategy.Create(config));
@@ -59,7 +59,7 @@ public class StrategyCreationTests
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
             AppSecretKey = "key",
-            AppName = "Upgrade",
+            UpdateAppName = "Upgrade",
             MainAppName = "MainApp"
         };
         var ex = Record.Exception(() => strategy.Create(config));
@@ -84,7 +84,7 @@ public class StrategyCreationTests
     public void OSSUpdateStrategy_Create_ClientRole_Succeeds()
     {
         var strategy = new OSSUpdateStrategy(AppType.OSSClient);
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", AppName = "app" };
+        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
@@ -93,7 +93,7 @@ public class StrategyCreationTests
     public void OSSUpdateStrategy_Create_UpgradeRole_Succeeds()
     {
         var strategy = new OSSUpdateStrategy(AppType.OSSUpgrade);
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", AppName = "app" };
+        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
@@ -109,20 +109,20 @@ public class StrategyCreationTests
     public void OSSUpdateStrategy_DefaultConstructor_UsesOSSClientRole()
     {
         var strategy = new OSSUpdateStrategy();
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", AppName = "app" };
+        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
 
     [Fact]
-    public async Task OSSUpdateStrategy_StartApp_NullAppName_ReturnsWithoutException()
+    public async Task OSSUpdateStrategy_StartApp_NullUpgradeAppName_ReturnsWithoutException()
     {
         var strategy = new OSSUpdateStrategy();
         strategy.Create(new GeneralUpdate.Core.Configuration.GlobalConfigInfo
         {
             ClientVersion = "1.0.0",
             MainAppName = null,
-            AppName = null
+            UpdateAppName = null
         });
         var ex = await Record.ExceptionAsync(() => strategy.StartAppAsync());
         Assert.Null(ex);

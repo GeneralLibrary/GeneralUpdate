@@ -36,8 +36,8 @@ namespace GeneralUpdate.Core.Configuration
             if (!string.IsNullOrWhiteSpace(UpdateLogUrl) && !Uri.IsWellFormedUriString(UpdateLogUrl, UriKind.Absolute))
                 throw new ArgumentException("Invalid UpdateLogUrl");
 
-            if (string.IsNullOrWhiteSpace(AppName))
-                throw new ArgumentException("AppName cannot be empty");
+            if (string.IsNullOrWhiteSpace(UpdateAppName))
+                throw new ArgumentException("UpdateAppName cannot be empty");
 
             if (string.IsNullOrWhiteSpace(MainAppName))
                 throw new ArgumentException("MainAppName cannot be empty");

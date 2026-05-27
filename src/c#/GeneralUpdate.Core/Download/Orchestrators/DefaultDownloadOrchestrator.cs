@@ -145,8 +145,17 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
             results.Count(r => !r.Success));
     }
 
-    private static string GetFileName(DownloadAsset asset)
+    private string GetFileName(DownloadAsset asset)
     {
+        if (!string.IsNullOrEmpty(asset.Name))
+        {
+            var name = asset.Name;
+            var ext = _options.Format.ToExtension();
+            if (!name.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                name += ext;
+            return name;
+        }
+
         try
         {
             var name = Path.GetFileName(new Uri(asset.Url).AbsolutePath);

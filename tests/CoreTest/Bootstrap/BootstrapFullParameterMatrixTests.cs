@@ -7,7 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.Hooks;
 using Xunit;
 
 namespace CoreTest.Bootstrap
@@ -53,7 +55,7 @@ namespace CoreTest.Bootstrap
         [Fact] public void DiffMode_Parallel() => Assert.NotNull(B().Option(UpdateOptions.DiffMode, DiffMode.Parallel));
         [Fact] public void Encoding_Utf8() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.UTF8));
         [Fact] public void Encoding_Ascii() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.ASCII));
-        [Fact] public void Format_ZIP() => Assert.NotNull(B().Option(UpdateOptions.Format, "ZIP"));
+        [Fact] public void Format_ZIP() => Assert.NotNull(B().Option(UpdateOptions.Format, Format.Zip));
         [Theory][InlineData(10)][InlineData(30)][InlineData(60)][InlineData(300)]
         public void DownloadTimeout_Various(int t) => Assert.NotNull(B().Option(UpdateOptions.DownloadTimeout, t));
         [Fact] public void PatchEnabled_True() => Assert.NotNull(B().Option(UpdateOptions.PatchEnabled, true));
@@ -63,7 +65,6 @@ namespace CoreTest.Bootstrap
         #endregion
 
         #region Silent
-        [Fact] public void SilentAutoInstall_True() => Assert.NotNull(B().Option(UpdateOptions.SilentAutoInstall, true));
         [Theory][InlineData(15)][InlineData(30)][InlineData(60)]
         public void SilentPollInterval_Various(int m) => Assert.NotNull(B().Option(UpdateOptions.SilentPollIntervalMinutes, m));
         #endregion
@@ -79,8 +80,6 @@ namespace CoreTest.Bootstrap
         #endregion
 
         #region Blacklist/Misc
-        [Fact] public void Hub_Configured() => Assert.NotNull(B().Option(UpdateOptions.Hub,
-            new HubConfig { Url = "https://signalr.example.com/hub" }));
         #endregion
 
         #region Extension Injection — Hooks / Strategy / Policy / Differ / Pipeline / etc.
@@ -97,6 +96,8 @@ namespace CoreTest.Bootstrap
         private sealed class StubStrategy : GeneralUpdate.Core.Strategy.IStrategy
         {
             public void Create(GlobalConfigInfo parameter) { }
+            public IUpdateHooks Hooks { get; set; }
+            public IUpdateReporter Reporter { get; set; }
             public Task ExecuteAsync() => Task.CompletedTask;
             public Task StartAppAsync() => Task.CompletedTask;
         }
@@ -128,8 +129,11 @@ namespace CoreTest.Bootstrap
 
         private sealed class StubDownloadSource : GeneralUpdate.Core.Download.Abstractions.IDownloadSource
         {
-            public Task<IReadOnlyList<GeneralUpdate.Core.Download.Models.DownloadAsset>> ListAsync(CancellationToken token = default)
-                => Task.FromResult<IReadOnlyList<GeneralUpdate.Core.Download.Models.DownloadAsset>>(Array.Empty<GeneralUpdate.Core.Download.Models.DownloadAsset>());
+            public Task<GeneralUpdate.Core.Download.Models.DownloadSourceResult> ListAsync(CancellationToken token = default)
+                => Task.FromResult(new GeneralUpdate.Core.Download.Models.DownloadSourceResult
+                {
+                    Assets = Array.Empty<GeneralUpdate.Core.Download.Models.DownloadAsset>()
+                });
         }
 
         private sealed class StubDownloadPipeline : GeneralUpdate.Core.Download.Abstractions.IDownloadPipeline
@@ -207,7 +211,7 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.AppType, AppType.Client)
                 .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.Format, Format.Zip)
                 .Option(UpdateOptions.DownloadTimeout, 120)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, true)
@@ -217,7 +221,6 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.RetryCount, 5)
                 .Option(UpdateOptions.VerifyChecksum, true)
                 .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
-                .Option(UpdateOptions.SilentAutoInstall, false)
                 .Option(UpdateOptions.SilentPollIntervalMinutes, 30)
                 .SetConfig(new Configinfo
                 {
@@ -237,7 +240,6 @@ namespace CoreTest.Bootstrap
             var b = new GeneralUpdateBootstrap()
                 .Option(UpdateOptions.AppType, AppType.Client)
                 .Option(UpdateOptions.Silent, true)
-                .Option(UpdateOptions.SilentAutoInstall, true)
                 .Option(UpdateOptions.SilentPollIntervalMinutes, 15)
                 .SetConfig(new Configinfo { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
             Assert.NotNull(b);
@@ -265,7 +267,7 @@ namespace CoreTest.Bootstrap
             var sharedConfig = new Configinfo
             {
                 UpdateUrl = "https://update.enterprise.com/api/v2",
-                AppName = "Update.exe", MainAppName = "EnterpriseApp.exe",
+                UpdateAppName = "Update.exe", MainAppName = "EnterpriseApp.exe",
                 ClientVersion = "4.2.1", UpgradeClientVersion = "2.0.0",
                 InstallPath = _testDir, AppSecretKey = "enterprise-prod-key-2026",
                 ProductId = "enterprise-app-v4",
@@ -281,7 +283,7 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.AppType, AppType.Client)
                 .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.Format, Format.Zip)
                 .Option(UpdateOptions.DownloadTimeout, 120)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, true)
@@ -309,7 +311,7 @@ namespace CoreTest.Bootstrap
                 .Option(UpdateOptions.AppType, AppType.Upgrade)
                 .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
                 .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, "ZIP")
+                .Option(UpdateOptions.Format, Format.Zip)
                 .Option(UpdateOptions.DownloadTimeout, 30)
                 .Option(UpdateOptions.PatchEnabled, true)
                 .Option(UpdateOptions.BackupEnabled, false)

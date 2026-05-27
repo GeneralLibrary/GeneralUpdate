@@ -46,6 +46,13 @@ public class HttpDownloadExecutor : IDownloadExecutor
             if (_enableResume && existingBytes > 0)
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
 
+            // Apply per-asset auth if provided by server (e.g. GeneralSpacestation signed URLs or Bearer tokens)
+            if (!string.IsNullOrEmpty(asset.AuthScheme) && !string.IsNullOrEmpty(asset.AuthToken))
+            {
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue(asset.AuthScheme, asset.AuthToken);
+            }
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             cts.CancelAfter(_timeout);
 

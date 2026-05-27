@@ -21,7 +21,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// <b>Design:</b> Upgrade does NOT validate versions or download packages.
 /// The client has already validated versions, downloaded all packages, and
 /// passed the results via ProcessInfo. Upgrade only applies updates and
-/// starts the main application — zero network.
+/// starts the main application -- zero network.
 /// </remarks>
 public class UpgradeUpdateStrategy : IStrategy
 {
@@ -30,6 +30,7 @@ public class UpgradeUpdateStrategy : IStrategy
 
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
+
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
@@ -37,8 +38,12 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
-        if (_pendingDirtyStrategy != null && _osStrategy is AbstractStrategy abs)
-            abs.DirtyStrategy = _pendingDirtyStrategy;
+        if (_osStrategy is AbstractStrategy abs)
+        {
+            if (_pendingDirtyStrategy != null) abs.DirtyStrategy = _pendingDirtyStrategy;
+            if (_pendingBinaryDiffer != null) abs.BinaryDiffer = _pendingBinaryDiffer;
+            if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
+        }
     }
 
     public async Task ExecuteAsync()
@@ -59,10 +64,11 @@ public class UpgradeUpdateStrategy : IStrategy
 
             _osStrategy!.Create(_configInfo);
 
-            // Apply MainApp updates — Client already applied Upgrade packages, IPC only has MainApp versions
+            // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
             if (_configInfo.UpdateVersions?.Count > 0)
             {
-                GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count + " MainApp update(s).");
+                GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
+                                   " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
             }
             else
@@ -79,7 +85,22 @@ public class UpgradeUpdateStrategy : IStrategy
             // Hooks: before starting main app (e.g. chmod +x on Linux/macOS)
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            await _osStrategy.StartAppAsync();
+            // Delegate to OS strategy: launch MainAppName + Bowl.
+            // Skip if silent mode requested no-launch (e.g. maintenance windows).
+            if (_configInfo.LaunchClientAfterUpdate)
+            {
+                if (_osStrategy is AbstractStrategy abs2)
+                {
+                    abs2.LaunchAppName = _configInfo.MainAppName;
+                    abs2.LaunchBowl = true;
+                }
+
+                await _osStrategy.StartAppAsync();
+            }
+            else
+            {
+                GeneralTracer.Info("UpgradeUpdateStrategy: LaunchClientAfterUpdate=false, skipping app launch.");
+            }
         }
         catch (Exception ex)
         {
@@ -91,6 +112,8 @@ public class UpgradeUpdateStrategy : IStrategy
     }
 
     private IDirtyStrategy? _pendingDirtyStrategy;
+    private IBinaryDiffer? _pendingBinaryDiffer;
+    private DiffPipeline? _pendingDiffPipeline;
 
     /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
     /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
@@ -107,6 +130,8 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.BinaryDiffer = binaryDiffer;
+        else
+            _pendingBinaryDiffer = binaryDiffer;
     }
 
     /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
@@ -114,6 +139,8 @@ public class UpgradeUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.DiffPipeline = diffPipeline;
+        else
+            _pendingDiffPipeline = diffPipeline;
     }
 
     public async Task StartAppAsync()
@@ -142,7 +169,7 @@ public class UpgradeUpdateStrategy : IStrategy
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
-            _configInfo?.AppName ?? "unknown",
+            _configInfo?.UpdateAppName ?? "unknown",
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
@@ -152,51 +179,80 @@ public class UpgradeUpdateStrategy : IStrategy
 
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
+        try
+        {
+            return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}");
+            return true;
+        }
     }
 
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
-        try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
-        try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.UpdateApplied, ctx.AppType, DateTimeOffset.UtcNow
-            )).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success,
+                    1)).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.UpdateFailed, ctx.AppType, DateTimeOffset.UtcNow,
-                ErrorMessage: error.Message
-            )).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(
+                    new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1))
+                .ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}");
+        }
     }
 
     #endregion

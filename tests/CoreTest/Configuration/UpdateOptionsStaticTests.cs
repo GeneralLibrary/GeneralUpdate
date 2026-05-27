@@ -31,7 +31,7 @@ public class UpdateOptionsStaticTests
     [Fact]
     public void Format_HasCorrectDefault()
     {
-        Assert.Equal("ZIP", UpdateOptions.Format.DefaultValue);
+        Assert.Equal(Format.Zip, UpdateOptions.Format.DefaultValue);
     }
 
     [Fact]
@@ -56,12 +56,6 @@ public class UpdateOptionsStaticTests
     public void Silent_HasCorrectDefault()
     {
         Assert.False(UpdateOptions.Silent.DefaultValue);
-    }
-
-    [Fact]
-    public void SilentAutoInstall_HasCorrectDefault()
-    {
-        Assert.False(UpdateOptions.SilentAutoInstall.DefaultValue);
     }
 
     [Fact]
@@ -119,16 +113,6 @@ public class UpdateOptionsStaticTests
         Assert.Same(UpdateOptions.Format, UpdateOptions.Format);
         Assert.Same(UpdateOptions.MaxConcurrency, UpdateOptions.MaxConcurrency);
         Assert.Same(UpdateOptions.RetryCount, UpdateOptions.RetryCount);
-    }
-
-    #endregion
-
-    #region Hub option
-
-    [Fact]
-    public void Hub_NotSet_HasNullDefault()
-    {
-        Assert.Null(UpdateOptions.Hub.DefaultValue);
     }
 
     #endregion

@@ -66,7 +66,7 @@ public class HooksIntegrationTests
     {
         var ctx = new UpdateContext("MyApp", "/opt/myapp", "1.0.0", "2.0.0", AppType.Client);
 
-        Assert.Equal("MyApp", ctx.AppName);
+        Assert.Equal("MyApp", ctx.UpdateAppName);
         Assert.Equal("/opt/myapp", ctx.InstallPath);
         Assert.Equal("1.0.0", ctx.CurrentVersion);
         Assert.Equal("2.0.0", ctx.TargetVersion);

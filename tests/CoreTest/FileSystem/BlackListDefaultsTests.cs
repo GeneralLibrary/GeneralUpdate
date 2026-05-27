@@ -38,7 +38,7 @@ public class BlackListDefaultsTests
         Assert.Contains(".rar", formats);
         Assert.Contains(".tar", formats);
         Assert.Contains(".json", formats);
-        Assert.Contains(Format.ZIP, formats);
+        Assert.Contains(Format.Zip.ToExtension(), formats);
     }
 
     [Fact]

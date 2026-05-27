@@ -14,7 +14,7 @@ public class BaseConfigInfoTests
     public void Ctor_AppName_DefaultsToUpdateExe()
     {
         var config = new TestableConfig();
-        Assert.Equal("Update.exe", config.AppName);
+        Assert.Equal("Update.exe", config.UpdateAppName);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class BaseConfigInfoTests
     {
         var config = new TestableConfig
         {
-            AppName = "MyApp.exe",
+            UpdateAppName = "MyApp.exe",
             MainAppName = "MainApp",
             InstallPath = "C:\\MyApp",
             UpdateLogUrl = "https://logs.example.com",
@@ -130,7 +130,7 @@ public class BaseConfigInfoTests
             DriverDirectory = "C:\\Drivers"
         };
 
-        Assert.Equal("MyApp.exe", config.AppName);
+        Assert.Equal("MyApp.exe", config.UpdateAppName);
         Assert.Equal("MainApp", config.MainAppName);
         Assert.Equal("C:\\MyApp", config.InstallPath);
         Assert.Equal("https://logs.example.com", config.UpdateLogUrl);

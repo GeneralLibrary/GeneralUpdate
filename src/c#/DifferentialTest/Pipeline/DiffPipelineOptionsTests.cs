@@ -4,7 +4,7 @@ namespace DifferentialTest.Pipeline
 {
     /// <summary>
     /// 分支覆盖点：
-    ///   1. MaxDegreeOfParallelism — 默认 = Environment.ProcessorCount
+    ///   1. MaxDegreeOfParallelism — 默认 = 2
     ///   2. StopOnFirstError — 默认 = false
     ///   3. DeletePatchAfterApply — 默认 = true
     ///   4. 属性 set/get — 修改后正确返回
@@ -15,12 +15,12 @@ namespace DifferentialTest.Pipeline
     /// </summary>
     public class DiffPipelineOptionsTests
     {
-        [Fact(DisplayName = "默认构造_MaxDegreeOfParallelism为Environment.ProcessorCount")]
-        public void DefaultConstructor_MaxDegreeOfParallelism_EqualsProcessorCount()
+        [Fact(DisplayName = "默认构造_MaxDegreeOfParallelism为2")]
+        public void DefaultConstructor_MaxDegreeOfParallelism_Equals2()
         {
             var options = new DiffPipelineOptions();
 
-            Assert.Equal(Environment.ProcessorCount, options.MaxDegreeOfParallelism);
+            Assert.Equal(2, options.MaxDegreeOfParallelism);
         }
 
         [Fact(DisplayName = "默认构造_StopOnFirstError为false")]

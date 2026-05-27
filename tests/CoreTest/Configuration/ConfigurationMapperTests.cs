@@ -10,7 +10,7 @@ public class ConfigurationMapperTests
         var source = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             ClientVersion = "1.0.0",
             AppSecretKey = "secret",
@@ -23,10 +23,10 @@ public class ConfigurationMapperTests
     [Fact]
     public void MapToGlobalConfigInfo_SourceNull_ReturnsEmptyTarget()
     {
-        var target = new GlobalConfigInfo { AppName = "existing" };
+        var target = new GlobalConfigInfo { UpdateAppName = "existing" };
         var result = ConfigurationMapper.MapToGlobalConfigInfo(null, target);
         Assert.Same(target, result);
-        Assert.Equal("existing", result.AppName); // Unchanged
+        Assert.Equal("existing", result.UpdateAppName); // Unchanged
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class ConfigurationMapperTests
         var source = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "App.exe",
+            UpdateAppName = "App.exe",
             MainAppName = "MainApp",
             ClientVersion = "2.0.0",
             AppSecretKey = "key123",
@@ -55,7 +55,7 @@ public class ConfigurationMapperTests
         };
         var result = ConfigurationMapper.MapToGlobalConfigInfo(source);
         Assert.Equal("https://api.example.com", result.UpdateUrl);
-        Assert.Equal("App.exe", result.AppName);
+        Assert.Equal("App.exe", result.UpdateAppName);
         Assert.Equal("MainApp", result.MainAppName);
         Assert.Equal("2.0.0", result.ClientVersion);
         Assert.Equal("key123", result.AppSecretKey);
@@ -79,7 +79,7 @@ public class ConfigurationMapperTests
     }
 
     [Fact]
-    public void MapToProcessInfo_MapsAppNameToMainAppName()
+    public void MapToProcessInfo_MapsUpgradeAppNameToMainAppName()
     {
         var source = new GlobalConfigInfo
         {
@@ -89,7 +89,7 @@ public class ConfigurationMapperTests
             LastVersion = "2.0.0",
             AppSecretKey = "secret",
             Encoding = System.Text.Encoding.UTF8,
-            Format = ".zip",
+            Format = Format.Zip,
             DownloadTimeOut = 30,
             UpdateLogUrl = "https://log.example.com",
             ReportUrl = "https://report.example.com",
@@ -127,7 +127,7 @@ public class ConfigurationMapperTests
     [Fact]
     public void CopyBaseFields_TargetNull_DoesNotThrow()
     {
-        var source = new Configinfo { AppName = "source" };
+        var source = new Configinfo { UpdateAppName = "source" };
         var exception = Record.Exception(() => ConfigurationMapper.CopyBaseFields<Configinfo, GlobalConfigInfo>(source, null));
         Assert.Null(exception);
     }
@@ -137,7 +137,7 @@ public class ConfigurationMapperTests
     {
         var source = new Configinfo
         {
-            AppName = "App.exe",
+            UpdateAppName = "App.exe",
             MainAppName = "Main",
             InstallPath = "C:\\path",
             UpdateLogUrl = "https://log",
@@ -152,7 +152,7 @@ public class ConfigurationMapperTests
 
         ConfigurationMapper.CopyBaseFields(source, target);
 
-        Assert.Equal("App.exe", target.AppName);
+        Assert.Equal("App.exe", target.UpdateAppName);
         Assert.Equal("Main", target.MainAppName);
         Assert.Equal("C:\\path", target.InstallPath);
         Assert.Equal("https://log", target.UpdateLogUrl);

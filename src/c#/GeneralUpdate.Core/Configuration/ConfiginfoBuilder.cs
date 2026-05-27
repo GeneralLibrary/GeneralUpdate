@@ -14,7 +14,7 @@ namespace GeneralUpdate.Core.Configuration
     public class ConfiginfoBuilder
     {
         // Configurable default values
-        // Note: AppName and InstallPath defaults are set in Configinfo class itself
+        // Note: UpdateAppName and InstallPath defaults are set in Configinfo class itself
         // These are ConfiginfoBuilder-specific defaults to support the builder pattern
         private string _updateUrl;
         private string _token;
@@ -91,8 +91,8 @@ namespace GeneralUpdate.Core.Configuration
                    builder.SetToken(config.Token);
                 if (!string.IsNullOrWhiteSpace(config.Scheme))
                    builder.SetScheme(config.Scheme);
-                if (!string.IsNullOrWhiteSpace(config.AppName))
-                    builder.SetAppName(config.AppName);
+                if (!string.IsNullOrWhiteSpace(config.UpdateAppName))
+                    builder.SetUpgradeAppName(config.UpdateAppName);
                 if (!string.IsNullOrWhiteSpace(config.MainAppName))
                     builder.SetMainAppName(config.MainAppName);
                 if (!string.IsNullOrWhiteSpace(config.ClientVersion))
@@ -177,10 +177,10 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         /// <param name="appName">The name of the application executable.</param>
         /// <returns>The current ConfiginfoBuilder instance for method chaining.</returns>
-        public ConfiginfoBuilder SetAppName(string appName)
+        public ConfiginfoBuilder SetUpgradeAppName(string appName)
         {
             if (string.IsNullOrWhiteSpace(appName))
-                throw new ArgumentException("AppName cannot be null or empty.", nameof(appName));
+                throw new ArgumentException("UpdateAppName cannot be null or empty.", nameof(appName));
             
             _appName = appName;
             return this;
@@ -369,7 +369,7 @@ namespace GeneralUpdate.Core.Configuration
                 UpdateUrl = _updateUrl,
                 Token = _token,
                 Scheme = _scheme,
-                AppName = _appName,
+                UpdateAppName = _appName,
                 MainAppName = _mainAppName,
                 ClientVersion = _clientVersion,
                 UpgradeClientVersion = _upgradeClientVersion,

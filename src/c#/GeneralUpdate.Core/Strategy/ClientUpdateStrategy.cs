@@ -36,6 +36,17 @@ public class ClientUpdateStrategy : IStrategy
     private IStrategy? _osStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
+    private int _mainRecordId;
+
+    /// <summary>Which side(s) need updating, determined by server validation.</summary>
+    private enum UpdateScenario
+    {
+        None,
+        UpgradeOnly,
+        MainOnly,
+        Both
+    }
+
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
     /// <summary>Update status reporter injected by the bootstrap.</summary>
@@ -49,8 +60,12 @@ public class ClientUpdateStrategy : IStrategy
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
-        if (_pendingDirtyStrategy != null && _osStrategy is AbstractStrategy abs)
-            abs.DirtyStrategy = _pendingDirtyStrategy;
+        if (_osStrategy is AbstractStrategy abs)
+        {
+            if (_pendingDirtyStrategy != null) abs.DirtyStrategy = _pendingDirtyStrategy;
+            if (_pendingBinaryDiffer != null) abs.BinaryDiffer = _pendingBinaryDiffer;
+            if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
+        }
     }
 
     public async Task ExecuteAsync()
@@ -74,6 +89,8 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     private IDirtyStrategy? _pendingDirtyStrategy;
+    private IBinaryDiffer? _pendingBinaryDiffer;
+    private DiffPipeline? _pendingDiffPipeline;
 
     /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
     /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
@@ -90,6 +107,8 @@ public class ClientUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.BinaryDiffer = binaryDiffer;
+        else
+            _pendingBinaryDiffer = binaryDiffer;
     }
 
     /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
@@ -97,6 +116,8 @@ public class ClientUpdateStrategy : IStrategy
     {
         if (_osStrategy is AbstractStrategy abs)
             abs.DiffPipeline = diffPipeline;
+        else
+            _pendingDiffPipeline = diffPipeline;
     }
 
     public async Task StartAppAsync()
@@ -116,7 +137,7 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteWorkflowAsync()
     {
-        // Standard mode — silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
+        // Standard mode �?silent mode is handled by GeneralUpdateBootstrap.LaunchSilentAsync().
         // Runtime options (Encoding, Format, DownloadTimeOut, etc.) are already
         // populated on _configInfo by Bootstrap.ApplyRuntimeOptions().
         await ExecuteStandardWorkflowAsync();
@@ -137,23 +158,67 @@ public class ClientUpdateStrategy : IStrategy
             _configInfo.Scheme,
             _configInfo.Token);
 
-        var assets = await downloadSource.ListAsync().ConfigureAwait(false);
-        var downloadPlan = Download.DownloadPlanBuilder.Build(assets, _configInfo.ClientVersion);
+        // Call server validation — returns assets plus per-side flags from the two Validate calls
+        var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
+        var downloadPlan = Download.DownloadPlanBuilder.Build(sourceResult.Assets, _configInfo.ClientVersion);
 
-        // Detect update status
-        _configInfo.IsMainUpdate = downloadPlan.HasAssets;
-        _configInfo.IsUpgradeUpdate = assets.Any(a => a.Version != _configInfo.ClientVersion);
+        // Detect update status from SERVER validation results: IsMainUpdate is true only when
+        // the server returned version info for the Client call, IsUpgradeUpdate only when
+        // the server returned version info for the Upgrade call (requirement 1).
+        _configInfo.IsMainUpdate = sourceResult.HasMainUpdate;
+        _configInfo.IsUpgradeUpdate = sourceResult.HasUpgradeUpdate;
         _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
-        GeneralTracer.Info($"ClientUpdateStrategy: IsMainUpdate={_configInfo.IsMainUpdate}, IsUpgradeUpdate={_configInfo.IsUpgradeUpdate}, AssetCount={downloadPlan.Assets.Count}");
 
-        // Dispatch update info event
-        var updateInfoArgs = new UpdateInfoEventArgs(null);
+        var scenario = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
+        {
+            (false, false) => UpdateScenario.None,
+            (false, true)  => UpdateScenario.UpgradeOnly,
+            (true, false)  => UpdateScenario.MainOnly,
+            (true, true)   => UpdateScenario.Both,
+        };
+        GeneralTracer.Info($"ClientUpdateStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
+
+        // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
+        var versionInfos = downloadPlan.Assets.Select(a => new VersionInfo
+        {
+            RecordId = a.RecordId,
+            Name = a.Name,
+            Url = a.Url,
+            Size = a.Size,
+            Hash = a.SHA256,
+            Version = a.Version,
+            IsForcibly = a.IsForcibly,
+            IsFreeze = a.IsFreeze,
+            AppType = a.AppType,
+            UpgradeMode = a.UpgradeMode,
+            IsCrossVersion = a.IsCrossVersion,
+            FromVersion = a.FromVersion
+        }).ToList();
+        
+        var versionResp = new VersionRespDTO
+        {
+            Code = versionInfos.Count > 0 ? 200 : 404,
+            Body = versionInfos,
+            Message = versionInfos.Count > 0 ? $"Found {versionInfos.Count} update(s)." : "No updates available."
+        };
+        
+        var updateInfoArgs = new UpdateInfoEventArgs(versionResp);
+
+        // Capture the first RecordId for status reporting to GeneralSpacestation
+        _mainRecordId = downloadPlan.Assets.FirstOrDefault().RecordId;
         EventManager.Instance.Dispatch(this, updateInfoArgs);
 
         var isForcibly = downloadPlan.IsForcibly;
         if (CanSkip(isForcibly, updateInfoArgs))
         {
             GeneralTracer.Info("ClientUpdateStrategy: update skipped.");
+            return;
+        }
+
+        // Scenario None: nothing to update — exit early
+        if (scenario == UpdateScenario.None)
+        {
+            GeneralTracer.Info("ClientUpdateStrategy: no update available for client or upgrade.");
             return;
         }
 
@@ -169,16 +234,9 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportUpdateStartedAsync(hooksCtx).ConfigureAwait(false);
 
         InitBlackList();
-
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
             $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
-
-        if (!_configInfo.IsMainUpdate)
-        {
-            GeneralTracer.Info("ClientUpdateStrategy: no update available.");
-            return;
-        }
 
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
@@ -199,7 +257,8 @@ public class ClientUpdateStrategy : IStrategy
 
         _osStrategy!.Create(_configInfo);
 
-        // Download via orchestrator — wired with options from GlobalConfigInfo
+        // Download ALL packages via orchestrator (requirement 6: client downloads everything
+        // regardless of whether client or upgrade needs updating)
         var orchOptions = Download.Models.DownloadOrchestratorOptions.From(_configInfo);
         GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
         if (_orchestrator != null)
@@ -220,49 +279,66 @@ public class ClientUpdateStrategy : IStrategy
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
 
-        // Phase: apply Upgrade packages — update Upgrade.exe itself before launching it.
-        // Safe because MainApp and Upgrade.exe are different files (no lock conflict).
-        var allVersions = downloadPlan.Assets.Select(a => new VersionInfo
-        {
-            Name = a.Name,
-            Hash = a.SHA256,
-            Url = a.Url,
-            Version = a.Version,
-            Format = _configInfo.Format ?? "ZIP",
-            AppType = a.IsForcibly ? null : null // preserve original AppType
-        }).ToList();
-
-        // Rebuild the full VersionInfo list with AppType preserved from download source
+        // Build VersionInfo list with AppType preserved from server response.
         var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
         {
             Name = a.Name,
             Hash = a.SHA256,
             Url = a.Url,
             Version = a.Version,
-            Format = _configInfo.Format ?? "ZIP",
-            AppType = _configInfo.IsUpgradeUpdate == true && a.Version != _configInfo.ClientVersion
-                ? (int)AppType.Upgrade : (int)AppType.Client
+            Format = _configInfo.Format.ToExtension(),
+            AppType = a.AppType ?? (int)AppType.Client
         }).ToList();
 
-        // Split: Upgrade versions vs MainApp versions
         var upgradeVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
-        var clientVersions = downloadVersions.Where(v => v.AppType != (int)AppType.Upgrade).ToList();
-
+        var clientVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Client).ToList();
         GeneralTracer.Info($"ClientUpdateStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
 
-        // Apply Upgrade packages now (update Upgrade.exe before launching it)
-        if (upgradeVersions.Count > 0)
+        // ── Dispatch by scenario — one switch, four states, zero nested if-else ──
+        switch (scenario)
         {
-            GeneralTracer.Info("ClientUpdateStrategy: applying Upgrade packages.");
-            _configInfo.UpdateVersions = upgradeVersions;
-            _osStrategy!.Create(_configInfo);
-            await _osStrategy.ExecuteAsync();
-        }
+            case UpdateScenario.UpgradeOnly:
+                await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
+                await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+                await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
+                GeneralTracer.Info("ClientUpdateStrategy: Upgrade-only update applied, client continues running.");
+                break;
 
-        // Send IPC with remaining MainApp versions for the upgrade process
+            case UpdateScenario.MainOnly:
+                SendProcessIpc(clientVersions);
+                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                break;
+
+            case UpdateScenario.Both:
+                await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
+                await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+                await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
+                SendProcessIpc(clientVersions);
+                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                break;
+        }
+    }
+
+    #endregion
+
+    #region Scenario actions
+
+    private async Task ApplyUpgradePackagesAsync(List<VersionInfo> upgradeVersions)
+    {
+        if (upgradeVersions.Count == 0) return;
+        GeneralTracer.Info("ClientUpdateStrategy: applying Upgrade packages in place.");
+        _configInfo!.UpdateVersions = upgradeVersions;
+        _osStrategy!.Create(_configInfo);
+        await _osStrategy.ExecuteAsync().ConfigureAwait(false);
+    }
+
+    private void SendProcessIpc(List<VersionInfo> clientVersions)
+    {
         var processInfo = ConfigurationMapper.MapToProcessInfo(
-            _configInfo, clientVersions,
-            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
+            _configInfo!, clientVersions,
+            _configInfo!.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
             _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
             _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
 
@@ -270,20 +346,18 @@ public class ClientUpdateStrategy : IStrategy
             ProcessInfoJsonContext.Default.ProcessInfo);
         new EncryptedFileProcessInfoProvider().Send(processInfo);
         GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent with MainApp versions only.");
+    }
 
-        await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-        await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
-        await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-
-        // Launch the upgrade process to apply MainApp updates
-        var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
-        if (!File.Exists(updaterPath))
-            throw new FileNotFoundException($"Upgrade application not found: {updaterPath}");
-
-        GeneralTracer.Info($"ClientUpdateStrategy: launching upgrade process {updaterPath}");
-        Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
-        GeneralTracer.Info("ClientUpdateStrategy: upgrade process launched, exiting.");
-        await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
+    private async Task LaunchUpgradeProcessAsync()
+    {
+        if (_osStrategy is AbstractStrategy abs)
+        {
+            abs.LaunchAppName = _configInfo!.UpdateAppName;
+            abs.LaunchBowl = false;
+            abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+        }
+        GeneralTracer.Info($"ClientUpdateStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
+        await _osStrategy!.StartAppAsync();
     }
 
     #endregion
@@ -366,7 +440,7 @@ public class ClientUpdateStrategy : IStrategy
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
-            _configInfo?.AppName ?? "unknown",
+            _configInfo?.UpdateAppName ?? "unknown",
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
             _configInfo?.LastVersion,
@@ -403,7 +477,7 @@ public class ClientUpdateStrategy : IStrategy
         try
         {
             var downloadCtx = new Hooks.DownloadContext(
-                _configInfo?.MainAppName ?? _configInfo?.AppName ?? "unknown",
+                _configInfo?.MainAppName ?? _configInfo?.UpdateAppName ?? "unknown",
                 _configInfo?.LastVersion ?? "",
                 0, TimeSpan.Zero, _configInfo?.TempPath, true);
             await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
@@ -415,10 +489,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.UpdateStarted, ctx.AppType, DateTimeOffset.UtcNow
-            )).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
@@ -427,10 +498,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.DownloadCompleted, ctx.AppType, DateTimeOffset.UtcNow
-            )).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report DownloadCompleted failed: {ex.Message}"); }
     }
@@ -439,11 +507,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.UpdateFailed, ctx.AppType, DateTimeOffset.UtcNow,
-                ErrorMessage: error.Message
-            )).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
     }
@@ -452,10 +516,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
-                ctx.AppName, ctx.CurrentVersion, ctx.TargetVersion,
-                Download.Reporting.UpdateEvent.UpdateApplied, ctx.AppType, DateTimeOffset.UtcNow
-            )).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }

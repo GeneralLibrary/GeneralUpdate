@@ -17,7 +17,7 @@ public interface IUpdateHooks
 }
 
 public record UpdateContext(
-    string AppName,
+    string UpdateAppName,
     string InstallPath,
     string CurrentVersion,
     string? TargetVersion,
@@ -48,7 +48,7 @@ public class UnixPermissionHooks : IUpdateHooks
 {
     public async Task OnBeforeStartAppAsync(UpdateContext ctx)
     {
-        var mainApp = Path.Combine(ctx.InstallPath, ctx.AppName);
+        var mainApp = Path.Combine(ctx.InstallPath, ctx.UpdateAppName);
         if (File.Exists(mainApp))
             await Task.Run(() => Process.Start("chmod", $"+x \"{mainApp}\"").WaitForExit());
     }
