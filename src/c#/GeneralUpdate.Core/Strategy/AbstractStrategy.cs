@@ -20,11 +20,11 @@ namespace GeneralUpdate.Core.Strategy
         private const string Patchs = "patchs";
         protected GlobalConfigInfo _configinfo = new();
 
-        /// <summary>Optional hooks for pre/post update callbacks.</summary>
-        public IUpdateHooks? Hooks { get; set; }
+        /// <summary>Hooks for pre/post update callbacks.</summary>
+        public IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
-        /// <summary>Optional reporter for update status reporting.</summary>
-        public IUpdateReporter? Reporter { get; set; }
+        /// <summary>Reporter for update status reporting.</summary>
+        public IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
         /// <summary>Optional binary differ for differential patch updates.</summary>
         public IDirtyStrategy? DirtyStrategy { get; set; }

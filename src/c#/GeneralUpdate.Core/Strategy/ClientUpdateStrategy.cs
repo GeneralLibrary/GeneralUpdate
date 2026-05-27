@@ -489,7 +489,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateEvent.UpdateStarted, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
@@ -498,7 +498,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateEvent.DownloadCompleted, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report DownloadCompleted failed: {ex.Message}"); }
     }
@@ -507,7 +507,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateEvent.UpdateFailed, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
     }
@@ -516,7 +516,7 @@ public class ClientUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateEvent.UpdateApplied, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }

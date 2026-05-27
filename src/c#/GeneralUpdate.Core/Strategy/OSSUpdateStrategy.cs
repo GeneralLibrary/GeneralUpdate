@@ -16,11 +16,11 @@ using GeneralUpdate.Core.Download.Orchestrators;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS (Object Storage Service) update strategy �?client/upgrade split via AppType.
+/// OSS (Object Storage Service) update strategy -- client/upgrade split via AppType.
 /// <list type="bullet">
-///   <item><see cref="AppType.OSSClient"/> �?downloads version config, checks for updates,
+///   <item><see cref="AppType.OSSClient"/> -- downloads version config, checks for updates,
 ///        starts the upgrade process, and exits.</item>
-///   <item><see cref="AppType.OSSUpgrade"/> �?reads version config, downloads packages from OSS,
+///   <item><see cref="AppType.OSSUpgrade"/> -- reads version config, downloads packages from OSS,
 ///        decompresses them, starts the main app, and exits.</item>
 /// </list>
 /// </summary>
@@ -181,7 +181,8 @@ public class OSSUpdateStrategy : IStrategy
             await DownloadAssetsAsync(assets, installPath).ConfigureAwait(false);
 
             GeneralTracer.Debug("OSSUpdateStrategy (upgrade): decompressing.");
-            DecompressAssets(assets, installPath);
+            var encoding = Encoding.GetEncoding(_configInfo?.Encoding?.CodePage ?? Encoding.UTF8.CodePage);
+            DecompressAssets(assets, installPath, encoding);
 
             await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
@@ -260,9 +261,8 @@ public class OSSUpdateStrategy : IStrategy
         }
     }
 
-    private static void DecompressAssets(List<DownloadAsset> assets, string targetPath)
+    private static void DecompressAssets(List<DownloadAsset> assets, string targetPath, Encoding encoding)
     {
-        var encoding = Encoding.UTF8;
         foreach (var asset in assets)
         {
             var zipFilePath = Path.Combine(targetPath, asset.Name);
@@ -320,7 +320,7 @@ public class OSSUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateEvent.UpdateStarted, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
@@ -328,7 +328,7 @@ public class OSSUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateEvent.UpdateApplied, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }
@@ -336,7 +336,7 @@ public class OSSUpdateStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateEvent.UpdateFailed, 1)).ConfigureAwait(false);
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
     }

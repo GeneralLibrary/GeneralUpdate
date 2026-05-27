@@ -14,8 +14,8 @@ public interface IUpdateReporter
     Task ReportAsync(UpdateReport report, CancellationToken token = default);
 }
 
-/// <summary>Update event types mapped to Spacestation status codes.</summary>
-public enum UpdateEvent { UpdateStarted = 1, DownloadCompleted = 1, UpdateApplied = 2, UpdateFailed = 3, AppStarted = 2 }
+/// <summary>Update status codes matching GeneralSpacestation ReportDTO contract (1=updating, 2=success, 3=failure).</summary>
+public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 
 /// <summary>Spacestation-compatible update report: recordId from verification, status (1=updating,2=success,3=failure), type (1=upgrade,2=push).</summary>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1);

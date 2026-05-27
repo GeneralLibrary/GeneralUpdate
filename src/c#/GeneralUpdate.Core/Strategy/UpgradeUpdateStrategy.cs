@@ -21,7 +21,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// <b>Design:</b> Upgrade does NOT validate versions or download packages.
 /// The client has already validated versions, downloaded all packages, and
 /// passed the results via ProcessInfo. Upgrade only applies updates and
-/// starts the main application �?zero network.
+/// starts the main application -- zero network.
 /// </remarks>
 public class UpgradeUpdateStrategy : IStrategy
 {
@@ -64,7 +64,7 @@ public class UpgradeUpdateStrategy : IStrategy
 
             _osStrategy!.Create(_configInfo);
 
-            // Apply MainApp updates �?Client already applied Upgrade packages, IPC only has MainApp versions
+            // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
             if (_configInfo.UpdateVersions?.Count > 0)
             {
                 GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
@@ -231,7 +231,7 @@ public class UpgradeUpdateStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateEvent.UpdateApplied,
+                .ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success,
                     1)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -246,7 +246,7 @@ public class UpgradeUpdateStrategy : IStrategy
         {
             await Reporter
                 .ReportAsync(
-                    new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateEvent.UpdateFailed, 1))
+                    new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1))
                 .ConfigureAwait(false);
         }
         catch (Exception ex)

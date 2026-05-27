@@ -163,7 +163,7 @@ public class SilentPollOrchestrator : IDisposable
         // Reporter: update started
         if (_reporter != null)
         {
-            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateStarted, 1), token).ConfigureAwait(false); }
+            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateStatus.Updating, 1), token).ConfigureAwait(false); }
             catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateStarted failed: {ex.Message}"); }
         }
 
@@ -196,7 +196,7 @@ public class SilentPollOrchestrator : IDisposable
             }
             if (_reporter != null)
             {
-                try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.DownloadCompleted, 1), token).ConfigureAwait(false); }
+                try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateStatus.Updating, 1), token).ConfigureAwait(false); }
                 catch (Exception ex) { GeneralTracer.Warn($"Reporter DownloadCompleted failed: {ex.Message}"); }
             }
         }
@@ -252,10 +252,16 @@ public class SilentPollOrchestrator : IDisposable
                 _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
                 _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
             _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-        }
 
-        Interlocked.Exchange(ref _prepared, 1);
-        GeneralTracer.Info("SilentPollOrchestrator: update prepared, waiting for process exit.");
+            Interlocked.Exchange(ref _prepared, 1);
+            GeneralTracer.Info("SilentPollOrchestrator: update prepared, waiting for process exit.");
+        }
+        else if (upgradeVersions.Count > 0)
+        {
+            // Upgrade-only: packages already applied, no handoff needed
+            Interlocked.Exchange(ref _prepared, 1);
+            GeneralTracer.Info("SilentPollOrchestrator: upgrade-only update applied, no client handoff needed.");
+        }
 
         if (_hooks != null)
         {
@@ -264,7 +270,7 @@ public class SilentPollOrchestrator : IDisposable
         }
         if (_reporter != null)
         {
-            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateApplied, 1), token).ConfigureAwait(false); }
+            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateStatus.Success, 1), token).ConfigureAwait(false); }
             catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateApplied failed: {ex.Message}"); }
         }
     }
@@ -314,7 +320,7 @@ public class SilentPollOrchestrator : IDisposable
         }
         if (_reporter != null)
         {
-            try { _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateFailed, 1)).GetAwaiter().GetResult(); }
+            try { _reporter.ReportAsync(new UpdateReport(0, (int)UpdateStatus.Failure, 1)).GetAwaiter().GetResult(); }
             catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
         }
     }

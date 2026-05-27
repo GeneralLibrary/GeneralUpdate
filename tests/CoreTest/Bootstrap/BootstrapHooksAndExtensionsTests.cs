@@ -156,30 +156,30 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void UpdateReport_StartedEvent()
         {
-            var report = new UpdateReport(123, (int)UpdateEvent.UpdateStarted, 1);
+            var report = new UpdateReport(123, (int)UpdateStatus.Updating, 1);
             Assert.Equal(123, report.RecordId);
-            Assert.Equal((int)UpdateEvent.UpdateStarted, report.Status);
+            Assert.Equal((int)UpdateStatus.Updating, report.Status);
             Assert.Equal(1, report.Type);
         }
 
         [Fact]
         public void UpdateReport_FailedWithError()
         {
-            var report = new UpdateReport(456, (int)UpdateEvent.UpdateFailed, 1);
+            var report = new UpdateReport(456, (int)UpdateStatus.Failure, 1);
             Assert.Equal(456, report.RecordId);
-            Assert.Equal((int)UpdateEvent.UpdateFailed, report.Status);
+            Assert.Equal((int)UpdateStatus.Failure, report.Status);
             Assert.Equal(1, report.Type);
         }
 
         [Fact]
-        public void UpdateEvent_AllValues_AreDefined()
+        public void UpdateStatus_AllValues_AreDefined()
         {
-            var values = Enum.GetValues<UpdateEvent>();
-            Assert.Contains(UpdateEvent.UpdateStarted, values);
-            Assert.Contains(UpdateEvent.DownloadCompleted, values);
-            Assert.Contains(UpdateEvent.UpdateApplied, values);
-            Assert.Contains(UpdateEvent.UpdateFailed, values);
-            Assert.Contains(UpdateEvent.AppStarted, values);
+            var values = Enum.GetValues<UpdateStatus>();
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Success, values);
+            Assert.Contains(UpdateStatus.Failure, values);
+            Assert.Contains(UpdateStatus.Success, values);
         }
 
         #endregion
@@ -187,7 +187,7 @@ namespace CoreTest.Bootstrap
         #region IUpdateEventListener
 
         [Fact]
-        public void UpdateEventListener_AllMethods_AreCallable()
+        public void UpdateStatusListener_AllMethods_AreCallable()
         {
             var listener = new TestEventListener();
             var vi = new VersionInfo { Version = "2.0.0", Url = "https://cdn.example.com/pkg.zip", Format = "ZIP" };

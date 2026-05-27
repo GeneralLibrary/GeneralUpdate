@@ -52,7 +52,7 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             _scheme, _token, token);
 
         var upgradeResp = await VersionService.Validate(
-            _updateUrl, _upgradeClientVersion , AppType.Upgrade,
+            _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
 

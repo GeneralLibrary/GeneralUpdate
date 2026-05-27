@@ -18,7 +18,7 @@ namespace CoreTest.Configuration
     ///   - DownloadStatus / DownloadPriority enums
     ///   - AppType / DiffMode / UpdateMode / PlatformType / OssProvider enums
     ///   - UpdateOption&lt;T&gt; value semantics
-    ///   - UpdateReport / UpdateEvent types
+    ///   - UpdateReport / UpdateStatus types
     /// </summary>
     public class ConfigurationModelsTests
     {
@@ -271,14 +271,14 @@ namespace CoreTest.Configuration
         }
 
         [Fact]
-        public void UpdateEvent_FiveValues()
+        public void UpdateStatus_FiveValues()
         {
-            var values = Enum.GetValues<UpdateEvent>();
-            Assert.Contains(UpdateEvent.UpdateStarted, values);
-            Assert.Contains(UpdateEvent.DownloadCompleted, values);
-            Assert.Contains(UpdateEvent.UpdateApplied, values);
-            Assert.Contains(UpdateEvent.UpdateFailed, values);
-            Assert.Contains(UpdateEvent.AppStarted, values);
+            var values = Enum.GetValues<UpdateStatus>();
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Updating, values);
+            Assert.Contains(UpdateStatus.Success, values);
+            Assert.Contains(UpdateStatus.Failure, values);
+            Assert.Contains(UpdateStatus.Success, values);
         }
 
         #endregion

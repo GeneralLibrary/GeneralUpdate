@@ -28,7 +28,7 @@ namespace CoreTest.Shared
                 UpdateUrl = TestUpdateUrl,
                 Token = TestToken,
                 Scheme = TestScheme,
-                UpgradeAppName = "Update.exe",
+                UpdateAppName = "Update.exe",
                 MainAppName = "TestApp.exe",
                 ClientVersion = "1.0.0",
                 AppSecretKey = "test-secret-key",
