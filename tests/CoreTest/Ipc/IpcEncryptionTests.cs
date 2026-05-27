@@ -80,7 +80,7 @@ public class EncryptedFileProcessInfoProviderTests
             null, System.Text.Encoding.UTF8, ".zip", 30, "secret",
             new List<GeneralUpdate.Core.Configuration.VersionInfo> { new() { Version = "2.0.0" } },
             "https://report.example.com", "C:\\backup",
-            null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
 
         provider.Send(info);
         var received = provider.Receive();

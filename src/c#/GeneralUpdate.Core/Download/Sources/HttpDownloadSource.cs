@@ -43,8 +43,8 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         _token = token;
     }
 
-    /// <summary>Call version API and return download assets.</summary>
-    public async Task<IReadOnlyList<DownloadAsset>> ListAsync(CancellationToken token = default)
+    /// <summary>Call version API and return download assets with per-side validation flags.</summary>
+    public async Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
     {
         var mainResp = await VersionService.Validate(
             _updateUrl, _clientVersion, AppType.Client,
@@ -52,9 +52,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             _scheme, _token, token);
 
         var upgradeResp = await VersionService.Validate(
-            _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
+            _updateUrl, _upgradeClientVersion , AppType.Upgrade,
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
+
+        var hasMainUpdate = mainResp?.Body?.Count > 0;
+        var hasUpgradeUpdate = upgradeResp?.Body?.Count > 0;
 
         var assets = new List<DownloadAsset>();
 
@@ -70,7 +73,13 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
                 assets.Add(MapVersionInfo(v));
         }
 
-        return assets;
+        // Deduplicate by URL — both Validate calls may return the same packages
+        return new DownloadSourceResult
+        {
+            Assets = assets.GroupBy(a => a.Url).Select(g => g.First()).ToList(),
+            HasMainUpdate = hasMainUpdate,
+            HasUpgradeUpdate = hasUpgradeUpdate
+        };
     }
 
     private static DownloadAsset MapVersionInfo(VersionInfo v)
@@ -81,7 +90,16 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             Size: v.Size ?? 0,
             SHA256: v.Hash,
             Version: v.Version ?? "0.0.0",
-            IsForcibly: v.IsForcibly == true
+            IsForcibly: v.IsForcibly == true,
+            IsFreeze: v.IsFreeze == true,
+            RecordId: v.RecordId,
+            UpgradeMode: v.UpgradeMode,
+            AppType: v.AppType,
+            IsCrossVersion: v.IsCrossVersion == true,
+            FromVersion: v.FromVersion,
+            TargetArchiveHash: v.Hash,
+            AuthScheme: v.AuthScheme,
+            AuthToken: v.AuthToken
         );
     }
 }

@@ -27,23 +27,18 @@ public class LinuxStrategy : AbstractStrategy
         return builder;
     }
 
-    protected override async Task OnExecuteCompleteAsync()
-    {
-        GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.OnExecuteComplete: all versions processed, starting application.");
-        await StartAppAsync();
-    }
-
     public override async Task StartAppAsync()
     {
         try
         {
-            var mainAppPath = CheckPath(_configinfo.InstallPath, _configinfo.MainAppName);
-            if (string.IsNullOrEmpty(mainAppPath))
-                throw new Exception($"Can't find the app {mainAppPath}!");
+            var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
+            var appPath = ResolveAppPath(appName, UseUpdatePath);
+            if (string.IsNullOrEmpty(appPath))
+                throw new Exception($"Can't find the app {appName}!");
 
-            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: launching main app={mainAppPath}");
-            Process.Start(mainAppPath);
-            GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: main app launched successfully.");
+            GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: launching app={appPath}");
+            Process.Start(appPath);
+            GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: app launched successfully.");
         }
         catch (Exception e)
         {
@@ -58,5 +53,4 @@ public class LinuxStrategy : AbstractStrategy
             await GracefulExit.CurrentProcessAsync();
         }
     }
-
 }

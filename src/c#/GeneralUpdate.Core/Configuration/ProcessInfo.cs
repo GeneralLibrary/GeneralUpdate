@@ -43,9 +43,12 @@ namespace GeneralUpdate.Core.Configuration
         /// <param name="scheme">The URL scheme for update requests</param>
         /// <param name="token">The authentication token</param>
         /// <param name="driverDirectory">The directory path containing driver files</param>
+        /// <param name="tempPath">The temp directory where the client downloaded update packages</param>
         /// <param name="blackFileFormats">List of file format extensions to skip</param>
         /// <param name="blackFiles">List of specific files to skip</param>
         /// <param name="skipDirectories">List of directories to skip</param>
+        /// <param name="upgradePath">Optional directory where the upgrade executable resides (defaults to InstallPath)</param>
+        /// <param name="launchClient">Whether to launch the client app after upgrade completes (default true)</param>
         /// <exception cref="ArgumentNullException">Thrown when required parameters are null</exception>
         /// <exception cref="ArgumentException">Thrown when parameters fail validation</exception>
         public ProcessInfo(string appName
@@ -64,9 +67,12 @@ namespace GeneralUpdate.Core.Configuration
             , string scheme
             , string token
             , string driverDirectory
+            , string tempPath
             , List<string> blackFileFormats
             , List<string> blackFiles
-            , List<string> skipDirectories)
+            , List<string> skipDirectories
+            , string upgradePath = null
+            , bool launchClient = true)
         {
             // Validate required string parameters
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
@@ -98,18 +104,25 @@ namespace GeneralUpdate.Core.Configuration
             Scheme = scheme;
             Token = token;
             DriverDirectory = driverDirectory;
+            TempPath = tempPath;
             
             // Set blacklist parameters
             BlackFileFormats = blackFileFormats;
             BlackFiles = blackFiles;
             SkipDirectorys = skipDirectories;
+
+            // Set upgrade path (optional — defaults to InstallPath if not set)
+            UpdatePath = upgradePath;
+
+            // Set launch flag (default true — backward compatible)
+            LaunchClientAfterUpdate = launchClient;
         }
 
         /// <summary>
         /// The name of the application to start after the update completes.
         /// Note: In ProcessInfo, this field holds the MainAppName value from other config classes.
         /// </summary>
-        [JsonPropertyName("AppName")]
+        [JsonPropertyName("UpdateAppName")]
         public string AppName { get; set; }
 
         /// <summary>
@@ -229,5 +242,26 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("DriverDirectory")]
         public string DriverDirectory { get; set; }
+
+        /// <summary>
+        /// The temp directory where the client downloaded update packages.
+        /// The upgrade process reads packages from this path via the pipeline.
+        /// </summary>
+        [JsonPropertyName("TempPath")]
+        public string TempPath { get; set; }
+
+        /// <summary>
+        /// Optional directory where the upgrade executable resides.
+        /// When set, the upgrade process is launched from this path instead of <see cref="InstallPath"/>.
+        /// </summary>
+        [JsonPropertyName("UpdatePath")]
+        public string UpdatePath { get; set; }
+
+        /// <summary>
+        /// Whether to launch the client application after the upgrade process finishes.
+        /// Default true. Set to false to keep the app stopped after update.
+        /// </summary>
+        [JsonPropertyName("LaunchClientAfterUpdate")]
+        public bool LaunchClientAfterUpdate { get; set; } = true;
     }
 }

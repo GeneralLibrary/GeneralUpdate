@@ -21,13 +21,12 @@ public class MacStrategy : AbstractStrategy
     {
         try
         {
-            var mainApp = Path.Combine(
-                _configinfo.InstallPath ?? string.Empty,
-                _configinfo.MainAppName ?? string.Empty);
+            var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
+            var mainApp = ResolveAppPath(appName, UseUpdatePath);
 
-            if (!string.IsNullOrEmpty(_configinfo.MainAppName) && File.Exists(mainApp))
+            if (!string.IsNullOrEmpty(mainApp) && File.Exists(mainApp))
             {
-                GeneralTracer.Info($"MacStrategy: starting {mainApp}");
+                GeneralTracer.Info($"MacStrategy.StartApp: launching app={mainApp}");
                 System.Diagnostics.Process.Start(mainApp);
             }
         }

@@ -34,7 +34,7 @@ namespace CoreTest.Pipeline
         {
             // Arrange
             var context = new PipelineContext();
-            var format = Format.ZIP;
+            var format = Format.Zip;
             var sourcePath = "/test/source.zip";
             var patchPath = "/test/patch";
             var encoding = Encoding.UTF8;
@@ -50,7 +50,7 @@ namespace CoreTest.Pipeline
             context.Add("PatchEnabled", patchEnabled);
 
             // Assert
-            Assert.Equal(format, context.Get<string>("Format"));
+            Assert.Equal(format, context.Get<Format>("Format"));
             Assert.Equal(sourcePath, context.Get<string>("ZipFilePath"));
             Assert.Equal(patchPath, context.Get<string>("PatchPath"));
             Assert.Equal(encoding, context.Get<Encoding>("Encoding"));

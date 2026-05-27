@@ -58,4 +58,28 @@ public class VersionInfo
     /// </summary>
     [JsonPropertyName("updateLog")]
     public string? UpdateLog { get; set; }
+
+    /// <summary>URL expiry time (UTC) for signed download URLs.</summary>
+    [JsonPropertyName("urlExpireTimeUtc")]
+    public DateTime? UrlExpireTimeUtc { get; set; }
+
+    /// <summary>Upgrade mode: 1=VersionChain, 2=CrossVersion.</summary>
+    [JsonPropertyName("upgradeMode")]
+    public int? UpgradeMode { get; set; }
+
+    /// <summary>Whether this is a cross-version packet.</summary>
+    [JsonPropertyName("isCrossVersion")]
+    public bool? IsCrossVersion { get; set; }
+
+    /// <summary>Source version for cross-version packets.</summary>
+    [JsonPropertyName("fromVersion")]
+    public string? FromVersion { get; set; }
+
+    /// <summary>Target version for cross-version packets.</summary>
+    [JsonPropertyName("toVersion")]
+    public string? ToVersion { get; set; }
+
+    /// <summary>Whether this packet is frozen (archived, not for active updates).</summary>
+    [JsonPropertyName("isFreeze")]
+    public bool? IsFreeze { get; set; }
 }

@@ -8,8 +8,8 @@ namespace GeneralUpdate.Core.Configuration
         [JsonPropertyName("Url")]
         public string Url { get; set; }
 
-        [JsonPropertyName("AppName")]
-        public string AppName { get; set; }
+        [JsonPropertyName("UpdateAppName")]
+        public string UpgradeAppName { get; set; }
 
         [JsonPropertyName("CurrentVersion")]
         public string CurrentVersion { get; set; }
@@ -27,7 +27,7 @@ namespace GeneralUpdate.Core.Configuration
         public GlobalConfigInfoOSS(string url, string appName, string currentVersion, string versionFileName)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
-            AppName = appName ?? throw new ArgumentNullException(nameof(appName));
+            UpgradeAppName = appName ?? throw new ArgumentNullException(nameof(appName));
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             VersionFileName = versionFileName ?? "versions.json";
         }

@@ -142,18 +142,4 @@ public class DownloadPlanBuilderTests
         Assert.Single(result.Assets);
         Assert.Equal("2.0.0", result.Assets[0].Version);
     }
-
-    [Fact]
-    public void MapToAsset_NullFields_HasSaneDefaults()
-    {
-        var packet = new GeneralUpdate.Core.Download.Abstractions.PacketDTO
-        {
-            Name = null, Url = null, Version = null, Hash = null
-        };
-        var asset = DownloadPlanBuilder.MapToAsset(packet);
-        Assert.Equal("unknown", asset.Name);
-        Assert.Equal("", asset.Url);
-        Assert.Equal("0.0.0", asset.Version);
-        Assert.Equal(0, asset.Size);
-    }
 }

@@ -30,29 +30,27 @@ namespace GeneralUpdate.Core.Strategy
             return builder;
         }
 
-        protected override async Task OnExecuteCompleteAsync()
-        {
-            GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.OnExecuteComplete: all versions processed, starting application.");
-            await StartAppAsync();
-        }
-
         public override async Task StartAppAsync()
         {
             try
             {
-                var mainAppPath = CheckPath(_configinfo.InstallPath, _configinfo.MainAppName);
-                if (string.IsNullOrEmpty(mainAppPath))
-                    throw new Exception($"Can't find the app {mainAppPath}!");
+                var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
+                var appPath = ResolveAppPath(appName, UseUpdatePath);
+                if (string.IsNullOrEmpty(appPath))
+                    throw new Exception($"Can't find the app {appName}!");
 
-                GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching main app={mainAppPath}");
-                Process.Start(mainAppPath);
-                GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: main app launched successfully.");
+                GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
+                Process.Start(appPath);
+                GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully.");
 
-                var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
-                if (!string.IsNullOrEmpty(bowlAppPath))
+                if (LaunchBowl)
                 {
-                    GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching Bowl process={bowlAppPath}");
-                    Process.Start(bowlAppPath);
+                    var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
+                    if (!string.IsNullOrEmpty(bowlAppPath))
+                    {
+                        GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching Bowl process={bowlAppPath}");
+                        Process.Start(bowlAppPath);
+                    }
                 }
             }
             catch (Exception e)

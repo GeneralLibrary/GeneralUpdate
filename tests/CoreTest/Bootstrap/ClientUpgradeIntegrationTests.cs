@@ -48,7 +48,7 @@ namespace CoreTest.Bootstrap
             var config = new Configinfo
             {
                 UpdateUrl = "https://api.example.com/updates",
-                AppName = "Update.exe",
+                UpdateAppName = "Update.exe",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 UpgradeClientVersion = "0.5.0",
@@ -387,7 +387,7 @@ namespace CoreTest.Bootstrap
             var configInfo = new Configinfo
             {
                 UpdateUrl = "https://api.example.com/updates",
-                AppName = "Update.exe",
+                UpdateAppName = "Update.exe",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 UpgradeClientVersion = "0.5.0",
@@ -409,7 +409,7 @@ namespace CoreTest.Bootstrap
 
             Assert.NotNull(globalConfig);
             Assert.Equal("https://api.example.com/updates", globalConfig.UpdateUrl);
-            Assert.Equal("Update.exe", globalConfig.AppName);
+            Assert.Equal("Update.exe", globalConfig.UpdateAppName);
             Assert.Equal("MyApp.exe", globalConfig.MainAppName);
             Assert.Equal("1.0.0", globalConfig.ClientVersion);
             Assert.Equal("0.5.0", globalConfig.UpgradeClientVersion);
@@ -510,7 +510,7 @@ namespace CoreTest.Bootstrap
                 .SetConfig(new Configinfo
                 {
                     UpdateUrl = "https://update.mycompany.com/api",
-                    AppName = "Update.exe",
+                    UpdateAppName = "Update.exe",
                     MainAppName = "MyProduct.exe",
                     ClientVersion = "3.2.1",
                     UpgradeClientVersion = "1.0.0",

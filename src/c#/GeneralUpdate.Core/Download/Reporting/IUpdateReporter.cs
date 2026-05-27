@@ -5,59 +5,41 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core;
-using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Download.Reporting;
 
-/// <summary>Reports update lifecycle events to the server.</summary>
+/// <summary>Reports update lifecycle events to the server, compatible with GeneralSpacestation API.</summary>
 public interface IUpdateReporter
 {
     Task ReportAsync(UpdateReport report, CancellationToken token = default);
 }
 
-public enum UpdateEvent { UpdateStarted, DownloadCompleted, UpdateApplied, UpdateFailed, AppStarted }
+/// <summary>Update event types mapped to Spacestation status codes.</summary>
+public enum UpdateEvent { UpdateStarted = 1, DownloadCompleted = 1, UpdateApplied = 2, UpdateFailed = 3, AppStarted = 2 }
 
-public record UpdateReport(
-    string AppName,
-    string FromVersion,
-    string? ToVersion,
-    UpdateEvent Event,
-    AppType AppType,
-    DateTimeOffset Timestamp,
-    string? ErrorMessage = null,
-    double? DurationMs = null
-);
+/// <summary>Spacestation-compatible update report: recordId from verification, status (1=updating,2=success,3=failure), type (1=upgrade,2=push).</summary>
+public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 
-/// <summary>HTTP POST reporter with optional HMAC signing.</summary>
+/// <summary>HTTP POST reporter that serializes UpdateReport as JSON matching Spacestation ReportDTO.</summary>
 public class HttpUpdateReporter : IUpdateReporter
 {
     private readonly HttpClient _client;
     private readonly string _reportUrl;
-    private readonly string? _secretKey;
 
-    public HttpUpdateReporter(HttpClient client, string reportUrl, string? secretKey = null)
+    public HttpUpdateReporter(HttpClient client, string reportUrl)
     {
         _client = client;
         _reportUrl = reportUrl;
-        _secretKey = secretKey;
     }
 
     public async Task ReportAsync(UpdateReport report, CancellationToken token = default)
     {
         try
         {
-            var json = JsonSerializer.Serialize(report);
+            var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            if (!string.IsNullOrEmpty(_secretKey))
-            {
-                var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                var sig = ComputeHmac($"{json}|{ts}", _secretKey);
-                request.Headers.Add("X-Update-Timestamp", ts);
-                request.Headers.Add("X-Update-Signature", sig);
-            }
 
             await _client.SendAsync(request, token).ConfigureAwait(false);
         }
@@ -65,13 +47,6 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
-    }
-
-    private static string ComputeHmac(string data, string key)
-    {
-        var h = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(key))
-            .ComputeHash(Encoding.UTF8.GetBytes(data));
-        return BitConverter.ToString(h).Replace("-", "").ToLowerInvariant();
     }
 }
 

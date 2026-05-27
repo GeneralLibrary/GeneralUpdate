@@ -78,7 +78,7 @@ public class OssIntegrationTests
         var strategy = new OSSUpdateStrategy();
         var config = new GlobalConfigInfo
         {
-            AppName = "TestOSS",
+            UpdateAppName = "TestOSS",
             ClientVersion = "1.0.0",
             InstallPath = "/test/oss"
         };

@@ -15,7 +15,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = updateUrl,
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -31,7 +31,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = "not_a_valid_uri!!!",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -48,7 +48,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = url,
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -65,7 +65,7 @@ public class ConfiginfoTests
         {
             UpdateUrl = "https://api.example.com",
             UpdateLogUrl = null,
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -82,7 +82,7 @@ public class ConfiginfoTests
         {
             UpdateUrl = "https://api.example.com",
             UpdateLogUrl = "not_a_uri!!!",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -95,12 +95,12 @@ public class ConfiginfoTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_AppNameNullOrWhitespace_ThrowsArgumentException(string appName)
+    public void Validate_UpgradeAppNameNullOrWhitespace_ThrowsArgumentException(string appName)
     {
         var config = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = appName,
+            UpdateAppName = appName,
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -113,13 +113,13 @@ public class ConfiginfoTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_MainAppNameNullOrWhitespace_ThrowsArgumentException(string mainAppName)
+    public void Validate_MainAppNameNullOrWhitespace_ThrowsArgumentException(string mainUpgradeAppName)
     {
         var config = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "TestApp",
-            MainAppName = mainAppName,
+            UpdateAppName = "TestApp",
+            MainAppName = mainUpgradeAppName,
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
@@ -136,7 +136,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = secretKey,
             ClientVersion = "1.0.0",
@@ -154,7 +154,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = clientVersion,
@@ -172,7 +172,7 @@ public class ConfiginfoTests
         var config = new Configinfo
         {
             UpdateUrl = "https://api.example.com",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret",
             ClientVersion = "1.0.0",
@@ -188,7 +188,7 @@ public class ConfiginfoTests
         {
             UpdateUrl = "https://api.example.com/update",
             UpdateLogUrl = "https://api.example.com/log",
-            AppName = "TestApp",
+            UpdateAppName = "TestApp",
             MainAppName = "MainApp",
             AppSecretKey = "secret123",
             ClientVersion = "1.0.0",

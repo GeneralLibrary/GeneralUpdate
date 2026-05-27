@@ -12,7 +12,7 @@ public class CompressMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            var format = context.Get<string>("Format");
+            var format = context.Get<Configuration.Format>("Format");
             var sourcePath = context.Get<string>("ZipFilePath");
             var patchPath = context.Get<string>("PatchPath");
             var encoding = context.Get<Encoding>("Encoding");

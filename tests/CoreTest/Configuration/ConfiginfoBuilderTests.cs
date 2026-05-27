@@ -51,11 +51,11 @@ public class ConfiginfoBuilderTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void SetAppName_InvalidValue_ThrowsArgumentException(string value)
+    public void SetUpgradeAppName_InvalidValue_ThrowsArgumentException(string value)
     {
         var builder = new ConfiginfoBuilder();
-        var ex = Assert.Throws<ArgumentException>(() => builder.SetAppName(value));
-        Assert.Contains("AppName", ex.Message);
+        var ex = Assert.Throws<ArgumentException>(() => builder.SetUpgradeAppName(value));
+        Assert.Contains("UpdateAppName", ex.Message);
     }
 
     [Theory]
@@ -189,7 +189,7 @@ public class ConfiginfoBuilderTests
             .SetUpdateUrl("https://api.example.com")
             .SetToken("token")
             .SetScheme("https")
-            .SetAppName("MyApp")
+            .SetUpgradeAppName("MyApp")
             .SetMainAppName("MainApp")
             .SetClientVersion("1.0.0");
         Assert.Same(builder, result);
@@ -206,7 +206,7 @@ public class ConfiginfoBuilderTests
             .SetUpdateUrl("https://api.example.com")
             .SetToken("token123")
             .SetScheme("https")
-            .SetAppName("MyApp.exe")
+            .SetUpgradeAppName("MyApp.exe")
             .SetMainAppName("MyApp")
             .SetClientVersion("1.0.0")
             .SetAppSecretKey("secret")
@@ -217,7 +217,7 @@ public class ConfiginfoBuilderTests
         Assert.Equal("https://api.example.com", config.UpdateUrl);
         Assert.Equal("token123", config.Token);
         Assert.Equal("https", config.Scheme);
-        Assert.Equal("MyApp.exe", config.AppName);
+        Assert.Equal("MyApp.exe", config.UpdateAppName);
         Assert.Equal("MyApp", config.MainAppName);
         Assert.Equal("1.0.0", config.ClientVersion);
         Assert.Equal("secret", config.AppSecretKey);
@@ -231,7 +231,7 @@ public class ConfiginfoBuilderTests
             .SetUpdateUrl("https://api.example.com")
             .SetToken("token")
             .SetScheme("https");
-        // Missing AppName, MainAppName, AppSecretKey, ClientVersion, InstallPath
+        // Missing UpdateAppName, MainAppName, AppSecretKey, ClientVersion, InstallPath
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
         Assert.Contains("Failed to build valid Configinfo", ex.Message);
         Assert.IsType<ArgumentException>(ex.InnerException);
@@ -244,7 +244,7 @@ public class ConfiginfoBuilderTests
             .SetUpdateUrl("https://api.example.com")
             .SetToken("token123")
             .SetScheme("https")
-            .SetAppName("MyApp.exe")
+            .SetUpgradeAppName("MyApp.exe")
             .SetMainAppName("MyApp")
             .SetClientVersion("1.0.0")
             .SetAppSecretKey("secret")
@@ -263,7 +263,7 @@ public class ConfiginfoBuilderTests
             .SetUpdateUrl("https://api.example.com")
             .SetToken("token123")
             .SetScheme("https")
-            .SetAppName("MyApp.exe")
+            .SetUpgradeAppName("MyApp.exe")
             .SetMainAppName("MyApp")
             .SetClientVersion("1.0.0")
             .SetAppSecretKey("secret")

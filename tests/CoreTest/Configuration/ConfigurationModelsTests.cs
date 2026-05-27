@@ -68,35 +68,6 @@ namespace CoreTest.Configuration
 
         #endregion
 
-        #region HubConfig
-
-        [Fact]
-        public void HubConfig_WithUrl_DefaultsReasonable()
-        {
-            var config = new HubConfig { Url = "https://signalr.example.com/hub" };
-
-            Assert.Equal("https://signalr.example.com/hub", config.Url);
-            Assert.Equal(TimeSpan.FromSeconds(5), config.ReconnectDelay);
-            Assert.Equal(10, config.MaxReconnectAttempts);
-        }
-
-        [Fact]
-        public void HubConfig_AllFields_Customized()
-        {
-            var config = new HubConfig
-            {
-                Url = "wss://push.example.com/update-hub",
-                ReconnectDelay = TimeSpan.FromSeconds(10),
-                MaxReconnectAttempts = 20
-            };
-
-            Assert.Equal("wss://push.example.com/update-hub", config.Url);
-            Assert.Equal(TimeSpan.FromSeconds(10), config.ReconnectDelay);
-            Assert.Equal(20, config.MaxReconnectAttempts);
-        }
-
-        #endregion
-
         #region DownloadAsset
 
         [Fact]

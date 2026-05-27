@@ -15,7 +15,7 @@ namespace GeneralUpdate.Core.Pipeline;
 /// var pipeline = new DiffPipelineBuilder()
 ///     .UseDiffer(new StreamingHdiffDiffer())
 ///     .UseCleanMatcher(new DefaultCleanMatcher())
-///     .WithParallelism(Environment.ProcessorCount)
+///     .WithParallelism(2)
 ///     .Build();
 /// await pipeline.CleanAsync(src, tgt, patch);
 /// </code>
@@ -25,7 +25,7 @@ public class DiffPipelineBuilder
     private IBinaryDiffer? _differ;
     private ICleanMatcher? _cleanMatcher;
     private IDirtyMatcher? _dirtyMatcher;
-    private int _maxParallelism = Environment.ProcessorCount;
+    private int _maxParallelism = 2;
     private bool _stopOnFirstError;
     private IProgress<DiffProgress>? _progress;
 
@@ -60,7 +60,7 @@ public class DiffPipelineBuilder
 
     /// <summary>
     /// Sets the maximum degree of parallelism for file processing.
-    /// Default: <see cref="Environment.ProcessorCount"/>.
+    /// Default: 2.
     /// </summary>
     public DiffPipelineBuilder WithParallelism(int maxDegreeOfParallelism)
     {

@@ -12,9 +12,9 @@ public class DownloadOrchestratorOptions
     /// <summary>
     /// Maximum number of concurrent download operations.
     /// Valid range: 1 to <see cref="Environment.ProcessorCount"/> * 2.
-    /// Default: 3.
+    /// Default: 2.
     /// </summary>
-    public int MaxConcurrency { get; set; } = 3;
+    public int MaxConcurrency { get; set; } = 2;
 
     /// <summary>
     /// Whether to resume interrupted downloads via HTTP Range requests.
@@ -55,6 +55,13 @@ public class DownloadOrchestratorOptions
     public TimeSpan DownloadTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// File format for downloaded packages.
+    /// Ensures the downloaded filename matches what the pipeline expects.
+    /// Default: <see cref="Configuration.Format.Zip"/>.
+    /// </summary>
+    public Configuration.Format Format { get; set; } = Configuration.Format.Zip;
+
+    /// <summary>
     /// Creates a <see cref="DownloadOrchestratorOptions"/> from <see cref="Configuration.GlobalConfigInfo"/>.
     /// </summary>
     public static DownloadOrchestratorOptions From(Configuration.GlobalConfigInfo config)
@@ -68,6 +75,7 @@ public class DownloadOrchestratorOptions
             VerifyChecksum = config.VerifyChecksum,
             DiffMode = config.DiffMode,
             DownloadTimeout = TimeSpan.FromSeconds(config.DownloadTimeOut > 0 ? config.DownloadTimeOut : 30),
+            Format = config.Format,
         };
     }
 

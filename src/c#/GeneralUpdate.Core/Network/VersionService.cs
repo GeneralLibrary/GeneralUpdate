@@ -58,7 +58,7 @@ namespace GeneralUpdate.Core.Network
             string scheme = null, string token = null, CancellationToken ct = default)
         {
             var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
-            return new VersionService(a).ValidateAsync(url, version, (int)appType, (int)platform, productId, ct);
+            return new VersionService(a).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
         }
 
         // Backward-compatible int overload (binary compat for existing callers)
@@ -69,14 +69,14 @@ namespace GeneralUpdate.Core.Network
 
         private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
         {
-            var p = new Dictionary<string, object> { ["RecordId"] = recordId, ["Status"] = status, ["Type"] = type };
+            var p = new Dictionary<string, object> { ["recordId"] = recordId, ["status"] = status, ["type"] = type };
             await PostAsync<BaseResponseDTO<bool>>(url, p, ReportRespJsonContext.Default.BaseResponseDTOBoolean, t);
         }
 
-        private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, int pf, string pid,
+        private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, string appKey, int pf, string pid,
             CancellationToken t = default)
         {
-            var p = new Dictionary<string, object> { ["Version"] = v, ["AppType"] = at, ["Platform"] = pf, ["ProductId"] = pid };
+            var p = new Dictionary<string, object> { ["version"] = v, ["appType"] = at, ["appKey"] = appKey, ["platform"] = pf, ["productId"] = pid, ["upgradeMode"] = 1 };
             return await PostAsync<VersionRespDTO>(url, p, VersionRespJsonContext.Default.VersionRespDTO, t);
         }
 

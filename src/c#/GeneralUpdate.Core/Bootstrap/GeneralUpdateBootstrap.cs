@@ -65,6 +65,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
         var appType = GetOption(UpdateOptions.AppType);
+        _configInfo.AppType = appType;
 
         // Silent mode: start background poll and return immediately
         if (appType == AppType.Client && GetOption(UpdateOptions.Silent))
@@ -75,9 +76,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return appType switch
         {
-            AppType.Client  => await LaunchWithStrategy(new ClientUpdateStrategy()),
+            AppType.Client => await LaunchWithStrategy(new ClientUpdateStrategy()),
             AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OSSClient  => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSClient)),
+            AppType.OSSClient => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSClient)),
             AppType.OSSUpgrade => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSUpgrade)),
             _ => await LaunchWithStrategy(new ClientUpdateStrategy())
         };
@@ -94,68 +95,40 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             // Resolve hooks and reporter from extensions
             var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
-            var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
+            var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
+                           new Download.Reporting.NoOpUpdateReporter();
 
-            // Configure client-specific callbacks
-            if (roleStrategy is ClientUpdateStrategy clientStrat)
-            {
-                clientStrat.Hooks = hooks;
-                clientStrat.Reporter = reporter;
-                // Resolve DownloadSource from extension registry (Hub, custom, etc.)
-                var resolvedSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
+            // ── Phase 1: inject all dependencies before Create ──
+            roleStrategy.Hooks = hooks;
+            roleStrategy.Reporter = reporter;
 
-                // Inject SignalR Hub download source if configured
-                if (resolvedSource == null)
-                {
-                    var hubConfig = GetOption(UpdateOptions.Hub);
-                    if (hubConfig != null && !string.IsNullOrEmpty(hubConfig.Url))
-                    {
-                        var hubSource = new Download.Sources.HubDownloadSource(
-                            hubConfig.Url, _configInfo.Token, _configInfo.AppSecretKey);
-                        await hubSource.StartAsync().ConfigureAwait(false);
-                        resolvedSource = hubSource;
-                        GeneralTracer.Info("GeneralUpdateBootstrap: HubDownloadSource started from HubConfig.");
-                    }
-                }
-                clientStrat.DownloadSource = resolvedSource;
-                if (_updatePrecheck != null)
-                    clientStrat.UseUpdatePrecheck(_updatePrecheck);
-                await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
-            }
-            else if (roleStrategy is UpgradeUpdateStrategy upgradeStrat)
+            var binaryDiffer = ResolveExtension<IBinaryDiffer>();
+            var dirtyStrategy = ResolveExtension<IDirtyStrategy>();
+            var diffPipeline = BuildDiffPipeline();
+
+            switch (roleStrategy)
             {
-                upgradeStrat.Hooks = hooks;
-                upgradeStrat.Reporter = reporter;
-            }
-            else if (roleStrategy is OSSUpdateStrategy ossStrat)
-            {
-                ossStrat.Hooks = hooks;
-                ossStrat.Reporter = reporter;
+                case ClientUpdateStrategy cs:
+                    cs.DownloadSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
+
+                    if (_updatePrecheck != null)
+                        cs.UseUpdatePrecheck(_updatePrecheck);
+
+                    await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
+
+                    if (binaryDiffer != null) cs.SetBinaryDiffer(binaryDiffer);
+                    if (dirtyStrategy != null) cs.SetDirtyStrategy(dirtyStrategy);
+                    cs.SetDiffPipeline(diffPipeline);
+                    break;
+
+                case UpgradeUpdateStrategy us:
+                    if (binaryDiffer != null) us.SetBinaryDiffer(binaryDiffer);
+                    if (dirtyStrategy != null) us.SetDirtyStrategy(dirtyStrategy);
+                    us.SetDiffPipeline(diffPipeline);
+                    break;
             }
 
             roleStrategy.Create(_configInfo);
-            
-            var binaryDiffer = ResolveExtension<IBinaryDiffer>();
-            var dirtyStrategy = ResolveExtension<IDirtyStrategy>();
-
-            if (roleStrategy is ClientUpdateStrategy cs2)
-            {
-                if (binaryDiffer != null) cs2.SetBinaryDiffer(binaryDiffer);
-                if (dirtyStrategy != null) cs2.SetDirtyStrategy(dirtyStrategy);
-            }
-            else if (roleStrategy is UpgradeUpdateStrategy us2)
-            {
-                if (binaryDiffer != null) us2.SetBinaryDiffer(binaryDiffer);
-                if (dirtyStrategy != null) us2.SetDirtyStrategy(dirtyStrategy);
-            }
-
-            // Build DiffPipeline — user‑configured or default with BsdiffDiffer,
-            // parallelism=2, and progress reporter wired to AddListenerProgress.
-            var diffPipeline = BuildDiffPipeline();
-            if (roleStrategy is ClientUpdateStrategy cs3)
-                cs3.SetDiffPipeline(diffPipeline);
-            else if (roleStrategy is UpgradeUpdateStrategy us3)
-                us3.SetDiffPipeline(diffPipeline);
 
             // Check custom skip condition before executing update
             if (_customSkipOption?.Invoke() == true)
@@ -173,24 +146,21 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         }
         finally
         {
-            // Dispose HubDownloadSource if it was started
-            if (roleStrategy is ClientUpdateStrategy cs && cs.DownloadSource is IAsyncDisposable ad)
-                await ad.DisposeAsync();
             _cts?.Dispose();
             _cts = null;
         }
+
         return this;
     }
-
-
+    
     // ════════════════════════════════════════════════════════════════
     // Configuration
     // ════════════════════════════════════════════════════════════════
 
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
-        {
-            configInfo.Validate();
-            _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
+    {
+        configInfo.Validate();
+        _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
         var appType = GetOption(UpdateOptions.AppType);
         if (appType != AppType.Upgrade)
@@ -223,7 +193,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         // Resolve filename-only paths to current directory
         var hasPathChar = filePath.Contains(Path.DirectorySeparatorChar)
-                       || filePath.Contains(Path.AltDirectorySeparatorChar);
+                          || filePath.Contains(Path.AltDirectorySeparatorChar);
         var fullPath = hasPathChar
             ? Path.GetFullPath(filePath)
             : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
@@ -277,16 +247,18 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             LastVersion = processInfo.LastVersion,
             UpdateLogUrl = processInfo.UpdateLogUrl,
             Encoding = Encoding.GetEncoding(processInfo.CompressEncoding),
-            Format = processInfo.CompressFormat,
+            Format = ParseFormat(processInfo.CompressFormat),
             DownloadTimeOut = processInfo.DownloadTimeOut,
             AppSecretKey = processInfo.AppSecretKey,
             UpdateVersions = processInfo.UpdateVersions,
-            TempPath = StorageManager.GetTempDirectory("upgrade_temp"),
+            TempPath = processInfo.TempPath,
             ReportUrl = processInfo.ReportUrl,
             BackupDirectory = processInfo.BackupDirectory,
             Scheme = processInfo.Scheme,
             Token = processInfo.Token,
             DriverDirectory = processInfo.DriverDirectory,
+            UpdatePath = processInfo.UpdatePath,
+            LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
             BlackFiles = processInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
             BlackFormats = processInfo.BlackFileFormats ?? BlackListDefaults.DefaultBlackFormats,
             SkipDirectorys = processInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories
@@ -306,11 +278,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     {
         // Preserve Upgrade path values set by InitializeFromEnvironment()
         _configInfo.Encoding ??= GetOption(UpdateOptions.Encoding);
-        _configInfo.Format ??= GetOption(UpdateOptions.Format);
-        // Normalize legacy "ZIP" default (UpdateOptions) to Format.ZIP (".zip")
-        // so the pipeline constructs correct paths and CompressProvider matches its switch.
-        if (_configInfo.Format == "ZIP")
-            _configInfo.Format = Format.ZIP;
+        _configInfo.Format = GetOption(UpdateOptions.Format);
         if (_configInfo.DownloadTimeOut <= 0)
             _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
 
@@ -338,16 +306,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
 
         var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
-        var autoInstall = GetOption(UpdateOptions.SilentAutoInstall);
 
         var silentOptions = new Silent.SilentOptions
         {
-            PollInterval = TimeSpan.FromMinutes(pollMinutes),
-            AutoInstall = autoInstall
+            PollInterval = TimeSpan.FromMinutes(pollMinutes)
         };
 
         var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
-        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ?? new Download.Reporting.NoOpUpdateReporter();
+        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
+                       new Download.Reporting.NoOpUpdateReporter();
 
         var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions)
             .WithHooks(hooks)
@@ -371,6 +338,16 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             .Build();
     }
 
+    private static Format ParseFormat(string? compressFormat)
+    {
+        if (string.IsNullOrWhiteSpace(compressFormat)) return Format.Zip;
+        return compressFormat switch
+        {
+            ".zip" => Format.Zip,
+            _ => Format.Zip
+        };
+    }
+
     private void InitBlackList()
     {
         // Build blacklist matcher from GlobalConfigInfo and set on StorageManager.
@@ -378,7 +355,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var effectiveConfig = new BlackListConfig(
             _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
             _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
-            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+            _configInfo.SkipDirectorys?.Count > 0
+                ? _configInfo.SkipDirectorys
+                : BlackListDefaults.DefaultSkipDirectories
         );
         StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }

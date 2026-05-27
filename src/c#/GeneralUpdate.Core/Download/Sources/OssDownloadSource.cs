@@ -35,7 +35,7 @@ public class OssDownloadSource : IDownloadSource
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<DownloadAsset>> ListAsync(CancellationToken token = default)
+    public async Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
     {
         // Download and parse the version JSON from OSS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -49,10 +49,10 @@ public class OssDownloadSource : IDownloadSource
 
         var versions = System.Text.Json.JsonSerializer.Deserialize(json, VersionOSSJsonContext.Default.ListVersionOSS);
         if (versions == null || versions.Count == 0)
-            return Array.Empty<DownloadAsset>();
+            return new DownloadSourceResult { Assets = Array.Empty<DownloadAsset>() };
 
         // Convert VersionOSS to DownloadAsset, ordered by publish time
-        return versions
+        var assets = versions
             .OrderBy(v => v.PubTime)
             .Select(v =>
             {
@@ -74,5 +74,7 @@ public class OssDownloadSource : IDownloadSource
             })
             .ToList()
             .AsReadOnly();
+
+        return new DownloadSourceResult { Assets = assets };
     }
 }

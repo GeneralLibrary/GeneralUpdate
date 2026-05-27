@@ -492,7 +492,7 @@ namespace CoreTest.Bootstrap
             var config = new Configinfo
             {
                 UpdateUrl = "https://update.mycompany.com/v2/api",
-                AppName = "Update.exe",
+                UpdateAppName = "Update.exe",
                 MainAppName = "EnterpriseApp.exe",
                 ClientVersion = "4.2.1-beta",
                 UpgradeClientVersion = "1.5.0",

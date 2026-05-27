@@ -156,18 +156,19 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void UpdateReport_StartedEvent()
         {
-            var report = new UpdateReport("MyApp.exe", "1.0.0", "2.0.0", UpdateEvent.UpdateStarted, AppType.Client, DateTimeOffset.UtcNow);
-            Assert.Equal(UpdateEvent.UpdateStarted, report.Event);
-            Assert.Equal("1.0.0", report.FromVersion);
+            var report = new UpdateReport(123, (int)UpdateEvent.UpdateStarted, 1);
+            Assert.Equal(123, report.RecordId);
+            Assert.Equal((int)UpdateEvent.UpdateStarted, report.Status);
+            Assert.Equal(1, report.Type);
         }
 
         [Fact]
         public void UpdateReport_FailedWithError()
         {
-            var report = new UpdateReport("App.exe", "1.0.0", "2.0.0", UpdateEvent.UpdateFailed, AppType.Client,
-                DateTimeOffset.UtcNow, ErrorMessage: "Disk full", DurationMs: 15000.0);
-            Assert.Equal("Disk full", report.ErrorMessage);
-            Assert.Equal(15000.0, report.DurationMs);
+            var report = new UpdateReport(456, (int)UpdateEvent.UpdateFailed, 1);
+            Assert.Equal(456, report.RecordId);
+            Assert.Equal((int)UpdateEvent.UpdateFailed, report.Status);
+            Assert.Equal(1, report.Type);
         }
 
         [Fact]
@@ -220,7 +221,7 @@ namespace CoreTest.Bootstrap
         public void UpdateContext_AllFields_SetCorrectly()
         {
             var ctx = new UpdateContext("MyApp.exe", "/opt/app", "3.2.1", "4.0.0", AppType.Client);
-            Assert.Equal("MyApp.exe", ctx.AppName);
+            Assert.Equal("MyApp.exe", ctx.UpdateAppName);
             Assert.Equal("3.2.1", ctx.CurrentVersion);
             Assert.Equal("4.0.0", ctx.TargetVersion);
         }

@@ -1,5 +1,7 @@
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Hooks;
+using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
 
 namespace GeneralUpdate.Core.Strategy
 {
@@ -8,6 +10,16 @@ namespace GeneralUpdate.Core.Strategy
     /// </summary>
     public interface IStrategy
     {
+        /// <summary>
+        /// Lifecycle hooks for pre/post update callbacks.
+        /// </summary>
+        IUpdateHooks Hooks { get; set; }
+
+        /// <summary>
+        /// Update status reporter.
+        /// </summary>
+        IUpdateReporter Reporter { get; set; }
+
         /// <summary>
         /// Execution strategy.
         /// </summary>

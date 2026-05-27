@@ -4,13 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
-using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Download.Sources;
 using GeneralUpdate.Core.Event;
@@ -24,8 +22,12 @@ namespace GeneralUpdate.Core.Silent;
 
 /// <summary>
 /// Silent update poll orchestrator — periodically checks for updates,
-/// downloads them in the background, and optionally auto-installs.
-/// Replaces the legacy <c>SilentUpdateMode</c> class.
+/// downloads them in the background, and defers application to process exit.
+/// Follows the same AppType-split pattern as <see cref="ClientUpdateStrategy"/>:
+///   - Upgrade (AppType=2) packages are applied in place during the poll cycle
+///     (they target UpdatePath, not the running app's InstallPath).
+///   - Client (AppType=1) packages are deferred — stored in ProcessInfo and
+///     handed off to the Upgrade process on exit.
 /// </summary>
 public class SilentPollOrchestrator : IDisposable
 {
@@ -38,6 +40,7 @@ public class SilentPollOrchestrator : IDisposable
     private IUpdateHooks? _hooks;
     private IUpdateReporter? _reporter;
     private Configuration.ProcessInfo? _preparedProcessInfo;
+    private List<VersionInfo> _clientVersions = new();
 
     public SilentPollOrchestrator(GlobalConfigInfo configInfo, SilentOptions options)
     {
@@ -45,14 +48,12 @@ public class SilentPollOrchestrator : IDisposable
         _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
-    /// <summary>Inject hooks and reporter for lifecycle callbacks during silent polling.</summary>
     public SilentPollOrchestrator WithHooks(IUpdateHooks? hooks) { _hooks = hooks; return this; }
     public SilentPollOrchestrator WithReporter(IUpdateReporter? reporter) { _reporter = reporter; return this; }
 
-    /// <summary>Start background polling loop.</summary>
     public Task StartAsync()
     {
-        GeneralTracer.Info($"SilentPollOrchestrator: starting. PollInterval={_options.PollInterval.TotalMinutes}min, AutoInstall={_options.AutoInstall}");
+        GeneralTracer.Info($"SilentPollOrchestrator: starting. PollInterval={_options.PollInterval.TotalMinutes}min");
 
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
         _cts = new CancellationTokenSource();
@@ -67,7 +68,6 @@ public class SilentPollOrchestrator : IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Stop polling and cancel any in-flight operation.</summary>
     public void Stop()
     {
         _cts?.Cancel();
@@ -99,7 +99,6 @@ public class SilentPollOrchestrator : IDisposable
     {
         GeneralTracer.Info($"SilentPollOrchestrator: checking for updates. Url={_configInfo.UpdateUrl}");
 
-        // Use the new download source
         var downloadSource = new HttpDownloadSource(
             _configInfo.UpdateUrl,
             _configInfo.ClientVersion,
@@ -110,8 +109,8 @@ public class SilentPollOrchestrator : IDisposable
             _configInfo.Scheme,
             _configInfo.Token);
 
-        var assets = await downloadSource.ListAsync(token).ConfigureAwait(false);
-        var plan = DownloadPlanBuilder.Build(assets, _configInfo.ClientVersion);
+        var sourceResult = await downloadSource.ListAsync(token).ConfigureAwait(false);
+        var plan = DownloadPlanBuilder.Build(sourceResult.Assets, _configInfo.ClientVersion);
 
         if (!plan.HasAssets)
         {
@@ -126,9 +125,9 @@ public class SilentPollOrchestrator : IDisposable
             return;
         }
 
-        // ══— Hooks: allow cancellation before starting update ══— 
+        // Hooks: allow cancellation before starting update
         var updateCtx = new UpdateContext(
-            _configInfo.MainAppName ?? _configInfo.AppName,
+            _configInfo.MainAppName ?? _configInfo.UpdateAppName,
             _configInfo.InstallPath,
             _configInfo.ClientVersion,
             latestVersion,
@@ -147,166 +146,126 @@ public class SilentPollOrchestrator : IDisposable
             catch (Exception ex) { GeneralTracer.Warn($"Hook OnBeforeUpdateAsync failed: {ex.Message}"); }
         }
 
-        // Configure matcher from config with defaults
-        var effectiveConfig = new BlackListConfig(
-            _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
-            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
-            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
-        );
-        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
+        InitBlackList();
 
         _configInfo.LastVersion = latestVersion;
-        _configInfo.UpdateVersions = new List<VersionInfo>(); // legacy compat
         _configInfo.TempPath = StorageManager.GetTempDirectory("silent_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
             $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
 
         // Backup
-        StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+        if (_configInfo.BackupEnabled != false)
+        {
+            StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
+                _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+        }
 
-        // Build ProcessInfo and store for IPC delivery on process exit
-        _preparedProcessInfo = ConfigurationMapper.MapToProcessInfo(
-            _configInfo, new List<VersionInfo>(),
-            _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
-            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-
-        // ══— Reporter: update started ══— 
-        var startTime = DateTimeOffset.UtcNow;
+        // Reporter: update started
         if (_reporter != null)
         {
-            try
-            {
-                await _reporter.ReportAsync(new UpdateReport(
-                    updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
-                    UpdateEvent.UpdateStarted, AppType.Client, startTime), token).ConfigureAwait(false);
-            }
+            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateStarted, 1), token).ConfigureAwait(false); }
             catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateStarted failed: {ex.Message}"); }
         }
 
-        // Download using new orchestrator
+        // Download all packages in background
         GeneralTracer.Info($"SilentPollOrchestrator: downloading {plan.Assets.Count} asset(s).");
         var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
-        var downloadSuccessCount = 0;
-        var downloadFailedCount = 0;
-        var downloadTotalBytes = 0L;
-        var downloadElapsed = TimeSpan.Zero;
         try
         {
             var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient);
             var report = await orchestrator.ExecuteAsync(plan, _configInfo.TempPath, token: token).ConfigureAwait(false);
-            downloadSuccessCount = report.SuccessCount;
-            downloadFailedCount = report.FailedCount;
-            downloadTotalBytes = report.TotalBytes;
-            downloadElapsed = report.TotalDuration;
-            GeneralTracer.Info($"SilentPollOrchestrator: download complete. Success={downloadSuccessCount}, Failed={downloadFailedCount}");
+            GeneralTracer.Info($"SilentPollOrchestrator: download complete. Success={report.SuccessCount}, Failed={report.FailedCount}");
 
-            // ══— Hooks + Reporter: download completed ══— 
+            if (report.FailedCount > 0)
+            {
+                GeneralTracer.Error($"SilentPollOrchestrator: download had {report.FailedCount} failures, aborting update.");
+                return;
+            }
+
             if (_hooks != null)
             {
                 try
                 {
                     var downloadCtx = new DownloadContext(
                         plan.Assets.FirstOrDefault()?.Name ?? "update", latestVersion ?? "",
-                        downloadTotalBytes, downloadElapsed,
-                        _configInfo.TempPath, downloadFailedCount == 0);
+                        report.TotalBytes, report.TotalDuration,
+                        _configInfo.TempPath, report.FailedCount == 0);
                     await _hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
                 }
                 catch (Exception ex) { GeneralTracer.Warn($"Hook OnDownloadCompletedAsync failed: {ex.Message}"); }
             }
-
             if (_reporter != null)
             {
-                try
-                {
-                    await _reporter.ReportAsync(new UpdateReport(
-                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
-                        UpdateEvent.DownloadCompleted, AppType.Client, DateTimeOffset.UtcNow,
-                        DurationMs: downloadElapsed.TotalMilliseconds), token).ConfigureAwait(false);
-                }
+                try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.DownloadCompleted, 1), token).ConfigureAwait(false); }
                 catch (Exception ex) { GeneralTracer.Warn($"Reporter DownloadCompleted failed: {ex.Message}"); }
-            }
-
-            if (downloadFailedCount > 0)
-            {
-                GeneralTracer.Error($"SilentPollOrchestrator: download had {downloadFailedCount} failures, aborting update.");
-                return;
             }
         }
         catch (Exception ex)
         {
             GeneralTracer.Error("SilentPollOrchestrator: download failed.", ex);
-            if (_hooks != null)
-            {
-                try { await _hooks.OnUpdateErrorAsync(updateCtx, ex).ConfigureAwait(false); }
-                catch (Exception hookEx) { GeneralTracer.Warn($"Hook OnUpdateErrorAsync failed: {hookEx.Message}"); }
-            }
-            if (_reporter != null)
-            {
-                try
-                {
-                    await _reporter.ReportAsync(new UpdateReport(
-                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
-                        UpdateEvent.UpdateFailed, AppType.Client, DateTimeOffset.UtcNow,
-                        ErrorMessage: ex.Message), token).ConfigureAwait(false);
-                }
-                catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
-            }
+            TryReportError(updateCtx, ex);
             return;
         }
-        finally { }
 
-        // Execute pipeline
-        try
+        // Split packages by AppType — mirrors ClientUpdateStrategy
+        var downloadVersions = plan.Assets.Select(a => new VersionInfo
         {
-            var strategy = CreateStrategy();
-            strategy.Create(_configInfo);
-            await strategy.ExecuteAsync();
+            Name = a.Name,
+            Hash = a.SHA256,
+            Url = a.Url,
+            Version = a.Version,
+            Format = _configInfo.Format.ToExtension(),
+            AppType = a.AppType ?? (int)AppType.Client
+        }).ToList();
 
-            GeneralTracer.Info("SilentPollOrchestrator: update prepared.");
-            Interlocked.Exchange(ref _prepared, 1);
+        var upgradeVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
+        _clientVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Client).ToList();
+        GeneralTracer.Info($"SilentPollOrchestrator: Upgrade packages={upgradeVersions.Count}, Client packages={_clientVersions.Count}");
 
-            // ══— Hooks + Reporter: update applied ══— 
-            if (_hooks != null)
+        // Apply Upgrade packages in place — safe because they target UpdatePath
+        if (upgradeVersions.Count > 0)
+        {
+            GeneralTracer.Info("SilentPollOrchestrator: applying Upgrade packages.");
+            try
             {
-                try { await _hooks.OnAfterUpdateAsync(updateCtx).ConfigureAwait(false); }
-                catch (Exception ex) { GeneralTracer.Warn($"Hook OnAfterUpdateAsync failed: {ex.Message}"); }
+                _configInfo.UpdateVersions = upgradeVersions;
+                var strategy = CreateStrategy();
+                strategy.Create(_configInfo);
+                await strategy.ExecuteAsync().ConfigureAwait(false);
+                GeneralTracer.Info("SilentPollOrchestrator: Upgrade packages applied.");
             }
-
-            if (_reporter != null)
+            catch (Exception ex)
             {
-                try
-                {
-                    var elapsedMs = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
-                    await _reporter.ReportAsync(new UpdateReport(
-                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
-                        UpdateEvent.UpdateApplied, AppType.Client, DateTimeOffset.UtcNow,
-                        DurationMs: elapsedMs), token).ConfigureAwait(false);
-                }
-                catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateApplied failed: {ex.Message}"); }
+                GeneralTracer.Error("SilentPollOrchestrator: Upgrade package application failed.", ex);
+                TryReportError(updateCtx, ex);
+                return;
             }
         }
-        catch (Exception ex)
+
+        // Build ProcessInfo with Client packages for IPC delivery on process exit
+        if (_clientVersions.Count > 0)
         {
-            GeneralTracer.Error("SilentPollOrchestrator: pipeline execution failed.", ex);
-            if (_hooks != null)
-            {
-                try { await _hooks.OnUpdateErrorAsync(updateCtx, ex).ConfigureAwait(false); }
-                catch (Exception hookEx) { GeneralTracer.Warn($"Hook OnUpdateErrorAsync failed: {hookEx.Message}"); }
-            }
-            if (_reporter != null)
-            {
-                try
-                {
-                    await _reporter.ReportAsync(new UpdateReport(
-                        updateCtx.AppName, updateCtx.CurrentVersion, updateCtx.TargetVersion,
-                        UpdateEvent.UpdateFailed, AppType.Client, DateTimeOffset.UtcNow,
-                        ErrorMessage: ex.Message), token).ConfigureAwait(false);
-                }
-                catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
-            }
+            _configInfo.LaunchClientAfterUpdate = _options.LaunchClientAfterUpdate;
+            _preparedProcessInfo = ConfigurationMapper.MapToProcessInfo(
+                _configInfo, _clientVersions,
+                _configInfo.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
+                _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
+                _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+            _configInfo.ProcessInfo = JsonSerializer.Serialize(_preparedProcessInfo, ProcessInfoJsonContext.Default.ProcessInfo);
+        }
+
+        Interlocked.Exchange(ref _prepared, 1);
+        GeneralTracer.Info("SilentPollOrchestrator: update prepared, waiting for process exit.");
+
+        if (_hooks != null)
+        {
+            try { await _hooks.OnAfterUpdateAsync(updateCtx).ConfigureAwait(false); }
+            catch (Exception ex) { GeneralTracer.Warn($"Hook OnAfterUpdateAsync failed: {ex.Message}"); }
+        }
+        if (_reporter != null)
+        {
+            try { await _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateApplied, 1), token).ConfigureAwait(false); }
+            catch (Exception ex) { GeneralTracer.Warn($"Reporter UpdateApplied failed: {ex.Message}"); }
         }
     }
 
@@ -316,29 +275,58 @@ public class SilentPollOrchestrator : IDisposable
 
         try
         {
-            var updaterPath = Path.Combine(_configInfo.InstallPath, _configInfo.AppName);
+            // Resolve updater location — prefers UpdatePath, falls back to InstallPath
+            var updaterDir = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath)
+                ? (Path.IsPathRooted(_configInfo.UpdatePath)
+                    ? _configInfo.UpdatePath
+                    : Path.Combine(_configInfo.InstallPath, _configInfo.UpdatePath))
+                : _configInfo.InstallPath;
+            var updaterPath = Path.Combine(updaterDir, _configInfo.UpdateAppName);
 
-            // Start the upgrade process first — it will call ReceiveAsync in its constructor.
-            // We then call SendAsync which creates the NamedPipe server; the upgrade's
-            // client connects to it. Auto-fallback (SharedMemory > EncryptedFile) handles
-            // timing gaps where the named pipe handshake doesn't complete in time.
-            if (File.Exists(updaterPath))
+            if (!File.Exists(updaterPath))
             {
-                GeneralTracer.Info($"SilentPollOrchestrator: launching updater {updaterPath}");
-                Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
+                GeneralTracer.Warn($"SilentPollOrchestrator: updater not found at {updaterPath}, cannot launch.");
+                return;
             }
 
-            // Send ProcessInfo via AES-encrypted file IPC.
-            if (_preparedProcessInfo != null)
+            // Send ProcessInfo with Client packages via encrypted file IPC BEFORE starting Upgrade
+            if (_preparedProcessInfo != null && _clientVersions.Count > 0)
             {
                 new EncryptedFileProcessInfoProvider().Send(_preparedProcessInfo);
-                GeneralTracer.Info("SilentPollOrchestrator: ProcessInfo sent via encrypted file IPC.");
+                GeneralTracer.Info($"SilentPollOrchestrator: ProcessInfo sent with {_clientVersions.Count} Client package(s).");
             }
+
+            Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
+            GeneralTracer.Info($"SilentPollOrchestrator: launched updater {updaterPath}");
         }
         catch (Exception ex)
         {
             GeneralTracer.Error("SilentPollOrchestrator: OnProcessExit failed.", ex);
         }
+    }
+
+    private void TryReportError(UpdateContext ctx, Exception ex)
+    {
+        if (_hooks != null)
+        {
+            try { _hooks.OnUpdateErrorAsync(ctx, ex).GetAwaiter().GetResult(); }
+            catch (Exception hookEx) { GeneralTracer.Warn($"Hook OnUpdateErrorAsync failed: {hookEx.Message}"); }
+        }
+        if (_reporter != null)
+        {
+            try { _reporter.ReportAsync(new UpdateReport(0, (int)UpdateEvent.UpdateFailed, 1)).GetAwaiter().GetResult(); }
+            catch (Exception reporterEx) { GeneralTracer.Warn($"Reporter UpdateFailed failed: {reporterEx.Message}"); }
+        }
+    }
+
+    private void InitBlackList()
+    {
+        var effectiveConfig = new BlackListConfig(
+            _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
+            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
+            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+        );
+        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }
 
     private static IStrategy CreateStrategy()
@@ -372,12 +360,14 @@ public class SilentPollOrchestrator : IDisposable
     }
 }
 
-/// <summary>Silent polling configuration.</summary>
 public sealed class SilentOptions
 {
-    /// <summary>Polling interval (default 1 hour).</summary>
     public TimeSpan PollInterval { get; set; } = TimeSpan.FromHours(1);
 
-    /// <summary>Whether to auto-install after download.</summary>
-    public bool AutoInstall { get; set; } = false;
+    /// <summary>
+    /// Whether to launch the client application after the upgrade process finishes.
+    /// Default: true (current behavior). Set to false when the caller wants to
+    /// manually control restart timing (e.g. maintenance windows, orchestrated rollouts).
+    /// </summary>
+    public bool LaunchClientAfterUpdate { get; set; } = true;
 }

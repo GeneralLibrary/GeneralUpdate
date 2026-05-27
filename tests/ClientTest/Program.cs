@@ -1,0 +1,134 @@
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Event;
+using GeneralUpdate.Core.Hooks;
+
+try
+{
+    Console.WriteLine("=== GeneralUpdate Client Test ===");
+    Console.WriteLine($"Started at {DateTime.Now}");
+    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
+
+    var updateUrl =  "http://localhost:5000/Upgrade/Verification";
+    var reportUrl =  "http://localhost:5000/Upgrade/Report";
+    var appSecretKey = Environment.GetEnvironmentVariable("APP_SECRET_KEY") ?? "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
+    var productId = Environment.GetEnvironmentVariable("PRODUCT_ID") ?? "2d974e2a-31e6-4887-9bb1-b4689e98c77a";
+    var clientVersion = Environment.GetEnvironmentVariable("CLIENT_VERSION") ?? "1.0.0.0";
+
+    Console.WriteLine($"UpdateUrl: {updateUrl}");
+    Console.WriteLine($"ReportUrl: {reportUrl}");
+    Console.WriteLine($"ClientVersion: {clientVersion}");
+    Console.WriteLine($"ProductId: {productId}");
+    Console.WriteLine();
+
+    var config = new Configinfo
+    {
+        UpdateUrl = updateUrl,
+        ReportUrl = reportUrl,
+        UpdatePath = "Upgrade",
+        UpdateAppName = "UpgradeTest.exe",
+        MainAppName = "ClientTest.exe",
+        InstallPath = AppDomain.CurrentDomain.BaseDirectory,
+        ClientVersion = clientVersion,
+        UpgradeClientVersion = "1.0.0.0",
+        ProductId = productId,
+        AppSecretKey = appSecretKey,
+    };
+
+    await new GeneralUpdateBootstrap()
+        .SetConfig(config)
+        .Option(UpdateOptions.AppType, AppType.Client)
+        .Hooks<ClientTestHooks>()
+        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
+        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
+        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
+        .AddListenerMultiDownloadError(OnDownloadError)
+        .AddListenerException(OnException)
+        .AddListenerUpdateInfo(OnUpdateInfo)
+        .LaunchAsync();
+
+    Console.WriteLine("Client test completed.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FATAL: {ex}");
+    Environment.Exit(1);
+}
+
+static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
+{
+    var v = e.Version as VersionInfo;
+    Console.WriteLine($"[Download] {v?.Version}: {e.ProgressPercentage}% | {e.Speed} | ETA: {e.Remaining}");
+}
+
+static void OnDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
+{
+    var v = e.Version as VersionInfo;
+    Console.WriteLine($"[Download] {v?.Version}: {(e.IsCompleted ? "SUCCESS" : "FAILED")}");
+}
+
+static void OnAllDownloadCompleted(object sender, MultiAllDownloadCompletedEventArgs e)
+{
+    Console.WriteLine(e.IsAllDownloadCompleted
+        ? "[Download] All downloads completed."
+        : $"[Download] Downloads finished with {e.FailedVersions.Count} failure(s).");
+}
+
+static void OnDownloadError(object sender, MultiDownloadErrorEventArgs e)
+{
+    var v = e.Version as VersionInfo;
+    Console.WriteLine($"[Download] Error @ {v?.Version}: {e.Exception.Message}");
+}
+
+static void OnException(object sender, ExceptionEventArgs e)
+{
+    Console.WriteLine($"[Error] {e.Exception}");
+}
+
+static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
+{
+    Console.WriteLine($"[UpdateInfo] Code={e.Info?.Code}, Message={e.Info?.Message}");
+    if (e.Info?.Body is { Count: > 0 })
+    {
+        foreach (var vi in e.Info.Body)
+            Console.WriteLine($"  - {vi.Version} ({vi.Name}) [{vi.Size} bytes] {(vi.IsForcibly == true ? "(forced)" : "")}");
+    }
+    else
+    {
+        Console.WriteLine("  No updates available.");
+    }
+}
+
+sealed class ClientTestHooks : IUpdateHooks
+{
+    public async Task<bool> OnBeforeUpdateAsync(UpdateContext ctx)
+    {
+        Console.WriteLine($"[Hook] OnBeforeUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
+        return await Task.FromResult(true);
+    }
+
+    public async Task OnDownloadCompletedAsync(DownloadContext ctx)
+    {
+        Console.WriteLine($"[Hook] OnDownloadCompleted: {ctx.AssetName} v{ctx.Version} ({ctx.TotalBytes} bytes, {ctx.Duration}) {(ctx.Success ? "OK" : "FAIL")}");
+        await Task.CompletedTask;
+    }
+
+    public async Task OnAfterUpdateAsync(UpdateContext ctx)
+    {
+        Console.WriteLine($"[Hook] OnAfterUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
+        await Task.CompletedTask;
+    }
+
+    public async Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex)
+    {
+        Console.WriteLine($"[Hook] OnUpdateError: {ctx.CurrentVersion} -> {ctx.TargetVersion} | {ex.Message}");
+        await Task.CompletedTask;
+    }
+
+    public async Task OnBeforeStartAppAsync(UpdateContext ctx)
+    {
+        Console.WriteLine($"[Hook] OnBeforeStartApp: {ctx.UpdateAppName} @ {ctx.InstallPath}");
+        await Task.CompletedTask;
+    }
+}

@@ -29,7 +29,7 @@ namespace GeneralUpdate.Core.Configuration
                 return target;
 
             // Map common fields from base configuration
-            target.AppName = source.AppName;
+            target.UpdateAppName = source.UpdateAppName;
             target.MainAppName = source.MainAppName;
             target.ClientVersion = source.ClientVersion;
             target.InstallPath = source.InstallPath;
@@ -43,6 +43,8 @@ namespace GeneralUpdate.Core.Configuration
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.DriverDirectory = source.DriverDirectory;
+            target.AppType = source.AppType;
+            target.UpdatePath = source.UpdatePath;
 
             // Map GlobalConfigInfo-specific fields
             target.UpdateUrl = source.UpdateUrl;
@@ -76,13 +78,13 @@ namespace GeneralUpdate.Core.Configuration
             // Create ProcessInfo with all required parameters in a single location
             // Centralized parameter mapping for ProcessInfo creation
             return new ProcessInfo(
-                appName: source.MainAppName,              // Maps MainAppName to ProcessInfo.AppName
+                appName: source.MainAppName,              // Maps MainAppName to ProcessInfo.UpdateAppName
                 installPath: source.InstallPath,
                 currentVersion: source.ClientVersion,     // Maps ClientVersion to ProcessInfo.CurrentVersion
                 lastVersion: source.LastVersion,          // Computed value set before calling this method
                 updateLogUrl: source.UpdateLogUrl,
                 compressEncoding: source.Encoding,        // Computed value set before calling this method
-                compressFormat: source.Format,            // Computed value set before calling this method
+                compressFormat: source.Format.ToExtension(), // Computed value set before calling this method
                 downloadTimeOut: source.DownloadTimeOut,  // Computed value set before calling this method
                 appSecretKey: source.AppSecretKey,
                 updateVersions: updateVersions,           // From API response
@@ -92,9 +94,12 @@ namespace GeneralUpdate.Core.Configuration
                 scheme: source.Scheme,
                 token: source.Token,
                 driverDirectory: source.DriverDirectory,  // Driver directory for driver updates
+                tempPath: source.TempPath,                // Client's download temp path so upgrade can find packages
                 blackFileFormats: blackFileFormats,       // From BlackListManager
                 blackFiles: blackFiles,                   // From BlackListManager
-                skipDirectories: skipDirectories          // From BlackListManager
+                skipDirectories: skipDirectories,         // From BlackListManager
+                upgradePath: source.UpdatePath,          // Custom upgrade directory
+                launchClient: source.LaunchClientAfterUpdate
             );
         }
 
@@ -113,7 +118,7 @@ namespace GeneralUpdate.Core.Configuration
             if (source == null || target == null)
                 return;
 
-            target.AppName = source.AppName;
+            target.UpdateAppName = source.UpdateAppName;
             target.MainAppName = source.MainAppName;
             target.InstallPath = source.InstallPath;
             target.UpdateLogUrl = source.UpdateLogUrl;
@@ -127,6 +132,8 @@ namespace GeneralUpdate.Core.Configuration
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.DriverDirectory = source.DriverDirectory;
+            target.AppType = source.AppType;
+            target.UpdatePath = source.UpdatePath;
         }
     }
 }
