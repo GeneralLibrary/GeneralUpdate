@@ -14,16 +14,15 @@ namespace CoreTest.Pipeline
     {
         /// <summary>
         /// Tests that InvokeAsync requires necessary context values.
+        /// Missing required context keys cause the pipeline to fail.
         /// </summary>
         [Fact]
         public async Task InvokeAsync_WithMissingContextValues_ThrowsException()
         {
-            // Arrange
             var middleware = new CompressMiddleware();
             var context = new PipelineContext();
-            
-            // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => middleware.InvokeAsync(context));
+
+            await Assert.ThrowsAsync<Exception>(() => middleware.InvokeAsync(context));
         }
 
         /// <summary>

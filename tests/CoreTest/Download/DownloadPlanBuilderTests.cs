@@ -81,7 +81,7 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
-    public void Build_CrossVersionMatch_ReturnsSingleAssetPlan()
+    public void Build_CrossVersionIncluded_ReturnsAllMatchingAssets()
     {
         var assets = new[]
         {
@@ -90,8 +90,10 @@ public class DownloadPlanBuilderTests
         };
         var result = DownloadPlanBuilder.Build(assets, "1.0.0");
         Assert.True(result.HasAssets);
-        Assert.Single(result.Assets);
-        Assert.Equal("5.0.0", result.Assets[0].Version);
+        Assert.Equal(3, result.Assets.Count);
+        Assert.Equal("2.0.0", result.Assets[0].Version);
+        Assert.Equal("3.0.0", result.Assets[1].Version);
+        Assert.Equal("5.0.0", result.Assets[2].Version);
     }
 
     [Fact]
