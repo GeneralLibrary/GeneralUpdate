@@ -27,12 +27,17 @@ public class UpgradeUpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
+    private IStrategy? _customOsStrategy;
 
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+
+    /// <summary>Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
+    /// When set, this replaces the automatic platform detection in <see cref="ResolveOsStrategy"/>.</summary>
+    public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
 
     public void Create(GlobalConfigInfo parameter)
     {
@@ -151,8 +156,10 @@ public class UpgradeUpdateStrategy : IStrategy
 
     #region Helpers
 
-    private static IStrategy ResolveOsStrategy()
+    private IStrategy ResolveOsStrategy()
     {
+        if (_customOsStrategy != null)
+            return _customOsStrategy;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return new WindowsStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

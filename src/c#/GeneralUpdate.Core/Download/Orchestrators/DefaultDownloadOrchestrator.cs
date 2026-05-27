@@ -28,12 +28,21 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     private readonly HttpClient _httpClient;
     private readonly IDownloadPolicy _policy;
     private readonly DownloadOrchestratorOptions _options;
+    private readonly IDownloadExecutor? _customExecutor;
+    private readonly Func<string?, IDownloadPipeline>? _pipelineFactory;
 
-    public DefaultDownloadOrchestrator(HttpClient httpClient, DownloadOrchestratorOptions? options = null, IDownloadPolicy? policy = null)
+    public DefaultDownloadOrchestrator(
+        HttpClient httpClient,
+        DownloadOrchestratorOptions? options = null,
+        IDownloadPolicy? policy = null,
+        IDownloadExecutor? executor = null,
+        Func<string?, IDownloadPipeline>? pipelineFactory = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _options = options ?? new DownloadOrchestratorOptions();
         _policy = policy ?? new DefaultRetryPolicy(_options.RetryCount, _options.RetryInterval);
+        _customExecutor = executor;
+        _pipelineFactory = pipelineFactory;
     }
 
     /// <summary>Execute downloads for all assets in the plan.</summary>
@@ -82,8 +91,8 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                 var fileName = GetFileName(asset);
                 var destPath = Path.Combine(destDir, fileName);
 
-                var executor = new HttpDownloadExecutor(_httpClient, _options.DownloadTimeout, _options.EnableResume);
-                var pipeline = new DefaultDownloadPipeline(asset.SHA256);
+                var executor = _customExecutor ?? new HttpDownloadExecutor(_httpClient, _options.DownloadTimeout, _options.EnableResume);
+                var pipeline = _pipelineFactory?.Invoke(asset.SHA256) ?? new DefaultDownloadPipeline(asset.SHA256);
 
                 var result = await _policy.ExecuteAsync(async ct =>
                 {

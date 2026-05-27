@@ -34,8 +34,12 @@ public class ClientUpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
+    private IStrategy? _customOsStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
-    private readonly Download.Abstractions.IDownloadOrchestrator? _orchestrator;
+    private Download.Abstractions.IDownloadOrchestrator? _orchestrator;
+    private Download.Abstractions.IDownloadPolicy? _customDownloadPolicy;
+    private Download.Abstractions.IDownloadExecutor? _customDownloadExecutor;
+    private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
 
     /// <summary>Which side(s) need updating, determined by server validation.</summary>
@@ -49,12 +53,30 @@ public class ClientUpdateStrategy : IStrategy
 
     /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
+
     /// <summary>Update status reporter injected by the bootstrap.</summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+
     /// <summary>Download source (e.g., HTTP, SignalR Hub). Injected by bootstrap via HubConfig or extension registry (<c>.DownloadSource&lt;T&gt;()</c>).</summary>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
-    public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator = null) { _orchestrator = orchestrator; }
+    public ClientUpdateStrategy() { }
+
+    /// <summary>Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
+    /// When set, this replaces the automatic platform detection in <see cref="ResolveOsStrategy"/>.</summary>
+    public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
+
+    /// <summary>Sets a custom download orchestrator (injected via <c>.DownloadOrchestrator&lt;T&gt;()</c>).</summary>
+    public void SetOrchestrator(Download.Abstractions.IDownloadOrchestrator? orchestrator) => _orchestrator = orchestrator;
+
+    /// <summary>Sets a custom download retry policy (injected via <c>.DownloadPolicy&lt;T&gt;()</c>).</summary>
+    public void SetDownloadPolicy(Download.Abstractions.IDownloadPolicy? policy) => _customDownloadPolicy = policy;
+
+    /// <summary>Sets a custom download executor (injected via <c>.DownloadExecutor&lt;T&gt;()</c>).</summary>
+    public void SetDownloadExecutor(Download.Abstractions.IDownloadExecutor? executor) => _customDownloadExecutor = executor;
+
+    /// <summary>Sets a custom download pipeline factory (injected via <c>.DownloadPipeline&lt;T&gt;()</c>).</summary>
+    public void SetDownloadPipelineFactory(Func<string?, Download.Abstractions.IDownloadPipeline>? factory) => _customDownloadPipelineFactory = factory;
 
     public void Create(GlobalConfigInfo parameter)
     {
@@ -145,7 +167,8 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task ExecuteStandardWorkflowAsync()
     {
-        GeneralTracer.Info($"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
+        GeneralTracer.Info(
+            $"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
         // Use injected DownloadSource (Hub/HTTP), or default to HttpDownloadSource
         var downloadSource = DownloadSource ?? new Download.Sources.HttpDownloadSource(
@@ -172,9 +195,9 @@ public class ClientUpdateStrategy : IStrategy
         var scenario = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
         {
             (false, false) => UpdateScenario.None,
-            (false, true)  => UpdateScenario.UpgradeOnly,
-            (true, false)  => UpdateScenario.MainOnly,
-            (true, true)   => UpdateScenario.Both,
+            (false, true) => UpdateScenario.UpgradeOnly,
+            (true, false) => UpdateScenario.MainOnly,
+            (true, true) => UpdateScenario.Both,
         };
         GeneralTracer.Info($"ClientUpdateStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
@@ -194,14 +217,14 @@ public class ClientUpdateStrategy : IStrategy
             IsCrossVersion = a.IsCrossVersion,
             FromVersion = a.FromVersion
         }).ToList();
-        
+
         var versionResp = new VersionRespDTO
         {
             Code = versionInfos.Count > 0 ? 200 : 404,
             Body = versionInfos,
             Message = versionInfos.Count > 0 ? $"Found {versionInfos.Count} update(s)." : "No updates available."
         };
-        
+
         var updateInfoArgs = new UpdateInfoEventArgs(versionResp);
 
         // Capture the first RecordId for status reporting to GeneralSpacestation
@@ -241,7 +264,8 @@ public class ClientUpdateStrategy : IStrategy
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
         {
-            GeneralTracer.Warn($"ClientUpdateStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
+            GeneralTracer.Warn(
+                $"ClientUpdateStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
             return;
         }
 
@@ -270,10 +294,14 @@ public class ClientUpdateStrategy : IStrategy
             var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
             try
             {
-                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(httpClient, orchOptions);
+                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
+                    httpClient, orchOptions, _customDownloadPolicy,
+                    _customDownloadExecutor, _customDownloadPipelineFactory);
                 await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
             }
-            finally { }
+            finally
+            {
+            }
         }
 
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
@@ -292,7 +320,8 @@ public class ClientUpdateStrategy : IStrategy
 
         var upgradeVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
         var clientVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Client).ToList();
-        GeneralTracer.Info($"ClientUpdateStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
+        GeneralTracer.Info(
+            $"ClientUpdateStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
 
         // ── Dispatch by scenario — one switch, four states, zero nested if-else ──
         switch (scenario)
@@ -356,7 +385,9 @@ public class ClientUpdateStrategy : IStrategy
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
         }
-        GeneralTracer.Info($"ClientUpdateStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
+
+        GeneralTracer.Info(
+            $"ClientUpdateStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
         await _osStrategy!.StartAppAsync();
     }
 
@@ -364,8 +395,10 @@ public class ClientUpdateStrategy : IStrategy
 
     #region Helpers
 
-    private static IStrategy ResolveOsStrategy()
+    private IStrategy ResolveOsStrategy()
     {
+        if (_customOsStrategy != null)
+            return _customOsStrategy;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return new WindowsStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -380,14 +413,17 @@ public class ClientUpdateStrategy : IStrategy
         var effectiveConfig = new BlackListConfig(
             _configInfo!.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
             _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
-            _configInfo.SkipDirectorys?.Count > 0 ? _configInfo.SkipDirectorys : BlackListDefaults.DefaultSkipDirectories
+            _configInfo.SkipDirectorys?.Count > 0
+                ? _configInfo.SkipDirectorys
+                : BlackListDefaults.DefaultSkipDirectories
         );
         StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }
 
     private void Backup()
     {
-        GeneralTracer.Info($"ClientUpdateStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
+        GeneralTracer.Info(
+            $"ClientUpdateStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
             _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
     }
@@ -450,26 +486,51 @@ public class ClientUpdateStrategy : IStrategy
 
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
+        try
+        {
+            return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}");
+            return true;
+        }
     }
 
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
-        try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
-        try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
+        try
+        {
+            await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
@@ -482,43 +543,66 @@ public class ClientUpdateStrategy : IStrategy
                 0, TimeSpan.Zero, _configInfo?.TempPath, true);
             await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportDownloadCompletedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report DownloadCompleted failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report DownloadCompleted failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}");
+        }
     }
 
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
+            await Reporter
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
         }
-        catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}");
+        }
     }
 
     #endregion
