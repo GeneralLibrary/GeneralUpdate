@@ -27,18 +27,53 @@ using GeneralUpdate.Differential.Differ;
 namespace GeneralUpdate.Core;
 
 /// <summary>
-/// Unified update bootstrap — single entry point for Client, Upgrade, and OSS roles.
-/// Use <see cref="AppType"/> to select the workflow:
-/// <list type="bullet">
-///   <item><see cref="AppType.Client"/> — validate versions, download, start upgrade process</item>
-///   <item><see cref="AppType.Upgrade"/> — receive ProcessInfo, apply updates, start main app</item>
-///   <item><see cref="AppType.OSSClient"/> — OSS client: download version config, start upgrade process</item>
-///   <item><see cref="AppType.OSSUpgrade"/> — OSS upgrade: download packages from cloud, start main app</item>
-/// </list>
+/// Unified update entry point for all application update scenarios.
+/// Configure the update via fluent methods, then call <see cref="LaunchAsync"/> to execute.
 /// </summary>
 /// <remarks>
-/// For Client mode, use <c>Option(UpdateOptions.AppType, AppType.Client)</c>.
+/// <para><b>Core flow:</b></para>
+/// <para>
+/// 1. <b>Configuration</b> — <see cref="SetConfig(Configinfo)"/> loads parameters (versions, paths, URLs).<br/>
+/// 2. <b>Extension resolution</b> — <see cref="LaunchWithStrategy"/> resolves all registered
+///    extension points (strategy, hooks, download components, network policies) and injects
+///    them into the role strategy.<br/>
+/// 3. <b>Role dispatch</b> — <see cref="AppType"/> selects the role strategy:<br/>
+///    • <see cref="AppType.Client"/> — validates against server, downloads packages,
+///      applies upgrade packages in-place, serializes client packages to IPC, and launches
+///      the upgrade process.<br/>
+///    • <see cref="AppType.Upgrade"/> — reads IPC data, applies client packages via the
+///      OS pipeline, then starts the main application.<br/>
+///    • <see cref="AppType.OSSClient"/>/<see cref="AppType.OSSUpgrade"/> — OSS-based
+///      workflow for cloud storage (AliYun, AWS S3, MinIO).<br/>
+/// 4. <b>Platform resolution</b> — <see cref="Strategy.ClientUpdateStrategy.ResolveOsStrategy"/>
+///    detects the OS and creates <c>WindowsStrategy</c>, <c>LinuxStrategy</c>, or
+///    <c>MacStrategy</c> unless overridden via <c>Strategy&lt;T&gt;()</c>.<br/>
+/// 5. <b>Pipeline execution</b> — the OS strategy runs <c>HashMiddleware → CompressMiddleware
+///    → PatchMiddleware</c> for each update version.<br/>
+/// 6. <b>App launch</b> — the OS strategy starts the updated main application.
+/// </para>
+/// <para><b>Silent mode:</b> when <c>Option(UpdateOptions.Silent, true)</c> is set on
+/// <see cref="AppType.Client"/>, launches a background poll loop via
+/// <see cref="Silent.SilentPollOrchestrator"/> and returns immediately. Updates are
+/// prepared on process exit.</para>
+/// <para><b>Extension points:</b> <see cref="AbstractBootstrap{TBootstrap, TStrategy}"/>
+/// provides fluent methods for injecting custom implementations of hooks, download
+/// components, network policies, and OS strategy.</para>
 /// </remarks>
+/// <example>
+/// <code>
+/// var result = await new GeneralUpdateBootstrap()
+///     .SetConfig(new Configinfo {
+///         UpdateUrl = "https://api.example.com",
+///         ClientVersion = "1.0.0",
+///         InstallPath = @"C:\MyApp",
+///         AppSecretKey = "my-key"
+///     })
+///     .Option(UpdateOptions.AppType, AppType.Client)
+///     .Hooks&lt;MyCustomHooks&gt;()
+///     .LaunchAsync();
+/// </code>
+/// </example>
 public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
 {
     private GlobalConfigInfo _configInfo = new();
@@ -58,10 +93,12 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         GeneralTracer.Info("GeneralUpdateBootstrap: cancellation requested.");
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // Launch — AppType dispatch via role strategies
-    // ════════════════════════════════════════════════════════════════
-
+    /// <summary>
+    /// Dispatches the update workflow based on <see cref="AppType"/>.
+    /// <see cref="AppType.Client"/> with silent mode returns immediately after starting a
+    /// background poll; all other modes run synchronously.
+    /// </summary>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
         var appType = GetOption(UpdateOptions.AppType);
@@ -177,10 +214,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         return this;
     }
     
-    // ════════════════════════════════════════════════════════════════
-    // Configuration
-    // ════════════════════════════════════════════════════════════════
-
+    /// <summary>
+    /// Applies the primary configuration object. Validates required fields, maps to
+    /// the internal <see cref="GlobalConfigInfo"/>, and initialises the blacklist
+    /// matcher for file exclusion during update operations.
+    /// </summary>
+    /// <param name="configInfo">User-facing configuration. Must have non-null
+    /// <c>UpdateUrl</c>, <c>AppSecretKey</c>, <c>ClientVersion</c>, <c>InstallPath</c>.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
     {
         configInfo.Validate();

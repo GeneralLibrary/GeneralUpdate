@@ -6,15 +6,25 @@ using GeneralUpdate.Core.FileSystem;
 namespace GeneralUpdate.Core.Differential;
 
 /// <summary>
-/// Default implementation of <see cref="ICleanMatcher"/> that preserves the
-/// original behaviour of the Clean phase.
-/// <list type="bullet">
-///   <item><description><see cref="Compare"/> delegates to <see cref="StorageManager.Compare"/>.</description></item>
-///   <item><description><see cref="Except"/> delegates to <see cref="StorageManager.Except"/>.</description></item>
-///   <item><description><see cref="Match"/> considers a new file matched to an old file when both share the
-///   same name, both exist on disk, and they reside at the same relative path.</description></item>
-/// </list>
+/// <see cref="ICleanMatcher"/> 的默认实现，保留 Clean 阶段（差异生成）的原始行为。
 /// </summary>
+/// <remarks>
+/// <para>
+/// DefaultCleanMatcher 实现了差异生成阶段的三种核心匹配操作：
+/// </para>
+/// <list type="bullet">
+///   <item><description><see cref="Compare"/>：委托给 <see cref="StorageManager.Compare"/>，
+///   对新旧两个目录进行完整的递归比较。</description></item>
+///   <item><description><see cref="Except"/>：委托给 <see cref="StorageManager.Except"/>，
+///   以左侧为基准找出右侧不存在的文件（即待删除的文件）。</description></item>
+///   <item><description><see cref="Match"/>：通过文件名称和相对路径的不区分大小写匹配，
+///   在新文件中查找对应的旧版本文件。匹配同时要求两个文件都存在在磁盘上才视为有效匹配。</description></item>
+/// </list>
+/// <para>
+/// 此实现的设计目标是保持与早期版本的向后兼容性。
+/// 如需自定义匹配逻辑（如基于文件哈希或元数据的匹配），可实现 <see cref="ICleanMatcher"/> 接口。
+/// </para>
+/// </remarks>
 public class DefaultCleanMatcher : ICleanMatcher
 {
     private readonly StorageManager _storageManager = new StorageManager();

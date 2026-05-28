@@ -11,17 +11,33 @@ using GeneralUpdate.Core.Pipeline;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// Upgrade-side update strategy. Receives process info from the client side,
-/// applies updates via the pipeline, and starts the main application.
+/// 升级端更新策略。接收客户端通过加密 IPC 传递的进程信息，应用更新并启动主应用程序。
 /// </summary>
 /// <remarks>
-/// This is the AppType.Upgrade role strategy. It composes an OS-specific
-/// strategy for platform operations (Windows/Linux/Mac).
-///
-/// <b>Design:</b> Upgrade does NOT validate versions or download packages.
-/// The client has already validated versions, downloaded all packages, and
-/// passed the results via ProcessInfo. Upgrade only applies updates and
-/// starts the main application -- zero network.
+/// <para>
+/// 本策略对应 <c>AppType.Upgrade</c> 角色，采用两层策略设计：上层角色策略（本类）负责编排更新流程，
+/// 下层操作系统策略（<see cref="WindowsStrategy"/>、<see cref="LinuxStrategy"/>、<see cref="MacStrategy"/>）
+/// 负责执行具体的平台操作。
+/// </para>
+/// <para>
+/// <b>执行流程：</b>
+/// <list type="number">
+///   <item><description>通过 <see cref="Create"/> 方法接收客户端传递的 <see cref="GlobalConfigInfo"/>，
+///   其中包含已下载的更新包路径、哈希值等元数据。</description></item>
+///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> 生命周期钩子，
+///   允许调用方在应用更新前执行自定义逻辑或取消操作。</description></item>
+///   <item><description>委托操作系统策略执行更新管道：通过 <c>Hash</c>（哈希校验）→
+///   <c>Decompress</c>（解压缩）→ <c>Patch</c>（增量补丁）中间件链处理每个更新版本。</description></item>
+///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/> 钩子，通知调用方所有更新已应用完毕。</description></item>
+///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/> 钩子，
+///   允许调用方在启动主应用程序前执行额外操作（如设置可执行权限或准备资源文件）。</description></item>
+///   <item><description>通过操作系统策略启动主应用程序（<c>MainAppName</c>）及 Bowl 辅助进程。</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>设计要点：</b>升级端不执行版本验证或下载操作。客户端已完成所有网络请求和下载任务，
+/// 并通过进程信息传递结果。升级端仅负责应用更新和启动应用程序——零网络开销。
+/// </para>
 /// </remarks>
 public class UpgradeUpdateStrategy : IStrategy
 {
@@ -29,16 +45,28 @@ public class UpgradeUpdateStrategy : IStrategy
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
 
-    /// <summary>Lifecycle hooks injected by the bootstrap.</summary>
+    /// <summary>
+    /// 获取或设置生命周期钩子。由引导程序注入，用于在更新流程的关键节点执行自定义逻辑。
+    /// </summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
-    /// <summary>Update status reporter injected by the bootstrap.</summary>
+    /// <summary>
+    /// 获取或设置更新状态报告器。由引导程序注入，负责向服务器或调用方报告更新进度和结果。
+    /// </summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
-    /// <summary>Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
-    /// When set, this replaces the automatic platform detection in <see cref="ResolveOsStrategy"/>.</summary>
+    /// <summary>
+    /// 设置自定义操作系统级别策略（通过 <c>.Strategy&lt;T&gt;()</c> 注入）。
+    /// 设置后将替换 <see cref="ResolveOsStrategy"/> 中的自动平台检测逻辑。
+    /// </summary>
     public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
 
+    /// <summary>
+    /// 初始化升级端策略。接收客户端传递的全局配置信息，并解析当前操作系统对应的策略实例。
+    /// </summary>
+    /// <param name="parameter">全局配置信息，包含更新包路径、哈希值、版本信息等。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="parameter"/> 为 null 时抛出。</exception>
+    /// <exception cref="PlatformNotSupportedException">当前操作系统不受支持时由 <see cref="ResolveOsStrategy"/> 抛出。</exception>
     public void Create(GlobalConfigInfo parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
@@ -49,6 +77,34 @@ public class UpgradeUpdateStrategy : IStrategy
         }
     }
 
+    /// <summary>
+    /// 执行升级端更新流程。按照生命周期顺序依次执行：更新前钩子、操作系统更新管道、更新后钩子、启动前钩子、启动主应用。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>执行流程详解：</b>
+    /// <list type="number">
+    ///   <item><description><b>OnBeforeUpdate 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/>，
+    ///   如果返回 <c>false</c> 则取消本次更新。</description></item>
+    ///   <item><description><b>操作系统更新管道：</b>将 <c>_configInfo.UpdateVersions</c> 传递给
+    ///   <see cref="IStrategy.ExecuteAsync"/>，由 OS 策略逐一处理每个版本的更新包
+    ///   （<c>Hash</c> 校验 → <c>Decompress</c> 解压 → <c>Patch</c> 补丁应用）。</description></item>
+    ///   <item><description><b>OnAfterUpdate 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/>，
+    ///   通知调用方所有更新已应用完成。</description></item>
+    ///   <item><description><b>报告更新成功：</b>通过 <see cref="Download.Reporting.IUpdateReporter"/>
+    ///   报告更新成功状态。</description></item>
+    ///   <item><description><b>OnBeforeStartApp 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/>，
+    ///   允许调用方在启动应用前执行额外操作（如设置可执行权限）。</description></item>
+    ///   <item><description><b>启动应用：</b>当 <c>LaunchClientAfterUpdate</c> 为 <c>true</c> 时，
+    ///   通过 OS 策略启动主应用程序（<c>MainAppName</c>）及 Bowl 辅助进程。</description></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <b>异常处理：</b>整个流程中任何异常均会被 <c>try-catch</c> 捕获，依次触发
+    /// <see cref="Hooks.IUpdateHooks.OnUpdateErrorAsync"/> 钩子、报告更新失败状态、
+    /// 记录错误日志并通过 <see cref="EventManager"/> 分发异常事件。
+    /// </para>
+    /// </remarks>
     public async Task ExecuteAsync()
     {
         if (_configInfo == null) throw new InvalidOperationException("UpgradeUpdateStrategy not configured.");
@@ -125,6 +181,12 @@ public class UpgradeUpdateStrategy : IStrategy
             _pendingDiffPipeline = diffPipeline;
     }
 
+    /// <summary>
+    /// 启动主应用程序。委托给底层操作系统策略执行平台相关的应用启动逻辑。
+    /// </summary>
+    /// <remarks>
+    /// 此方法由外部调用（如 Bowl 进程），用于在升级完成后启动主应用。
+    /// </remarks>
     public async Task StartAppAsync()
     {
         if (_osStrategy != null)
