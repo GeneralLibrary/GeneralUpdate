@@ -394,18 +394,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private async Task LaunchSilentAsync()
     {
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
-
         var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
-
         var silentOptions = new Silent.SilentOptions
         {
             PollInterval = TimeSpan.FromMinutes(pollMinutes)
         };
-
         var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
         var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
                        new Download.Reporting.NoOpUpdateReporter();
-
         var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
         if (sslPolicy != null) Network.VersionService.SetSslValidationPolicy(sslPolicy);
         var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
