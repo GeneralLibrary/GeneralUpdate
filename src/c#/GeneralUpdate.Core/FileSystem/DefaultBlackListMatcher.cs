@@ -6,20 +6,20 @@ using GeneralUpdate.Core.Configuration;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// 基于 Glob 模式的黑名单匹配器默认实现，由 <see cref="BlackListConfig"/> 驱动。
+/// Default implementation of a Glob-pattern-based blacklist matcher, driven by <see cref="BlackListConfig"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// DefaultBlackListMatcher 实现了 <see cref="IBlackListMatcher"/> 接口，提供三种类型的黑名单过滤：
+/// DefaultBlackListMatcher implements the <see cref="IBlackListMatcher"/> interface and provides three types of blacklist filtering:
 /// </para>
 /// <list type="bullet">
-///   <item><description><b>黑名单文件</b>：按照 Glob 模式匹配合文件名（如 <c>*.log</c> 匹配所有日志文件）。</description></item>
-///   <item><description><b>黑名单格式</b>：按照文件扩展名进行不区分大小写的精确匹配。</description></item>
-///   <item><description><b>跳过目录</b>：按照子字符串包含匹配（不区分大小写）判断是否跳过子目录。</description></item>
+///   <item><description><b>Blacklist files</b>: Matches file names using Glob patterns (e.g., <c>*.log</c> matches all log files).</description></item>
+///   <item><description><b>Blacklist formats</b>: Performs case-insensitive exact matching by file extension.</description></item>
+///   <item><description><b>Skip directories</b>: Uses case-insensitive substring containment matching to determine whether to skip subdirectories.</description></item>
 /// </list>
 /// <para>
-/// 此类的实例通常通过 <see cref="FromConfigInfo"/> 工厂方法从 <see cref="GlobalConfigInfo"/> 创建，
-/// 或通过构造函数直接传入 <see cref="BlackListConfig"/> 配置对象。
+/// Instances of this class are typically created from <see cref="GlobalConfigInfo"/> via the <see cref="FromConfigInfo"/> factory method,
+/// or constructed directly by passing a <see cref="BlackListConfig"/> configuration object.
 /// </para>
 /// </remarks>
 public class DefaultBlackListMatcher : IBlackListMatcher
@@ -27,21 +27,21 @@ public class DefaultBlackListMatcher : IBlackListMatcher
     private readonly BlackListConfig _config;
 
     /// <summary>
-    /// 使用指定的黑名单配置初始化 <see cref="DefaultBlackListMatcher"/> 的新实例。
+    /// Initializes a new instance of the <see cref="DefaultBlackListMatcher"/> class with the specified blacklist configuration.
     /// </summary>
-    /// <param name="config">黑名单配置对象，包含要排除的文件名模式、扩展名和目录名。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="config"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="config">The blacklist configuration object containing file name patterns, extensions, and directory names to exclude.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="config"/> is <c>null</c>.</exception>
     public DefaultBlackListMatcher(BlackListConfig config)
         => _config = config ?? throw new ArgumentNullException(nameof(config));
 
     /// <summary>
-    /// 从 <see cref="GlobalConfigInfo"/> 中的黑名单属性创建匹配器实例。
+    /// Creates a matcher instance from the blacklist properties in <see cref="GlobalConfigInfo"/>.
     /// </summary>
-    /// <param name="config">全局配置信息对象。</param>
-    /// <returns>配置好的 <see cref="DefaultBlackListMatcher"/> 实例。</returns>
+    /// <param name="config">The global configuration information object.</param>
+    /// <returns>A configured <see cref="DefaultBlackListMatcher"/> instance.</returns>
     /// <remarks>
-    /// 此工厂方法只会在相应列表有元素（<c>Count &gt; 0</c>）时才会设置对应的黑名单规则，
-    /// 空列表会被视为 <c>null</c>（即不启用该类型的过滤）。
+    /// This factory method only sets the corresponding blacklist rules when the respective list has elements (<c>Count &gt; 0</c>);
+    /// empty lists are treated as <c>null</c> (meaning that type of filtering is disabled).
     /// </remarks>
     public static DefaultBlackListMatcher FromConfigInfo(GlobalConfigInfo config)
     {
@@ -53,17 +53,17 @@ public class DefaultBlackListMatcher : IBlackListMatcher
     }
 
     /// <summary>
-    /// 判断指定文件是否被黑名单匹配规则排除。
+    /// Determines whether the specified file is excluded by the blacklist matching rules.
     /// </summary>
-    /// <param name="relativeFilePath">文件的相对路径或文件名。</param>
-    /// <returns>如果文件匹配黑名单规则则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="relativeFilePath">The relative path or file name of the file.</param>
+    /// <returns><c>true</c> if the file matches the blacklist rules; otherwise, <c>false</c>.</returns>
     /// <remarks>
-    /// 匹配逻辑依次检查：
+    /// The matching logic checks in the following order:
     /// <list type="number">
-    ///   <item><description>文件名是否匹配 <c>BlackFiles</c> 中的任一 Glob 模式。</description></item>
-    ///   <item><description>文件扩展名是否匹配 <c>BlackFormats</c> 中的任一格式。</description></item>
+    ///   <item><description>Whether the file name matches any Glob pattern in <c>BlackFiles</c>.</description></item>
+    ///   <item><description>Whether the file extension matches any format in <c>BlackFormats</c>.</description></item>
     /// </list>
-    /// 只要满足任一条件即视为黑名单文件。
+    /// The file is considered blacklisted if any condition is met.
     /// </remarks>
     public bool IsBlacklisted(string relativeFilePath)
     {
@@ -76,40 +76,40 @@ public class DefaultBlackListMatcher : IBlackListMatcher
     }
 
     /// <summary>
-    /// 判断指定的文件扩展名是否在黑名单格式列表中。
+    /// Determines whether the specified file extension is in the blacklist format list.
     /// </summary>
-    /// <param name="extension">文件扩展名（如 <c>.log</c>、<c>.tmp</c>）。</param>
-    /// <returns>如果扩展名在黑名单中则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="extension">The file extension (e.g., <c>.log</c>, <c>.tmp</c>).</param>
+    /// <returns><c>true</c> if the extension is in the blacklist; otherwise, <c>false</c>.</returns>
     /// <remarks>
-    /// 比较时使用不区分大小写的字符串比较。
+    /// Uses case-insensitive string comparison for evaluation.
     /// </remarks>
     public bool IsBlacklistedFormat(string extension)
         => _config.BlackFormats?.Any(f => string.Equals(f, extension, StringComparison.OrdinalIgnoreCase)) == true;
 
     /// <summary>
-    /// 判断指定的目录名是否应该被跳过（即不进入该目录进行遍历）。
+    /// Determines whether the specified directory name should be skipped (i.e., not entered during traversal).
     /// </summary>
-    /// <param name="directoryName">目录名称。</param>
-    /// <returns>如果目录名匹配任一跳过规则则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="directoryName">The directory name.</param>
+    /// <returns><c>true</c> if the directory name matches any skip rule; otherwise, <c>false</c>.</returns>
     /// <remarks>
-    /// 使用不区分大小写的子字符串包含匹配（<c>string.IndexOf</c>）进行判断。
-    /// 只要目录名中包含 <c>SkipDirectorys</c> 列表中的任一字符串，即判定为应该跳过。
+    /// Uses case-insensitive substring containment matching (<c>string.IndexOf</c>) for evaluation.
+    /// The directory is considered skippable if its name contains any string from the <c>SkipDirectorys</c> list.
     /// </remarks>
     public bool ShouldSkipDirectory(string directoryName)
         => _config.SkipDirectorys?.Any(d =>
             directoryName.IndexOf(d, StringComparison.OrdinalIgnoreCase) >= 0) == true;
 
     /// <summary>
-    /// 使用简单的 Glob 模式匹配文件名。
+    /// Matches a file name against a simple Glob pattern.
     /// </summary>
-    /// <param name="input">要匹配的文件名。</param>
-    /// <param name="pattern">Glob 模式（支持 <c>*.xxx</c> 通配前缀匹配和精确匹配）。</param>
-    /// <returns>如果文件名匹配模式则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="input">The file name to match.</param>
+    /// <param name="pattern">The Glob pattern (supports <c>*.xxx</c> wildcard prefix matching and exact matching).</param>
+    /// <returns><c>true</c> if the file name matches the pattern; otherwise, <c>false</c>.</returns>
     /// <remarks>
-    /// 目前支持两种 Glob 模式：
+    /// Currently supports two Glob patterns:
     /// <list type="bullet">
-    ///   <item><description><c>*.log</c>：以 <c>.log</c> 结尾的通配匹配。</description></item>
-    ///   <item><description><c>filename</c>：不区分大小写的精确文件名匹配。</description></item>
+    ///   <item><description><c>*.log</c>: Wildcard matching for names ending with <c>.log</c>.</description></item>
+    ///   <item><description><c>filename</c>: Case-insensitive exact file name matching.</description></item>
     /// </list>
     /// </remarks>
     private static bool MatchGlob(string input, string pattern)

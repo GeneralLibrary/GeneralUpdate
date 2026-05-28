@@ -9,33 +9,41 @@ using GeneralUpdate.Core;
 namespace GeneralUpdate.Core.Download.Policy;
 
 /// <summary>
-/// 默认的下载重试策略，基于指数退避算法。
-/// 对于可恢复的临时故障（超时、网络 I/O 错误、5xx 服务器错误）进行重试。
-/// 对于永久性故障（4xx 客户端错误、SSL/认证错误）不进行重试。
+/// Default download retry policy based on exponential backoff.
+/// Retries on recoverable transient failures (timeouts, network I/O errors, 5xx server errors).
+/// Does not retry on permanent failures (4xx client errors, SSL/authentication errors).
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IDownloadPolicy"/> 接口，为下载操作提供可配置的重试机制。
+/// This class implements <see cref="IDownloadPolicy"/> and provides a configurable retry mechanism
+/// for download operations.
 /// </para>
 /// <para>
-/// 重试策略特性：
+/// Retry policy features:
 /// <list type="bullet">
-///   <item><term>指数退避</term><description>每次重试的延迟时间按指数增长。
-///        延迟计算公式：<c>initialDelay * backoffMultiplier^attempt</c>。
-///        例如，初始延迟 1 秒、倍率 2.0 时，重试间隔为 1s、2s、4s、8s……</description></item>
-///   <item><term>可配置最大重试次数</term><description>默认最多重试 3 次（即总共最多执行 3 次尝试）。</description></item>
-///   <item><term>可重试异常判断</term><description>通过 <c>IsRetryable</c> 方法精确判断哪些异常值得重试，
-///        避免对 4xx 客户端错误等永久故障进行无效重试。</description></item>
-///   <item><term>取消支持</term><description>重试间隔期间会响应 <c>CancellationToken</c> 的取消请求。</description></item>
+///   <item><term>Exponential backoff</term><description>Delay between retries grows exponentially.
+///         Formula: <c>initialDelay * backoffMultiplier^attempt</c>.
+///         For example, with an initial delay of 1 second and multiplier 2.0, retry intervals are 1s, 2s, 4s, 8s, etc.</description></item>
+///   <item><term>Configurable maximum retries</term><description>Defaults to 3 attempts maximum.</description></item>
+///   <item><term>Retryable exception detection</term><description>Uses <c>IsRetryable</c> to precisely identify
+///         which exceptions warrant a retry, avoiding wasted retries on permanent failures like 4xx client errors.</description></item>
+///   <item><term>Cancellation support</term><description>Responds to <c>CancellationToken</c> cancellation requests during retry delays.</description></item>
 /// </list>
 /// </para>
 /// <para>
-/// 可重试的异常类型：
+/// Retryable exception types:
 /// <list type="bullet">
-///   <item><c>TaskCanceledException</c> — 任务被取消（可能是超时引起）。</item>
-///   <item><c>TimeoutException</c> — 操作超时。</item>
-///   <item><c>IOException</c> — 网络 I/O 错误。</item>
-///   <item>包含 timeout/500/502/503/504 状态码的 <c>HttpRequestException</c>。</item>
+///   <item><c>TaskCanceledException</c> — Task was cancelled (possibly due to timeout).</item>
+///   <item><c>TimeoutException</c> — Operation timed out.</item>
+///   <item><c>IOException</c> — Network I/O error.</item>
+///   <item><c>HttpRequestException</c> containing timeout, 500, 502, 503, or 504 status codes.</item>
+/// </list>
+/// </para>
+/// <para>
+/// Non-retryable exception types:
+/// <list type="bullet">
+///   <item><c>OperationCanceledException</c> — User-initiated cancellation.</item>
+///   <item>4xx client errors (thrown as <c>HttpRequestException</c> that will not match the retryable conditions).</item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -46,11 +54,12 @@ public class DefaultRetryPolicy : IDownloadPolicy
     private readonly double _backoffMultiplier;
 
     /// <summary>
-    /// 使用指定的重试次数、初始延迟和退避倍率初始化重试策略。
+    /// Initializes a new instance of the <see cref="DefaultRetryPolicy"/> class
+    /// with the specified retry count, initial delay, and backoff multiplier.
     /// </summary>
-    /// <param name="maxRetries">最大重试次数（包含首次尝试）。默认值为 3。</param>
-    /// <param name="initialDelay">每次重试前的初始延迟时间。默认值为 1 秒。</param>
-    /// <param name="backoffMultiplier">退避倍率，每次重试的延迟时间按此倍率增长。默认值为 2.0。</param>
+    /// <param name="maxRetries">Maximum number of retry attempts (including the initial attempt). Defaults to 3.</param>
+    /// <param name="initialDelay">Initial delay before the first retry. Defaults to 1 second.</param>
+    /// <param name="backoffMultiplier">Backoff multiplier applied to the delay after each retry. Defaults to 2.0.</param>
     public DefaultRetryPolicy(int maxRetries = 3, TimeSpan? initialDelay = null, double backoffMultiplier = 2.0)
     {
         _maxRetries = maxRetries;
@@ -59,22 +68,25 @@ public class DefaultRetryPolicy : IDownloadPolicy
     }
 
     /// <summary>
-    /// 异步执行指定的操作，并在发生可重试异常时根据指数退避策略进行重试。
+    /// Asynchronously executes the specified operation, retrying on retryable exceptions
+    /// using exponential backoff.
     /// </summary>
-    /// <typeparam name="T">操作返回的类型。</typeparam>
-    /// <param name="action">要执行的操作，接受 <see cref="CancellationToken"/> 并返回 <see cref="Task{T}"/>。</param>
-    /// <param name="token">用于取消操作的取消令牌。</param>
-    /// <returns>操作执行结果。</returns>
-    /// <exception cref="OperationCanceledException">当操作通过取消令牌被取消时抛出（此异常不会被重试）。</exception>
+    /// <typeparam name="T">The return type of the operation.</typeparam>
+    /// <param name="action">The operation to execute, accepting a <see cref="CancellationToken"/> and returning a <see cref="Task{T}"/>.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> to cancel the entire operation including retries.</param>
+    /// <returns>The result of the operation on success.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via <paramref name="token"/> (this exception is never retried).</exception>
     /// <remarks>
     /// <para>
-    /// 执行流程：
+    /// Execution flow:
     /// </para>
     /// <list type="number">
-    ///   <item>执行传入的操作。</item>
-    ///   <item>如果操作成功，直接返回结果。</item>
-    ///   <item>如果操作抛出可重试异常且尚未达到最大重试次数，记录警告日志，等待退避延迟后重试。</item>
-    ///   <item>如果操作抛出不可重试异常或已达到最大重试次数，异常会向上传播（不被捕获）。</item>
+    ///   <item>Executes the provided operation.</item>
+    ///   <item>If the operation succeeds, returns the result immediately.</item>
+    ///   <item>If the operation throws a retryable exception and the maximum retry count has not been reached,
+    ///         logs a warning, waits for the computed backoff delay, and retries.</item>
+    ///   <item>If the operation throws a non-retryable exception or the maximum retry count has been reached,
+    ///         the exception propagates upward (not caught).</item>
     /// </list>
     /// </remarks>
     public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken token = default)
@@ -95,22 +107,22 @@ public class DefaultRetryPolicy : IDownloadPolicy
     }
 
     /// <summary>
-    /// 判断指定异常是否可重试。
+    /// Determines whether the specified exception is retryable.
     /// </summary>
-    /// <param name="ex">要检查的异常。</param>
-    /// <returns>如果异常属于可重试类型（超时、网络 I/O、5xx 服务器错误）则返回 true；否则返回 false。</returns>
+    /// <param name="ex">The exception to examine.</param>
+    /// <returns>True if the exception is of a retryable type (timeout, network I/O, 5xx server error); otherwise false.</returns>
     /// <remarks>
-    /// <para>以下异常被认为是可重试的：</para>
+    /// <para>The following exceptions are considered retryable:</para>
     /// <list type="bullet">
-    ///   <item><c>TaskCanceledException</c> — 任务被取消（通常由超时引起）。</item>
-    ///   <item><c>TimeoutException</c> — 操作超时。</item>
-    ///   <item><c>IOException</c> — 网络 I/O 错误。</item>
-    ///   <item>包含 "timeout"、"500"、"502"、"503" 或 "504" 的 <c>HttpRequestException</c>。</item>
+    ///   <item><c>TaskCanceledException</c> — Task was cancelled (typically caused by a timeout).</item>
+    ///   <item><c>TimeoutException</c> — Operation timed out.</item>
+    ///   <item><c>IOException</c> — Network I/O error.</item>
+    ///   <item><c>HttpRequestException</c> with a message containing "timeout", "500", "502", "503", or "504".</item>
     /// </list>
-    /// <para>以下异常被认为是不可重试的：</para>
+    /// <para>The following exceptions are NOT considered retryable:</para>
     /// <list type="bullet">
-    ///   <item><c>OperationCanceledException</c> — 用户主动取消。</item>
-    ///   <item>4xx 客户端错误（由 <c>HttpRequestException</c> 抛出时不会匹配上述条件）。</item>
+    ///   <item><c>OperationCanceledException</c> — User-initiated cancellation.</item>
+    ///   <item>4xx client errors (when thrown as <c>HttpRequestException</c>, they will not match the retryable conditions above).</item>
     /// </list>
     /// </remarks>
     private static bool IsRetryable(Exception ex)

@@ -16,43 +16,50 @@ using GeneralUpdate.Core.Security;
 namespace GeneralUpdate.Core.Network
 {
     /// <summary>
-    /// 版本服务，提供与更新服务器的 HTTP 通信能力，包括版本校验和状态上报。
+    /// Version service providing HTTP communication with the update server,
+    /// including version validation and status reporting.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 该类是 GeneralUpdate 框架的 HTTP 通信层，其核心设计要点如下：
+    /// This class is the HTTP communication layer of the GeneralUpdate framework.
+    /// Its key design points are as follows:
     /// </para>
     /// <list type="bullet">
     ///   <item>
-    ///     <description>使用静态共享的 <see cref="HttpClient"/> 实例（<c>_sharedClient</c>），避免套接字耗尽，
-    ///     并通过 <see cref="SetSslValidationPolicy"/> 支持可配置的 SSL 证书验证策略。</description>
+    ///     <description>Uses a static shared <see cref="HttpClient"/> instance (<c>_sharedClient</c>)
+    ///     to avoid socket exhaustion, and supports configurable SSL certificate validation
+    ///     policies via <see cref="SetSslValidationPolicy"/>.</description>
     ///   </item>
     ///   <item>
-    ///     <description>提供两套静态 API（<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
-    ///     和 <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>），
-    ///     内部自动创建实例并调用对应的异步方法。这些静态方式为向后兼容而保留。</description>
+    ///     <description>Provides two sets of static convenience APIs
+    ///     (<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
+    ///     and <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>),
+    ///     which internally create instances and call the corresponding async methods.
+    ///     These static methods are retained for backward compatibility.</description>
     ///   </item>
     ///   <item>
-    ///     <description>支持可插拔的认证提供者（<see cref="IHttpAuthProvider"/>），
-    ///     内置支持 Bearer Token、API Key、HMAC 等认证方式，也可通过 <see cref="HttpAuthProviderFactory"/> 自定义扩展。</description>
+    ///     <description>Supports a pluggable authentication provider (<see cref="IHttpAuthProvider"/>)
+    ///     with built-in support for Bearer Token, API Key, HMAC, and extensibility
+    ///     through <see cref="HttpAuthProviderFactory"/>.</description>
     ///   </item>
     ///   <item>
-    ///     <description>具备指数退避重试机制：在 <see cref="PostAsync{T}"/> 中捕获可重试的异常，
-    ///     等待时间按 2^attempt * 1000 毫秒递增。</description>
+    ///     <description>Implements exponential backoff retry: in <see cref="PostAsync{T}"/>,
+    ///     retryable exceptions trigger a wait of 2^attempt * 1000 milliseconds.</description>
     ///   </item>
     ///   <item>
-    ///     <description>支持全局 SSL 策略（<see cref="SetSslValidationPolicy"/>）和全局认证提供者
-    ///     （<see cref="SetDefaultAuthProvider"/>）配置。当设置了全局认证提供者时，
-    ///     它将覆盖工厂方法 <see cref="HttpAuthProviderFactory.Create"/> 创建的认证实例。</description>
+    ///     <description>Supports global SSL policy (via <see cref="SetSslValidationPolicy"/>)
+    ///     and global authentication provider (via <see cref="SetDefaultAuthProvider"/>).
+    ///     When a global auth provider is set, it overrides the factory method
+    ///     <see cref="HttpAuthProviderFactory.Create"/>.</description>
     ///   </item>
     /// </list>
     /// <para>
-    /// 典型使用场景：
+    /// Typical usage scenarios:
     /// <list type="bullet">
-    ///   <item><description>启动时调用 <see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
-    ///   检查服务器是否有新版本。</description></item>
-    ///   <item><description>下载完成后调用 <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>
-    ///   上报更新状态。</description></item>
+    ///   <item><description>At startup, call <see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
+    ///   to check whether the server has a new version.</description></item>
+    ///   <item><description>After download completes, call <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>
+    ///   to report the update status.</description></item>
     /// </list>
     /// </para>
     /// </remarks>
@@ -67,12 +74,18 @@ namespace GeneralUpdate.Core.Network
         private readonly int _maxRetries;
 
         /// <summary>
-        /// 初始化 <see cref="VersionService"/> 的静态成员。
+        /// Static constructor: initializes the static members of <see cref="VersionService"/>.
         /// </summary>
         /// <remarks>
-        /// 创建带有自定义 SSL 验证回调的 <see cref="HttpClientHandler"/>，
-        /// 并使用该 handler 初始化静态共享的 <see cref="HttpClient"/> 实例。
-        /// SSL 验证逻辑委托给 <see cref="ISslValidationPolicy"/>，可通过 <see cref="SetSslValidationPolicy"/> 全局替换。
+        /// <para>
+        /// Execution flow:
+        /// <list type="number">
+        ///   <item><description>Creates an <see cref="HttpClientHandler"/> with a custom SSL validation callback.</description></item>
+        ///   <item><description>The SSL validation logic is delegated to <see cref="ISslValidationPolicy"/>,
+        ///   which can be replaced globally via <see cref="SetSslValidationPolicy"/>.</description></item>
+        ///   <item><description>Initializes the static shared <see cref="HttpClient"/> instance using the handler.</description></item>
+        /// </list>
+        /// </para>
         /// </remarks>
         static VersionService()
         {
@@ -82,30 +95,33 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 设置全局 SSL 证书验证策略。
+        /// Sets the global SSL certificate validation policy.
         /// </summary>
         /// <remarks>
-        /// 该策略会影响所有 <see cref="VersionService"/> 实例的 HTTPS 请求。
-        /// 默认使用 <see cref="StrictSslValidationPolicy"/>，即严格模式。
-        /// 可通过传入自定义的 <see cref="ISslValidationPolicy"/> 实现来放宽或替换验证逻辑。
+        /// This policy affects all HTTPS requests made by <see cref="VersionService"/> instances.
+        /// The default is <see cref="StrictSslValidationPolicy"/>, i.e., strict mode.
+        /// Pass a custom <see cref="ISslValidationPolicy"/> implementation to relax or replace
+        /// the validation logic.
         /// </remarks>
-        /// <param name="policy">SSL 验证策略实例。不能为 null。</param>
-        /// <exception cref="ArgumentNullException"><paramref name="policy"/> 为 null 时抛出。</exception>
+        /// <param name="policy">The SSL validation policy instance. Must not be null.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
         public static void SetSslValidationPolicy(ISslValidationPolicy policy)
             => _globalSslPolicy = policy ?? throw new ArgumentNullException(nameof(policy));
 
         /// <summary>
-        /// 设置全局默认的 HTTP 认证提供者。
+        /// Sets the global default HTTP authentication provider.
         /// </summary>
         /// <remarks>
-        /// 当设置了全局认证提供者后，所有通过静态 API（<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
-        /// 和 <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>）发起的请求将优先使用该提供者，
-        /// 覆盖 <see cref="HttpAuthProviderFactory.Create"/> 所创建的认证实例。
+        /// When a global authentication provider is set, all requests made via the static APIs
+        /// (<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
+        /// and <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>)
+        /// will preferentially use this provider, overriding the authentication instance
+        /// created by <see cref="HttpAuthProviderFactory.Create"/>.
         /// <para>
-        /// 传入 null 可清除全局认证提供者，此时将回退到工厂方法创建的认证实例。
+        /// Passing null clears the global authentication provider, reverting to the factory method.
         /// </para>
         /// </remarks>
-        /// <param name="provider">全局认证提供者实例，或 null 以清除全局配置。</param>
+        /// <param name="provider">The global authentication provider instance, or null to clear the global configuration.</param>
         public static void SetDefaultAuthProvider(IHttpAuthProvider? provider)
             => _globalAuthProvider = provider;
 
@@ -114,46 +130,50 @@ namespace GeneralUpdate.Core.Network
             => _globalSslPolicy.ValidateCertificate(c, ch, e);
 
         /// <summary>
-        /// 初始化 <see cref="VersionService"/> 的新实例。
+        /// Initializes a new instance of the <see cref="VersionService"/> class.
         /// </summary>
         /// <remarks>
-        /// 实例方法（<see cref="ValidateAsync"/> 和 <see cref="ReportAsync"/>）使用该实例的认证提供者和超时设置。
-        /// <paramref name="auth"/> 为 null 时，默认使用 <see cref="NoOpAuthProvider"/>（不执行任何认证）。
+        /// Instance methods (<see cref="ValidateAsync"/> and <see cref="ReportAsync"/>) use
+        /// this instance's authentication provider and timeout settings.
+        /// When <paramref name="auth"/> is null, <see cref="NoOpAuthProvider"/> (no authentication) is used by default.
         /// </remarks>
-        /// <param name="auth">HTTP 认证提供者。为 null 时使用 <see cref="NoOpAuthProvider"/>。</param>
-        /// <param name="timeout">请求超时时间。为 null 时默认 30 秒。</param>
-        /// <param name="maxRetries">最大重试次数，默认值为 3。</param>
+        /// <param name="auth">The HTTP authentication provider. If null, <see cref="NoOpAuthProvider"/> is used.</param>
+        /// <param name="timeout">The request timeout. If null, defaults to 30 seconds.</param>
+        /// <param name="maxRetries">The maximum number of retry attempts. Defaults to 3.</param>
         public VersionService(IHttpAuthProvider? auth = null, TimeSpan? timeout = null, int maxRetries = 3)
         {
             _auth = auth ?? new NoOpAuthProvider();
             _timeout = timeout ?? TimeSpan.FromSeconds(30);
             _maxRetries = maxRetries;
         }
+
         /// <summary>
-        /// 向服务器上报指定记录的更新状态。
+        /// Reports the update status to the server for a specified record.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// 这是一个向后兼容的静态便捷方法，内部自动创建 <see cref="VersionService"/> 实例并调用 <see cref="ReportAsync"/>。
+        /// This is a backward-compatible static convenience method that internally creates
+        /// a <see cref="VersionService"/> instance and calls <see cref="ReportAsync"/>.
         /// </para>
         /// <para>
-        /// 执行流程：
+        /// Execution flow:
         /// <list type="number">
-        ///   <item><description>解析认证提供者：优先使用全局认证提供者（<see cref="SetDefaultAuthProvider"/>），否则通过
-        ///   <see cref="HttpAuthProviderFactory.Create"/> 创建。</description></item>
-        ///   <item><description>创建临时 <see cref="VersionService"/> 实例。</description></item>
-        ///   <item><description>调用 <see cref="ReportAsync"/> 执行上报。</description></item>
+        ///   <item><description>Resolves the authentication provider: uses the global provider
+        ///   (<see cref="SetDefaultAuthProvider"/>) first; otherwise creates one via
+        ///   <see cref="HttpAuthProviderFactory.Create"/>.</description></item>
+        ///   <item><description>Creates a temporary <see cref="VersionService"/> instance.</description></item>
+        ///   <item><description>Calls <see cref="ReportAsync"/> to perform the report.</description></item>
         /// </list>
         /// </para>
         /// </remarks>
-        /// <param name="url">服务器 API 地址。</param>
-        /// <param name="recordId">更新记录标识符。</param>
-        /// <param name="status">当前状态码。</param>
-        /// <param name="type">更新类型（可为 null）。</param>
-        /// <param name="scheme">认证方案（如 "bearer"、"apikey"、"hmac"），用于创建认证提供者。当设置了全局认证提供者时此参数无效。</param>
-        /// <param name="token">认证令牌或密钥，与 <paramref name="scheme"/> 配合使用。</param>
-        /// <param name="ct">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>表示异步操作的任务。</returns>
+        /// <param name="url">The server API URL.</param>
+        /// <param name="recordId">The update record identifier.</param>
+        /// <param name="status">The current status code.</param>
+        /// <param name="type">The update type (may be null).</param>
+        /// <param name="scheme">The authentication scheme (e.g., "bearer", "apikey", "hmac"), used to create the auth provider. Ignored when a global auth provider is set.</param>
+        /// <param name="token">The authentication token or key, used together with <paramref name="scheme"/>.</param>
+        /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public static Task Report(string url, int recordId, int status, int? type,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
@@ -162,33 +182,37 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 向服务器校验当前版本，查询是否有可用更新。
+        /// Validates the current version against the server to check for available updates.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// 这是推荐的强类型重载。内部自动创建 <see cref="VersionService"/> 实例并调用 <see cref="ValidateAsync"/>。
+        /// This is the recommended strongly-typed overload. It internally creates a
+        /// <see cref="VersionService"/> instance and calls <see cref="ValidateAsync"/>.
         /// </para>
         /// <para>
-        /// 执行流程：
+        /// Execution flow:
         /// <list type="number">
-        ///   <item><description>解析认证提供者：优先使用全局认证提供者（<see cref="SetDefaultAuthProvider"/>），否则通过
-        ///   <see cref="HttpAuthProviderFactory.Create"/> 创建。</description></item>
-        ///   <item><description>创建临时 <see cref="VersionService"/> 实例。</description></item>
-        ///   <item><description>构造包含版本、应用类型、平台等信息的请求参数。</description></item>
-        ///   <item><description>通过 POST 请求将参数发送至服务器，反序列化响应为 <see cref="VersionRespDTO"/>。</description></item>
+        ///   <item><description>Resolves the authentication provider: uses the global provider
+        ///   (<see cref="SetDefaultAuthProvider"/>) first; otherwise creates one via
+        ///   <see cref="HttpAuthProviderFactory.Create"/>.</description></item>
+        ///   <item><description>Creates a temporary <see cref="VersionService"/> instance.</description></item>
+        ///   <item><description>Constructs request parameters containing the version, app type, platform, etc.</description></item>
+        ///   <item><description>Sends the parameters to the server via a POST request and deserializes
+        ///   the response into a <see cref="VersionRespDTO"/>.</description></item>
         /// </list>
         /// </para>
         /// </remarks>
-        /// <param name="url">服务器版本校验 API 地址。</param>
-        /// <param name="version">当前客户端版本号。</param>
-        /// <param name="appType">应用类型（如主程序、补丁等）。</param>
-        /// <param name="appKey">应用密钥，用于服务端鉴权。</param>
-        /// <param name="platform">目标平台（Windows、Linux、macOS 等）。</param>
-        /// <param name="productId">产品标识符。</param>
-        /// <param name="scheme">认证方案（如 "bearer"、"apikey"、"hmac"），用于创建认证提供者。当设置了全局认证提供者时此参数无效。</param>
-        /// <param name="token">认证令牌或密钥，与 <paramref name="scheme"/> 配合使用。</param>
-        /// <param name="ct">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>包含版本校验结果（如是否存在更新、下载地址等）的 <see cref="VersionRespDTO"/>。</returns>
+        /// <param name="url">The server version validation API URL.</param>
+        /// <param name="version">The current client version string.</param>
+        /// <param name="appType">The application type (e.g., main program, patch, etc.).</param>
+        /// <param name="appKey">The application key used for server-side authentication.</param>
+        /// <param name="platform">The target platform (Windows, Linux, macOS, etc.).</param>
+        /// <param name="productId">The product identifier.</param>
+        /// <param name="scheme">The authentication scheme (e.g., "bearer", "apikey", "hmac"), used to create the auth provider. Ignored when a global auth provider is set.</param>
+        /// <param name="token">The authentication token or key, used together with <paramref name="scheme"/>.</param>
+        /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result
+        /// (e.g., whether an update exists, download URL, etc.).</returns>
         public static Task<VersionRespDTO> Validate(string url, string version,
             AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
@@ -198,38 +222,50 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 向服务器校验当前版本（使用整数参数的向后兼容重载）。
+        /// Validates the current version against the server (backward-compatible overload using integer parameters).
         /// </summary>
         /// <remarks>
         /// <para>
-        /// 该重载将整数参数转换为对应的枚举类型后，委托给强类型重载 <see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/> 执行。
-        /// 为保持与旧调用方的二进制兼容性而保留。
+        /// This overload converts the integer parameters to their corresponding enum types
+        /// and delegates to the strongly-typed overload
+        /// <see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>.
+        /// Retained for binary compatibility with older callers.
         /// </para>
         /// </remarks>
-        /// <param name="url">服务器版本校验 API 地址。</param>
-        /// <param name="version">当前客户端版本号。</param>
-        /// <param name="appType">应用类型（整数形式，将转换为 <see cref="AppType"/>）。</param>
-        /// <param name="appKey">应用密钥。</param>
-        /// <param name="platform">目标平台（整数形式，将转换为 <see cref="PlatformType"/>）。</param>
-        /// <param name="productId">产品标识符。</param>
-        /// <param name="scheme">认证方案。</param>
-        /// <param name="token">认证令牌或密钥。</param>
-        /// <param name="ct">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>包含版本校验结果的 <see cref="VersionRespDTO"/>。</returns>
+        /// <param name="url">The server version validation API URL.</param>
+        /// <param name="version">The current client version string.</param>
+        /// <param name="appType">The application type (as an integer, will be cast to <see cref="AppType"/>).</param>
+        /// <param name="appKey">The application key.</param>
+        /// <param name="platform">The target platform (as an integer, will be cast to <see cref="PlatformType"/>).</param>
+        /// <param name="productId">The product identifier.</param>
+        /// <param name="scheme">The authentication scheme.</param>
+        /// <param name="token">The authentication token or key.</param>
+        /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result.</returns>
         public static Task<VersionRespDTO> Validate(string url, string version,
             int appType, string appKey, int platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
             => Validate(url, version, (AppType)appType, appKey, (PlatformType)platform, productId, scheme, token, ct);
 
         /// <summary>
-        /// 异步上报更新记录的状态。
+        /// Asynchronously reports the update record status to the server.
         /// </summary>
-        /// <param name="url">服务器 API 地址。</param>
-        /// <param name="recordId">更新记录标识符。</param>
-        /// <param name="status">当前状态码。</param>
-        /// <param name="type">更新类型（可为 null）。</param>
-        /// <param name="t">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>表示异步操作的任务。</returns>
+        /// <remarks>
+        /// <para>
+        /// Execution flow:
+        /// <list type="number">
+        ///   <item><description>Constructs a parameter dictionary with the record ID, status, and type.</description></item>
+        ///   <item><description>Sends the parameters via a POST request using <see cref="PostAsync{T}"/>.</description></item>
+        ///   <item><description>Deserializes the response into a <see cref="BaseResponseDTO{T}"/> of type <see cref="bool"/>.</description></item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        /// <param name="url">The server API URL.</param>
+        /// <param name="recordId">The update record identifier.</param>
+        /// <param name="status">The current status code.</param>
+        /// <param name="type">The update type (may be null).</param>
+        /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
         {
             var p = new Dictionary<string, object> { ["recordId"] = recordId, ["status"] = status, ["type"] = type };
@@ -237,16 +273,27 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 异步校验版本，向服务器查询可用更新。
+        /// Asynchronously validates the version by querying the server for available updates.
         /// </summary>
-        /// <param name="url">服务器版本校验 API 地址。</param>
-        /// <param name="v">当前客户端版本号。</param>
-        /// <param name="at">应用类型的整数值。</param>
-        /// <param name="appKey">应用密钥。</param>
-        /// <param name="pf">平台类型的整数值。</param>
-        /// <param name="pid">产品标识符。</param>
-        /// <param name="t">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>包含版本校验结果的 <see cref="VersionRespDTO"/>。</returns>
+        /// <remarks>
+        /// <para>
+        /// Execution flow:
+        /// <list type="number">
+        ///   <item><description>Constructs a parameter dictionary with the version, app type, app key,
+        ///   platform, product ID, and upgrade mode.</description></item>
+        ///   <item><description>Sends the parameters via a POST request using <see cref="PostAsync{T}"/>.</description></item>
+        ///   <item><description>Deserializes the response into a <see cref="VersionRespDTO"/>.</description></item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        /// <param name="url">The server version validation API URL.</param>
+        /// <param name="v">The current client version string.</param>
+        /// <param name="at">The application type as an integer value.</param>
+        /// <param name="appKey">The application key.</param>
+        /// <param name="pf">The platform type as an integer value.</param>
+        /// <param name="pid">The product identifier.</param>
+        /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result.</returns>
         private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, string appKey, int pf, string pid,
             CancellationToken t = default)
         {
@@ -255,38 +302,40 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 执行带有指数退避重试机制的 HTTP POST 请求。
+        /// Executes an HTTP POST request with exponential backoff retry logic.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// 本方法封装了重试逻辑，流程如下：
+        /// This method encapsulates the retry logic. The execution flow is as follows:
         /// </para>
         /// <list type="number">
         ///   <item>
-        ///     <description>调用 <see cref="SendAsync{T}"/> 发送 POST 请求。</description>
+        ///     <description>Calls <see cref="SendAsync{T}"/> to send the POST request.</description>
         ///   </item>
         ///   <item>
-        ///     <description>若请求成功，直接返回反序列化后的结果。</description>
+        ///     <description>If the request succeeds, the deserialized result is returned directly.</description>
         ///   </item>
         ///   <item>
-        ///     <description>若抛出可重试的异常（参见 <see cref="IsRetryable"/>）且未达到最大重试次数，
-        ///     则等待指数递增的时间（2^attempt * 1000 毫秒）后重试。</description>
+        ///     <description>If a retryable exception (see <see cref="IsRetryable"/>) is thrown and the
+        ///     maximum retry count has not been reached, waits for an exponentially increasing
+        ///     interval (2^attempt * 1000 milliseconds) before retrying.</description>
         ///   </item>
         ///   <item>
-        ///     <description>不可重试的异常（如 <see cref="OperationCanceledException"/>）会立即向上传播。</description>
+        ///     <description>Non-retryable exceptions (such as <see cref="OperationCanceledException"/>)
+        ///     propagate immediately.</description>
         ///   </item>
         /// </list>
         /// <para>
-        /// 重试等待期间会通过 <see cref="Task.Delay(TimeSpan, CancellationToken)"/> 释放线程，
-        /// 并响应取消令牌。
+        /// During retry waits, the thread is released via
+        /// <see cref="Task.Delay(TimeSpan, CancellationToken)"/>, and the cancellation token is respected.
         /// </para>
         /// </remarks>
-        /// <typeparam name="T">响应数据的反序列化目标类型。</typeparam>
-        /// <param name="url">请求的目标 URL。</param>
-        /// <param name="p">POST 请求体参数字典。</param>
-        /// <param name="ti">用于源代码生成器（source generator）的 JSON 类型信息元数据，可为 null（此时使用反射反序列化）。</param>
-        /// <param name="t">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>反序列化后的响应数据。</returns>
+        /// <typeparam name="T">The deserialization target type for the response data.</typeparam>
+        /// <param name="url">The target URL for the request.</param>
+        /// <param name="p">The POST body parameter dictionary.</param>
+        /// <param name="ti">The JSON type info metadata for source generator (may be null, in which case reflection-based deserialization is used).</param>
+        /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>The deserialized response data.</returns>
         private async Task<T> PostAsync<T>(string url, Dictionary<string, object> p,
             JsonTypeInfo<T>? ti, CancellationToken t)
         {
@@ -302,40 +351,45 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// 执行单个 HTTP POST 请求，包含认证注入和超时控制。
+        /// Executes a single HTTP POST request, including authentication injection and timeout control.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// 本方法负责单次 HTTP 请求的全过程：
+        /// This method handles the full lifecycle of a single HTTP request:
         /// </para>
         /// <list type="number">
         ///   <item>
-        ///     <description>构造 <see cref="HttpRequestMessage"/>，设置 URL、方法（POST）和 Accept 头。</description>
+        ///     <description>Constructs an <see cref="HttpRequestMessage"/> with the URL, method (POST),
+        ///     and Accept header.</description>
         ///   </item>
         ///   <item>
-        ///     <description>将参数字典序列化为 JSON 字符串，设置为请求内容。</description>
+        ///     <description>Serializes the parameter dictionary to JSON and sets it as the request content.</description>
         ///   </item>
         ///   <item>
-        ///     <description>调用 <see cref="IHttpAuthProvider.ApplyAuthAsync"/> 注入认证信息（如 Bearer Token）。</description>
+        ///     <description>Calls <see cref="IHttpAuthProvider.ApplyAuthAsync"/> to inject authentication
+        ///     information (e.g., Bearer Token).</description>
         ///   </item>
         ///   <item>
-        ///     <description>通过 <see cref="CancellationTokenSource.CreateLinkedTokenSource"/> 将传入的取消令牌与超时令牌关联，
-        ///     确保超时或取消任一触发时请求立即中止。</description>
+        ///     <description>Uses <see cref="CancellationTokenSource.CreateLinkedTokenSource"/> to link
+        ///     the incoming cancellation token with a timeout token, ensuring the request is aborted
+        ///     when either the timeout elapses or cancellation is requested.</description>
         ///   </item>
         ///   <item>
-        ///     <description>使用静态共享的 <see cref="HttpClient"/> 发送请求，并调用 <c>EnsureSuccessStatusCode</c> 验证响应状态。</description>
+        ///     <description>Sends the request using the static shared <see cref="HttpClient"/> and calls
+        ///     <c>EnsureSuccessStatusCode</c> to validate the response status.</description>
         ///   </item>
         ///   <item>
-        ///     <description>读取响应内容为字符串，并通过 <paramref name="ti"/> 或反射反序列化为目标类型 <typeparamref name="T"/>。</description>
+        ///     <description>Reads the response content as a string and deserializes it into the target
+        ///     type <typeparamref name="T"/> using <paramref name="ti"/> or reflection.</description>
         ///   </item>
         /// </list>
         /// </remarks>
-        /// <typeparam name="T">响应数据的反序列化目标类型。</typeparam>
-        /// <param name="url">请求的目标 URL。</param>
-        /// <param name="p">POST 请求体参数字典。</param>
-        /// <param name="ti">用于源代码生成器的 JSON 类型信息元数据，可为 null。</param>
-        /// <param name="t">用于取消操作的 <see cref="CancellationToken"/>。</param>
-        /// <returns>反序列化后的响应数据。</returns>
+        /// <typeparam name="T">The deserialization target type for the response data.</typeparam>
+        /// <param name="url">The target URL for the request.</param>
+        /// <param name="p">The POST body parameter dictionary.</param>
+        /// <param name="ti">The JSON type info metadata for source generator (may be null).</param>
+        /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
+        /// <returns>The deserialized response data.</returns>
         private async Task<T> SendAsync<T>(string url, Dictionary<string, object> p,
             JsonTypeInfo<T>? ti, CancellationToken t)
         {
@@ -353,6 +407,28 @@ namespace GeneralUpdate.Core.Network
             return ti == null ? JsonSerializer.Deserialize<T>(rj) : JsonSerializer.Deserialize(rj, ti);
         }
 
+        /// <summary>
+        /// Determines whether an exception is retryable.
+        /// </summary>
+        /// <param name="ex">The exception to evaluate.</param>
+        /// <returns><c>true</c> if the exception is retryable; otherwise <c>false</c>.</returns>
+        /// <remarks>
+        /// <para>
+        /// Retryable exceptions:
+        /// <list type="bullet">
+        ///   <item><description><see cref="TaskCanceledException"/></description></item>
+        ///   <item><description><see cref="TimeoutException"/></description></item>
+        ///   <item><description><see cref="System.IO.IOException"/></description></item>
+        ///   <item><description><see cref="HttpRequestException"/> with a message containing "timeout"</description></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// Non-retryable exceptions:
+        /// <list type="bullet">
+        ///   <item><description><see cref="OperationCanceledException"/></description></item>
+        /// </list>
+        /// </para>
+        /// </remarks>
         private static bool IsRetryable(Exception ex)
         {
             if (ex is OperationCanceledException) return false;

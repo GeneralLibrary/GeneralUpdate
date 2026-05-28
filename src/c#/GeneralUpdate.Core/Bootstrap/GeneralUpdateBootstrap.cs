@@ -87,6 +87,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>Cancel the current update operation.</summary>
+    /// <remarks>
+    /// Signals the internal <see cref="CancellationTokenSource"/> to request cancellation
+    /// of the ongoing update workflow. After calling this method, the running strategy
+    /// (e.g., <see cref="Strategy.ClientUpdateStrategy"/>) will observe the cancellation
+    /// token and terminate the current operation at the next safe checkpoint.
+    /// A cancellation message is also written to the trace log.
+    /// </remarks>
     public void Cancel()
     {
         _cts?.Cancel();
@@ -245,6 +252,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// If just a filename (no directory separator), resolves relative to the current directory.
     /// Relative or absolute paths are used as-is.
     /// </param>
+    /// <returns>This bootstrap instance for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="filePath"/> is <c>null</c> or whitespace.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the specified file does not exist.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the JSON file cannot be deserialised into a valid <see cref="Configinfo"/>.</exception>
+    /// <remarks>
+    /// Reads the file content as UTF-8 JSON, deserialises it into a <see cref="Configinfo"/>
+    /// using the source-generated JSON serialisation context (<see cref="JsonContext.HttpParameterJsonContext"/>),
+    /// then delegates to <see cref="SetConfig(Configinfo)"/> for validation and mapping.
+    /// </remarks>
     public GeneralUpdateBootstrap SetConfig(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
@@ -282,6 +298,21 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         return this;
     }
 
+    /// <summary>
+    /// Registers a pre-check callback that is invoked after update information is retrieved
+    /// but before downloads begin. The callback can inspect the metadata and decide whether
+    /// to proceed with or abort the update.
+    /// </summary>
+    /// <param name="func">A predicate that receives <see cref="UpdateInfoEventArgs"/>
+    /// and returns <c>true</c> to continue or <c>false</c> to abort the update.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <c>null</c>.</exception>
+    /// <remarks>
+    /// The pre-check function is called during the client update strategy's standard workflow,
+    /// immediately after version comparison and before any packages are downloaded.
+    /// This allows conditional update logic, such as skipping updates under certain
+    /// network conditions or user preferences.
+    /// </remarks>
     public GeneralUpdateBootstrap AddListenerUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));
@@ -456,24 +487,64 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         return this;
     }
 
+    /// <summary>
+    /// Registers a callback for the multi-all-download-completed event, raised when all
+    /// update files across all versions have been downloaded.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerMultiAllDownloadCompleted(
         Action<object, MultiAllDownloadCompletedEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for the multi-download-completed event, raised when a single
+    /// version's set of files has finished downloading.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerMultiDownloadCompleted(
         Action<object, MultiDownloadCompletedEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for the multi-download-error event, raised when an error
+    /// occurs during batch download.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerMultiDownloadError(
         Action<object, MultiDownloadErrorEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for download statistics events, providing real-time throughput
+    /// and progress information during batch downloads.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerMultiDownloadStatistics(
         Action<object, MultiDownloadStatisticsEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for exception events raised during the update workflow.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerException(
         Action<object, ExceptionEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for update-information events, providing version metadata
+    /// retrieved from the server.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerUpdateInfo(
         Action<object, UpdateInfoEventArgs> cb) => AddListener(cb);
 
+    /// <summary>
+    /// Registers a callback for general progress events during the update process.
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerProgress(
         Action<object, ProgressEventArgs> cb) => AddListener(cb);
 

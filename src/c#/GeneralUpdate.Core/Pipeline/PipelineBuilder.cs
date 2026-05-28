@@ -5,31 +5,31 @@ using System.Threading.Tasks;
 namespace GeneralUpdate.Core.Pipeline
 {
     /// <summary>
-    /// 管道构建器，采用 FIFO（先进先出）顺序注册和执行中间件。
+    /// Pipeline builder that registers and executes middleware in FIFO (first-in, first-out) order.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <see cref="PipelineBuilder"/> 是 GeneralUpdate 管道模式的核心编排组件。
-    /// 它管理一个 <see cref="IMiddleware"/> 实例的不可变队列，中间件按注册顺序排队，
-    /// 在调用 <see cref="Build"/> 时按 FIFO 顺序依次异步执行。
+    /// <see cref="PipelineBuilder"/> is the core orchestration component of the GeneralUpdate pipeline pattern.
+    /// It manages an immutable queue of <see cref="IMiddleware"/> instances. Middleware are enqueued in
+    /// registration order, and during <see cref="Build"/> they execute sequentially in FIFO order asynchronously.
     /// </para>
     /// <para>
-    /// 典型的更新管道流程如下：
+    /// A typical update pipeline flow is as follows:
     /// <list type="number">
-    ///   <item><description><see cref="HashMiddleware"/> — 验证下载压缩包的 SHA256 哈希值。</description></item>
-    ///   <item><description><see cref="CompressMiddleware"/> — 将压缩包解压到目标目录。</description></item>
-    ///   <item><description><see cref="PatchMiddleware"/> — 应用二进制差异补丁（如果启用了补丁功能）。</description></item>
+    ///   <item><description><see cref="HashMiddleware"/> — Verifies the SHA256 hash of the downloaded archive.</description></item>
+    ///   <item><description><see cref="CompressMiddleware"/> — Decompresses the archive to the target directory.</description></item>
+    ///   <item><description><see cref="PatchMiddleware"/> — Applies binary differential patches (if patching is enabled).</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// 使用 <see cref="UseMiddleware{TMiddleware}"/> 无条件注册中间件，
-    /// 或使用 <see cref="UseMiddlewareIf{TMiddleware}(bool?)"/> 根据条件决定是否注册。
+    /// Use <see cref="UseMiddleware{TMiddleware}"/> to unconditionally register middleware,
+    /// or <see cref="UseMiddlewareIf{TMiddleware}(bool?)"/> to register conditionally.
     /// </para>
     /// </remarks>
     /// <example>
     /// <code>
     /// var context = new PipelineContext();
-    /// // 设置上下文数据...
+    /// // Set context data...
     /// var builder = new PipelineBuilder(context)
     ///     .UseMiddleware&lt;HashMiddleware&gt;()
     ///     .UseMiddlewareIf&lt;CompressMiddleware&gt;(true)
@@ -40,25 +40,26 @@ namespace GeneralUpdate.Core.Pipeline
     public sealed class PipelineBuilder(PipelineContext context)
     {
         /// <summary>
-        /// 中间件不可变队列，FIFO（先进先出）顺序。
+        /// Immutable queue of middleware, maintained in FIFO (first-in, first-out) order.
         /// </summary>
         /// <remarks>
-        /// 使用 <see cref="ImmutableQueue{T}"/> 保证注册后队列内容不被意外修改。
-        /// 每次 <see cref="Enqueue"/> 操作都返回一个新的队列实例，原始实例保持不变。
+        /// Uses <see cref="ImmutableQueue{T}"/> to guarantee that the queue contents cannot be accidentally
+        /// modified after registration. Each <see cref="ImmutableQueue{T}.Enqueue(T)"/> operation returns a new
+        /// queue instance, leaving the original instance unchanged.
         /// </remarks>
         private ImmutableQueue<IMiddleware> _middlewareQueue = ImmutableQueue<IMiddleware>.Empty;
 
         /// <summary>
-        /// 向管道注册一个中间件。每次调用都会将中间件实例排队到队列尾部。
+        /// Registers a middleware type into the pipeline. Each call enqueues a middleware instance at the tail of the queue.
         /// </summary>
         /// <typeparam name="TMiddleware">
-        /// 要注册的中间件类型。必须实现 <see cref="IMiddleware"/> 接口且具有无参数构造函数。
+        /// The type of middleware to register. Must implement the <see cref="IMiddleware"/> interface and have a parameterless constructor.
         /// </typeparam>
-        /// <returns>当前 <see cref="PipelineBuilder"/> 实例，支持链式调用。</returns>
+        /// <returns>The current <see cref="PipelineBuilder"/> instance, enabling chained calls.</returns>
         /// <remarks>
-        /// 此方法始终注册中间件，无论任何条件。如果需要条件注册，请使用
-        /// <see cref="UseMiddlewareIf{TMiddleware}(bool?)"/>。
-        /// 中间件实例通过 <c>new TMiddleware()</c> 创建，因此类型必须具有公开的无参数构造函数。
+        /// This method always registers the middleware regardless of any condition. For conditional registration,
+        /// use <see cref="UseMiddlewareIf{TMiddleware}(bool?)"/>.
+        /// The middleware instance is created via <c>new TMiddleware()</c>, so the type must have a public parameterless constructor.
         /// </remarks>
         public PipelineBuilder UseMiddleware<TMiddleware>() where TMiddleware : IMiddleware, new()
         {
@@ -68,19 +69,20 @@ namespace GeneralUpdate.Core.Pipeline
         }
 
         /// <summary>
-        /// 根据条件向管道注册中间件。仅当条件为 <c>true</c> 时才注册。
+        /// Conditionally registers a middleware type into the pipeline. The middleware is only registered when the condition is <c>true</c>.
         /// </summary>
         /// <typeparam name="TMiddleware">
-        /// 要注册的中间件类型。必须实现 <see cref="IMiddleware"/> 接口且具有无参数构造函数。
+        /// The type of middleware to register. Must implement the <see cref="IMiddleware"/> interface and have a parameterless constructor.
         /// </typeparam>
         /// <param name="condition">
-        /// 注册条件。如果为 <c>null</c> 或 <c>false</c>，则跳过注册；
-        /// 如果为 <c>true</c>，则创建并注册中间件实例。
+        /// The registration condition. If <c>null</c> or <c>false</c>, registration is skipped;
+        /// if <c>true</c>, a middleware instance is created and registered.
         /// </param>
-        /// <returns>当前 <see cref="PipelineBuilder"/> 实例，支持链式调用。</returns>
+        /// <returns>The current <see cref="PipelineBuilder"/> instance, enabling chained calls.</returns>
         /// <remarks>
-        /// 此方法适用于需要根据运行时配置或功能开关决定是否启用某个处理阶段的场景。
-        /// 例如，仅在启用差异补丁时才注册 <see cref="PatchMiddleware"/>：
+        /// This method is suitable for scenarios where certain processing stages should be enabled or disabled
+        /// based on runtime configuration or feature flags. For example, register <see cref="PatchMiddleware"/>
+        /// only when differential patching is enabled:
         /// <code>
         /// builder.UseMiddlewareIf&lt;PatchMiddleware&gt;(isPatchEnabled);
         /// </code>
@@ -97,18 +99,20 @@ namespace GeneralUpdate.Core.Pipeline
         }
 
         /// <summary>
-        /// 按 FIFO 顺序异步执行所有已注册的中间件。
+        /// Asynchronously executes all registered middleware in FIFO order.
         /// </summary>
-        /// <returns>表示异步操作的任务。当所有中间件执行完毕时，该任务完成。</returns>
+        /// <returns>A task that represents the asynchronous operation. The task completes when all middleware have finished executing.</returns>
         /// <remarks>
         /// <para>
-        /// 此方法遍历 <see cref="_middlewareQueue"/>，对每个中间件依次调用
-        /// <see cref="IMiddleware.InvokeAsync(PipelineContext)"/>。
-        /// 中间件按注册顺序（先进先出）串行执行——前一个中间件完成后才会执行下一个。
+        /// This method traverses the <see cref="_middlewareQueue"/> and calls
+        /// <see cref="IMiddleware.InvokeAsync(PipelineContext)"/> on each middleware in sequence.
+        /// Middleware execute serially in registration order (first-in, first-out) — the next middleware
+        /// starts only after the previous one has completed.
         /// </para>
         /// <para>
-        /// 如果任何中间件抛出异常，管道将立即终止，后续中间件不会执行。
-        /// 调用者应捕获并处理异常以执行适当的错误恢复逻辑。
+        /// If any middleware throws an exception, the pipeline terminates immediately and subsequent
+        /// middleware will not execute. Callers should catch and handle exceptions to perform appropriate
+        /// error recovery logic.
         /// </para>
         /// </remarks>
         public async Task Build()

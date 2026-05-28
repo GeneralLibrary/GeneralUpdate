@@ -9,33 +9,36 @@ using GeneralUpdate.Core.Configuration;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// macOS 平台专用的更新策略。
-/// 实现了针对 macOS 操作系统的更新流程，包括管道构建、哈希校验、解压缩和应用补丁。
+/// macOS platform-specific update strategy.
+/// Implements the update flow for the macOS operating system, including pipeline building,
+/// hash verification, decompression, and patch application.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类继承自 <c>AbstractStrategy</c>，提供了 macOS 环境下的完整更新生命周期管理。
-/// 其管道流程与 Linux 策略相似，但在 <c>StartAppAsync</c> 中会额外验证文件是否存在。
+/// This class inherits from <c>AbstractStrategy</c> and provides complete update lifecycle management for the macOS environment.
+/// Its pipeline flow is similar to the Linux strategy, but additionally verifies file existence in <c>StartAppAsync</c>.
 /// </para>
 /// <para>
-/// 核心流程：
+/// Core flow:
 /// <list type="number">
-///   <item><c>BuildPipeline</c> — 构建中间件管道，按顺序执行哈希校验→解压缩→（可选）应用补丁。</item>
-///   <item><c>ExecuteAsync</c> — 执行基类的管道流程，并记录开始信息（使用 <c>ConfigureAwait(false)</c> 避免上下文切换死锁）。</item>
-///   <item><c>Create</c> — 直接保存配置信息到内部字段。</item>
-///   <item><c>StartAppAsync</c> — 启动已更新的主应用程序，然后退出当前更新程序进程。</item>
+///   <item><c>BuildPipeline</c> — Builds the middleware pipeline, executing hash verification, decompression,
+///        and (optionally) patch application in order.</item>
+///   <item><c>ExecuteAsync</c> — Executes the base class pipeline flow and logs start information
+///        (uses <c>ConfigureAwait(false)</c> to avoid context-switch deadlocks).</item>
+///   <item><c>Create</c> — Directly stores configuration information in the internal field.</item>
+///   <item><c>StartAppAsync</c> — Starts the updated main application, then exits the current updater process.</item>
 /// </list>
 /// </para>
 /// </remarks>
 public class MacStrategy : AbstractStrategy
 {
     /// <summary>
-    /// 异步执行更新策略的主流程。
+    /// Asynchronously executes the main update strategy flow.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
-    /// 此方法首先记录执行开始信息，然后调用基类的 <c>ExecuteAsync</c> 方法执行实际的管道流程。
-    /// 使用 <c>ConfigureAwait(false)</c> 配置以避免在 UI 上下文中发生死锁。
+    /// This method first logs the execution start information, then calls the base class's <c>ExecuteAsync</c> method
+    /// to execute the actual pipeline flow. Uses <c>ConfigureAwait(false)</c> to avoid deadlocks in UI contexts.
     /// </remarks>
     public override async Task ExecuteAsync()
     {
@@ -44,22 +47,22 @@ public class MacStrategy : AbstractStrategy
     }
 
     /// <summary>
-    /// 异步启动已更新的主应用程序，然后退出当前更新程序进程。
+    /// Asynchronously starts the updated main application, then exits the current updater process.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// <para>
-    /// 此方法在更新流程完成后调用。与 Windows/Linux 策略的不同之处在于：
+    /// This method is called after the update process completes. The differences from the Windows/Linux strategies are:
     /// </para>
     /// <list type="number">
-    ///   <item>使用 <c>LaunchAppName</c> 获取主应用程序名称，如果未设置则抛出异常。</item>
-    ///   <item>调用 <c>ResolveAppPath</c> 解析应用程序路径。</item>
-    ///   <item>在启动前使用 <c>File.Exists</c> 验证文件是否存在（macOS 特有）。</item>
-    ///   <item>使用 <c>Process.Start</c> 启动主应用程序。</item>
-    ///   <item>释放 <c>GeneralTracer</c> 资源并调用 <c>GracefulExit.CurrentProcessAsync()</c> 退出更新程序进程。</item>
+    ///   <item>Uses <c>LaunchAppName</c> to get the main application name; throws if not set.</item>
+    ///   <item>Calls <c>ResolveAppPath</c> to resolve the application path.</item>
+    ///   <item>Verifies file existence using <c>File.Exists</c> before launching (macOS-specific).</item>
+    ///   <item>Starts the main application using <c>Process.Start</c>.</item>
+    ///   <item>Disposes the <c>GeneralTracer</c> resources and calls <c>GracefulExit.CurrentProcessAsync()</c> to exit the updater process.</item>
     /// </list>
     /// <para>
-    /// 任何异常都会被 <c>EventManager</c> 捕获并分发为 <c>ExceptionEventArgs</c> 事件。
+    /// Any exception is caught and dispatched as an <c>ExceptionEventArgs</c> event via <c>EventManager</c>.
     /// </para>
     /// </remarks>
     public override async Task StartAppAsync()
@@ -89,28 +92,29 @@ public class MacStrategy : AbstractStrategy
     }
 
     /// <summary>
-    /// 使用全局配置信息创建并初始化策略实例。
+    /// Creates and initializes the strategy instance using global configuration information.
     /// </summary>
-    /// <param name="configInfo">全局配置信息，包含安装路径、应用名称、版本号等设置。</param>
+    /// <param name="configInfo">Global configuration information containing settings such as install path, application name, and version number.</param>
     /// <remarks>
-    /// macOS 策略的 <c>Create</c> 实现直接保存配置信息到内部字段 <c>_configinfo</c>，
-    /// 而不调用基类的实现。这提供了更轻量级的初始化方式。
+    /// The MacStrategy's <c>Create</c> implementation directly stores the configuration information in the internal field <c>_configinfo</c>,
+    /// without calling the base class implementation. This provides a more lightweight initialization approach.
     /// </remarks>
     public override void Create(GlobalConfigInfo configInfo) => _configinfo = configInfo;
 
     /// <summary>
-    /// 构建 macOS 平台的更新中间件管道。
+    /// Builds the macOS platform update middleware pipeline.
     /// </summary>
-    /// <param name="context">管道上下文，包含版本和补丁信息。</param>
-    /// <returns>配置好的 <c>PipelineBuilder</c> 实例，包含哈希校验、解压缩和（可选）补丁中间件。</returns>
+    /// <param name="context">The pipeline context containing version and patch information.</param>
+    /// <returns>A configured <c>PipelineBuilder</c> instance containing hash verification, decompression,
+    /// and (optionally) patch middleware.</returns>
     /// <remarks>
     /// <para>
-    /// 管道按以下顺序组装中间件：
+    /// The pipeline assembles middleware in the following order:
     /// </para>
     /// <list type="number">
-    ///   <item><c>HashMiddleware</c> — 计算并验证文件哈希，确保数据完整性。</item>
-    ///   <item><c>CompressMiddleware</c> — 解压缩下载的更新包。</item>
-    ///   <item><c>PatchMiddleware</c> — （可选）应用二进制补丁。仅在 <c>_configinfo.PatchEnabled</c> 为 true 时启用。</item>
+    ///   <item><c>HashMiddleware</c> — Computes and verifies file hashes to ensure data integrity.</item>
+    ///   <item><c>CompressMiddleware</c> — Decompresses the downloaded update package.</item>
+    ///   <item><c>PatchMiddleware</c> — (Optional) Applies binary patches. Only enabled when <c>_configinfo.PatchEnabled</c> is true.</item>
     /// </list>
     /// </remarks>
     protected override PipelineBuilder BuildPipeline(PipelineContext context)

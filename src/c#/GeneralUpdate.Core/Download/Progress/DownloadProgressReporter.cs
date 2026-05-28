@@ -7,23 +7,25 @@ using IProgress = System.IProgress<GeneralUpdate.Core.Download.Models.DownloadPr
 namespace GeneralUpdate.Core.Download.Progress;
 
 /// <summary>
-/// 下载进度报告器，将 <see cref="IProgress{T}"/> 进度事件桥接到 <see cref="EventManager"/>
-/// 事件系统，为传统事件监听器提供向后兼容的订阅方式。
+/// Download progress reporter that bridges <see cref="IProgress{T}"/> progress events
+/// to the <see cref="EventManager"/> event system, providing backwards-compatible
+/// subscription for legacy event listeners.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IProgress{T}"/> 接口（其中 T 为 <c>DownloadProgress</c>），
-/// 在报告下载进度时，同时触发以下事件：
+/// This class implements <see cref="IProgress{T}"/> (where T is <c>DownloadProgress</c>)
+/// and triggers the following events when reporting download progress:
 /// </para>
 /// <list type="bullet">
-///   <item><term><c>ProgressEventArgs</c></term><description>每次报告进度时触发，包含下载百分比、已下载字节数等信息。</description></item>
-///   <item><term><c>MultiDownloadCompletedEventArgs</c></term><description>当下载状态为 <c>Completed</c> 时触发。</description></item>
-///   <item><term><c>MultiDownloadErrorEventArgs</c></term><description>当下载状态为 <c>Failed</c> 时触发。</description></item>
-///   <item><term><c>MultiAllDownloadCompletedEventArgs</c></term><description>通过 <c>DispatchAllCompleted</c> 静态方法触发，表示所有下载任务已完成。</description></item>
+///   <item><term><c>ProgressEventArgs</c></term><description>Fired on every progress report,
+///         containing the download percentage, bytes downloaded, and other information.</description></item>
+///   <item><term><c>MultiDownloadCompletedEventArgs</c></term><description>Fired when the download status is <c>Completed</c>.</description></item>
+///   <item><term><c>MultiDownloadErrorEventArgs</c></term><description>Fired when the download status is <c>Failed</c>.</description></item>
+///   <item><term><c>MultiAllDownloadCompletedEventArgs</c></term><description>Fired via the static <c>DispatchAllCompleted</c> method when all download tasks are finished.</description></item>
 /// </list>
 /// <para>
-/// 此类同时也支持直接注入 <c>onProgress</c> 和 <c>onCompleted</c> 回调委托，
-/// 作为除 EventManager 之外的另一条通知通道。
+/// This class also supports direct injection of <c>onProgress</c> and <c>onCompleted</c>
+/// callback delegates as an alternative notification channel alongside EventManager.
 /// </para>
 /// </remarks>
 public class DownloadProgressReporter : IProgress
@@ -32,10 +34,11 @@ public class DownloadProgressReporter : IProgress
     private readonly Action? _onCompleted;
 
     /// <summary>
-    /// 使用可选的进度回调和完成回调初始化进度报告器。
+    /// Initializes a new instance of the <see cref="DownloadProgressReporter"/> class
+    /// with optional progress and completion callbacks.
     /// </summary>
-    /// <param name="onProgress">每次报告进度时调用的回调委托。</param>
-    /// <param name="onCompleted">下载完成时调用的回调委托。</param>
+    /// <param name="onProgress">A callback delegate invoked on each progress report.</param>
+    /// <param name="onCompleted">A callback delegate invoked when the download completes.</param>
     public DownloadProgressReporter(
         Action<Models.DownloadProgress>? onProgress = null,
         Action? onCompleted = null)
@@ -45,9 +48,10 @@ public class DownloadProgressReporter : IProgress
     }
 
     /// <summary>
-    /// 报告下载进度。触发进度回调、EventManager 事件，并根据下载状态触发完成或失败事件。
+    /// Reports download progress. Invokes the progress callback, fires EventManager events,
+    /// and triggers completion or failure events based on the download status.
     /// </summary>
-    /// <param name="value">包含当前下载进度信息的 <see cref="Models.DownloadProgress"/> 实例。</param>
+    /// <param name="value">A <see cref="Models.DownloadProgress"/> instance containing the current download progress information.</param>
     public void Report(Models.DownloadProgress value)
     {
         _onProgress?.Invoke(value);
@@ -70,12 +74,13 @@ public class DownloadProgressReporter : IProgress
     }
 
     /// <summary>
-    /// 触发所有下载完成事件。此方法应在所有下载任务完成后调用一次，而不是每个资产完成后调用。
-    /// 通常由下载编排器（Download Orchestrator）在全部下载完成后调用。
+    /// Dispatches the all-downloads-completed event. This method should be called once
+    /// after all download tasks are finished, not after each individual asset completes.
+    /// Typically called by the download orchestrator after all downloads have completed.
     /// </summary>
-    /// <param name="sender">事件发送者。</param>
-    /// <param name="success">所有下载是否全部成功。</param>
-    /// <param name="details">每个下载资产的详情列表，包含资产对象和文件名。</param>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="success">Whether all downloads completed successfully.</param>
+    /// <param name="details">The list of details for each downloaded asset, containing the asset object and file name.</param>
     public static void DispatchAllCompleted(object sender, bool success, List<(object, string)> details)
     {
         EventManager.Instance.Dispatch(sender,
@@ -83,12 +88,14 @@ public class DownloadProgressReporter : IProgress
     }
 
     /// <summary>
-    /// 创建一个将进度事件分发给 EventManager 的 <see cref="IProgress{T}"/> 实例。
+    /// Creates an <see cref="IProgress{T}"/> instance that dispatches progress events
+    /// to the EventManager.
     /// </summary>
-    /// <returns>一个新的 <see cref="DownloadProgressReporter"/> 实例，用于桥接进度报告到事件系统。</returns>
+    /// <returns>A new <see cref="DownloadProgressReporter"/> instance bridging progress reporting to the event system.</returns>
     /// <remarks>
-    /// 此工厂方法创建的报告器不包含自定义回调，仅通过 EventManager 分发事件。
-    /// 适合只需订阅 EventManager 事件而不需要直接回调的场景。
+    /// This factory method creates a reporter without custom callbacks, dispatching events
+    /// exclusively through EventManager. Suitable for scenarios where only EventManager
+    /// subscriptions are needed without direct callbacks.
     /// </remarks>
     public static IProgress CreateEventBridge()
         => new DownloadProgressReporter();

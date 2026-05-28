@@ -11,32 +11,36 @@ using GeneralUpdate.Core.Pipeline;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// 升级端更新策略。接收客户端通过加密 IPC 传递的进程信息，应用更新并启动主应用程序。
+/// Upgrade-side update strategy. Receives process information passed from the client via encrypted IPC,
+/// applies updates, and launches the main application.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 本策略对应 <c>AppType.Upgrade</c> 角色，采用两层策略设计：上层角色策略（本类）负责编排更新流程，
-/// 下层操作系统策略（<see cref="WindowsStrategy"/>、<see cref="LinuxStrategy"/>、<see cref="MacStrategy"/>）
-/// 负责执行具体的平台操作。
+/// This strategy serves the <c>AppType.Upgrade</c> role and uses a two-layer strategy design:
+/// the upper role strategy (this class) handles workflow orchestration,
+/// while the lower OS-level strategy (<see cref="WindowsStrategy"/>, <see cref="LinuxStrategy"/>, <see cref="MacStrategy"/>)
+/// handles platform-specific operations.
 /// </para>
 /// <para>
-/// <b>执行流程：</b>
+/// <b>Execution Flow:</b>
 /// <list type="number">
-///   <item><description>通过 <see cref="Create"/> 方法接收客户端传递的 <see cref="GlobalConfigInfo"/>，
-///   其中包含已下载的更新包路径、哈希值等元数据。</description></item>
-///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> 生命周期钩子，
-///   允许调用方在应用更新前执行自定义逻辑或取消操作。</description></item>
-///   <item><description>委托操作系统策略执行更新管道：通过 <c>Hash</c>（哈希校验）→
-///   <c>Decompress</c>（解压缩）→ <c>Patch</c>（增量补丁）中间件链处理每个更新版本。</description></item>
-///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/> 钩子，通知调用方所有更新已应用完毕。</description></item>
-///   <item><description>调用 <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/> 钩子，
-///   允许调用方在启动主应用程序前执行额外操作（如设置可执行权限或准备资源文件）。</description></item>
-///   <item><description>通过操作系统策略启动主应用程序（<c>MainAppName</c>）及 Bowl 辅助进程。</description></item>
+///   <item><description>Receives the <see cref="GlobalConfigInfo"/> passed from the client via the <see cref="Create"/> method,
+///   which contains already-downloaded update package paths, hash values, and other metadata.</description></item>
+///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> lifecycle hook,
+///   allowing the caller to execute custom logic or cancel the operation before applying updates.</description></item>
+///   <item><description>Delegates to the OS strategy to execute the update pipeline: processes each version through the
+///   <c>Hash</c> (hash verification) → <c>Decompress</c> (extraction) → <c>Patch</c> (incremental patch) middleware chain.</description></item>
+///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/> hook to notify the caller that all updates have been applied.</description></item>
+///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/> hook,
+///   allowing the caller to perform additional operations before launching the main application
+///   (such as setting executable permissions or preparing resource files).</description></item>
+///   <item><description>Launches the main application (<c>MainAppName</c>) and the Bowl helper process through the OS strategy.</description></item>
 /// </list>
 /// </para>
 /// <para>
-/// <b>设计要点：</b>升级端不执行版本验证或下载操作。客户端已完成所有网络请求和下载任务，
-/// 并通过进程信息传递结果。升级端仅负责应用更新和启动应用程序——零网络开销。
+/// <b>Design Note:</b> The upgrade side does not perform version validation or download operations.
+/// The client has already completed all network requests and downloads, passing results through process information.
+/// The upgrade side is responsible only for applying updates and launching the application -- zero network overhead.
 /// </para>
 /// </remarks>
 public class UpgradeUpdateStrategy : IStrategy
@@ -46,27 +50,28 @@ public class UpgradeUpdateStrategy : IStrategy
     private IStrategy? _customOsStrategy;
 
     /// <summary>
-    /// 获取或设置生命周期钩子。由引导程序注入，用于在更新流程的关键节点执行自定义逻辑。
+    /// Gets or sets the lifecycle hooks. Injected by the bootstrap to execute custom logic at key points in the update flow.
     /// </summary>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
     /// <summary>
-    /// 获取或设置更新状态报告器。由引导程序注入，负责向服务器或调用方报告更新进度和结果。
+    /// Gets or sets the update status reporter. Injected by the bootstrap to report update progress and results to the server or caller.
     /// </summary>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
     /// <summary>
-    /// 设置自定义操作系统级别策略（通过 <c>.Strategy&lt;T&gt;()</c> 注入）。
-    /// 设置后将替换 <see cref="ResolveOsStrategy"/> 中的自动平台检测逻辑。
+    /// Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
+    /// When set, replaces the automatic platform detection logic in <see cref="ResolveOsStrategy"/>.
     /// </summary>
     public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
 
     /// <summary>
-    /// 初始化升级端策略。接收客户端传递的全局配置信息，并解析当前操作系统对应的策略实例。
+    /// Initializes the upgrade-side strategy. Receives the global configuration information passed from the client
+    /// and resolves the strategy instance for the current operating system.
     /// </summary>
-    /// <param name="parameter">全局配置信息，包含更新包路径、哈希值、版本信息等。</param>
-    /// <exception cref="ArgumentNullException"><paramref name="parameter"/> 为 null 时抛出。</exception>
-    /// <exception cref="PlatformNotSupportedException">当前操作系统不受支持时由 <see cref="ResolveOsStrategy"/> 抛出。</exception>
+    /// <param name="parameter">Global configuration information containing update package paths, hash values, version information, etc.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
+    /// <exception cref="PlatformNotSupportedException">Thrown by <see cref="ResolveOsStrategy"/> when the current OS is not supported.</exception>
     public void Create(GlobalConfigInfo parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
@@ -78,31 +83,33 @@ public class UpgradeUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 执行升级端更新流程。按照生命周期顺序依次执行：更新前钩子、操作系统更新管道、更新后钩子、启动前钩子、启动主应用。
+    /// Executes the upgrade-side update flow. Follows the lifecycle order: pre-update hook, OS update pipeline,
+    /// post-update hook, pre-start-app hook, and main application launch.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>执行流程详解：</b>
+    /// <b>Detailed Execution Flow:</b>
     /// <list type="number">
-    ///   <item><description><b>OnBeforeUpdate 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/>，
-    ///   如果返回 <c>false</c> 则取消本次更新。</description></item>
-    ///   <item><description><b>操作系统更新管道：</b>将 <c>_configInfo.UpdateVersions</c> 传递给
-    ///   <see cref="IStrategy.ExecuteAsync"/>，由 OS 策略逐一处理每个版本的更新包
-    ///   （<c>Hash</c> 校验 → <c>Decompress</c> 解压 → <c>Patch</c> 补丁应用）。</description></item>
-    ///   <item><description><b>OnAfterUpdate 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/>，
-    ///   通知调用方所有更新已应用完成。</description></item>
-    ///   <item><description><b>报告更新成功：</b>通过 <see cref="Download.Reporting.IUpdateReporter"/>
-    ///   报告更新成功状态。</description></item>
-    ///   <item><description><b>OnBeforeStartApp 钩子：</b>调用 <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/>，
-    ///   允许调用方在启动应用前执行额外操作（如设置可执行权限）。</description></item>
-    ///   <item><description><b>启动应用：</b>当 <c>LaunchClientAfterUpdate</c> 为 <c>true</c> 时，
-    ///   通过 OS 策略启动主应用程序（<c>MainAppName</c>）及 Bowl 辅助进程。</description></item>
+    ///   <item><description><b>OnBeforeUpdate Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/>.
+    ///   If it returns <c>false</c>, the update is cancelled.</description></item>
+    ///   <item><description><b>OS Update Pipeline:</b> Passes <c>_configInfo.UpdateVersions</c> to
+    ///   <see cref="IStrategy.ExecuteAsync"/>, where the OS strategy processes each version's update package
+    ///   (<c>Hash</c> verification → <c>Decompress</c> extraction → <c>Patch</c> application).</description></item>
+    ///   <item><description><b>OnAfterUpdate Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/>
+    ///   to notify the caller that all updates have been applied.</description></item>
+    ///   <item><description><b>Report Success:</b> Reports the update success status via
+    ///   <see cref="Download.Reporting.IUpdateReporter"/>.</description></item>
+    ///   <item><description><b>OnBeforeStartApp Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/>,
+    ///   allowing the caller to perform additional operations before launching the application
+    ///   (such as setting executable permissions).</description></item>
+    ///   <item><description><b>Launch Application:</b> When <c>LaunchClientAfterUpdate</c> is <c>true</c>,
+    ///   launches the main application (<c>MainAppName</c>) and the Bowl helper process via the OS strategy.</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// <b>异常处理：</b>整个流程中任何异常均会被 <c>try-catch</c> 捕获，依次触发
-    /// <see cref="Hooks.IUpdateHooks.OnUpdateErrorAsync"/> 钩子、报告更新失败状态、
-    /// 记录错误日志并通过 <see cref="EventManager"/> 分发异常事件。
+    /// <b>Exception Handling:</b> Any exception in the entire flow is caught by the <c>try-catch</c> block,
+    /// which sequentially triggers <see cref="Hooks.IUpdateHooks.OnUpdateErrorAsync"/>, reports the update failure status,
+    /// logs the error, and dispatches the exception event via <see cref="EventManager"/>.
     /// </para>
     /// </remarks>
     public async Task ExecuteAsync()
@@ -172,7 +179,14 @@ public class UpgradeUpdateStrategy : IStrategy
 
     private DiffPipeline? _pendingDiffPipeline;
 
-    /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
+    /// <summary>
+    /// Sets the differential patch pipeline on the underlying OS-level strategy for parallel patch application.
+    /// </summary>
+    /// <param name="diffPipeline">The differential pipeline instance. If <c>null</c>, clears the pending pipeline.</param>
+    /// <remarks>
+    /// If the OS strategy is not yet initialized, the pipeline is stored in a pending field
+    /// and passed to the OS strategy's <c>DiffPipeline</c> property when <see cref="Create"/> is called.
+    /// </remarks>
     public void SetDiffPipeline(DiffPipeline? diffPipeline)
     {
         if (_osStrategy is AbstractStrategy abs)
@@ -182,10 +196,10 @@ public class UpgradeUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 启动主应用程序。委托给底层操作系统策略执行平台相关的应用启动逻辑。
+    /// Starts the main application. Delegates to the underlying OS strategy for platform-specific application launch logic.
     /// </summary>
     /// <remarks>
-    /// 此方法由外部调用（如 Bowl 进程），用于在升级完成后启动主应用。
+    /// This method is called externally (e.g., by the Bowl process) to start the main application after the upgrade completes.
     /// </remarks>
     public async Task StartAppAsync()
     {

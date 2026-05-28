@@ -6,14 +6,14 @@ using System.Text.Json;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    ///     通用的 <see cref="Configinfo" /> 建造者类，用于简化更新配置的创建过程。
-    ///     只需三个核心参数（<c>UpdateUrl</c>、<c>Token</c>、<c>Scheme</c>），
-    ///     即可自动生成平台适用的默认值，其他配置项均可选填。
+    ///     A generic <see cref="Configinfo" /> builder class that simplifies the creation of update configuration.
+    ///     With just three core parameters (<c>UpdateUrl</c>, <c>Token</c>, <c>Scheme</c>), it automatically
+    ///     generates platform-appropriate defaults. All other configuration items are optional.
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         该建造者采用流式（Fluent）接口设计，所有 Set 方法均返回当前实例，
-    ///         支持链式调用。例如：
+    ///         This builder uses a fluent interface design — all Set methods return the current instance,
+    ///         enabling method chaining. For example:
     ///         <code>
     ///             var config = new ConfiginfoBuilder()
     ///                 .SetUpdateUrl("https://update.example.com")
@@ -23,13 +23,15 @@ namespace GeneralUpdate.Core.Configuration
     ///         </code>
     ///     </para>
     ///     <para>
-    ///         设计灵感来源于 Velopack 等项目的零配置设计模式。
-    ///         通过 <c>Create()</c> 静态工厂方法可从 <c>update_config.json</c> 配置文件加载设置，
-    ///         该方式优先级最高，配置文件中指定的所有值将覆盖代码中的设置。
+    ///         The design is inspired by the zero-configuration pattern used in projects like Velopack.
+    ///         The <c>Create()</c> static factory method loads settings from an <c>update_config.json</c> file,
+    ///         which has the highest priority — all values specified in the configuration file override
+    ///         programmatic settings.
     ///     </para>
     ///     <para>
-    ///         构建完成后调用 <see cref="Build" /> 方法会触发生成的 <see cref="Configinfo" /> 对象的
-    ///         <see cref="Configinfo.Validate" /> 校验，确保生成的配置合法有效。
+    ///         After building, calling the <see cref="Build" /> method triggers validation on the generated
+    ///         <see cref="Configinfo" /> object via <see cref="Configinfo.Validate" />, ensuring the resulting
+    ///         configuration is valid.
     ///     </para>
     /// </remarks>
     /// <seealso cref="Configinfo" />
@@ -60,16 +62,17 @@ namespace GeneralUpdate.Core.Configuration
         private List<string> _skipDirectorys;
 
         /// <summary>
-        ///     通过从 <c>update_config.json</c> 配置文件中加载设置来创建
-        ///     <see cref="ConfiginfoBuilder" /> 实例。
+        ///     Creates a <see cref="ConfiginfoBuilder" /> instance by loading settings from the
+        ///     <c>update_config.json</c> configuration file.
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         配置文件必须存在于应用程序的运行目录中，并包含所有必需的设置。
-        ///         配置文件具有最高优先级——所有设置都必须在 JSON 文件中指定。
+        ///         The configuration file must exist in the application's running directory and contain all
+        ///         required settings. This approach has the highest priority — all settings must be specified
+        ///         in the JSON file.
         ///     </para>
         ///     <para>
-        ///         JSON 配置文件示例：
+        ///         Example JSON configuration file:
         ///         <code>
         ///             {
         ///                 "UpdateUrl": "https://update.example.com",
@@ -81,18 +84,19 @@ namespace GeneralUpdate.Core.Configuration
         ///         </code>
         ///     </para>
         ///     <para>
-        ///         如果配置文件不存在或格式无效，将抛出 <see cref="FileNotFoundException" />。
-        ///         该方法不支持回退到手动设置——如果需要手动设置，请直接使用构造函数并通过 Set 方法链式构建。
+        ///         If the configuration file does not exist or has an invalid format, a <see cref="FileNotFoundException" />
+        ///         is thrown. This method does not fall back to manual settings. For manual configuration, use the
+        ///         constructor and chain Set methods directly.
         ///     </para>
         /// </remarks>
         /// <returns>
-        ///     一个从配置文件加载了设置的新 <see cref="ConfiginfoBuilder" /> 实例。
+        ///     A new <see cref="ConfiginfoBuilder" /> instance with settings loaded from the configuration file.
         /// </returns>
         /// <exception cref="FileNotFoundException">
-        ///     当运行目录中找不到 <c>update_config.json</c> 文件时抛出。
+        ///     Thrown when the <c>update_config.json</c> file cannot be found in the running directory.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        ///     当配置文件格式无效或无法加载时抛出。
+        ///     Thrown when the configuration file format is invalid or cannot be loaded.
         /// </exception>
         public static ConfiginfoBuilder Create()
         {
@@ -109,16 +113,16 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     从运行目录中的 <c>update_config.json</c> 文件加载配置。
+        ///     Loads configuration from the <c>update_config.json</c> file in the running directory.
         /// </summary>
         /// <remarks>
-        ///     此方法会尝试读取并解析 JSON 文件。如果文件不存在、JSON 格式无效、
-        ///     文件读取权限不足或发生其他意外错误，均会返回 <c>null</c> 而非抛出异常，
-        ///     以便调用方决定回退策略。
+        ///     This method attempts to read and parse the JSON file. If the file does not exist, the JSON format
+        ///     is invalid, file read permissions are insufficient, or any other unexpected error occurs, it returns
+        ///     <c>null</c> instead of throwing an exception, allowing the caller to decide on a fallback strategy.
         /// </remarks>
         /// <returns>
-        ///     成功时返回包含文件设置的 <see cref="ConfiginfoBuilder" /> 实例；
-        ///     如果文件不存在、格式无效或读取失败，则返回 <c>null</c>。
+        ///     A <see cref="ConfiginfoBuilder" /> instance populated with the file settings on success;
+        ///     <c>null</c> if the file does not exist, the format is invalid, or reading fails.
         /// </returns>
         private static ConfiginfoBuilder LoadFromConfigFile()
         {
@@ -185,32 +189,32 @@ namespace GeneralUpdate.Core.Configuration
             }
             catch (System.Text.Json.JsonException)
             {
-                // JSON 格式无效，回退到参数方式
+                // JSON format is invalid, fall back to parameter-based approach
                 return null;
             }
             catch (IOException)
             {
-                // 文件读取错误，回退到参数方式
+                // File read error, fall back to parameter-based approach
                 return null;
             }
             catch (UnauthorizedAccessException)
             {
-                // 权限不足，回退到参数方式
+                // Insufficient permissions, fall back to parameter-based approach
                 return null;
             }
             catch
             {
-                // 任何其他意外错误，回退到参数方式
+                // Any other unexpected error, fall back to parameter-based approach
                 return null;
             }
         }
 
         /// <summary>
-        ///     设置更新检查的 API 端点 URL。
+        ///     Sets the API endpoint URL for update checking.
         /// </summary>
-        /// <param name="updateUrl">用于检查可用更新的 API 端点 URL。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="updateUrl" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="updateUrl">The API endpoint URL used to check for available updates.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="updateUrl" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetUpdateUrl(string updateUrl)
         {
             if (string.IsNullOrWhiteSpace(updateUrl))
@@ -221,11 +225,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置 API 请求的身份验证令牌。
+        ///     Sets the authentication token for API requests.
         /// </summary>
-        /// <param name="token">用于 HTTP 请求头的身份验证令牌。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="token" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="token">The authentication token for HTTP request headers.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="token" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -236,11 +240,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置 URL 方案（例如 "http" 或 "https"）。
+        ///     Sets the URL scheme (e.g., "http" or "https").
         /// </summary>
-        /// <param name="scheme">用于服务器通信的 URL 方案。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="scheme" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="scheme">The URL scheme used for server communication.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="scheme" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetScheme(string scheme)
         {
             if (string.IsNullOrWhiteSpace(scheme))
@@ -251,11 +255,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置升级应用程序的名称（更新完成后启动的可执行文件）。
+        ///     Sets the name of the upgrade application (the executable launched after the update completes).
         /// </summary>
-        /// <param name="appName">升级应用程序的可执行文件名称。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="appName" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="appName">The executable file name of the upgrade application.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="appName" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetUpgradeAppName(string appName)
         {
             if (string.IsNullOrWhiteSpace(appName))
@@ -266,11 +270,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置主应用程序的名称。
+        ///     Sets the name of the main application.
         /// </summary>
-        /// <param name="mainAppName">主应用程序的名称（不含文件扩展名）。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="mainAppName" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="mainAppName">The name of the main application (without file extension).</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="mainAppName" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetMainAppName(string mainAppName)
         {
             if (string.IsNullOrWhiteSpace(mainAppName))
@@ -281,11 +285,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置客户端应用程序的当前版本号。
+        ///     Sets the current version number of the client application.
         /// </summary>
-        /// <param name="clientVersion">客户端应用程序的当前版本号（应为语义化版本格式）。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="clientVersion" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="clientVersion">The current version number of the client application (should follow semantic versioning format).</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="clientVersion" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetClientVersion(string clientVersion)
         {
             if (string.IsNullOrWhiteSpace(clientVersion))
@@ -296,12 +300,12 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置升级客户端程序的当前版本号。
-        ///     用于实现更新器自身的独立版本管理。
+        ///     Sets the current version number of the upgrade client program.
+        ///     Used for independent version management of the updater itself.
         /// </summary>
-        /// <param name="upgradeClientVersion">升级应用程序的当前版本号。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="upgradeClientVersion" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="upgradeClientVersion">The current version number of the upgrade application.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="upgradeClientVersion" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetUpgradeClientVersion(string upgradeClientVersion)
         {
             if (string.IsNullOrWhiteSpace(upgradeClientVersion))
@@ -312,11 +316,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置用于身份验证的应用程序密钥。
+        ///     Sets the application secret key used for authentication.
         /// </summary>
-        /// <param name="appSecretKey">用于更新请求身份验证的应用程序密钥。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="appSecretKey" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="appSecretKey">The application secret key used for authenticating update requests.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="appSecretKey" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetAppSecretKey(string appSecretKey)
         {
             if (string.IsNullOrWhiteSpace(appSecretKey))
@@ -327,12 +331,12 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置唯一产品标识符。
-        ///     用于在共享同一更新服务器的多个产品之间进行区分。
+        ///     Sets the unique product identifier.
+        ///     Used to distinguish between multiple products sharing the same update server.
         /// </summary>
-        /// <param name="productId">唯一的应用程序产品标识符。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="productId" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="productId">The unique application product identifier.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="productId" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetProductId(string productId)
         {
             if (string.IsNullOrWhiteSpace(productId))
@@ -343,11 +347,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置应用程序文件的安装路径。
+        ///     Sets the installation path for the application files.
         /// </summary>
-        /// <param name="installPath">应用程序文件所在的安装目录路径。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="installPath" /> 为 null、空字符串或仅含空白字符时抛出。</exception>
+        /// <param name="installPath">The installation directory path for the application files.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="installPath" /> is null, empty, or consists only of whitespace.</exception>
         public ConfiginfoBuilder SetInstallPath(string installPath)
         {
             if (string.IsNullOrWhiteSpace(installPath))
@@ -358,11 +362,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置更新日志网页的 URL 地址。
+        ///     Sets the URL of the update log web page.
         /// </summary>
-        /// <param name="updateLogUrl">用于查看更新日志的网页 URL。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="updateLogUrl" /> 不为空但格式不是有效的绝对 URI 时抛出。</exception>
+        /// <param name="updateLogUrl">The web page URL for viewing the update log.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="updateLogUrl" /> is not empty but is not a valid absolute URI.</exception>
         public ConfiginfoBuilder SetUpdateLogUrl(string updateLogUrl)
         {
             if (!string.IsNullOrWhiteSpace(updateLogUrl) && !Uri.IsWellFormedUriString(updateLogUrl, UriKind.Absolute))
@@ -373,11 +377,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置用于报告更新状态和结果的 API 端点 URL。
+        ///     Sets the API endpoint URL for reporting update status and results.
         /// </summary>
-        /// <param name="reportUrl">用于报告更新状态和结果的 API 端点 URL。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
-        /// <exception cref="ArgumentException">当 <paramref name="reportUrl" /> 不为空但格式不是有效的绝对 URI 时抛出。</exception>
+        /// <param name="reportUrl">The API endpoint URL for reporting update status and results.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="reportUrl" /> is not empty but is not a valid absolute URI.</exception>
         public ConfiginfoBuilder SetReportUrl(string reportUrl)
         {
             if (!string.IsNullOrWhiteSpace(reportUrl) && !Uri.IsWellFormedUriString(reportUrl, UriKind.Absolute))
@@ -388,10 +392,10 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置需要在更新前终止的冲突进程名称。
+        ///     Sets the name of the conflicting process to terminate before the update.
         /// </summary>
-        /// <param name="bowl">应在开始更新前终止的进程名称。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
+        /// <param name="bowl">The process name to terminate before starting the update.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
         public ConfiginfoBuilder SetBowl(string bowl)
         {
             _bowl = bowl;
@@ -399,11 +403,11 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置驱动程序文件所在的目录路径。
-        ///     用于驱动更新功能（Drive 模式）。
+        ///     Sets the directory path containing driver files.
+        ///     Used for driver-based update functionality (Drive mode).
         /// </summary>
-        /// <param name="driverDirectory">包含驱动程序文件的目录路径。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
+        /// <param name="driverDirectory">The directory path containing the driver files.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
         public ConfiginfoBuilder SetDriverDirectory(string driverDirectory)
         {
             _driverDirectory = driverDirectory;
@@ -411,10 +415,10 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置应从更新过程中排除的黑名单文件列表。
+        ///     Sets the list of blacklisted files to exclude from the update process.
         /// </summary>
-        /// <param name="blackFiles">应被排除的特定文件列表。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
+        /// <param name="blackFiles">The list of specific files to be excluded.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
         public ConfiginfoBuilder SetBlackFiles(List<string> blackFiles)
         {
             _blackFiles = blackFiles ?? new List<string>();
@@ -422,10 +426,10 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置应从更新过程中排除的黑名单文件格式扩展名列表。
+        ///     Sets the list of blacklisted file format extensions to exclude from the update process.
         /// </summary>
-        /// <param name="blackFormats">应被排除的文件扩展名列表（例如 ".log"、".tmp"）。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
+        /// <param name="blackFormats">The list of file extensions to be excluded (e.g., ".log", ".tmp").</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
         public ConfiginfoBuilder SetBlackFormats(List<string> blackFormats)
         {
             _blackFormats = blackFormats ?? new List<string>();
@@ -433,10 +437,10 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     设置应在更新过程中跳过的目录路径列表。
+        ///     Sets the list of directory paths to skip during the update process.
         /// </summary>
-        /// <param name="skipDirectorys">应在更新期间跳过的目录路径列表。</param>
-        /// <returns>当前 <see cref="ConfiginfoBuilder" /> 实例，支持链式调用。</returns>
+        /// <param name="skipDirectorys">The list of directory paths to skip during the update.</param>
+        /// <returns>The current <see cref="ConfiginfoBuilder" /> instance for chaining.</returns>
         public ConfiginfoBuilder SetSkipDirectorys(List<string> skipDirectorys)
         {
             _skipDirectorys = skipDirectorys ?? new List<string>();
@@ -444,22 +448,23 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     构建并返回一个完整的 <see cref="Configinfo" /> 对象，包含所有已配置和默认的值。
+        ///     Builds and returns a complete <see cref="Configinfo" /> object containing all configured and default values.
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         此方法是建造者模式的最终步骤。它会将所有配置的值（包括显式设置的和使用默认值的）
-        ///         组装到新的 <see cref="Configinfo" /> 实例中。
+        ///         This method is the final step of the builder pattern. It assembles all configured values
+        ///         (both explicitly set and defaulted) into a new <see cref="Configinfo" /> instance.
         ///     </para>
         ///     <para>
-        ///         构建完成后会自动调用 <see cref="Configinfo.Validate" /> 方法进行完整性校验。
-        ///         如果校验失败，校验异常将被包装为 <see cref="InvalidOperationException" /> 重新抛出。
+        ///         After building, it automatically calls <see cref="Configinfo.Validate" /> to validate the
+        ///         configuration. If validation fails, the validation exception is wrapped in an
+        ///         <see cref="InvalidOperationException" /> and rethrown.
         ///     </para>
         /// </remarks>
-        /// <returns>一个完全配置的 <see cref="Configinfo" /> 实例。</returns>
+        /// <returns>A fully configured <see cref="Configinfo" /> instance.</returns>
         /// <exception cref="InvalidOperationException">
-        ///     当生成的配置对象未通过 <see cref="Configinfo.Validate" /> 校验时抛出，
-        ///     内部异常包含具体的校验失败原因。
+        ///     Thrown when the generated configuration object fails <see cref="Configinfo.Validate" /> validation.
+        ///     The inner exception contains the specific validation failure details.
         /// </exception>
         public Configinfo Build()
         {

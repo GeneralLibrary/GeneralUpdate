@@ -9,38 +9,40 @@ using GeneralUpdate.Core.Pipeline;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// Linux 平台专用的更新策略。
-/// 实现了针对 Linux 操作系统的更新流程，包括管道构建、哈希校验、解压缩和应用补丁。
+/// Linux platform-specific update strategy.
+/// Implements the update flow for the Linux operating system, including pipeline building,
+/// hash verification, decompression, and patch application.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类继承自 <c>AbstractStrategy</c>，提供了 Linux 环境下的完整更新生命周期管理。
+/// This class inherits from <c>AbstractStrategy</c> and provides complete update lifecycle management for the Linux environment.
 /// </para>
 /// <para>
-/// 核心流程：
+/// Core flow:
 /// <list type="number">
-///   <item><c>BuildPipeline</c> — 构建中间件管道，按顺序执行哈希校验→解压缩→（可选）应用补丁。</item>
-///   <item><c>CreatePipelineContext</c> — 创建包含版本信息和补丁路径的管道上下文。</item>
-///   <item><c>StartAppAsync</c> — 使用 <c>Process.Start</c> 启动已更新的主应用程序，
-///        然后释放跟踪器并优雅退出当前更新程序进程。</item>
+///   <item><c>BuildPipeline</c> — Builds the middleware pipeline, executing hash verification, decompression,
+///        and (optionally) patch application in order.</item>
+///   <item><c>CreatePipelineContext</c> — Creates the pipeline context containing version information and patch path.</item>
+///   <item><c>StartAppAsync</c> — Starts the updated main application using <c>Process.Start</c>,
+///        then releases the tracer and gracefully exits the current updater process.</item>
 /// </list>
 /// </para>
 /// <para>
-/// 与 Windows 策略不同，Linux 策略不包含 Bowl 辅助进程的启动逻辑。
-/// 补丁功能由 <c>PatchEnabled</c> 配置控制。
+/// Unlike the Windows strategy, the Linux strategy does not include Bowl helper process launch logic.
+/// The patching feature is controlled by the <c>PatchEnabled</c> configuration.
 /// </para>
 /// </remarks>
 public class LinuxStrategy : AbstractStrategy
 {
     /// <summary>
-    /// 创建管道上下文，包含目标版本信息和补丁路径。
+    /// Creates the pipeline context containing target version information and patch path.
     /// </summary>
-    /// <param name="version">目标版本信息。</param>
-    /// <param name="patchPath">补丁文件的路径。</param>
-    /// <returns>包含版本信息和补丁路径的 <c>PipelineContext</c> 实例。</returns>
+    /// <param name="version">The target version information.</param>
+    /// <param name="patchPath">The path to the patch files.</param>
+    /// <returns>A <c>PipelineContext</c> instance containing version information and patch path.</returns>
     /// <remarks>
-    /// 此方法被 <c>AbstractStrategy</c> 中的管道执行流程调用。
-    /// 它会记录版本号和补丁路径，然后调用基类的 <c>CreatePipelineContext</c> 方法创建上下文对象。
+    /// This method is called by the pipeline execution flow in <c>AbstractStrategy</c>.
+    /// It logs the version number and patch path, then calls the base class's <c>CreatePipelineContext</c> method to create the context object.
     /// </remarks>
     protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
     {
@@ -50,18 +52,19 @@ public class LinuxStrategy : AbstractStrategy
     }
 
     /// <summary>
-    /// 构建 Linux 平台的更新中间件管道。
+    /// Builds the Linux platform update middleware pipeline.
     /// </summary>
-    /// <param name="context">管道上下文，包含版本和补丁信息。</param>
-    /// <returns>配置好的 <c>PipelineBuilder</c> 实例，包含哈希校验、解压缩和（可选）补丁中间件。</returns>
+    /// <param name="context">The pipeline context containing version and patch information.</param>
+    /// <returns>A configured <c>PipelineBuilder</c> instance containing hash verification, decompression,
+    /// and (optionally) patch middleware.</returns>
     /// <remarks>
     /// <para>
-    /// 管道按以下顺序组装中间件：
+    /// The pipeline assembles middleware in the following order:
     /// </para>
     /// <list type="number">
-    ///   <item><c>HashMiddleware</c> — 计算并验证文件哈希，确保数据完整性。</item>
-    ///   <item><c>CompressMiddleware</c> — 解压缩下载的更新包。</item>
-    ///   <item><c>PatchMiddleware</c> — （可选）应用二进制补丁。仅在 <c>_configinfo.PatchEnabled</c> 为 true 时启用。</item>
+    ///   <item><c>HashMiddleware</c> — Computes and verifies file hashes to ensure data integrity.</item>
+    ///   <item><c>CompressMiddleware</c> — Decompresses the downloaded update package.</item>
+    ///   <item><c>PatchMiddleware</c> — (Optional) Applies binary patches. Only enabled when <c>_configinfo.PatchEnabled</c> is true.</item>
     /// </list>
     /// </remarks>
     protected override PipelineBuilder BuildPipeline(PipelineContext context)
@@ -75,23 +78,23 @@ public class LinuxStrategy : AbstractStrategy
     }
 
     /// <summary>
-    /// 异步启动已更新的主应用程序，然后退出当前更新程序进程。
+    /// Asynchronously starts the updated main application, then exits the current updater process.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// <para>
-    /// 此方法在更新流程完成后调用。执行步骤如下：
+    /// This method is called after the update process completes. The execution steps are as follows:
     /// </para>
     /// <list type="number">
-    ///   <item>使用 <c>LaunchAppName</c> 属性获取主应用程序名称，如果未设置则抛出异常。</item>
-    ///   <item>调用 <c>ResolveAppPath</c> 解析应用程序的完整路径。</item>
-    ///   <item>使用 <c>Process.Start</c> 启动主应用程序。</item>
-    ///   <item>释放 <c>GeneralTracer</c> 资源。</item>
-    ///   <item>调用 <c>GracefulExit.CurrentProcessAsync()</c> 优雅终止更新程序进程。</item>
+    ///   <item>Uses the <c>LaunchAppName</c> property to get the main application name; throws if not set.</item>
+    ///   <item>Calls <c>ResolveAppPath</c> to resolve the full path of the application.</item>
+    ///   <item>Starts the main application using <c>Process.Start</c>.</item>
+    ///   <item>Disposes the <c>GeneralTracer</c> resources.</item>
+    ///   <item>Calls <c>GracefulExit.CurrentProcessAsync()</c> to gracefully terminate the updater process.</item>
     /// </list>
     /// <para>
-    /// 注意：Linux 策略在启动应用程序时不支持 Bowl 辅助进程。任何异常都会被 <c>EventManager</c>
-    /// 捕获并分发为 <c>ExceptionEventArgs</c> 事件。
+    /// Note: The Linux strategy does not support the Bowl helper process when starting the application.
+    /// Any exception is caught and dispatched as an <c>ExceptionEventArgs</c> event via <c>EventManager</c>.
     /// </para>
     /// </remarks>
     public override async Task StartAppAsync()

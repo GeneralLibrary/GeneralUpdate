@@ -9,27 +9,30 @@ using GeneralUpdate.Core.Network;
 namespace GeneralUpdate.Core.Download.Sources;
 
 /// <summary>
-/// HTTP 下载源，通过调用版本验证 API 获取更新资产列表。
-/// 分别对客户端（Client）和升级端（Upgrade）执行版本验证，
-/// 并将服务器响应转换为 <see cref="DownloadAsset"/> 列表。
+/// HTTP download source that retrieves update asset lists by calling a version-validation API.
+/// Performs version validation for both Client and Upgrade app types,
+/// then maps the server responses into <see cref="DownloadAsset"/> lists.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IDownloadSource"/> 接口，是标准 HTTP 更新流程的下载源实现。
+/// This class implements <see cref="IDownloadSource"/> and serves as the standard HTTP-based
+/// download source for the update workflow.
 /// </para>
 /// <para>
-/// 工作流程：
+/// Workflow:
 /// <list type="number">
-///   <item>调用 <c>VersionService.Validate</c> 分别对 <c>AppType.Client</c> 和 <c>AppType.Upgrade</c>
-///        进行版本验证。升级端版本优先使用 <c>upgradeClientVersion</c>，如果未配置则使用 <c>clientVersion</c>。</item>
-///   <item>将两次验证返回的版本信息映射为 <see cref="DownloadAsset"/> 对象。</item>
-///   <item>按 URL 对资产进行去重（两个验证调用可能返回相同的包）。</item>
-///   <item>返回包含资产列表和更新标志的 <see cref="DownloadSourceResult"/>。</item>
+///   <item>Calls <c>VersionService.Validate</c> for <c>AppType.Client</c> to validate the main application version.</item>
+///   <item>Calls <c>VersionService.Validate</c> for <c>AppType.Upgrade</c> to validate the upgrade client version.
+///         The upgrade client version uses <c>upgradeClientVersion</c> if provided; otherwise falls back to <c>clientVersion</c>.</item>
+///   <item>Maps the version information returned by both validations into <see cref="DownloadAsset"/> objects.</item>
+///   <item>Deduplicates assets by URL (both validation calls may return the same package).</item>
+///   <item>Returns a <see cref="DownloadSourceResult"/> containing the asset list and update flags.</item>
 /// </list>
 /// </para>
 /// <para>
-/// 两次验证调用的设计是为了支持客户端自身更新和主应用程序更新的场景：
-/// 客户端更新包和应用程序更新包可能来自同一个版本服务器，但属于不同的应用类型。
+/// The two-step validation design supports scenarios where the client's own update package
+/// and the main application's update package come from the same version server but belong
+/// to different application types.
 /// </para>
 /// </remarks>
 public class HttpDownloadSource : Abstractions.IDownloadSource
@@ -44,17 +47,20 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     private readonly string? _token;
 
     /// <summary>
-    /// 使用指定的更新配置初始化 HTTP 下载源。
+    /// Initializes a new instance of the <see cref="HttpDownloadSource"/> class
+    /// with the specified update configuration parameters.
     /// </summary>
-    /// <param name="updateUrl">版本验证 API 的 URL。</param>
-    /// <param name="clientVersion">当前客户端版本号。</param>
-    /// <param name="upgradeClientVersion">升级端（Upgrade 应用）的当前版本号。
-    /// 如果为 null 或为空，则使用 <paramref name="clientVersion"/>。</param>
-    /// <param name="appSecretKey">应用密钥，用于 API 身份验证。</param>
-    /// <param name="platform">目标平台类型（Windows、Linux、macOS 等）。</param>
-    /// <param name="productId">可选的产品 ID。</param>
-    /// <param name="scheme">可选的认证方案。</param>
-    /// <param name="token">可选的认证令牌。</param>
+    /// <param name="updateUrl">The URL of the version-validation API.</param>
+    /// <param name="clientVersion">The current client version string.</param>
+    /// <param name="upgradeClientVersion">
+    /// The current version string of the Upgrade application.
+    /// If null or empty, <paramref name="clientVersion"/> is used instead.
+    /// </param>
+    /// <param name="appSecretKey">The application secret key used for API authentication.</param>
+    /// <param name="platform">The target platform type (Windows, Linux, macOS, etc.).</param>
+    /// <param name="productId">An optional product identifier.</param>
+    /// <param name="scheme">An optional authentication scheme.</param>
+    /// <param name="token">An optional authentication token.</param>
     public HttpDownloadSource(
         string updateUrl,
         string clientVersion,
@@ -76,24 +82,28 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     }
 
     /// <summary>
-    /// 异步获取下载资产列表，通过对客户端和升级端分别执行版本验证，
-    /// 合并结果并按 URL 去重。
+    /// Asynchronously retrieves the list of downloadable assets by performing version validation
+    /// for both Client and Upgrade app types, merging the results, and deduplicating by URL.
     /// </summary>
-    /// <param name="token">可选的取消令牌。</param>
-    /// <returns>包含资产列表和更新标志（HasMainUpdate、HasUpgradeUpdate）的
-    /// <see cref="DownloadSourceResult"/>。</returns>
+    /// <param name="token">An optional <see cref="CancellationToken"/> to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="DownloadSourceResult"/> containing the merged and deduplicated list of
+    /// <see cref="DownloadAsset"/> objects, along with flags indicating whether main and/or
+    /// upgrade updates are available.
+    /// </returns>
     /// <remarks>
     /// <para>
-    /// 此方法会调用 <c>VersionService.Validate</c> 两次：
+    /// This method calls <c>VersionService.Validate</c> twice:
     /// </para>
     /// <list type="number">
-    ///   <item>第一次使用 <c>AppType.Client</c> 验证主应用的更新。</item>
-    ///   <item>第二次使用 <c>AppType.Upgrade</c> 验证升级程序自身的更新。</item>
+    ///   <item>First with <c>AppType.Client</c> to validate the main application update.</item>
+    ///   <item>Second with <c>AppType.Upgrade</c> to validate the upgrade program's own update.</item>
     /// </list>
     /// <para>
-    /// 两次调用使用相同的 <c>_updateUrl</c>、<c>_appSecretKey</c> 和 <c>_platform</c>，
-    /// 但使用不同的 <c>AppType</c>。这允许服务器根据应用类型返回不同的更新包。
-    /// 结果中的资产列表会按 URL 去重，因为两个验证调用可能返回相同的包。
+    /// Both calls use the same <c>_updateUrl</c>, <c>_appSecretKey</c>, and <c>_platform</c>,
+    /// but with different <c>AppType</c> values. This allows the server to return different
+    /// update packages depending on the application type.
+    /// The resulting asset list is deduplicated by URL, as both validation calls may return the same packages.
     /// </para>
     /// </remarks>
     public async Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
@@ -135,11 +145,13 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     }
 
     /// <summary>
-    /// 将服务器返回的 <see cref="VersionInfo"/> 对象映射为 <see cref="DownloadAsset"/> 对象。
+    /// Maps a server-returned <see cref="VersionInfo"/> object to a <see cref="DownloadAsset"/> object.
     /// </summary>
-    /// <param name="v">服务器返回的版本信息。</param>
-    /// <returns>转换后的 <see cref="DownloadAsset"/> 实例，包含名称、URL、大小、哈希值、
-    /// 版本号、强制更新标志、冻结标志、认证信息等属性。</returns>
+    /// <param name="v">The version information returned by the server.</param>
+    /// <returns>
+    /// A <see cref="DownloadAsset"/> instance populated with the name, URL, size, hash value,
+    /// version number, forced-update flag, freeze flag, authentication information, and other metadata.
+    /// </returns>
     private static DownloadAsset MapVersionInfo(VersionInfo v)
     {
         return new DownloadAsset(

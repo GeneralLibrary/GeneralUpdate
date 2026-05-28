@@ -4,20 +4,20 @@ using GeneralUpdate.Core;
 namespace GeneralUpdate.Core.FileSystem;
 
     /// <summary>
-    /// 简单的文件二叉排序树，以 <see cref="FileNode.Id"/> 为排序键组织文件节点。
+    /// A simple binary search tree for files, organized by <see cref="FileNode.Id"/> as the sort key.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// FileTree 封装了一个二叉排序树（Binary Search Tree），主要用途：
+    /// FileTree encapsulates a Binary Search Tree (BST) with the following primary uses:
     /// </para>
     /// <list type="bullet">
-    ///   <item><description>将扁平的文件节点列表组织为树形结构以支持高效的搜索和比较操作。</description></item>
-    ///   <item><description>配合 <see cref="FileTree.Compare"/> 方法对两棵树进行递归比较，识别差异节点。</description></item>
-    ///   <item><description>支持节点的添加、搜索、删除等标准二叉排序树操作。</description></item>
+    ///   <item><description>Organizes a flat list of file nodes into a tree structure to support efficient search and comparison operations.</description></item>
+    ///   <item><description>Works with the <see cref="FileTree.Compare"/> method to recursively compare two trees and identify differing nodes.</description></item>
+    ///   <item><description>Supports standard BST operations including node addition, search, and deletion.</description></item>
     /// </list>
     /// <para>
-    /// 此树由 <see cref="StorageManager.Compare"/> 方法内部使用，用于将两个版本的
-    /// 文件快照组织为树形结构后进行递归差异比较。
+    /// This tree is used internally by the <see cref="StorageManager.Compare"/> method to organize file snapshots
+    /// of two versions into tree structures before performing recursive difference comparison.
     /// </para>
     /// </remarks>
     public class FileTree
@@ -31,15 +31,15 @@ namespace GeneralUpdate.Core.FileSystem;
         #region Constructors
 
         /// <summary>
-        /// 初始化 <see cref="FileTree"/> 的新实例，树为空。
+        /// Initializes a new instance of the <see cref="FileTree"/> class with an empty tree.
         /// </summary>
         public FileTree()
         { }
 
         /// <summary>
-        /// 使用指定的节点集合初始化 <see cref="FileTree"/>，并将所有节点添加到树中。
+        /// Initializes a new instance of the <see cref="FileTree"/> class with the specified node collection and adds all nodes to the tree.
         /// </summary>
-        /// <param name="nodes">要添加到树中的文件节点集合。</param>
+        /// <param name="nodes">The collection of file nodes to add to the tree.</param>
         public FileTree(IEnumerable<FileNode> nodes)
         {
             foreach (var node in nodes) Add(node);
@@ -50,12 +50,12 @@ namespace GeneralUpdate.Core.FileSystem;
         #region Public Methods
 
         /// <summary>
-        /// 向树中添加一个文件节点。
+        /// Adds a file node to the tree.
         /// </summary>
-        /// <param name="node">要添加的 <see cref="FileNode"/> 实例。</param>
+        /// <param name="node">The <see cref="FileNode"/> instance to add.</param>
         /// <remarks>
-        /// 如果树为空（根节点为 <c>null</c>），则将 <paramref name="node"/> 设为根节点；
-        /// 否则委托给根节点的 <see cref="FileNode.Add"/> 方法进行递归插入。
+        /// If the tree is empty (root is <c>null</c>), <paramref name="node"/> is set as the root;
+        /// otherwise, the insertion is delegated to the root node's <see cref="FileNode.Add"/> method for recursive insertion.
         /// </remarks>
         public void Add(FileNode node)
         {
@@ -70,27 +70,28 @@ namespace GeneralUpdate.Core.FileSystem;
         }
 
         /// <summary>
-        /// 在树中搜索指定 ID 的文件节点。
+        /// Searches the tree for a file node with the specified ID.
         /// </summary>
-        /// <param name="id">要搜索的节点 ID。</param>
-        /// <returns>找到的 <see cref="FileNode"/> 实例；如果未找到则返回 <c>null</c>。</returns>
+        /// <param name="id">The node ID to search for.</param>
+        /// <returns>The <see cref="FileNode"/> instance if found; otherwise, <c>null</c>.</returns>
         public FileNode Search(long id) => _root == null ? null : _root.Search(id);
 
         /// <summary>
-        /// 在树中搜索指定 ID 节点的父节点。
+        /// Searches the tree for the parent node of the node with the specified ID.
         /// </summary>
-        /// <param name="id">目标节点的 ID。</param>
-        /// <returns>目标节点的父 <see cref="FileNode"/>；如果未找到则返回 <c>null</c>。</returns>
+        /// <param name="id">The ID of the target node.</param>
+        /// <returns>The parent <see cref="FileNode"/> of the target node; <c>null</c> if not found.</returns>
         public FileNode SearchParent(long id) => _root == null ? null : _root.SearchParent(id);
 
         /// <summary>
-        /// 删除右子树中的最小节点（用于删除具有两个子节点的节点时的替换操作）。
+        /// Deletes the minimum node from the right subtree (used as a replacement operation when deleting a node with two children).
         /// </summary>
-        /// <param name="node">要从中查找并删除最小节点的右子树根节点。</param>
-        /// <returns>被删除的最小节点的 ID。</returns>
+        /// <param name="node">The root node of the right subtree from which to find and delete the minimum node.</param>
+        /// <returns>The ID of the deleted minimum node.</returns>
         /// <remarks>
-        /// 在二叉排序树的删除操作中，当待删除节点有两个子节点时，
-        /// 需要找到右子树中的最小节点来替换待删除节点。此方法执行此操作并返回被删除的最小节点的 ID。
+        /// In a BST deletion operation, when the node to delete has two children,
+        /// the minimum node from the right subtree must be found to replace the node being deleted.
+        /// This method performs this operation and returns the ID of the deleted minimum node.
         /// </remarks>
         public long DelRightTreeMin(FileNode node)
         {
@@ -104,20 +105,20 @@ namespace GeneralUpdate.Core.FileSystem;
         }
 
         /// <summary>
-        /// 从树中删除指定 ID 的节点。
+        /// Deletes the node with the specified ID from the tree.
         /// </summary>
-        /// <param name="id">要删除的节点 ID。</param>
+        /// <param name="id">The ID of the node to delete.</param>
         /// <remarks>
         /// <para>
-        /// 标准的二叉排序树删除操作，包含三种情况：
+        /// Standard BST deletion operation handling three cases:
         /// <list type="bullet">
-        ///   <item><description><b>叶子节点</b>：直接将其父节点的对应子引用置为 <c>null</c>。</description></item>
-        ///   <item><description><b>只有一个子节点</b>：用子节点替换待删除节点。</description></item>
-        ///   <item><description><b>有两个子节点</b>：找到右子树的最小节点替换待删除节点，然后删除该最小节点。</description></item>
+        ///   <item><description><b>Leaf node</b>: Directly sets the parent's corresponding child reference to <c>null</c>.</description></item>
+        ///   <item><description><b>Single child</b>: Replaces the node with its child.</description></item>
+        ///   <item><description><b>Two children</b>: Finds the minimum node in the right subtree to replace the node, then deletes that minimum node.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// 如果树为空或节点不存在，不执行任何操作。
+        /// If the tree is empty or the node does not exist, no operation is performed.
         /// </para>
         /// </remarks>
         public void DelNode(long id)
@@ -185,23 +186,23 @@ namespace GeneralUpdate.Core.FileSystem;
         }
 
         /// <summary>
-        /// 从指定节点开始，递归比较两棵二叉排序树的对应子节点，收集差异节点。
+        /// Recursively compares corresponding child nodes of two binary search trees starting from the specified node, collecting differing nodes.
         /// </summary>
-        /// <param name="node">当前树（左侧/基准）的节点。</param>
-        /// <param name="node0">目标树（右侧/新版本）的对应节点。</param>
-        /// <param name="nodes">用于收集差异节点的列表引用。</param>
+        /// <param name="node">The node from the current tree (left/base).</param>
+        /// <param name="node0">The corresponding node from the target tree (right/new version).</param>
+        /// <param name="nodes">The list reference used to collect differing nodes.</param>
         /// <remarks>
         /// <para>
-        /// 比较逻辑：
+        /// Comparison logic:
         /// <list type="bullet">
-        ///   <item><description>如果左树节点存在且不为空，递归比较其左子节点。</description></item>
-        ///   <item><description>如果左树节点为空但右树对应节点存在，将右树节点视为新增加入差异列表。</description></item>
-        ///   <item><description>对于右子树执行对称的操作。</description></item>
-        ///   <item><description>当发现对应节点不等价（通过 <see cref="FileNode.Equals"/> 比较 Hash 和 Name）时，将右树节点加入差异列表。</description></item>
+        ///   <item><description>If the left tree node exists and is not null, recursively compare its left child.</description></item>
+        ///   <item><description>If the left tree node is null but the corresponding right tree node exists, treat the right node as added and add it to the diff list.</description></item>
+        ///   <item><description>Performs symmetric operations for the right subtree.</description></item>
+        ///   <item><description>When corresponding nodes are found to be non-equivalent (compared via <see cref="FileNode.Equals"/> by Hash and Name), the right tree node is added to the diff list.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// 此方法通过 <c>ref</c> 传递差异列表，避免在递归过程中频繁创建新对象。
+        /// This method passes the diff list by <c>ref</c> to avoid frequent object creation during recursion.
         /// </para>
         /// </remarks>
         public void Compare(FileNode node, FileNode node0, ref List<FileNode> nodes)
@@ -234,9 +235,9 @@ namespace GeneralUpdate.Core.FileSystem;
         }
 
         /// <summary>
-        /// 获取树的根节点。
+        /// Gets the root node of the tree.
         /// </summary>
-        /// <returns>根 <see cref="FileNode"/>；如果树为空则返回 <c>null</c>。</returns>
+        /// <returns>The root <see cref="FileNode"/>; <c>null</c> if the tree is empty.</returns>
         public FileNode GetRoot() => _root;
 
         #endregion Public Methods

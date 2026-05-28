@@ -5,16 +5,16 @@ using System.Linq;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// 不可变的文件条目记录，表示目录树中的一个文件快照。
-/// 记录文件的相对路径、大小和最后修改时间，用于文件差异比较。
+/// Represents an immutable file entry record containing a snapshot of a single file within a directory tree.
+/// Records the file's relative path, size, and last write time, used for file difference comparison.
 /// </summary>
-/// <param name="RelativePath">文件相对于根目录的路径。</param>
-/// <param name="Size">文件大小（字节数）。</param>
-/// <param name="LastWriteTimeUtc">文件最后写入时间的 UTC 表示。</param>
+/// <param name="RelativePath">The relative path of the file with respect to the root directory.</param>
+/// <param name="Size">The file size in bytes.</param>
+/// <param name="LastWriteTimeUtc">The last write time of the file in UTC.</param>
 /// <remarks>
-/// FileEntry 是 <see cref="FileTreeSnapshot"/> 的基本数据单元，
-/// 通过比较 <see cref="Size"/> 和 <see cref="LastWriteTimeUtc"/> 来判断文件是否被修改。
-/// 此记录类型为只读结构，保证了快照的不可变性。
+/// FileEntry is the fundamental data unit of <see cref="FileTreeSnapshot"/>.
+/// File modification is determined by comparing <see cref="Size"/> and <see cref="LastWriteTimeUtc"/>.
+/// This record type is a read-only struct, guaranteeing snapshot immutability.
 /// </remarks>
 public readonly record struct FileEntry(
     string RelativePath,
@@ -23,45 +23,45 @@ public readonly record struct FileEntry(
 );
 
 /// <summary>
-/// 不可变的目录树快照，记录某一时刻目录中所有文件的元数据状态。
+/// An immutable directory tree snapshot that records the metadata state of all files in a directory at a specific point in time.
 /// </summary>
 /// <remarks>
 /// <para>
-/// FileTreeSnapshot 由 <see cref="FileTreeEnumerator"/> 配合 <see cref="IBlackListMatcher"/>
-/// 创建，文件遍历过程中自动跳过黑名单中的文件和目录。
+/// FileTreeSnapshot is created by <see cref="FileTreeEnumerator"/> in conjunction with <see cref="IBlackListMatcher"/>,
+/// automatically skipping blacklisted files and directories during file traversal.
 /// </para>
 /// <para>
-/// 典型使用流程：
+/// Typical usage flow:
 /// <list type="number">
-///   <item><description>使用 <see cref="FromEnumerator"/> 方法从根目录创建快照。</description></item>
-///   <item><description>将快照通过 JSON 序列化后储存或传输。</description></item>
-///   <item><description>在差异更新时，使用 <see cref="FileTreeComparer.Compare"/> 对比新旧快照。</description></item>
+///   <item><description>Create a snapshot from a root directory using the <see cref="FromEnumerator"/> method.</description></item>
+///   <item><description>Serialize the snapshot to JSON for storage or transmission.</description></item>
+///   <item><description>During differential updates, use <see cref="FileTreeComparer.Compare"/> to compare old and new snapshots.</description></item>
 /// </list>
 /// </para>
 /// </remarks>
 public sealed class FileTreeSnapshot
 {
     /// <summary>
-    /// 获取快照创建时的 UTC 时间戳。
+    /// Gets the UTC timestamp when the snapshot was created.
     /// </summary>
     public DateTime CreatedAt { get; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 获取被快照的根目录路径。
+    /// Gets the root directory path that was snapshotted.
     /// </summary>
     public string RootPath { get; }
 
     /// <summary>
-    /// 获取快照中包含的所有文件条目只读列表。
+    /// Gets a read-only list of all file entries contained in the snapshot.
     /// </summary>
     public IReadOnlyList<FileEntry> Entries { get; }
 
     /// <summary>
-    /// 使用指定的根目录路径和文件条目初始化 <see cref="FileTreeSnapshot"/> 的新实例。
+    /// Initializes a new instance of the <see cref="FileTreeSnapshot"/> class with the specified root directory path and file entries.
     /// </summary>
-    /// <param name="rootPath">被快照的根目录路径。</param>
-    /// <param name="entries">文件条目集合。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="rootPath"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="rootPath">The root directory path that was snapshotted.</param>
+    /// <param name="entries">The collection of file entries.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootPath"/> is <c>null</c>.</exception>
     public FileTreeSnapshot(string rootPath, IEnumerable<FileEntry> entries)
     {
         RootPath = rootPath ?? throw new ArgumentNullException(nameof(rootPath));
@@ -69,16 +69,16 @@ public sealed class FileTreeSnapshot
     }
 
     /// <summary>
-    /// 使用 <see cref="FileTreeEnumerator"/> 遍历指定根目录，创建文件系统快照。
+    /// Creates a file system snapshot by traversing the specified root directory using a <see cref="FileTreeEnumerator"/>.
     /// </summary>
-    /// <param name="rootPath">要创建快照的根目录路径。</param>
-    /// <param name="enumerator">配置了黑名单规则的 <see cref="FileTreeEnumerator"/> 实例。</param>
-    /// <returns>包含目录中所有（未被黑名单过滤的）文件的新快照。</returns>
+    /// <param name="rootPath">The root directory path to create a snapshot of.</param>
+    /// <param name="enumerator">A <see cref="FileTreeEnumerator"/> instance configured with blacklist rules.</param>
+    /// <returns>A new snapshot containing all files (not filtered by the blacklist) in the directory.</returns>
     /// <remarks>
-    /// 此方法会枚举根目录下的所有文件（跳过黑名单中的文件和目录），
-    /// 为每个文件创建 <see cref="FileEntry"/> 记录（含大小和最后修改时间），
-    /// 然后封装为 <see cref="FileTreeSnapshot"/> 返回。
-    /// 快照创建时会记录当前 UTC 时间作为 <see cref="CreatedAt"/>。
+    /// This method enumerates all files under the root directory (skipping blacklisted files and directories),
+    /// creates a <see cref="FileEntry"/> record for each file (including size and last write time),
+    /// and then wraps them into a <see cref="FileTreeSnapshot"/> to return.
+    /// The current UTC time is recorded as <see cref="CreatedAt"/> when the snapshot is created.
     /// </remarks>
     public static FileTreeSnapshot FromEnumerator(string rootPath, FileTreeEnumerator enumerator)
     {
@@ -100,9 +100,9 @@ public sealed class FileTreeSnapshot
     }
 
     /// <summary>
-    /// 创建一个空的文件系统快照（不含任何文件条目），用于表示空目录或占位。
+    /// Creates an empty file system snapshot (containing no file entries), used to represent an empty directory or as a placeholder.
     /// </summary>
-    /// <param name="rootPath">根目录路径。</param>
-    /// <returns>空的 <see cref="FileTreeSnapshot"/> 实例。</returns>
+    /// <param name="rootPath">The root directory path.</param>
+    /// <returns>An empty <see cref="FileTreeSnapshot"/> instance.</returns>
     public static FileTreeSnapshot Empty(string rootPath) => new(rootPath, Array.Empty<FileEntry>());
 }

@@ -6,20 +6,20 @@ using GeneralUpdate.Core.Configuration;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// 递归枚举指定目录中的所有文件，同时通过 <see cref="IBlackListMatcher"/> 应用黑名单过滤。
+/// Recursively enumerates all files in a specified directory while applying blacklist filtering via <see cref="IBlackListMatcher"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// FileTreeEnumerator 是一个轻量级的文件遍历器，核心流程为：
+/// FileTreeEnumerator is a lightweight file traverser. The core flow is:
 /// </para>
 /// <list type="number">
-///   <item><description>从根目录开始逐层递归遍历。</description></item>
-///   <item><description>对每个文件，调用 <c>IBlackListMatcher.IsBlacklisted</c> 判断是否跳过。</description></item>
-///   <item><description>对每个子目录，调用 <c>IBlackListMatcher.ShouldSkipDirectory</c> 判断是否进入。</description></item>
+///   <item><description>Begins recursive traversal from the root directory level by level.</description></item>
+///   <item><description>For each file, calls <c>IBlackListMatcher.IsBlacklisted</c> to determine whether to skip it.</description></item>
+///   <item><description>For each subdirectory, calls <c>IBlackListMatcher.ShouldSkipDirectory</c> to determine whether to enter it.</description></item>
 /// </list>
 /// <para>
-/// 此遍历器常用于创建 <see cref="FileTreeSnapshot"/> 的输入源。
-/// 可通过 <see cref="FromConfig"/> 工厂方法直接从 <see cref="BlackListConfig"/> 创建。
+/// This traverser is commonly used as an input source for creating <see cref="FileTreeSnapshot"/> instances.
+/// It can be created directly from a <see cref="BlackListConfig"/> via the <see cref="FromConfig"/> factory method.
 /// </para>
 /// </remarks>
 public class FileTreeEnumerator
@@ -27,31 +27,31 @@ public class FileTreeEnumerator
     private readonly IBlackListMatcher _matcher;
 
     /// <summary>
-    /// 使用指定的黑名单匹配器初始化 <see cref="FileTreeEnumerator"/> 的新实例。
+    /// Initializes a new instance of the <see cref="FileTreeEnumerator"/> class with the specified blacklist matcher.
     /// </summary>
-    /// <param name="matcher">黑名单匹配器实例。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="matcher"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="matcher">The blacklist matcher instance.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="matcher"/> is <c>null</c>.</exception>
     public FileTreeEnumerator(IBlackListMatcher matcher)
     {
         _matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
     }
 
     /// <summary>
-    /// 枚举根目录下的所有文件，跳过黑名单中的文件和目录。
+    /// Enumerates all files under the root directory, skipping blacklisted files and directories.
     /// </summary>
-    /// <param name="rootPath">要枚举的根目录路径。</param>
-    /// <returns>所有未跳过文件的完整路径集合。</returns>
+    /// <param name="rootPath">The root directory path to enumerate.</param>
+    /// <returns>A collection of full paths for all files that were not skipped.</returns>
     /// <remarks>
     /// <para>
-    /// 枚举逻辑：
+    /// Enumeration logic:
     /// <list type="bullet">
-    ///   <item><description>首先枚举根目录中的所有文件，跳过后缀名匹配黑名单的文件。</description></item>
-    ///   <item><description>然后枚举根目录中的所有子目录，跳过匹配黑名单的目录。</description></item>
-    ///   <item><description>对未跳过的子目录递归执行相同操作。</description></item>
+    ///   <item><description>First enumerates all files in the root directory, skipping files whose extensions match the blacklist.</description></item>
+    ///   <item><description>Then enumerates all subdirectories in the root directory, skipping those that match the blacklist.</description></item>
+    ///   <item><description>Recursively performs the same operations on subdirectories that were not skipped.</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// 此方法使用 <c>yield return</c> 延迟执行，每次只处理一个文件。
+    /// This method uses <c>yield return</c> for deferred execution, processing one file at a time.
     /// </para>
     /// </remarks>
     public IEnumerable<string> EnumerateFiles(string rootPath)
@@ -78,12 +78,12 @@ public class FileTreeEnumerator
     }
 
     /// <summary>
-    /// 从 <see cref="BlackListConfig"/> 配置快速创建 <see cref="FileTreeEnumerator"/> 实例。
+    /// Quickly creates a <see cref="FileTreeEnumerator"/> instance from a <see cref="BlackListConfig"/> configuration.
     /// </summary>
-    /// <param name="config">黑名单配置对象。</param>
-    /// <returns>配置好的 <see cref="FileTreeEnumerator"/> 实例。</returns>
+    /// <param name="config">The blacklist configuration object.</param>
+    /// <returns>A configured <see cref="FileTreeEnumerator"/> instance.</returns>
     /// <remarks>
-    /// 此工厂方法内部使用 <see cref="DefaultBlackListMatcher"/> 作为黑名单匹配器实现。
+    /// This factory method uses <see cref="DefaultBlackListMatcher"/> as the underlying blacklist matcher implementation.
     /// </remarks>
     public static FileTreeEnumerator FromConfig(BlackListConfig config)
         => new(new DefaultBlackListMatcher(config));

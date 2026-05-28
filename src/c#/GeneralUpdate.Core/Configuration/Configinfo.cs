@@ -4,19 +4,21 @@ using System.Collections.Generic;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    ///     面向外部 API 调用者的更新参数配置类。
-    ///     该类专为外部使用者设计，用于配置更新行为所需的核心参数。
-    ///     继承自 <see cref="BaseConfigInfo" />，复用公共字段以减少重复并提高可维护性。
+    ///     Update parameter configuration class for external API callers.
+    ///     Designed specifically for external consumers to configure the core parameters required for update behavior.
+    ///     Inherits from <see cref="BaseConfigInfo" /> to reuse common fields, reducing duplication and improving maintainability.
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         <c>Configinfo</c> 是更新流程的入口配置对象，由 <see cref="ConfiginfoBuilder" /> 通过建造者模式构建。
-    ///         构建完成后，会通过 <see cref="ConfigurationMapper.MapToGlobalConfigInfo" /> 映射为内部运行时配置
-    ///         <see cref="GlobalConfigInfo" />，供更新工作流使用。
+    ///         <c>Configinfo</c> is the entry-point configuration object for the update workflow, constructed by
+    ///         <see cref="ConfiginfoBuilder" /> using the builder pattern. Once built, it is mapped to the internal
+    ///         runtime configuration <see cref="GlobalConfigInfo" /> via <see cref="ConfigurationMapper.MapToGlobalConfigInfo" />
+    ///         for use by the update pipeline.
     ///     </para>
     ///     <para>
-    ///         调用 <see cref="Validate" /> 方法可对所有必填字段进行完整性校验，
-    ///         确保 <c>UpdateUrl</c>、<c>MainAppName</c>、<c>ClientVersion</c> 等关键参数不为空或格式正确。
+    ///         Calling the <see cref="Validate" /> method performs completeness validation on all required fields,
+    ///         ensuring that key parameters such as <c>UpdateUrl</c>, <c>MainAppName</c>, and <c>ClientVersion</c>
+    ///         are not empty or incorrectly formatted.
     ///     </para>
     /// </remarks>
     /// <seealso cref="BaseConfigInfo" />
@@ -26,60 +28,60 @@ namespace GeneralUpdate.Core.Configuration
     public class Configinfo : BaseConfigInfo
     {
         /// <summary>
-        ///     用于检查可用更新的 API 端点 URL。
-        ///     客户端通过查询此 URL 来确定是否存在新版本可供更新。
+        ///     The API endpoint URL used to check for available updates.
+        ///     The client queries this URL to determine whether a new version is available.
         /// </summary>
         /// <remarks>
-        ///     该属性为必填项，在 <see cref="Validate" /> 方法中会校验其是否为有效的绝对 URI 格式。
-        ///     如果未配置或格式无效，将抛出 <see cref="ArgumentException" />。
+        ///     This property is required. The <see cref="Validate" /> method checks that it is a valid absolute URI.
+        ///     If it is not configured or is malformed, an <see cref="ArgumentException" /> is thrown.
         /// </remarks>
         public string UpdateUrl { get; set; }
 
         /// <summary>
-        ///     升级程序（更新器自身）的当前版本号。
-        ///     该版本号用于实现更新器自身的独立升级，与主应用的版本管理解耦。
+        ///     The current version number of the updater (the update client itself).
+        ///     This version number enables independent upgrades of the updater itself, decoupled from the main application's version management.
         /// </summary>
         /// <remarks>
-        ///     通过比较 <c>UpgradeClientVersion</c> 与服务端返回的最新版本号，
-        ///     可确定是否需要先对更新器本身执行升级操作。
+        ///     By comparing <c>UpgradeClientVersion</c> with the latest version returned by the server,
+        ///     the system determines whether the updater itself needs to be upgraded first.
         /// </remarks>
         public string UpgradeClientVersion { get; set; }
 
         /// <summary>
-        ///     用于跟踪和更新管理的唯一产品标识符。
-        ///     多个产品可以共享同一套更新基础设施，通过不同的产品 ID 进行区分。
+        ///     The unique product identifier used for tracking and update management.
+        ///     Multiple products can share the same update infrastructure and are distinguished by different product IDs.
         /// </summary>
         public string ProductId { get; set; }
 
         /// <summary>
-        ///     校验当前配置对象的必填字段是否完整且格式正确。
+        ///     Validates that all required fields of the configuration object are present and correctly formatted.
         /// </summary>
         /// <remarks>
-        ///     <para>该方法会对以下字段执行校验逻辑：</para>
+        ///     <para>The method performs validation on the following fields:</para>
         ///     <list type="bullet">
         ///         <item>
-        ///             <c>UpdateUrl</c>：不能为空，且必须是有效的绝对 URI。</item>
+        ///             <c>UpdateUrl</c>: Must not be empty and must be a valid absolute URI.</item>
         ///         <item>
-        ///             <c>UpdateLogUrl</c>：如果已设置，则必须是有效的绝对 URI。</item>
+        ///             <c>UpdateLogUrl</c>: If set, must be a valid absolute URI.</item>
         ///         <item>
-        ///             <c>UpdateAppName</c>：不能为空。</item>
+        ///             <c>UpdateAppName</c>: Must not be empty.</item>
         ///         <item>
-        ///             <c>MainAppName</c>：不能为空。</item>
+        ///             <c>MainAppName</c>: Must not be empty.</item>
         ///         <item>
-        ///             <c>AppSecretKey</c>：不能为空。</item>
+        ///             <c>AppSecretKey</c>: Must not be empty.</item>
         ///         <item>
-        ///             <c>ClientVersion</c>：不能为空。</item>
+        ///             <c>ClientVersion</c>: Must not be empty.</item>
         ///         <item>
-        ///             <c>InstallPath</c>：不能为空。</item>
+        ///             <c>InstallPath</c>: Must not be empty.</item>
         ///     </list>
         ///     <para>
-        ///         该方法通常在 <see cref="ConfiginfoBuilder.Build" /> 方法的末尾被调用，
-        ///         以确保构建出的配置对象是完整且合法的。
+        ///         This method is typically called at the end of the <see cref="ConfiginfoBuilder.Build" /> method
+        ///         to ensure the constructed configuration object is complete and valid.
         ///     </para>
         /// </remarks>
         /// <exception cref="ArgumentException">
-        ///     当任一必填字段为空、仅含空白字符或格式无效时抛出，
-        ///     异常消息会指明具体是哪个字段校验失败。
+        ///     Thrown when any required field is null, empty, consists only of whitespace, or is malformed.
+        ///     The exception message indicates which specific field failed validation.
         /// </exception>
         public void Validate()
         {

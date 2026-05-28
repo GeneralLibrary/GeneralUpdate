@@ -16,34 +16,37 @@ using GeneralUpdate.Core.Download.Orchestrators;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// OSS（对象存储服务，Object Storage Service）更新策略。
-/// 通过 AppType 区分客户端（OSSClient）和升级端（OSSUpgrade）两种角色，
-/// 分别执行版本检查、下载、解压缩和应用程序启动等操作。
+/// OSS (Object Storage Service) update strategy.
+/// Uses <c>AppType</c> to distinguish between client (OSSClient) and upgrade (OSSUpgrade) roles,
+/// performing version checking, downloading, decompression, and application launch accordingly.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IStrategy"/> 接口，提供完整的 OSS 更新生命周期管理。
-/// 根据 <c>AppType</c> 的不同，执行不同的流程：
+/// This class implements the <see cref="IStrategy"/> interface and provides complete OSS update lifecycle management.
+/// Based on the <c>AppType</c>, different workflows are executed:
 /// </para>
 /// <list type="bullet">
 ///   <item>
-///     <term><c>AppType.OSSClient</c>（客户端）</term>
+///     <term><c>AppType.OSSClient</c> (Client)</term>
 ///     <description>
-///       下载版本配置文件，与当前版本比较。如果有新版本，则启动升级进程（<c>GeneralUpdate.Upgrade.exe</c>），
-///       然后退出自身。升级进程负责执行实际的下载和安装操作。
+///       Downloads the version configuration file and compares it with the current version.
+///       If a new version is available, launches the upgrade process (<c>GeneralUpdate.Upgrade.exe</c>),
+///       then exits itself. The upgrade process is responsible for actual download and installation.
 ///     </description>
 ///   </item>
 ///   <item>
-///     <term><c>AppType.OSSUpgrade</c>（升级端）</term>
+///     <term><c>AppType.OSSUpgrade</c> (Upgrade)</term>
 ///     <description>
-///       读取版本配置文件，从 OSS 下载更新包，解压缩文件，启动主应用程序，
-///       然后退出自身。这是实际执行更新操作的进程。
+///       Reads the version configuration file, downloads update packages from OSS, decompresses files,
+///       launches the main application, and then exits itself. This is the process that actually performs
+///       the update operations.
 ///     </description>
 ///   </item>
 /// </list>
 /// <para>
-/// 此策略还通过 <c>IUpdateHooks</c> 和 <c>IUpdateReporter</c> 提供完整的生命周期回调
-/// 和状态上报功能，支持在更新各阶段执行自定义逻辑以及向服务器报告更新状态。
+/// This strategy also provides complete lifecycle callbacks and status reporting via <c>IUpdateHooks</c>
+/// and <c>IUpdateReporter</c>, supporting custom logic at various update stages and reporting update status
+/// to the server.
 /// </para>
 /// </remarks>
 public class OSSUpdateStrategy : IStrategy
@@ -54,12 +57,13 @@ public class OSSUpdateStrategy : IStrategy
     private const int DefaultTimeOut = 60;
 
     /// <summary>
-    /// 使用指定的角色初始化 OSS 更新策略。
+    /// Initializes the OSS update strategy with the specified role.
     /// </summary>
-    /// <param name="role">指定当前实例的角色。<c>AppType.OSSClient</c> 表示客户端进程，
-    /// <c>AppType.OSSUpgrade</c> 表示升级进程。默认为 <c>AppType.OSSClient</c>。</param>
+    /// <param name="role">Specifies the role of the current instance. <c>AppType.OSSClient</c> indicates the client process,
+    /// <c>AppType.OSSUpgrade</c> indicates the upgrade process. Defaults to <c>AppType.OSSClient</c>.</param>
     /// <remarks>
-    /// 客户端角色仅负责检查版本并启动升级进程；升级角色负责实际的下载、解压缩和安装操作。
+    /// The client role is only responsible for checking the version and launching the upgrade process;
+    /// the upgrade role handles the actual downloading, decompression, and installation operations.
     /// </remarks>
     public OSSUpdateStrategy(AppType role = AppType.OSSClient)
     {
@@ -67,50 +71,52 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 获取或设置更新生命周期钩子，用于在更新前后执行自定义回调。
+    /// Gets or sets the update lifecycle hooks for executing custom callbacks before and after updates.
     /// </summary>
     /// <remarks>
-    /// 默认实现为 <c>NoOpUpdateHooks</c>（空操作）。可通过设置此属性注入自定义钩子实现，
-    /// 以在更新开始、下载完成、更新完成、应用程序启动前以及错误处理等阶段执行自定义逻辑。
+    /// The default implementation is <c>NoOpUpdateHooks</c> (no operation). Set this property to inject custom hook implementations
+    /// for executing custom logic at stages such as update start, download completion, update completion,
+    /// pre-application launch, and error handling.
     /// </remarks>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
     /// <summary>
-    /// 获取或设置更新状态报告器，用于向服务器或事件系统报告更新进度和结果。
+    /// Gets or sets the update status reporter for reporting update progress and results to the server or event system.
     /// </summary>
     /// <remarks>
-    /// 默认实现为 <c>NoOpUpdateReporter</c>（空操作）。可通过设置此属性注入自定义报告器实现，
-    /// 以将更新状态（正在更新、成功、失败）上报给远程服务（如 GeneralSpacestation）。
+    /// The default implementation is <c>NoOpUpdateReporter</c> (no operation). Set this property to inject custom reporter implementations
+    /// to report update status (updating, success, failure) to a remote service (such as GeneralSpacestation).
     /// </remarks>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
     /// <summary>
-    /// 获取或设置下载源，用于从远程存储获取下载资产列表。
+    /// Gets or sets the download source for retrieving the download asset list from remote storage.
     /// </summary>
     /// <remarks>
-    /// 如果设置了此属性，将使用 <c>IDownloadSource.ListAsync</c> 获取下载资产列表，
-    /// 而不是从本地版本配置 JSON 文件中读取。
+    /// If this property is set, <c>IDownloadSource.ListAsync</c> is used to obtain the download asset list,
+    /// instead of reading from the local version configuration JSON file.
     /// </remarks>
     public IDownloadSource? DownloadSource { get; set; }
 
     /// <summary>
-    /// 获取或设置下载编排器，用于管理多个下载资产的有序下载。
+    /// Gets or sets the download orchestrator for managing the orderly download of multiple assets.
     /// </summary>
     /// <remarks>
-    /// 如果设置了此属性，将使用 <c>IDownloadOrchestrator.ExecuteAsync</c> 执行下载操作；
-    /// 否则将创建默认的 <c>DefaultDownloadOrchestrator</c> 实例进行下载。
-    /// 下载编排器支持进度报告、并发控制和错误处理。
+    /// If this property is set, <c>IDownloadOrchestrator.ExecuteAsync</c> is used to perform the download;
+    /// otherwise, a default <c>DefaultDownloadOrchestrator</c> instance is created for downloading.
+    /// The download orchestrator supports progress reporting, concurrency control, and error handling.
     /// </remarks>
     public IDownloadOrchestrator? DownloadOrchestrator { get; set; }
 
     /// <summary>
-    /// 使用全局配置信息初始化 OSS 更新策略实例。
+    /// Initializes the OSS update strategy instance with global configuration information.
     /// </summary>
-    /// <param name="parameter">全局配置信息，包含安装路径、应用名称、版本号等设置。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="parameter"/> 为 null 时抛出。</exception>
+    /// <param name="parameter">Global configuration information containing settings such as install path, application name, and version number.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
     /// <remarks>
-    /// 此方法必须在调用 <see cref="ExecuteAsync"/> 之前调用。
-    /// 配置信息会被保存到内部字段以供后续使用，包括安装路径、版本号和下载超时等设置。
+    /// This method must be called before <see cref="ExecuteAsync"/>.
+    /// The configuration information is stored in internal fields for subsequent use, including install path,
+    /// version number, and download timeout settings.
     /// </remarks>
     public void Create(GlobalConfigInfo parameter)
     {
@@ -118,24 +124,24 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 根据角色（AppType）异步执行 OSS 更新策略的主要流程。
+    /// Asynchronously executes the main OSS update strategy flow based on the role (AppType).
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
-    /// <exception cref="InvalidOperationException">策略未通过 <see cref="Create"/> 初始化时抛出。</exception>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the strategy has not been initialized via <see cref="Create"/>.</exception>
     /// <remarks>
     /// <para>
-    /// 此方法根据构造时指定的 <c>_role</c> 分发执行流程：
+    /// This method dispatches the execution flow based on the <c>_role</c> specified at construction:
     /// </para>
     /// <list type="bullet">
     ///   <item>
     ///     <term><c>AppType.OSSUpgrade</c></term>
-    ///     <description>调用 <c>ExecuteUpgradeAsync</c> 执行完整的更新流程：
-    ///       读取版本配置→下载更新包→解压缩→启动主应用。</description>
+    ///     <description>Calls <c>ExecuteUpgradeAsync</c> to execute the full update flow:
+    ///       read version config, download update packages, decompress, and launch the main application.</description>
     ///   </item>
     ///   <item>
     ///     <term><c>AppType.OSSClient</c></term>
-    ///     <description>调用 <c>ExecuteClientAsync</c> 执行客户端检查流程：
-    ///       下载版本配置→检查更新→（如有更新）启动升级进程。</description>
+    ///     <description>Calls <c>ExecuteClientAsync</c> to execute the client check flow:
+    ///       download version config, check for updates, and (if available) launch the upgrade process.</description>
     ///   </item>
     /// </list>
     /// </remarks>
@@ -159,20 +165,20 @@ public class OSSUpdateStrategy : IStrategy
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 客户端更新检查流程。下载版本配置文件，检查是否有新版本，
-    /// 如有更新则启动升级进程并退出当前进程。
+    /// Client-side update check flow. Downloads the version configuration file, checks for a new version,
+    /// and if an update is available, launches the upgrade process and exits the current process.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// <para>
-    /// 执行步骤如下：
+    /// The execution steps are as follows:
     /// </para>
     /// <list type="number">
-    ///   <item>从 <c>_configInfo.UpdateUrl</c> 下载版本配置文件到安装目录。</item>
-    ///   <item>反序列化 JSON 文件，获取版本列表并按发布时间降序排序。</item>
-    ///   <item>比较服务器最新版本与当前客户端版本。</item>
-    ///   <item>如果有新版本，解析升级进程路径并启动升级程序。</item>
-    ///   <item>调用 <c>GracefulExit.CurrentProcessAsync</c> 退出当前进程。</item>
+    ///   <item>Downloads the version configuration file from <c>_configInfo.UpdateUrl</c> to the install directory.</item>
+    ///   <item>Deserializes the JSON file, obtains the version list, and sorts it in descending order by publish time.</item>
+    ///   <item>Compares the latest server version with the current client version.</item>
+    ///   <item>If a new version is available, resolves the upgrade process path and launches the upgrade program.</item>
+    ///   <item>Calls <c>GracefulExit.CurrentProcessAsync</c> to exit the current process.</item>
     /// </list>
     /// </remarks>
     private async Task ExecuteClientAsync()
@@ -234,24 +240,24 @@ public class OSSUpdateStrategy : IStrategy
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 升级端更新流程。从 OSS 下载更新包、解压缩、启动主应用程序。
+    /// Upgrade-side update flow. Downloads update packages from OSS, decompresses them, and launches the main application.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// <para>
-    /// 这是实际执行更新操作的核心方法。执行步骤如下：
+    /// This is the core method that actually performs the update operations. The execution steps are as follows:
     /// </para>
     /// <list type="number">
-    ///   <item>读取版本配置文件或通过 <c>DownloadSource</c> 获取资产列表。</item>
-    ///   <item>触发 <c>OnBeforeUpdateAsync</c> 钩子，允许取消更新。</item>
-    ///   <item>下载所有更新资产到安装目录。</item>
-    ///   <item>解压缩所有下载的 ZIP 文件并删除原始压缩包。</item>
-    ///   <item>依次触发下载完成、更新完成、更新应用等生命周期钩子。</item>
-    ///   <item>启动主应用程序。</item>
+    ///   <item>Reads the version configuration file or retrieves the asset list via <c>DownloadSource</c>.</item>
+    ///   <item>Triggers the <c>OnBeforeUpdateAsync</c> hook, allowing the update to be cancelled.</item>
+    ///   <item>Downloads all update assets to the install directory.</item>
+    ///   <item>Decompresses all downloaded ZIP files and deletes the original archives.</item>
+    ///   <item>Sequentially triggers lifecycle hooks for download completion, update completion, and update applied.</item>
+    ///   <item>Launches the main application.</item>
     /// </list>
     /// <para>
-    /// 任何异常都会被捕获，触发 <c>OnUpdateErrorAsync</c> 钩子并报告失败状态，
-    /// 然后退出当前进程。
+    /// Any exception is caught, triggering the <c>OnUpdateErrorAsync</c> hook and reporting the failure status,
+    /// then exiting the current process.
     /// </para>
     /// </remarks>
     private async Task ExecuteUpgradeAsync()
@@ -337,22 +343,22 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 异步启动已更新的主应用程序。
+    /// Asynchronously starts the updated main application.
     /// </summary>
-    /// <returns>表示异步操作的任务。如果应用程序名称未配置，则返回已完成的任务。</returns>
-    /// <exception cref="FileNotFoundException">在主应用程序路径上找不到文件时抛出。</exception>
+    /// <returns>A task that represents the asynchronous operation. Returns a completed task if the application name is not configured.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the file is not found at the main application path.</exception>
     /// <remarks>
     /// <para>
-    /// 此方法在升级端更新流程完成后调用。它会：
+    /// This method is called after the upgrade-side update flow completes. It will:
     /// </para>
     /// <list type="number">
-    ///   <item>获取主应用程序名称（优先使用 <c>MainAppName</c>，其次使用 <c>UpdateAppName</c>）。</item>
-    ///   <item>在安装目录中定位主应用程序的可执行文件。</item>
-    ///   <item>使用 <c>Process.Start</c> 启动主应用程序。</item>
+    ///   <item>Retrieve the main application name (prefers <c>MainAppName</c>, falls back to <c>UpdateAppName</c>).</item>
+    ///   <item>Locate the main application executable in the install directory.</item>
+    ///   <item>Start the main application using <c>Process.Start</c>.</item>
     /// </list>
     /// <para>
-    /// 与 Windows/Linux/Mac 策略不同，此方法不执行 <c>GracefulExit.CurrentProcessAsync</c>，
-    /// 退出操作由调用者 <c>ExecuteUpgradeAsync</c> 在 finally 块中处理。
+    /// Unlike the Windows/Linux/Mac strategies, this method does not call <c>GracefulExit.CurrentProcessAsync</c>;
+    /// the exit operation is handled by the caller <c>ExecuteUpgradeAsync</c> in its finally block.
     /// </para>
     /// </remarks>
     public Task StartAppAsync()
@@ -373,14 +379,14 @@ public class OSSUpdateStrategy : IStrategy
     #region Helpers
 
     /// <summary>
-    /// 从指定 URL 下载版本配置文件并保存到本地路径。
+    /// Downloads the version configuration file from the specified URL and saves it to the local path.
     /// </summary>
-    /// <param name="url">版本配置文件的远程 URL。</param>
-    /// <param name="path">本地保存路径。</param>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <param name="url">The remote URL of the version configuration file.</param>
+    /// <param name="path">The local save path.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
-    /// 如果本地已存在同名文件，会先将其删除再下载新文件。
-    /// 使用共享的 <c>HttpClientProvider</c> 实例发送 HTTP 请求。
+    /// If the local file already exists, it is deleted before downloading the new file.
+    /// Uses the shared <c>HttpClientProvider</c> instance to send HTTP requests.
     /// </remarks>
     private static async Task DownloadVersionConfig(string url, string path)
     {
@@ -395,14 +401,14 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 判断客户端是否需要进行 OSS 升级。
+    /// Determines whether the client needs an OSS upgrade.
     /// </summary>
-    /// <param name="clientVersion">当前客户端版本字符串。</param>
-    /// <param name="serverVersion">服务器最新版本字符串。</param>
-    /// <returns>如果服务器版本高于客户端版本则返回 true，否则返回 false。</returns>
+    /// <param name="clientVersion">The current client version string.</param>
+    /// <param name="serverVersion">The latest server version string.</param>
+    /// <returns>Returns true if the server version is higher than the client version; otherwise false.</returns>
     /// <remarks>
-    /// 此方法会尝试将两个版本字符串解析为 <c>Version</c> 类型进行比较。
-    /// 如果任一版本字符串为 null、空字符串或无法解析，则返回 false 表示不需要升级。
+    /// This method attempts to parse both version strings as <c>Version</c> types for comparison.
+    /// If either version string is null, empty, or cannot be parsed, returns false indicating no upgrade is needed.
     /// </remarks>
     private static bool IsOssUpgrade(string clientVersion, string serverVersion)
     {
@@ -414,15 +420,15 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 下载所有更新资产到指定的目标路径。
+    /// Downloads all update assets to the specified target path.
     /// </summary>
-    /// <param name="assets">要下载的资产列表。</param>
-    /// <param name="targetPath">目标安装路径。</param>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <param name="assets">The list of assets to download.</param>
+    /// <param name="targetPath">The target installation path.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
-    /// 如果设置了 <c>DownloadOrchestrator</c>，则使用该编排器执行下载；
-    /// 否则创建默认的 <c>DefaultDownloadOrchestrator</c> 实例进行下载。
-    /// 默认编排器的超时时间从配置中读取，如果未配置则使用 60 秒。
+    /// If <c>DownloadOrchestrator</c> is set, uses that orchestrator to perform the download;
+    /// otherwise creates a default <c>DefaultDownloadOrchestrator</c> instance for downloading.
+    /// The default orchestrator's timeout is read from the configuration; if not configured, 60 seconds is used.
     /// </remarks>
     private async Task DownloadAssetsAsync(List<DownloadAsset> assets, string targetPath)
     {
@@ -443,14 +449,14 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 解压缩所有下载的资产文件（ZIP 格式）。
+    /// Decompresses all downloaded asset files (ZIP format).
     /// </summary>
-    /// <param name="assets">已下载的资产列表。</param>
-    /// <param name="targetPath">解压缩目标路径。</param>
-    /// <param name="encoding">解压缩时使用的字符编码。</param>
+    /// <param name="assets">The list of downloaded assets.</param>
+    /// <param name="targetPath">The target path for decompression.</param>
+    /// <param name="encoding">The character encoding to use during decompression.</param>
     /// <remarks>
-    /// 遍历资产列表，对每个资产执行 ZIP 解压缩操作。
-    /// 解压缩完成后删除原始的 ZIP 文件。
+    /// Iterates through the asset list and performs ZIP decompression for each asset.
+    /// Deletes the original ZIP files after decompression completes.
     /// </remarks>
     private static void DecompressAssets(List<DownloadAsset> assets, string targetPath, Encoding encoding)
     {
@@ -466,9 +472,9 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 构建更新上下文，用于传递更新相关信息给生命周期钩子。
+    /// Builds the update context for passing update-related information to lifecycle hooks.
     /// </summary>
-    /// <returns>包含应用名称、安装路径、版本号等信息的 <c>UpdateContext</c> 实例。</returns>
+    /// <returns>An <c>UpdateContext</c> instance containing application name, install path, version number, and other information.</returns>
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
@@ -481,47 +487,47 @@ public class OSSUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全地调用更新前的钩子，捕获并记录异常以防止阻止更新流程。
+    /// Safely invokes the pre-update hook, catching and logging exceptions to prevent blocking the update flow.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <returns>钩子调用的结果；如果钩子抛出异常则默认为 true（继续更新）。</returns>
+    /// <param name="ctx">The update context.</param>
+    /// <returns>The result of the hook invocation; defaults to true (continue updating) if the hook throws an exception.</returns>
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
     {
         try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
     }
     /// <summary>
-    /// 安全地调用应用启动前的钩子，捕获并记录异常。
+    /// Safely invokes the pre-start-app hook, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
         try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地调用更新错误钩子，捕获并记录异常。
+    /// Safely invokes the update error hook, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <param name="error">更新过程中发生的异常。</param>
+    /// <param name="ctx">The update context.</param>
+    /// <param name="error">The exception that occurred during the update.</param>
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地调用更新完成后的钩子，捕获并记录异常。
+    /// Safely invokes the post-update hook, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
         try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地调用下载完成钩子，捕获并记录异常。
+    /// Safely invokes the download completed hook, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -534,9 +540,9 @@ public class OSSUpdateStrategy : IStrategy
         catch (Exception ex) { GeneralTracer.Warn($"OnDownloadCompletedAsync hook failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地报告更新已开始的状态，捕获并记录异常。
+    /// Safely reports the update started status, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -546,9 +552,9 @@ public class OSSUpdateStrategy : IStrategy
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地报告更新已应用的状态，捕获并记录异常。
+    /// Safely reports the update applied status, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -558,10 +564,10 @@ public class OSSUpdateStrategy : IStrategy
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }
     /// <summary>
-    /// 安全地报告更新失败的状态，捕获并记录异常。
+    /// Safely reports the update failed status, catching and logging exceptions.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <param name="error">更新过程中发生的异常。</param>
+    /// <param name="ctx">The update context.</param>
+    /// <param name="error">The exception that occurred during the update.</param>
     private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try

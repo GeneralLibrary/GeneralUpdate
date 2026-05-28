@@ -3,21 +3,21 @@ using System;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// 文件节点类，表示文件树（二叉排序树）中的一个节点。
-/// 同时作为文件快照的基本数据单元，存储文件的元数据信息和树形结构引用。
+/// Represents a file node within a file tree (binary search tree).
+/// Also serves as the fundamental data unit for file snapshots, storing file metadata and tree structure references.
 /// </summary>
 /// <remarks>
 /// <para>
-/// FileNode 在 GeneralUpdate 中有两个核心用途：
+/// FileNode has two core purposes in GeneralUpdate:
 /// </para>
 /// <list type="bullet">
-///   <item><description><b>文件元数据容器</b>：记录文件的名称、完整路径、相对路径、SHA-256 哈希值等。</description></item>
-///   <item><description><b>二叉排序树节点</b>：通过 <see cref="Id"/> 作为排序键构建二叉排序树，
-///   支持 <see cref="Add"/>、<see cref="Search"/> 和 <see cref="SearchParent"/> 等树操作。</description></item>
+///   <item><description><b>File metadata container</b>: Records the file name, full path, relative path, SHA-256 hash, and other metadata.</description></item>
+///   <item><description><b>Binary search tree node</b>: Uses <see cref="Id"/> as the sort key to build a binary search tree,
+///   supporting tree operations such as <see cref="Add"/>, <see cref="Search"/>, and <see cref="SearchParent"/>.</description></item>
 /// </list>
 /// <para>
-/// <see cref="Equals"/> 方法基于 <see cref="Hash"/> 和 <see cref="Name"/> 进行不区分大小写的比较，
-/// 用于 <see cref="FileTree.Compare"/> 算法中判断两个节点是否代表同一个文件。
+/// The <see cref="Equals"/> method performs a case-insensitive comparison based on <see cref="Hash"/> and <see cref="Name"/>,
+/// and is used in the <see cref="FileTree.Compare"/> algorithm to determine whether two nodes represent the same file.
 /// </para>
 /// </remarks>
 public class FileNode
@@ -25,63 +25,63 @@ public class FileNode
     #region Public Properties
 
     /// <summary>
-    /// 文件节点的唯一标识符（二叉排序树的排序键）。
+    /// Gets or sets the unique identifier for the file node (the sort key for the binary search tree).
     /// </summary>
-    /// <remarks>由 <see cref="StorageManager.GetId"/> 方法以线程安全的方式自增分配。</remarks>
+    /// <remarks>Assigned in a thread-safe auto-incrementing manner by the <see cref="StorageManager.GetId"/> method.</remarks>
     public long Id { get; set; }
 
     /// <summary>
-    /// 文件名称（不含路径部分）。
+    /// Gets or sets the file name (without the path portion).
     /// </summary>
     /// <example><c>example.dll</c></example>
     public string Name { get; set; }
 
     /// <summary>
-    /// 文件的完整绝对路径。
+    /// Gets or sets the full absolute path of the file.
     /// </summary>
     /// <example><c>C:\App\bin\example.dll</c></example>
     public string FullName { get; set; }
 
     /// <summary>
-    /// 文件所在目录的路径。
+    /// Gets or sets the directory path where the file is located.
     /// </summary>
     public string Path { get; set; }
 
     /// <summary>
-    /// 文件的 SHA-256 哈希值（十六进制字符串形式）。
+    /// Gets or sets the SHA-256 hash value of the file (in hexadecimal string format).
     /// </summary>
     /// <remarks>
-    /// 用于文件内容比较和完整性验证。由 <see cref="Sha256HashAlgorithm"/> 计算。
+    /// Used for file content comparison and integrity verification. Computed by <see cref="Sha256HashAlgorithm"/>.
     /// </remarks>
     public string Hash { get; set; }
 
     /// <summary>
-    /// 二叉排序树的左子节点引用（存储 Id 小于当前节点的节点）。
+    /// Gets or sets the left child node reference in the binary search tree (stores nodes with Id less than the current node).
     /// </summary>
     public FileNode Left { get; set; }
 
     /// <summary>
-    /// 二叉排序树的右子节点引用（存储 Id 大于等于当前节点的节点）。
+    /// Gets or sets the right child node reference in the binary search tree (stores nodes with Id greater than or equal to the current node).
     /// </summary>
     public FileNode Right { get; set; }
 
     /// <summary>
-    /// 左侧树中节点的类型标记（保留字段，用于差异分析中的分类标记）。
+    /// Gets or sets a type marker for the node in the left tree (reserved field for classification in differential analysis).
     /// </summary>
     public int LeftType { get; set; }
 
     /// <summary>
-    /// 右侧树中节点的类型标记（保留字段，用于差异分析中的分类标记）。
+    /// Gets or sets a type marker for the node in the right tree (reserved field for classification in differential analysis).
     /// </summary>
     public int RightType { get; set; }
 
     /// <summary>
-    /// 文件相对于根目录的相对路径。
+    /// Gets or sets the relative path of the file with respect to the root directory.
     /// </summary>
     /// <example><c>bin/example.dll</c></example>
     /// <remarks>
-    /// 使用 URI 相对路径格式（使用正斜杠 <c>/</c> 作为目录分隔符），确保跨平台兼容性。
-    /// 此属性在 <see cref="StorageManager.ReadFileNode"/> 中通过 <c>Uri.MakeRelativeUri</c> 计算。
+    /// Uses URI relative path format (forward slash <c>/</c> as directory separator) to ensure cross-platform compatibility.
+    /// This property is computed via <c>Uri.MakeRelativeUri</c> in <see cref="StorageManager.ReadFileNode"/>.
     /// </remarks>
     public string RelativePath { get; set; }
 
@@ -90,16 +90,16 @@ public class FileNode
     #region Constructors
 
     /// <summary>
-    /// 初始化 <see cref="FileNode"/> 的新实例，所有属性使用默认值。
+    /// Initializes a new instance of the <see cref="FileNode"/> class with default property values.
     /// </summary>
     public FileNode()
     {
     }
 
     /// <summary>
-    /// 初始化 <see cref="FileNode"/> 的新实例并设置节点 ID。
+    /// Initializes a new instance of the <see cref="FileNode"/> class with the specified node ID.
     /// </summary>
-    /// <param name="id">文件节点的唯一标识符。</param>
+    /// <param name="id">The unique identifier for the file node.</param>
     public FileNode(int id)
     {
         Id = id;
@@ -110,19 +110,19 @@ public class FileNode
     #region Public Methods
 
     /// <summary>
-    /// 向以当前节点为根的二叉排序树中添加一个新节点。
+    /// Adds a new node to the binary search tree rooted at the current node.
     /// </summary>
-    /// <param name="node">要添加的 <see cref="FileNode"/> 实例。</param>
+    /// <param name="node">The <see cref="FileNode"/> instance to add.</param>
     /// <remarks>
     /// <para>
-    /// 添加规则：
+    /// Insertion rules:
     /// <list type="bullet">
-    ///   <item><description>如果新节点的 <c>Id</c> 小于当前节点的 <c>Id</c>，递归插入到左子树。</description></item>
-    ///   <item><description>如果新节点的 <c>Id</c> 大于等于当前节点的 <c>Id</c>，递归插入到右子树。</description></item>
+    ///   <item><description>If the new node's <c>Id</c> is less than the current node's <c>Id</c>, recursively insert into the left subtree.</description></item>
+    ///   <item><description>If the new node's <c>Id</c> is greater than or equal to the current node's <c>Id</c>, recursively insert into the right subtree.</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// 如果 <paramref name="node"/> 为 <c>null</c>，不执行任何操作。
+    /// If <paramref name="node"/> is <c>null</c>, no operation is performed.
     /// </para>
     /// </remarks>
     public void Add(FileNode node)
@@ -154,18 +154,18 @@ public class FileNode
     }
 
     /// <summary>
-    /// 在以当前节点为根的二叉排序树中搜索指定 ID 的节点。
+    /// Searches for a node with the specified ID in the binary search tree rooted at the current node.
     /// </summary>
-    /// <param name="id">要搜索的节点 ID。</param>
+    /// <param name="id">The node ID to search for.</param>
     /// <returns>
-    /// 如果找到则返回对应的 <see cref="FileNode"/> 实例；否则返回 <c>null</c>。
+    /// The matching <see cref="FileNode"/> instance if found; otherwise, <c>null</c>.
     /// </returns>
     /// <remarks>
-    /// 利用二叉排序树的特性进行二分查找，平均时间复杂度为 O(log n)：
+    /// Uses the binary search tree property for binary search with an average time complexity of O(log n):
     /// <list type="bullet">
-    ///   <item><description>如果 <paramref name="id"/> 等于当前节点 ID，返回当前节点。</description></item>
-    ///   <item><description>如果 <paramref name="id"/> 小于当前节点 ID，递归搜索左子树。</description></item>
-    ///   <item><description>如果 <paramref name="id"/> 大于当前节点 ID，递归搜索右子树。</description></item>
+    ///   <item><description>If <paramref name="id"/> equals the current node's ID, returns the current node.</description></item>
+    ///   <item><description>If <paramref name="id"/> is less than the current node's ID, recursively searches the left subtree.</description></item>
+    ///   <item><description>If <paramref name="id"/> is greater than the current node's ID, recursively searches the right subtree.</description></item>
     /// </list>
     /// </remarks>
     public FileNode Search(long id)
@@ -187,18 +187,18 @@ public class FileNode
     }
 
     /// <summary>
-    /// 在二叉排序树中查找指定 ID 节点的父节点（用于删除操作）。
+    /// Finds the parent node of a node with the specified ID in the binary search tree (used for deletion operations).
     /// </summary>
-    /// <param name="id">目标节点的 ID。</param>
+    /// <param name="id">The ID of the target node.</param>
     /// <returns>
-    /// 如果找到则返回目标节点的父 <see cref="FileNode"/>；否则返回 <c>null</c>。
+    /// The parent <see cref="FileNode"/> of the target node if found; otherwise, <c>null</c>.
     /// </returns>
     /// <remarks>
-    /// 此方法在 <see cref="FileTree.DelNode"/> 中用于定位待删除节点的父节点，
-    /// 从而更新父节点的左/右子引用。判断逻辑：
+    /// This method is used in <see cref="FileTree.DelNode"/> to locate the parent of the node to be deleted,
+    /// so that the parent's left/right child reference can be updated. The determination logic:
     /// <list type="bullet">
-    ///   <item><description>如果当前节点的左子或右子的 ID 等于目标 ID，则当前节点即为父节点。</description></item>
-    ///   <item><description>否则，根据 ID 大小关系递归搜索左子树或右子树。</description></item>
+    ///   <item><description>If the current node's left or right child has an ID equal to the target ID, the current node is the parent.</description></item>
+    ///   <item><description>Otherwise, recursively searches the left or right subtree based on ID comparison.</description></item>
     /// </list>
     /// </remarks>
     public FileNode SearchParent(long id)

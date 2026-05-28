@@ -4,45 +4,48 @@ using System.Text.Json.Serialization;
 namespace GeneralUpdate.Core.Configuration;
 
 /// <summary>
-///     表示更新服务器返回的版本信息对象。
-///     对应服务端 JSON 响应的数据结构，包含版本标识、下载地址、更新日志、
-///     升级模式等所有与单个版本相关的元数据。
+///     Represents a version information object returned by the update server.
+///     Corresponds to the data structure of the server-side JSON response, containing all metadata related to
+///     a single version, including version identifier, download URL, update log, and upgrade mode.
 /// </summary>
 /// <remarks>
 ///     <para>
-///         <c>VersionInfo</c> 是客户端与更新服务器之间的数据契约，从版本检查 API 的
-///         JSON 响应中反序列化而来。每个 <c>VersionInfo</c> 实例代表一个可用的更新版本。
+///         <c>VersionInfo</c> is the data contract between the client and the update server, deserialized from
+///         the JSON response of the version check API. Each <c>VersionInfo</c> instance represents an available
+///         update version.
 ///     </para>
 ///     <para>
-///         此对象在更新流程中的用途：
+///         This object is used throughout the update workflow:
 ///         <list type="number">
 ///             <item>
 ///                 <description>
-///                     版本检查阶段：从服务端获取版本列表，用于判断是否存在新版本。
+///                     Version check phase: Retrieves the version list from the server to determine whether a
+///                     new version exists.
 ///                 </description>
 ///             </item>
 ///             <item>
 ///                 <description>
-///                     更新下载阶段：通过 <see cref="Url" /> 属性下载更新包。
+///                     Update download phase: Downloads the update package via the <see cref="Url" /> property.
 ///                 </description>
 ///             </item>
 ///             <item>
 ///                 <description>
-///                     差异更新阶段：利用 <see cref="Hash" /> 进行文件校验，
-///                     <see cref="FromVersion" /> 和 <see cref="ToVersion" /> 用于确定差异补丁的作用范围。
+///                     Differential update phase: Uses <see cref="Hash" /> for file verification, and
+///                     <see cref="FromVersion" /> and <see cref="ToVersion" /> to determine the scope of the
+///                     differential patch.
 ///                 </description>
 ///             </item>
 ///             <item>
 ///                 <description>
-///                     IPC 传输阶段：作为 <see cref="ProcessInfo.UpdateVersions" /> 的列表元素
-///                     传递给升级进程。
+///                     IPC transmission phase: Passed to the upgrade process as list elements in
+///                     <see cref="ProcessInfo.UpdateVersions" />.
 ///                 </description>
 ///             </item>
 ///         </list>
 ///     </para>
 ///     <para>
-///         所有属性均使用 <see cref="JsonPropertyNameAttribute" /> 注解，映射服务端 JSON 响应的字段名。
-///         属性大多为可空类型，以容错服务端可能缺失的字段。
+///         All properties are annotated with <see cref="JsonPropertyNameAttribute" /> to map server-side JSON
+///         response field names. Most properties are nullable to tolerate potentially missing fields from the server.
 ///     </para>
 /// </remarks>
 /// <seealso cref="ProcessInfo" />
@@ -50,127 +53,128 @@ namespace GeneralUpdate.Core.Configuration;
 public class VersionInfo
 {
     /// <summary>
-    ///     版本记录的唯一标识符（主键 ID）。
+    ///     The unique identifier (primary key ID) of the version record.
     /// </summary>
     [JsonPropertyName("recordId")]
     public int RecordId { get; set; }
 
     /// <summary>
-    ///     版本名称或标签（例如 "v1.0.1"、"Release Candidate 2"）。
+    ///     The version name or label (e.g., "v1.0.1", "Release Candidate 2").
     /// </summary>
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
     /// <summary>
-    ///     更新包文件的哈希值（通常为 SHA256），用于下载后的完整性校验。
+    ///     The hash value of the update package file (typically SHA256), used for integrity verification after download.
     /// </summary>
     [JsonPropertyName("hash")]
     public string? Hash { get; set; }
 
     /// <summary>
-    ///     版本的发布日期。
+    ///     The release date of the version.
     /// </summary>
     [JsonPropertyName("releaseDate")]
     public DateTime? ReleaseDate { get; set; }
 
     /// <summary>
-    ///     更新包的下载 URL 地址。
-    ///     客户端通过此地址下载更新包文件。
+    ///     The download URL of the update package.
+    ///     The client downloads the update package file from this address.
     /// </summary>
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
     /// <summary>
-    ///     此版本信息的版本号字符串（例如 "1.0.0.1"）。
+    ///     The version number string of this version information (e.g., "1.0.0.1").
     /// </summary>
     [JsonPropertyName("version")]
     public string? Version { get; set; }
 
     /// <summary>
-    ///     应用程序类型标识，用于区分主应用更新和升级器更新。
+    ///     The application type identifier, used to distinguish between main application updates and updater updates.
     /// </summary>
     /// <remarks>
-    ///     取值为整数枚举：通常 0 表示主应用（Client），1 表示升级器（Upgrade）。
-    ///     与 <see cref="BaseConfigInfo.AppType" /> 配合使用，决定此版本是用于
-    ///     <see cref="GlobalConfigInfo.IsMainUpdate" /> 还是
-    ///     <see cref="GlobalConfigInfo.IsUpgradeUpdate" />。
+    ///     Takes an integer enum value: typically 0 for the main application (Client) and 1 for the updater (Upgrade).
+    ///     Works with <see cref="BaseConfigInfo.AppType" /> to determine whether this version is used for
+    ///     <see cref="GlobalConfigInfo.IsMainUpdate" /> or <see cref="GlobalConfigInfo.IsUpgradeUpdate" />.
     /// </remarks>
     [JsonPropertyName("appType")]
     public int? AppType { get; set; }
 
     /// <summary>
-    ///     目标平台标识，用于区分不同操作系统或架构的更新包。
+    ///     The target platform identifier, used to distinguish update packages for different operating systems or architectures.
     /// </summary>
     [JsonPropertyName("platform")]
     public int? Platform { get; set; }
 
     /// <summary>
-    ///     此版本关联的产品标识符，用于多产品环境下的版本筛选。
+    ///     The product identifier associated with this version, used for version filtering in multi-product environments.
     /// </summary>
     [JsonPropertyName("productId")]
     public string? ProductId { get; set; }
 
     /// <summary>
-    ///     是否强制更新。
-    ///     如果为 <c>true</c>，客户端必须执行此更新才能继续使用。
+    ///     Whether the update is forced.
+    ///     If <c>true</c>, the client must apply this update to continue using the application.
     /// </summary>
     [JsonPropertyName("isForcibly")]
     public bool? IsForcibly { get; set; }
 
     /// <summary>
-    ///     更新包的压缩格式名称（例如 "zip"、"7z"、"tar.gz"）。
+    ///     The compression format name of the update package (e.g., "zip", "7z", "tar.gz").
     /// </summary>
     [JsonPropertyName("format")]
     public string? Format { get; set; }
 
     /// <summary>
-    ///     更新包文件的大小（字节）。
+    ///     The size of the update package file in bytes.
     /// </summary>
     [JsonPropertyName("size")]
     public long? Size { get; set; }
 
     /// <summary>
-    ///     下载请求的 HTTP 身份验证方案（例如 "Bearer"、"Basic"）。
+    ///     The HTTP authentication scheme for download requests (e.g., "Bearer", "Basic").
     /// </summary>
     /// <remarks>
-    ///     当更新包的下载需要额外的身份验证时使用，与服务端配置的鉴权方式对应。
+    ///     Used when additional authentication is required for downloading the update package, corresponding to the
+    ///     authentication method configured on the server side.
     /// </remarks>
     [JsonPropertyName("authScheme")]
     public string? AuthScheme { get; set; }
 
     /// <summary>
-    ///     下载请求的 HTTP 身份验证令牌。
+    ///     The HTTP authentication token for download requests.
     /// </summary>
     /// <remarks>
-    ///     配合 <see cref="AuthScheme" /> 使用，在下载更新包时附加到 HTTP 请求头中进行鉴权。
+    ///     Used in conjunction with <see cref="AuthScheme" />, appended to HTTP request headers during update
+    ///     package download for authentication.
     /// </remarks>
     [JsonPropertyName("authToken")]
     public string? AuthToken { get; set; }
 
     /// <summary>
-    ///     此版本的更新日志或发行说明文本。
+    ///     The update log or release notes text for this version.
     /// </summary>
     [JsonPropertyName("updateLog")]
     public string? UpdateLog { get; set; }
 
     /// <summary>
-    ///     签名式下载 URL 的过期时间（UTC）。
-    ///     过期后 URL 将失效，需要重新获取。
+    ///     The expiration time (UTC) of the signed download URL.
+    ///     After expiration, the URL becomes invalid and must be re-acquired.
     /// </summary>
     [JsonPropertyName("urlExpireTimeUtc")]
     public DateTime? UrlExpireTimeUtc { get; set; }
 
     /// <summary>
-    ///     升级模式：1 = 版本链式升级（VersionChain），2 = 跨版本升级（CrossVersion）。
+    ///     The upgrade mode: 1 = VersionChain (sequential version upgrades), 2 = CrossVersion (cross-version upgrade).
     /// </summary>
     /// <remarks>
     ///     <para>
     ///         <list type="bullet">
     ///             <item>
-    ///                 <description><c>1（VersionChain）</c>：按顺序逐个版本升级，跳过中间版本。</description>
+    ///                 <description><c>1 (VersionChain)</c>: Upgrades through versions sequentially, without skipping intermediate versions.</description>
     ///             </item>
     ///             <item>
-    ///                 <description><c>2（CrossVersion）</c>：直接从一个旧版本升级到任意新版本。</description>
+    ///                 <description><c>2 (CrossVersion)</c>: Directly upgrades from an old version to any newer version.</description>
     ///             </item>
     ///         </list>
     ///     </para>
@@ -179,37 +183,38 @@ public class VersionInfo
     public int? UpgradeMode { get; set; }
 
     /// <summary>
-    ///     是否为跨版本升级包。
-    ///     <c>true</c> 表示此包用于直接从一个旧版本升级到新版本，而非按顺序链式升级。
+    ///     Whether this is a cross-version upgrade package.
+    ///     <c>true</c> indicates this package is used to upgrade directly from an old version to a new version,
+    ///     rather than through sequential chain upgrades.
     /// </summary>
     [JsonPropertyName("isCrossVersion")]
     public bool? IsCrossVersion { get; set; }
 
     /// <summary>
-    ///     跨版本升级包的源版本号。
-    ///     表示此差异包可以从哪个源版本应用。
+    ///     The source version number for cross-version upgrade packages.
+    ///     Indicates which source version this differential patch can be applied to.
     /// </summary>
     /// <remarks>
-    ///     仅当 <see cref="IsCrossVersion" /> 为 <c>true</c> 时有效。
-    ///     与 <see cref="ToVersion" /> 共同定义了差异补丁的版本作用范围。
+    ///     Only valid when <see cref="IsCrossVersion" /> is <c>true</c>.
+    ///     Together with <see cref="ToVersion" />, defines the version scope of the differential patch.
     /// </remarks>
     [JsonPropertyName("fromVersion")]
     public string? FromVersion { get; set; }
 
     /// <summary>
-    ///     跨版本升级包的目标版本号。
-    ///     表示此差异包应用后将升级到的目标版本。
+    ///     The target version number for cross-version upgrade packages.
+    ///     Indicates the target version that will be reached after applying this differential patch.
     /// </summary>
     /// <remarks>
-    ///     仅当 <see cref="IsCrossVersion" /> 为 <c>true</c> 时有效。
-    ///     与 <see cref="FromVersion" /> 共同定义了差异补丁的版本作用范围。
+    ///     Only valid when <see cref="IsCrossVersion" /> is <c>true</c>.
+    ///     Together with <see cref="FromVersion" />, defines the version scope of the differential patch.
     /// </remarks>
     [JsonPropertyName("toVersion")]
     public string? ToVersion { get; set; }
 
     /// <summary>
-    ///     此版本包是否被冻结（归档，不用于活跃更新）。
-    ///     冻结的版本包不会被用于更新检测和下载。
+    ///     Whether this version package is frozen (archived and not used for active updates).
+    ///     Frozen version packages will not be used for update detection or download.
     /// </summary>
     [JsonPropertyName("isFreeze")]
     public bool? IsFreeze { get; set; }

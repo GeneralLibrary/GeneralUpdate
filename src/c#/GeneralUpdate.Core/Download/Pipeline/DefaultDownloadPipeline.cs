@@ -7,26 +7,28 @@ using GeneralUpdate.Core.Download.Abstractions;
 namespace GeneralUpdate.Core.Download.Pipeline;
 
 /// <summary>
-/// 默认的下载后处理管道，对下载的文件执行 SHA256 哈希校验，
-/// 确保文件完整性与服务器端提供的预期哈希值一致。
+/// Default post-download processing pipeline that performs SHA256 hash verification
+/// on downloaded files to ensure their integrity matches the expected hash value
+/// provided by the server.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IDownloadPipeline"/> 接口，在下载完成后对文件进行完整性验证。
+/// This class implements <see cref="IDownloadPipeline"/> and provides integrity verification
+/// after a file has been downloaded.
 /// </para>
 /// <para>
-/// 工作流程：
+/// Workflow:
 /// <list type="number">
-///   <item>检查是否配置了预期哈希值。如果没有配置，则跳过校验直接返回文件路径。</item>
-///   <item>使用 SHA256 算法计算下载文件的哈希值。</item>
-///   <item>将计算出的哈希值与预期的哈希值进行不区分大小写的比较。</item>
-///   <item>如果哈希值匹配，返回原始文件路径。</item>
-///   <item>如果哈希值不匹配，抛出 <see cref="InvalidDataException"/>。</item>
+///   <item>Checks whether an expected hash value has been configured. If not, skips verification and returns the file path directly.</item>
+///   <item>Computes the SHA256 hash of the downloaded file.</item>
+///   <item>Compares the computed hash against the expected hash using a case-insensitive comparison.</item>
+///   <item>If the hashes match, returns the original file path.</item>
+///   <item>If the hashes do not match, throws <see cref="InvalidDataException"/> with details of the mismatch.</item>
 /// </list>
 /// </para>
 /// <para>
-/// SHA256 计算在后台线程上执行（通过 <c>Task.Run</c>），避免阻塞调用线程。
-/// 同时通过 <c>CancellationToken</c> 支持取消哈希计算操作。
+/// The SHA256 computation is offloaded to a background thread via <c>Task.Run</c>
+/// to avoid blocking the calling thread. Cancellation is supported through <c>CancellationToken</c>.
 /// </para>
 /// </remarks>
 public class DefaultDownloadPipeline : IDownloadPipeline
@@ -34,24 +36,35 @@ public class DefaultDownloadPipeline : IDownloadPipeline
     private readonly string? _expectedHash;
 
     /// <summary>
-    /// 使用预期的 SHA256 哈希值初始化下载管道。
+    /// Initializes a new instance of the <see cref="DefaultDownloadPipeline"/> class
+    /// with the expected SHA256 hash value.
     /// </summary>
-    /// <param name="expectedHash">预期的 SHA256 哈希值（十六进制字符串，不区分大小写）。
-    /// 如果为 null 或空，则跳过哈希校验。</param>
+    /// <param name="expectedHash">
+    /// The expected SHA256 hash value as a hexadecimal string (case-insensitive).
+    /// If null or empty, hash verification is skipped.
+    /// </param>
     public DefaultDownloadPipeline(string? expectedHash = null)
         => _expectedHash = expectedHash;
 
     /// <summary>
-    /// 对已下载的文件进行处理，执行 SHA256 哈希验证。
+    /// Processes the downloaded file by performing SHA256 hash verification
+    /// against the expected hash value.
     /// </summary>
-    /// <param name="downloadedPath">已下载文件的完整路径。</param>
-    /// <param name="token">用于取消哈希计算的取消令牌。</param>
-    /// <returns>如果哈希验证通过，返回原始文件路径。</returns>
-    /// <exception cref="InvalidDataException">当计算出的 SHA256 哈希值与预期值不匹配时抛出。</exception>
-    /// <exception cref="OperationCanceledException">当操作通过取消令牌被取消时抛出。</exception>
+    /// <param name="downloadedPath">The full path to the downloaded file.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> to cancel the hash computation.</param>
+    /// <returns>The original file path if hash verification passes or is skipped.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the computed SHA256 hash does not match the expected value.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the <paramref name="token"/>.</exception>
     /// <remarks>
-    /// 如果 <c>_expectedHash</c> 为 null 或空字符串，则跳过哈希校验直接返回文件路径。
-    /// 哈希比较不区分大小写。
+    /// <para>
+    /// Processing flow:
+    /// </para>
+    /// <list type="number">
+    ///   <item>If <c>_expectedHash</c> is null or empty, the file path is returned immediately without verification.</item>
+    ///   <item>Otherwise, the SHA256 hash of the file is computed asynchronously via <see cref="ComputeSha256Async"/>.</item>
+    ///   <item>The computed hash is compared with the expected hash using case-insensitive ordinal comparison.</item>
+    ///   <item>If the hashes match, the file path is returned. Otherwise, an <see cref="InvalidDataException"/> is thrown.</item>
+    /// </list>
     /// </remarks>
     public async Task<string> ProcessAsync(string downloadedPath, CancellationToken token = default)
     {
@@ -66,14 +79,19 @@ public class DefaultDownloadPipeline : IDownloadPipeline
     }
 
     /// <summary>
-    /// 计算指定文件的 SHA256 哈希值。
+    /// Computes the SHA256 hash of the specified file.
     /// </summary>
-    /// <param name="path">要计算哈希的文件路径。</param>
-    /// <param name="token">用于取消操作的取消令牌。</param>
-    /// <returns>文件的小写十六进制 SHA256 哈希字符串。</returns>
+    /// <param name="path">The file path for which to compute the hash.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> to cancel the operation.</param>
+    /// <returns>A lowercase hexadecimal SHA256 hash string without separators (e.g., "a1b2c3d4...").</returns>
     /// <remarks>
-    /// 哈希计算在后台线程上执行，以避免阻塞调用线程。
-    /// 返回的哈希字符串为小写字母且不含分隔符（如 "a1b2c3d4..."）。
+    /// <para>
+    /// The hash computation is performed on a background thread via <c>Task.Run</c>
+    /// to avoid blocking the calling thread.
+    /// </para>
+    /// <para>
+    /// The returned hash string is lowercase with no hyphens or separators.
+    /// </para>
     /// </remarks>
     private static async Task<string> ComputeSha256Async(string path, CancellationToken token)
     {

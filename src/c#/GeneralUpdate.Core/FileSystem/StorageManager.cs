@@ -10,24 +10,27 @@ using GeneralUpdate.Core.HashAlgorithms;
 namespace GeneralUpdate.Core.FileSystem
 {
     /// <summary>
-    /// 存储管理器，提供文件系统操作的静态工具类。
-    /// 支持备份、恢复、目录比较、文件遍历、哈希校验以及黑名单过滤等核心功能。
-    /// 该类是所有文件系统操作的统一入口，在更新流程中负责版本目录的快照生成与差异比较。
+    /// Storage manager providing static utility methods for file system operations.
+    /// Supports backup, restore, directory comparison, file traversal, hash verification, and blacklist filtering.
+    /// This class is the unified entry point for all file system operations and is responsible for
+    /// generating version directory snapshots and performing difference comparisons during the update workflow.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// StorageManager 是整个更新框架中文件操作的核心枢纽，主要职责包括：
+    /// StorageManager is the central hub for file operations within the entire update framework.
+    /// Its primary responsibilities include:
     /// </para>
     /// <list type="bullet">
-    ///   <item><description><c>Backup</c> / <c>Restore</c>：创建和恢复应用程序的完整备份。</description></item>
-    ///   <item><description><c>Compare</c>：对两个目录进行递归比较，识别新增、修改和删除的文件。</description></item>
-    ///   <item><description><c>HashEquals</c>：使用 SHA-256 哈希算法验证两个文件是否相同。</description></item>
-    ///   <item><description><c>GetAllFiles</c>：递归获取指定目录下的所有文件，支持跳过指定目录。</description></item>
-    ///   <item><description><c>CleanBackup</c> / <c>ListBackups</c>：管理历史备份版本，支持保留最近 N 个版本。</description></item>
+    ///   <item><description><c>Backup</c> / <c>Restore</c>: Create and restore full application backups.</description></item>
+    ///   <item><description><c>Compare</c>: Recursively compare two directories to identify added, modified, and deleted files.</description></item>
+    ///   <item><description><c>HashEquals</c>: Verify whether two files are identical using the SHA-256 hash algorithm.</description></item>
+    ///   <item><description><c>GetAllFiles</c>: Recursively retrieve all files under a specified directory, with support for skipping directories.</description></item>
+    ///   <item><description><c>CleanBackup</c> / <c>ListBackups</c>: Manage historical backup versions with support for retaining the most recent N versions.</description></item>
     /// </list>
     /// <para>
-    /// 可通过 <see cref="BlackListMatcher"/> 静态属性设置黑名单匹配器，在文件遍历时排除特定文件或目录。
-    /// 所有公开方法均为线程安全的静态方法，但 <see cref="Compare"/> 方法内部使用实例状态，注意并发调用。
+    /// A blacklist matcher can be set via the <see cref="BlackListMatcher"/> static property to exclude specific files or directories during file traversal.
+    /// All public methods are thread-safe static methods; however, the <see cref="Compare"/> method uses instance state internally,
+    /// so concurrent calls should be avoided on the same instance.
     /// </para>
     /// </remarks>
     public sealed class StorageManager
@@ -35,23 +38,23 @@ namespace GeneralUpdate.Core.FileSystem
         private long _fileCount = 0;
 
         /// <summary>
-        /// 备份目录的默认前缀名称。
+        /// The default prefix name for backup directories.
         /// </summary>
         /// <remarks>
-        /// 备份目录的命名格式为 "app-{版本号}"，此常量定义了前缀部分。
+        /// Backup directories are named in the format "app-{version}". This constant defines the prefix portion.
         /// </remarks>
         public const string DirectoryName = "app-";
 
         /// <summary>
-        /// 获取或设置可选的路径/文件黑名单匹配器。
+        /// Gets or sets the optional path/file blacklist matcher.
         /// </summary>
         /// <value>
-        /// 实现 <see cref="IBlackListMatcher"/> 接口的实例，用于在文件遍历时排除黑名单中的文件或目录。
-        /// 必须在执行任何文件操作之前设置。
+        /// An instance implementing the <see cref="IBlackListMatcher"/> interface, used to exclude blacklisted files or directories during file traversal.
+        /// Must be set before any file operations are performed.
         /// </value>
         /// <remarks>
-        /// 如果设置了此属性，<see cref="ReadFileNode"/> 方法会在遍历文件系统时自动跳过匹配的文件和目录。
-        /// 设置方式示例：<c>StorageManager.BlackListMatcher = new DefaultBlackListMatcher(config);</c>
+        /// When this property is set, the <see cref="ReadFileNode"/> method automatically skips files and directories that match the blacklist during file system traversal.
+        /// Example of setting: <c>StorageManager.BlackListMatcher = new DefaultBlackListMatcher(config);</c>
         /// </remarks>
         public static IBlackListMatcher? BlackListMatcher { get; set; }
         
@@ -60,17 +63,19 @@ namespace GeneralUpdate.Core.FileSystem
         #region Public Methods
 
         /// <summary>
-        /// 以左侧目录为基准，找出左侧有但右侧没有的文件集合（即被删除的文件）。
+        /// Finds the set of files present in the left directory but not in the right directory (i.e. files that have been deleted).
         /// </summary>
-        /// <param name="leftPath">基准（旧版本）目录路径。</param>
-        /// <param name="rightPath">目标（新版本）目录路径。</param>
+        /// <param name="leftPath">The base (old version) directory path.</param>
+        /// <param name="rightPath">The target (new version) directory path.</param>
         /// <returns>
-        /// 存在于左侧但不存在于右侧的 <see cref="FileNode"/> 集合；如果两侧文件列表完全一致，则返回空集合。
+        /// A collection of <see cref="FileNode"/> instances that exist in the left directory but not in the right directory;
+        /// returns an empty collection if both file lists are identical.
         /// </returns>
         /// <remarks>
-        /// 此方法将左右两侧目录分别序列化为 <see cref="FileNode"/> 列表，
-        /// 然后以 <c>RelativePath</c> 为键构建哈希表进行差集运算。
-        /// 适用于差异更新场景中识别需要删除的旧文件。
+        /// This method serializes both the left and right directories into <see cref="FileNode"/> lists,
+        /// then builds a hash table keyed by <c>RelativePath</c> to perform a set difference operation.
+        /// It is suitable for identifying old files that need to be deleted in a differential update scenario.
+        /// </remarks>
         /// </remarks>
         public IEnumerable<FileNode>? Except(string leftPath, string rightPath)
         {
@@ -81,25 +86,25 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 比较两个目录，识别出其中不同的文件。
+        /// Compares two directories and identifies the files that differ between them.
         /// </summary>
-        /// <param name="leftDir">基准（旧版本）目录路径。</param>
-        /// <param name="rightDir">目标（新版本）目录路径。</param>
+        /// <param name="leftDir">The base (old version) directory path.</param>
+        /// <param name="rightDir">The target (new version) directory path.</param>
         /// <returns>
-        /// <see cref="ComparisonResult"/> 对象，包含左侧节点、右侧节点以及差异节点的集合。
+        /// A <see cref="ComparisonResult"/> object containing collections of left nodes, right nodes, and differing nodes.
         /// </returns>
         /// <remarks>
         /// <para>
-        /// 比较流程如下：
+        /// Comparison flow:
         /// <list type="number">
-        ///   <item><description>重置内部文件 ID 计数器。</description></item>
-        ///   <item><description>递归读取左右两个目录中的所有文件节点，生成 <see cref="FileNode"/> 列表。</description></item>
-        ///   <item><description>分别构建左右两棵 <see cref="FileTree"/> 二叉排序树。</description></item>
-        ///   <item><description>从根节点开始递归对比两棵树的同名节点，收集哈希值或名称不同的节点。</description></item>
+        ///   <item><description>Resets the internal file ID counter.</description></item>
+        ///   <item><description>Recursively reads all file nodes from both directories, generating <see cref="FileNode"/> lists.</description></item>
+        ///   <item><description>Constructs left and right <see cref="FileTree"/> binary search trees.</description></item>
+        ///   <item><description>Recursively compares corresponding nodes of the two trees starting from the root, collecting nodes with differing hash values or names.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// 注意：该方法使用实例内部的 <c>ComparisonResult</c> 状态，应避免在多线程环境中并发调用同一实例。
+        /// Note: This method uses the instance-level <c>ComparisonResult</c> state and should not be called concurrently on the same instance in a multi-threaded environment.
         /// </para>
         /// </remarks>
         public ComparisonResult Compare(string leftDir, string rightDir)
@@ -119,16 +124,16 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 将对象序列化为 JSON 文件并写入指定路径。
+        /// Serializes an object to JSON and writes it to the specified path.
         /// </summary>
-        /// <typeparam name="T">要序列化的对象类型，必须是引用类型。</typeparam>
-        /// <param name="targetPath">目标 JSON 文件的完整路径。</param>
-        /// <param name="obj">要序列化的对象实例。</param>
-        /// <param name="typeInfo">可选的 JSON 类型信息元数据，用于支持源生成器序列化。</param>
-        /// <exception cref="ArgumentException">当 <paramref name="targetPath"/> 不包含有效的目录路径时抛出。</exception>
+        /// <typeparam name="T">The type of the object to serialize. Must be a reference type.</typeparam>
+        /// <param name="targetPath">The full path of the target JSON file.</param>
+        /// <param name="obj">The object instance to serialize.</param>
+        /// <param name="typeInfo">Optional JSON type info metadata for source generator serialization support.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="targetPath"/> does not contain a valid directory path.</exception>
         /// <remarks>
-        /// 如果目标文件的目录不存在，会自动创建。支持通过 <c>JsonTypeInfo</c> 进行源生成器模式，
-        /// 在 AOT 编译场景中可避免运行时反射。
+        /// If the directory of the target file does not exist, it will be created automatically.
+        /// Supports source generator mode via <c>JsonTypeInfo</c>, which avoids runtime reflection in AOT compilation scenarios.
         /// </remarks>
         public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
@@ -143,15 +148,15 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 从指定路径读取 JSON 文件并反序列化为指定类型的对象。
+        /// Reads a JSON file from the specified path and deserializes it into the specified type.
         /// </summary>
-        /// <typeparam name="T">要反序列化的目标类型，必须是引用类型。</typeparam>
-        /// <param name="path">JSON 文件的完整路径。</param>
-        /// <param name="typeInfo">可选的 JSON 类型信息元数据，用于支持源生成器反序列化。</param>
-        /// <returns>反序列化后的对象实例；如果文件不存在则返回 <c>default</c>。</returns>
+        /// <typeparam name="T">The target type for deserialization. Must be a reference type.</typeparam>
+        /// <param name="path">The full path of the JSON file.</param>
+        /// <param name="typeInfo">Optional JSON type info metadata for source generator deserialization support.</param>
+        /// <returns>The deserialized object instance; returns <c>default</c> if the file does not exist.</returns>
         /// <remarks>
-        /// 如果文件不存在，不会抛出异常而是返回 <c>null</c>。
-        /// 支持通过 <c>JsonTypeInfo</c> 进行源生成器模式。
+        /// If the file does not exist, no exception is thrown and <c>null</c> is returned.
+        /// Supports source generator mode via <c>JsonTypeInfo</c>.
         /// </remarks>
         public static T? GetJson<T>(string path, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
@@ -169,13 +174,13 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 在系统临时目录中创建一个带有唯一名称的子目录，用于存放临时更新文件。
+        /// Creates a uniquely named subdirectory in the system temporary directory for storing temporary update files.
         /// </summary>
-        /// <param name="name">用于标识临时目录用途的自定义名称。</param>
-        /// <returns>创建的临时目录的完整路径。</returns>
+        /// <param name="name">A custom name identifying the purpose of the temporary directory.</param>
+        /// <returns>The full path of the created temporary directory.</returns>
         /// <remarks>
-        /// 目录命名格式为 <c>generalupdate_{时间戳}_{进程ID}_{name}</c>。
-        /// 如果目录已存在不会重复创建。调用方负责在不再需要时清理此目录。
+        /// The directory naming format is <c>generalupdate_{timestamp}_{processId}_{name}</c>.
+        /// If the directory already exists, it will not be recreated. The caller is responsible for cleaning up this directory when it is no longer needed.
         /// </remarks>
         public static string GetTempDirectory(string name)
         {
@@ -190,12 +195,12 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 递归删除指定目录及其所有子目录和文件。
+        /// Recursively deletes the specified directory and all of its subdirectories and files.
         /// </summary>
-        /// <param name="targetDir">要删除的目标目录路径。</param>
+        /// <param name="targetDir">The path to the target directory to delete.</param>
         /// <remarks>
-        /// 在删除前会将每个文件的属性重置为 <see cref="FileAttributes.Normal"/>，
-        /// 以避免因只读属性导致删除失败。此操作不可恢复，请谨慎使用。
+        /// Before deletion, each file's attributes are reset to <see cref="FileAttributes.Normal"/>
+        /// to prevent deletion failures caused by read-only attributes. This operation is irreversible, use with caution.
         /// </remarks>
         public static void DeleteDirectory(string targetDir)
         {
@@ -214,14 +219,14 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 递归获取指定目录下的所有文件，支持跳过黑名单中的子目录。
+        /// Recursively retrieves all files under the specified directory, with support for skipping subdirectories via the blacklist.
         /// </summary>
-        /// <param name="path">要遍历的根目录路径。</param>
-        /// <param name="skipDirectorys">需要跳过的子目录名称列表（包含匹配）。</param>
-        /// <returns>所有未跳过的文件的 <see cref="FileInfo"/> 集合。</returns>
+        /// <param name="path">The root directory path to traverse.</param>
+        /// <param name="skipDirectorys">The list of subdirectory names to skip (uses containment matching).</param>
+        /// <returns>A collection of <see cref="FileInfo"/> instances for all files that were not skipped.</returns>
         /// <remarks>
-        /// 此方法仅跳过第一层子目录（不递归跳过），适用于备份和全量文件枚举场景。
-        /// 如果遍历过程中因权限等原因发生异常，会返回空集合而不是抛出异常。
+        /// This method only skips first-level subdirectories (does not recursively skip) and is suitable for backup and full file enumeration scenarios.
+        /// If an exception occurs during traversal (e.g., due to permissions), an empty collection is returned instead of throwing an exception.
         /// </remarks>
         public static List<FileInfo> GetAllFiles(string path, List<string> skipDirectorys)
         {
@@ -256,13 +261,13 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 私有递归方法，获取指定路径下的所有文件（无黑名单过滤）。
+        /// Private recursive method that retrieves all files under the specified path (without blacklist filtering).
         /// </summary>
-        /// <param name="path">要遍历的目录路径。</param>
-        /// <returns>目录中所有文件的 <see cref="FileInfo"/> 集合。</returns>
+        /// <param name="path">The directory path to traverse.</param>
+        /// <returns>A collection of <see cref="FileInfo"/> instances for all files in the directory.</returns>
         /// <remarks>
-        /// 与 <see cref="GetAllFiles"/> 不同，此方法不包含目录跳过逻辑。
-        /// 如果遍历过程中因权限等原因发生异常，会返回空集合而不是抛出异常。
+        /// Unlike <see cref="GetAllFiles"/>, this method does not include directory-skipping logic.
+        /// If an exception occurs during traversal (e.g., due to permissions), an empty collection is returned instead of throwing an exception.
         /// </remarks>
         private static List<FileInfo> GetAllfiles(string path)
         {
@@ -285,14 +290,14 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 使用 SHA-256 哈希算法比较两个文件的内容是否完全相同。
+        /// Compares the contents of two files to determine whether they are identical using the SHA-256 hash algorithm.
         /// </summary>
-        /// <param name="leftPath">第一个文件的完整路径。</param>
-        /// <param name="rightPath">第二个文件的完整路径。</param>
-        /// <returns>如果两个文件的哈希值相同则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+        /// <param name="leftPath">The full path of the first file.</param>
+        /// <param name="rightPath">The full path of the second file.</param>
+        /// <returns><c>true</c> if the hash values of the two files are equal; otherwise, <c>false</c>.</returns>
         /// <remarks>
-        /// 此方法计算两个文件的 SHA-256 哈希值并进行字节序列比较。
-        /// 适用于大文件比较场景，比逐字节读取更高效。
+        /// This method computes the SHA-256 hash of both files and compares the resulting byte sequences.
+        /// It is suitable for large file comparisons and is more efficient than byte-by-byte reading.
         /// </remarks>
         public static bool HashEquals(string leftPath, string rightPath)
         {
@@ -303,22 +308,22 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 备份整个应用程序目录到指定位置。
+        /// Backs up the entire application directory to the specified location.
         /// </summary>
-        /// <param name="sourcePath">源应用程序目录路径。</param>
-        /// <param name="backupPath">目标备份目录路径。</param>
-        /// <param name="directoryNames">需要跳过的子目录名称列表（包含匹配）。</param>
+        /// <param name="sourcePath">The source application directory path.</param>
+        /// <param name="backupPath">The target backup directory path.</param>
+        /// <param name="directoryNames">The list of subdirectory names to skip (uses containment matching).</param>
         /// <remarks>
         /// <para>
-        /// 备份流程：
+        /// Backup flow:
         /// <list type="number">
-        ///   <item><description>如果备份目录已存在，先删除它。</description></item>
-        ///   <item><description>创建新的备份目录。</description></item>
-        ///   <item><description>递归复制源目录中的所有文件和子目录，跳过 <paramref name="directoryNames"/> 中匹配的目录。</description></item>
+        ///   <item><description>If the backup directory already exists, delete it first.</description></item>
+        ///   <item><description>Create a new backup directory.</description></item>
+        ///   <item><description>Recursively copy all files and subdirectories from the source directory, skipping directories that match <paramref name="directoryNames"/>.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// 此方法会覆盖目标目录中已存在的文件。
+        /// This method overwrites existing files in the target directory.
         /// </para>
         /// </remarks>
         public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames)
@@ -351,13 +356,14 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 从备份目录恢复整个应用程序到指定位置。
+        /// Restores the entire application from a backup directory to the specified location.
         /// </summary>
-        /// <param name="backupPath">备份目录路径。</param>
-        /// <param name="sourcePath">要恢复到的目标应用程序目录路径。</param>
+        /// <param name="backupPath">The backup directory path.</param>
+        /// <param name="sourcePath">The target application directory path to restore to.</param>
         /// <remarks>
-        /// 如果目标目录不存在，会自动创建。恢复操作会完整复制备份目录中所有文件和子目录到目标位置，
-        /// 并覆盖已存在的同名文件。此方法不包含黑名单过滤逻辑，会完整恢复所有备份内容。
+        /// If the target directory does not exist, it will be created automatically. The restore operation copies all files and subdirectories
+        /// from the backup directory to the target location, overwriting any existing files with the same name.
+        /// This method does not include blacklist filtering logic and restores all backup content completely.
         /// </remarks>
         public static void Restore(string backupPath, string sourcePath)
         {
@@ -386,15 +392,15 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 异步备份整个应用程序目录（将同步备份操作调度到线程池执行）。
+        /// Asynchronously backs up the entire application directory (offloads the synchronous backup operation to the thread pool).
         /// </summary>
-        /// <param name="sourcePath">源应用程序目录路径。</param>
-        /// <param name="backupPath">目标备份目录路径。</param>
-        /// <param name="directoryNames">需要跳过的子目录名称列表。</param>
-        /// <returns>表示异步备份操作的任务。</returns>
+        /// <param name="sourcePath">The source application directory path.</param>
+        /// <param name="backupPath">The target backup directory path.</param>
+        /// <param name="directoryNames">The list of subdirectory names to skip.</param>
+        /// <returns>A task representing the asynchronous backup operation.</returns>
         /// <remarks>
-        /// 此方法通过 <c>Task.Run</c> 将 <see cref="Backup"/> 调用调度到线程池，
-        /// 适用于 UI 应用程序中避免阻塞主线程的场景。
+        /// This method offloads the <see cref="Backup"/> call to the thread pool via <c>Task.Run</c>,
+        /// making it suitable for UI applications where blocking the main thread should be avoided.
         /// </remarks>
         public static async System.Threading.Tasks.Task BackupAsync(string sourcePath, string backupPath, System.Collections.Generic.IReadOnlyList<string> directoryNames)
         {
@@ -402,13 +408,13 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 异步从备份目录恢复应用程序（将同步恢复操作调度到线程池执行）。
+        /// Asynchronously restores the application from a backup directory (offloads the synchronous restore operation to the thread pool).
         /// </summary>
-        /// <param name="backupPath">备份目录路径。</param>
-        /// <param name="sourcePath">要恢复到的目标应用程序目录路径。</param>
-        /// <returns>表示异步恢复操作的任务。</returns>
+        /// <param name="backupPath">The backup directory path.</param>
+        /// <param name="sourcePath">The target application directory path to restore to.</param>
+        /// <returns>A task representing the asynchronous restore operation.</returns>
         /// <remarks>
-        /// 此方法通过 <c>Task.Run</c> 将 <see cref="Restore"/> 调用调度到线程池。
+        /// This method offloads the <see cref="Restore"/> call to the thread pool via <c>Task.Run</c>.
         /// </remarks>
         public static async System.Threading.Tasks.Task RestoreAsync(string backupPath, string sourcePath)
         {
@@ -416,13 +422,13 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 异步清理旧版本备份，仅保留最近的 N 个版本（将同步清理操作调度到线程池执行）。
+        /// Asynchronously cleans up old backup versions, retaining only the most recent N versions (offloads the synchronous cleanup to the thread pool).
         /// </summary>
-        /// <param name="installPath">应用程序安装根目录路径。</param>
-        /// <param name="keepVersions">要保留的最新备份版本数量，默认为 3。</param>
-        /// <returns>表示异步清理操作的任务。</returns>
+        /// <param name="installPath">The application installation root directory path.</param>
+        /// <param name="keepVersions">The number of most recent backup versions to retain. Default is 3.</param>
+        /// <returns>A task representing the asynchronous cleanup operation.</returns>
         /// <remarks>
-        /// 此方法通过 <c>Task.Run</c> 将 <see cref="CleanBackup"/> 调用调度到线程池。
+        /// This method offloads the <see cref="CleanBackup"/> call to the thread pool via <c>Task.Run</c>.
         /// </remarks>
         public static async System.Threading.Tasks.Task CleanBackupAsync(string installPath, int keepVersions = 3)
         {
@@ -433,22 +439,22 @@ namespace GeneralUpdate.Core.FileSystem
         #region Private Methods
 
         /// <summary>
-        /// 私有递归方法，读取指定目录下的所有文件并转换为 <see cref="FileNode"/> 列表。
+        /// Private recursive method that reads all files under the specified directory and converts them into a list of <see cref="FileNode"/> instances.
         /// </summary>
-        /// <param name="path">当前要遍历的目录路径。</param>
-        /// <param name="rootPath">根目录路径，用于计算相对路径。如果为 <c>null</c>，则使用 <paramref name="path"/> 作为根目录。</param>
-        /// <returns>目录中所有 <see cref="FileNode"/> 的集合。</returns>
+        /// <param name="path">The directory path currently being traversed.</param>
+        /// <param name="rootPath">The root directory path used for calculating relative paths. If <c>null</c>, <paramref name="path"/> is used as the root.</param>
+        /// <returns>A collection of <see cref="FileNode"/> instances for all files in the directory.</returns>
         /// <remarks>
         /// <para>
-        /// 遍历逻辑：
+        /// Traversal logic:
         /// <list type="bullet">
-        ///   <item><description>枚举当前目录中的所有文件，计算每个文件的 SHA-256 哈希值和相对路径。</description></item>
-        ///   <item><description>如果设置了 <see cref="BlackListMatcher"/>，会跳过匹配黑名单的文件。</description></item>
-        ///   <item><description>递归遍历所有子目录，跳过匹配黑名单的子目录。</description></item>
+        ///   <item><description>Enumerates all files in the current directory, computing the SHA-256 hash and relative path for each file.</description></item>
+        ///   <item><description>If <see cref="BlackListMatcher"/> is set, files matching the blacklist are skipped.</description></item>
+        ///   <item><description>Recursively traverses all subdirectories, skipping those that match the blacklist.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// 相对路径的计算使用 <c>Uri.MakeRelativeUri</c> 方法，确保跨平台兼容性。
+        /// Relative paths are computed using the <c>Uri.MakeRelativeUri</c> method to ensure cross-platform compatibility.
         /// </para>
         /// </remarks>
         private IEnumerable<FileNode> ReadFileNode(string path, string rootPath = null)
@@ -490,32 +496,32 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 获取自增的文件树节点 ID，使用线程安全的交错增量操作。
+        /// Gets an auto-incrementing file tree node ID using a thread-safe interlocked increment operation.
         /// </summary>
-        /// <returns>下一个可用的文件节点 ID。</returns>
+        /// <returns>The next available file node ID.</returns>
         /// <remarks>
-        /// 此方法通过 <see cref="Interlocked.Increment"/> 保证多线程环境下的 ID 唯一性。
+        /// This method uses <see cref="Interlocked.Increment"/> to guarantee ID uniqueness in multi-threaded environments.
         /// </remarks>
         private long GetId() => Interlocked.Increment(ref _fileCount);
 
         /// <summary>
-        /// 重置文件树节点 ID 计数器为 0，使用线程安全的交错交换操作。
+        /// Resets the file tree node ID counter to 0 using a thread-safe interlocked exchange operation.
         /// </summary>
         /// <remarks>
-        /// 在每次新的 <see cref="Compare"/> 操作开始时调用，以确保每个比较操作使用独立的 ID 序列。
+        /// Called at the start of each new <see cref="Compare"/> operation to ensure each comparison uses an independent ID sequence.
         /// </remarks>
         private void ResetId() => Interlocked.Exchange(ref _fileCount, 0);
 
         /// <summary>
-        /// 清理旧的备份版本，仅保留最近的 N 个版本。
+        /// Cleans up old backup versions, retaining only the most recent N versions.
         /// </summary>
-        /// <param name="installPath">应用程序安装根目录路径。</param>
-        /// <param name="keepVersions">要保留的最新备份版本数量，默认为 3。</param>
+        /// <param name="installPath">The application installation root directory path.</param>
+        /// <param name="keepVersions">The number of most recent backup versions to retain. Default is 3.</param>
         /// <remarks>
-        /// 备份目录位于 <c>{installPath}/__backups</c> 下，每个子目录以版本号命名。
-        /// 此方法按照版本号降序排列，保留前 N 个版本，删除其余所有版本。
-        /// 如果版本号解析失败，视为 <c>0.0</c> 版本（会优先被删除）。
-        /// 如果 <c>__backups</c> 目录不存在，则不执行任何操作。
+        /// Backup directories are located under <c>{installPath}/__backups</c>, with each subdirectory named by version.
+        /// This method sorts directories by version in descending order, retains the top N versions, and deletes all others.
+        /// If a version cannot be parsed, it is treated as version <c>0.0</c> (and will be deleted first).
+        /// If the <c>__backups</c> directory does not exist, no operation is performed.
         /// </remarks>
         public static void CleanBackup(string installPath, int keepVersions = 3)
         {
@@ -536,13 +542,13 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
-        /// 列出所有备份版本及其元数据信息。
+        /// Lists all backup versions and their metadata information.
         /// </summary>
-        /// <param name="installPath">应用程序安装根目录路径。</param>
-        /// <returns>所有备份版本的 <see cref="BackupInfo"/> 只读集合。</returns>
+        /// <param name="installPath">The application installation root directory path.</param>
+        /// <returns>A read-only collection of <see cref="BackupInfo"/> for all backup versions.</returns>
         /// <remarks>
-        /// 每个备份条目包含版本号、完整路径、创建时间和总大小（字节）。
-        /// 如果 <c>__backups</c> 目录不存在，返回空集合。
+        /// Each backup entry contains the version name, full path, creation time, and total size in bytes.
+        /// If the <c>__backups</c> directory does not exist, an empty collection is returned.
         /// </remarks>
         public static IReadOnlyList<BackupInfo> ListBackups(string installPath)
         {
@@ -561,55 +567,55 @@ namespace GeneralUpdate.Core.FileSystem
     }
 
     /// <summary>
-    /// 备份配置项，用于控制备份行为。
+    /// Backup configuration for controlling backup behavior.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 通过配置 <see cref="BackupConfig"/> 可以控制：
+    /// Configuring <see cref="BackupConfig"/> controls the following:
     /// <list type="bullet">
-    ///   <item><description><see cref="KeepVersions"/>：保留的历史备份版本数量。</description></item>
-    ///   <item><description><see cref="BackupRoot"/>：自定义备份根目录（可选）。</description></item>
-    ///   <item><description><see cref="SkipDirectories"/>：备份时需要跳过的子目录列表。</description></item>
-    ///   <item><description><see cref="Enabled"/>：是否启用备份功能。</description></item>
+    ///   <item><description><see cref="KeepVersions"/>: The number of historical backup versions to retain.</description></item>
+    ///   <item><description><see cref="BackupRoot"/>: Custom backup root directory (optional).</description></item>
+    ///   <item><description><see cref="SkipDirectories"/>: The list of subdirectory names to skip during backup.</description></item>
+    ///   <item><description><see cref="Enabled"/>: Whether the backup feature is enabled.</description></item>
     /// </list>
     /// </para>
     /// </remarks>
     public sealed class BackupConfig
     {
         /// <summary>
-        /// 要保留的最新备份版本数量，默认为 3。
+        /// The number of most recent backup versions to retain. Default is 3.
         /// </summary>
         public int KeepVersions { get; set; } = 3;
 
         /// <summary>
-        /// 自定义备份根目录路径。如果为 <c>null</c>，则使用默认备份位置。
+        /// Custom backup root directory path. If <c>null</c>, the default backup location is used.
         /// </summary>
         public string? BackupRoot { get; set; }
 
         /// <summary>
-        /// 备份时需要跳过的子目录名称列表。
+        /// The list of subdirectory names to skip during backup.
         /// </summary>
         /// <remarks>
-        /// 使用包含匹配（<c>string.Contains</c>）进行判断，只要目录名包含列表中的任一字符串即被跳过。
+        /// Uses containment matching (<c>string.Contains</c>) for evaluation. A directory is skipped if its name contains any string in the list.
         /// </remarks>
         public List<string> SkipDirectories { get; set; } = new();
 
         /// <summary>
-        /// 是否启用备份功能，默认为 <c>true</c>。
+        /// Whether the backup feature is enabled. Default is <c>true</c>.
         /// </summary>
         public bool Enabled { get; set; } = true;
     }
 
     /// <summary>
-    /// 备份版本元数据记录。
+    /// Represents metadata for a backup version.
     /// </summary>
-    /// <param name="Version">备份版本的名称（一般为版本号字符串）。</param>
-    /// <param name="Path">备份目录的完整路径。</param>
-    /// <param name="CreatedAt">备份的创建时间。</param>
-    /// <param name="SizeBytes">备份的总大小（字节数）。</param>
+    /// <param name="Version">The name of the backup version (typically a version string).</param>
+    /// <param name="Path">The full path to the backup directory.</param>
+    /// <param name="CreatedAt">The creation time of the backup.</param>
+    /// <param name="SizeBytes">The total size of the backup in bytes.</param>
     /// <remarks>
-    /// 此记录类型用于 <see cref="StorageManager.ListBackups"/> 方法的返回结果，
-    /// 提供每个备份版本的摘要信息以便用户查看和管理历史备份。
+    /// This record type is used as the return type for the <see cref="StorageManager.ListBackups"/> method,
+    /// providing summary information for each backup version so users can view and manage historical backups.
     /// </remarks>
     public record BackupInfo(string Version, string Path, DateTime CreatedAt, long SizeBytes);
 }

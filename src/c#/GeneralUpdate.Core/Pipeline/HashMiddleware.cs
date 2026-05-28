@@ -8,45 +8,48 @@ using GeneralUpdate.Core;
 namespace GeneralUpdate.Core.Pipeline;
 
 /// <summary>
-/// 哈希验证中间件，用于验证下载的压缩包的 SHA256 完整性。
+/// Hash verification middleware for validating the SHA256 integrity of a downloaded archive.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此中间件从 <see cref="PipelineContext"/> 中读取以下键：
+/// This middleware reads the following keys from <see cref="PipelineContext"/>:
 /// <list type="bullet">
-///   <item><description><c>"ZipFilePath"</c> — 已下载的压缩包文件路径。</description></item>
-///   <item><description><c>"Hash"</c> — 预期的 SHA256 哈希值（十六进制字符串）。</description></item>
+///   <item><description><c>"ZipFilePath"</c> — The path to the downloaded archive file.</description></item>
+///   <item><description><c>"Hash"</c> — The expected SHA256 hash value (hexadecimal string).</description></item>
 /// </list>
 /// </para>
 /// <para>
-/// 工作流程：
+/// Workflow:
 /// <list type="number">
-///   <item><description>从上下文获取压缩包路径和期望的哈希值。</description></item>
-///   <item><description>使用 <see cref="Sha256HashAlgorithm"/> 计算文件的实际 SHA256 哈希值。</description></item>
-///   <item><description>将实际哈希值与期望哈希值进行不区分大小写的比较。</description></item>
-///   <item><description>如果匹配，则记录成功日志并继续；如果不匹配，则抛出 <see cref="CryptographicException"/> 终止管道。</description></item>
+///   <item><description>Retrieves the archive path and expected hash from the context.</description></item>
+///   <item><description>Computes the actual SHA256 hash of the file using <see cref="Sha256HashAlgorithm"/>.</description></item>
+///   <item><description>Performs a case-insensitive comparison between the actual and expected hash values.</description></item>
+///   <item><description>If they match, logs success and continues; if they do not match, throws a <see cref="CryptographicException"/> to terminate the pipeline.</description></item>
 /// </list>
 /// </para>
 /// <para>
-/// 此中间件应在 <see cref="CompressMiddleware"/> 之前注册，确保在解压缩之前验证包的完整性。
+/// This middleware should be registered before <see cref="CompressMiddleware"/> to ensure the integrity
+/// of the archive is verified before decompression.
 /// </para>
 /// </remarks>
 public class HashMiddleware : IMiddleware
 {
     /// <summary>
-    /// 异步执行哈希验证逻辑。
+    /// Asynchronously executes the hash verification logic.
     /// </summary>
-    /// <param name="context">管道上下文，包含压缩包路径和期望的哈希值。</param>
-    /// <returns>表示异步操作的任务。</returns>
-    /// <exception cref="CryptographicException">当实际文件的 SHA256 哈希值与期望哈希值不匹配时引发。</exception>
-    /// <exception cref="Exception">文件读取或哈希计算过程中的其他异常。</exception>
+    /// <param name="context">The pipeline context containing the archive path and expected hash value.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="CryptographicException">Thrown when the actual SHA256 hash of the file does not match the expected hash.</exception>
+    /// <exception cref="Exception">Other exceptions that may occur during file reading or hash computation.</exception>
     /// <remarks>
     /// <para>
-    /// 此方法是管道的第一个安全检查阶段。它确保下载的压缩包在传输过程中未被篡改或损坏。
+    /// This method represents the first security-check stage of the pipeline. It ensures that the downloaded
+    /// archive has not been tampered with or corrupted during transit.
     /// </para>
     /// <para>
-    /// 哈希计算在后台线程上执行（通过 <see cref="Task.Run"/>），避免阻塞调用线程。
-    /// 验证失败时，<see cref="CryptographicException"/> 会向上传播，中断整个管道执行。
+    /// Hash computation is performed on a background thread (via <see cref="Task.Run"/>) to avoid blocking
+    /// the calling thread. On verification failure, the <see cref="CryptographicException"/> propagates upward
+    /// to halt the entire pipeline execution.
     /// </para>
     /// </remarks>
     public async Task InvokeAsync(PipelineContext context)
@@ -76,17 +79,19 @@ public class HashMiddleware : IMiddleware
     }
 
     /// <summary>
-    /// 使用 SHA256 算法计算文件的哈希值并与期望值进行比较。
+    /// Computes the SHA256 hash of a file and compares it against the expected value.
     /// </summary>
-    /// <param name="path">要验证的文件完整路径。</param>
-    /// <param name="hash">期望的 SHA256 哈希值（十六进制字符串）。</param>
+    /// <param name="path">The full path to the file to verify.</param>
+    /// <param name="hash">The expected SHA256 hash value (hexadecimal string).</param>
     /// <returns>
-    /// 如果文件的实际 SHA256 哈希值与 <paramref name="hash"/> 匹配（不区分大小写），则为 <c>true</c>；否则为 <c>false</c>。
+    /// <c>true</c> if the actual SHA256 hash of the file matches <paramref name="hash"/>
+    /// (case-insensitive comparison); otherwise, <c>false</c>.
     /// </returns>
     /// <remarks>
-    /// 哈希计算通过 <see cref="Task.Run"/> 在后台线程池线程上执行，以避免阻塞。
-    /// 内部使用 <see cref="Sha256HashAlgorithm"/> 计算文件哈希，该算法实现了标准的 SHA256 哈希计算。
-    /// 比较操作用 <see cref="StringComparison.OrdinalIgnoreCase"/> 进行不区分大小写的十六进制字符串比较。
+    /// Hash computation is performed on a background thread-pool thread via <see cref="Task.Run"/>
+    /// to avoid blocking. Internally uses <see cref="Sha256HashAlgorithm"/> to compute the file hash,
+    /// which implements the standard SHA256 hash algorithm. The comparison uses
+    /// <see cref="StringComparison.OrdinalIgnoreCase"/> for case-insensitive hexadecimal string comparison.
     /// </remarks>
     private Task<bool> VerifyFileHash(string path, string hash)
     {
