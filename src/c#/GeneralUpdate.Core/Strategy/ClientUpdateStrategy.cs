@@ -1,14 +1,10 @@
-using GeneralUpdate.Core.Differential;
-using GeneralUpdate.Differential.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
@@ -16,7 +12,6 @@ using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
-using GeneralUpdate.Core.Network;
 using GeneralUpdate.Core.Pipeline;
 
 namespace GeneralUpdate.Core.Strategy;

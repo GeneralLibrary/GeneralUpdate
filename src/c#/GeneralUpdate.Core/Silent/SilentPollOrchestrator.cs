@@ -11,7 +11,6 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Download.Sources;
-using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.JsonContext;

@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Hooks;
 

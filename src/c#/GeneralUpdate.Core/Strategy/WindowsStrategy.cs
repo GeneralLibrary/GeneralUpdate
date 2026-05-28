@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.FileSystem;
-using GeneralUpdate.Core;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Configuration;

@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Download.Abstractions;
-using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Download.Policy;
 

@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Compress;
 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.Download.Abstractions;
 
 namespace GeneralUpdate.Core.JsonContext;
 

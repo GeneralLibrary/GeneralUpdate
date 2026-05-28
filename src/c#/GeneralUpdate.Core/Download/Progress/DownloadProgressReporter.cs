@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
 using IProgress = System.IProgress<GeneralUpdate.Core.Download.Models.DownloadProgress>;
 

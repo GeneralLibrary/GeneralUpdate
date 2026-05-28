@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>

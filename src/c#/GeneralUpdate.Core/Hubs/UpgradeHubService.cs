@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using GeneralUpdate.Core;
 using GeneralUpdate.Core.JsonContext;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;

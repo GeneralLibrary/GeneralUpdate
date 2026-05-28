@@ -1,8 +1,6 @@
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Compress;
-using GeneralUpdate.Core.Pipeline;
-using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.Pipeline;
 

@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text;
 using System.Text.Json;
@@ -12,16 +10,10 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Strategy;
-using GeneralUpdate.Core.Network;
-using GeneralUpdate.Core.Security;
-using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.Ipc;
-using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Pipeline;
-using GeneralUpdate.Differential.Abstractions;
 using GeneralUpdate.Differential.Differ;
 
 namespace GeneralUpdate.Core;
