@@ -19,10 +19,4 @@ public sealed class DiffPipelineOptions
     /// Default: false (continue processing other files, report errors via progress).
     /// </summary>
     public bool StopOnFirstError { get; set; } = false;
-
-    /// <summary>
-    /// Gets or sets whether to delete the patch directory after successful apply.
-    /// Default: true.
-    /// </summary>
-    public bool DeletePatchAfterApply { get; set; } = true;
 }

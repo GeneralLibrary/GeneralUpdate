@@ -333,30 +333,6 @@ namespace DifferentialTest.Matchers
             public FileInfo? Match(FileInfo oldFile, IEnumerable<FileInfo> patchFiles) => null;
         }
 
-        /// <summary>Fully custom <see cref="ICleanStrategy"/> that records whether it was invoked.</summary>
-        private sealed class RecordingCleanStrategy : ICleanStrategy
-        {
-            public bool WasCalled { get; private set; }
-
-            public Task ExecuteAsync(string sourcePath, string targetPath, string patchPath)
-            {
-                WasCalled = true;
-                return Task.CompletedTask;
-            }
-        }
-
-        /// <summary>Fully custom <see cref="IDirtyStrategy"/> that records whether it was invoked.</summary>
-        private sealed class RecordingDirtyStrategy : IDirtyStrategy
-        {
-            public bool WasCalled { get; private set; }
-
-            public Task ExecuteAsync(string appPath, string patchPath)
-            {
-                WasCalled = true;
-                return Task.CompletedTask;
-            }
-        }
-
         #endregion
     }
 }
