@@ -16,7 +16,7 @@ namespace GeneralUpdate.Core.Download.Abstractions;
 /// </para>
 /// <para>
 /// Built-in implementations include <c>HttpDownloadExecutor</c> (HTTP/HTTPS with resume support)
-/// and <c>OssDownloadExecutor</c> (OSS signed URL downloads).
+/// and <c>OssDownloadExecutor</c> (Oss signed URL downloads).
 /// </para>
 /// </remarks>
 public interface IDownloadExecutor

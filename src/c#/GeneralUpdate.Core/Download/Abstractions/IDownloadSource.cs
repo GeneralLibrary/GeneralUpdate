@@ -10,7 +10,7 @@ namespace GeneralUpdate.Core.Download.Abstractions;
 /// <remarks>
 /// <para>
 /// Implementations encapsulate the logic of connecting to a remote service—such as an HTTP
-/// version-validation API, an OSS bucket, or a SignalR hub—and returning a structured list
+/// version-validation API, an Oss bucket, or a SignalR hub—and returning a structured list
 /// of <see cref="DownloadAsset"/> objects for the orchestrator to process.
 /// </para>
 /// <para>

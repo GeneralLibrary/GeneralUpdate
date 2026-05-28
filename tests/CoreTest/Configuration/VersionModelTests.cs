@@ -5,7 +5,7 @@ namespace CoreTest.Configuration;
 
 /// <summary>
 /// Unit tests for configuration model/DTO classes following AAAT (Arrange-Act-Assert-TearDown).
-/// Covers: VersionInfo, VersionOSS, BaseResponseDTO, VersionRespDTO.
+/// Covers: VersionInfo, VersionOss, BaseResponseDTO, VersionRespDTO.
 /// </summary>
 public class VersionModelTests
 {
@@ -171,13 +171,13 @@ public class VersionModelTests
 
     #endregion
 
-    #region VersionOSS — property defaults
+    #region VersionOss — property defaults
 
     [Fact]
-    public void VersionOSS_DefaultInstance_HasDefaultDate()
+    public void VersionOss_DefaultInstance_HasDefaultDate()
     {
         // Arrange & Act
-        var voss = new VersionOSS();
+        var voss = new VersionOss();
 
         // Assert
         Assert.Equal(default(DateTime), voss.PubTime);
@@ -188,13 +188,13 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOSS_AllProperties_SetCorrectly()
+    public void VersionOss_AllProperties_SetCorrectly()
     {
         // Arrange
         var pubTime = new DateTime(2025, 3, 1);
 
         // Act
-        var voss = new VersionOSS
+        var voss = new VersionOss
         {
             PubTime = pubTime,
             PacketName = "update.zip",
@@ -212,10 +212,10 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOSS_JsonSerialization_UsesCorrectJsonPropertyNames()
+    public void VersionOss_JsonSerialization_UsesCorrectJsonPropertyNames()
     {
         // Arrange
-        var voss = new VersionOSS
+        var voss = new VersionOss
         {
             PubTime = new DateTime(2025, 1, 1),
             PacketName = "pkg.zip",
@@ -236,11 +236,11 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOSS_JsonRoundTrip_PreservesAllValues()
+    public void VersionOss_JsonRoundTrip_PreservesAllValues()
     {
         // Arrange
         var pubTime = new DateTime(2025, 6, 1, 12, 0, 0);
-        var original = new VersionOSS
+        var original = new VersionOss
         {
             PubTime = pubTime,
             PacketName = "package-v3.zip",
@@ -252,7 +252,7 @@ public class VersionModelTests
 
         // Act
         var json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<VersionOSS>(json, options);
+        var deserialized = JsonSerializer.Deserialize<VersionOss>(json, options);
 
         // Assert
         Assert.NotNull(deserialized);

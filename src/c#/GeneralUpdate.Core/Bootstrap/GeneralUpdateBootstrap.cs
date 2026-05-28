@@ -35,7 +35,7 @@ namespace GeneralUpdate.Core;
 ///      the upgrade process.<br/>
 ///    • <see cref="AppType.Upgrade"/> — reads IPC data, applies client packages via the
 ///      OS pipeline, then starts the main application.<br/>
-///    • <see cref="AppType.OSSClient"/>/<see cref="AppType.OSSUpgrade"/> — OSS-based
+///    • <see cref="AppType.OssClient"/>/<see cref="AppType.OssUpgrade"/> — Oss-based
 ///      workflow for cloud storage (AliYun, AWS S3, MinIO).<br/>
 /// 4. <b>Platform resolution</b> — <see cref="Strategy.ClientUpdateStrategy.ResolveOsStrategy"/>
 ///    detects the OS and creates <c>WindowsStrategy</c>, <c>LinuxStrategy</c>, or
@@ -114,8 +114,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             AppType.Client => await LaunchWithStrategy(new ClientUpdateStrategy()),
             AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OSSClient => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSClient)),
-            AppType.OSSUpgrade => await LaunchWithStrategy(new OSSUpdateStrategy(AppType.OSSUpgrade)),
+            AppType.OssClient => await LaunchWithStrategy(new OssUpdateStrategy(AppType.OssClient)),
+            AppType.OssUpgrade => await LaunchWithStrategy(new OssUpdateStrategy(AppType.OssUpgrade)),
             _ => await LaunchWithStrategy(new ClientUpdateStrategy())
         };
     }

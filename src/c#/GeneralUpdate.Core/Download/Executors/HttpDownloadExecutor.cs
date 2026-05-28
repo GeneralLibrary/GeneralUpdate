@@ -41,7 +41,7 @@ namespace GeneralUpdate.Core.Download.Executors;
 /// </para>
 /// <para>
 /// This executor is used by higher-level components such as <c>DefaultDownloadOrchestrator</c>
-/// and <c>OSSUpdateStrategy</c> as the actual HTTP download engine.
+/// and <c>OssUpdateStrategy</c> as the actual HTTP download engine.
 /// </para>
 /// </remarks>
 public class HttpDownloadExecutor : IDownloadExecutor
@@ -158,7 +158,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
 
     /// <summary>
     /// Shared download loop: reads data from a source stream, writes to a destination stream,
-    /// and reports download progress. This method is reused by both the HTTP and OSS executors
+    /// and reports download progress. This method is reused by both the HTTP and Oss executors
     /// to avoid duplicating the buffering/reading/writing/progress-reporting logic.
     /// </summary>
     /// <param name="source">The source data stream (typically from an HTTP response stream).</param>

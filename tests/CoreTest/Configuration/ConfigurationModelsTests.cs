@@ -229,9 +229,9 @@ namespace CoreTest.Configuration
         [Fact]
         public void AppType_UpgradeIs2() => Assert.Equal(2, (int)AppType.Upgrade);
         [Fact]
-        public void AppType_OSSClientIs3() => Assert.Equal(3, (int)AppType.OSSClient);
+        public void AppType_OssClientIs3() => Assert.Equal(3, (int)AppType.OssClient);
         [Fact]
-        public void AppType_OSSUpgradeIs4() => Assert.Equal(4, (int)AppType.OSSUpgrade);
+        public void AppType_OssUpgradeIs4() => Assert.Equal(4, (int)AppType.OssUpgrade);
 
         [Fact]
         public void DiffMode_SerialAndParallel_AreDefined()

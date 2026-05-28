@@ -9,13 +9,13 @@ using GeneralUpdate.Core.Download.Models;
 namespace GeneralUpdate.Core.Download.Executors;
 
 /// <summary>
-/// OSS (Object Storage Service) download executor that downloads files via HTTP GET
-/// using pre-signed URLs obtained from an OSS provider.
+/// Oss (Object Storage Service) download executor that downloads files via HTTP GET
+/// using pre-signed URLs obtained from an Oss provider.
 /// </summary>
 /// <remarks>
 /// <para>
 /// This class implements <see cref="IDownloadExecutor"/> and is designed to work with
-/// object storage services such as AliYun OSS, AWS S3, MinIO, and Tencent COS.
+/// object storage services such as AliYun Oss, AWS S3, MinIO, and Tencent COS.
 /// </para>
 /// <para>
 /// The executor delegates the actual data transfer to <see cref="HttpDownloadExecutor.StreamDownloadAsync"/>
@@ -32,7 +32,7 @@ namespace GeneralUpdate.Core.Download.Executors;
 /// </para>
 /// <para>
 /// Note: Unlike <c>HttpDownloadExecutor</c>, this executor does not support resume/download-range headers
-/// because OSS pre-signed URLs are typically short-lived and single-use.
+/// because Oss pre-signed URLs are typically short-lived and single-use.
 /// </para>
 /// </remarks>
 public class OssDownloadExecutor : IDownloadExecutor
@@ -48,7 +48,7 @@ public class OssDownloadExecutor : IDownloadExecutor
         => _client = client ?? throw new ArgumentNullException(nameof(client));
 
     /// <summary>
-    /// Asynchronously downloads a single asset from an OSS pre-signed URL to the specified local path.
+    /// Asynchronously downloads a single asset from an Oss pre-signed URL to the specified local path.
     /// </summary>
     /// <param name="asset">The <see cref="DownloadAsset"/> describing the resource to download, including its signed URL.</param>
     /// <param name="destPath">The full local file path where the downloaded content will be written.</param>

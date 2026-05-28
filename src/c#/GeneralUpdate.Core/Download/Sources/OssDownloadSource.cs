@@ -11,21 +11,21 @@ using GeneralUpdate.Core.JsonContext;
 namespace GeneralUpdate.Core.Download.Sources;
 
 /// <summary>
-/// OSS (Object Storage Service) download source that retrieves a version configuration JSON
+/// Oss (Object Storage Service) download source that retrieves a version configuration JSON
 /// from a remote URL, parses it, and returns a list of <see cref="DownloadAsset"/> objects.
 /// </summary>
 /// <remarks>
 /// <para>
 /// This class implements <see cref="IDownloadSource"/> and supports object storage services
-/// such as AliYun OSS, AWS S3, MinIO, and Tencent COS via pre-signed URLs.
-/// The version JSON format uses <see cref="VersionOSS"/> records.
+/// such as AliYun Oss, AWS S3, MinIO, and Tencent COS via pre-signed URLs.
+/// The version JSON format uses <see cref="VersionOss"/> records.
 /// </para>
 /// <para>
 /// Workflow:
 /// <list type="number">
 ///   <item>Downloads the version JSON file from the configured URL via HTTP GET.</item>
-///   <item>Parses the JSON into a list of <see cref="VersionOSS"/> records using source-generated serialization context.</item>
-///   <item>Converts each <see cref="VersionOSS"/> record into a <see cref="DownloadAsset"/> with name, URL, hash, and version.</item>
+///   <item>Parses the JSON into a list of <see cref="VersionOss"/> records using source-generated serialization context.</item>
+///   <item>Converts each <see cref="VersionOss"/> record into a <see cref="DownloadAsset"/> with name, URL, hash, and version.</item>
 ///   <item>Orders the assets by publish time (<c>PubTime</c>) in ascending order.</item>
 ///   <item>Returns a <see cref="DownloadSourceResult"/> containing the ordered asset list.</item>
 /// </list>
@@ -56,7 +56,7 @@ public class OssDownloadSource : IDownloadSource
 
     /// <summary>
     /// Asynchronously retrieves the list of downloadable assets by downloading and parsing
-    /// the version configuration JSON from the OSS URL.
+    /// the version configuration JSON from the Oss URL.
     /// </summary>
     /// <param name="token">A <see cref="CancellationToken"/> to cancel the operation.</param>
     /// <returns>
@@ -71,7 +71,7 @@ public class OssDownloadSource : IDownloadSource
     /// <list type="number">
     ///   <item>Creates a linked cancellation token with the configured timeout.</item>
     ///   <item>Sends an HTTP GET request to download the complete version JSON response.</item>
-    ///   <item>Deserializes the JSON into a list of <see cref="VersionOSS"/> records.</item>
+    ///   <item>Deserializes the JSON into a list of <see cref="VersionOss"/> records.</item>
     ///   <item>If no records are found, returns an empty result.</item>
     ///   <item>Otherwise, orders records by <c>PubTime</c>, converts each to a <see cref="DownloadAsset"/>,
     ///         and returns the result with both <c>HasMainUpdate</c> and <c>HasUpgradeUpdate</c> set to true.</item>
@@ -79,7 +79,7 @@ public class OssDownloadSource : IDownloadSource
     /// </remarks>
     public async Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
     {
-        // Download and parse the version JSON from OSS
+        // Download and parse the version JSON from Oss
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         cts.CancelAfter(_timeout);
 
@@ -89,18 +89,18 @@ public class OssDownloadSource : IDownloadSource
 
         var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-        var versions = System.Text.Json.JsonSerializer.Deserialize(json, VersionOSSJsonContext.Default.ListVersionOSS);
+        var versions = System.Text.Json.JsonSerializer.Deserialize(json, VersionOssJsonContext.Default.ListVersionOss);
         if (versions == null || versions.Count == 0)
             return new DownloadSourceResult { Assets = Array.Empty<DownloadAsset>() };
 
-        // Convert VersionOSS to DownloadAsset, ordered by publish time
+        // Convert VersionOss to DownloadAsset, ordered by publish time
         var assets = versions
             .OrderBy(v => v.PubTime)
             .Select(v =>
             {
                 if (string.IsNullOrWhiteSpace(v.Url))
                     throw new InvalidOperationException(
-                        $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
+                        $"Oss version '{v.PacketName ?? v.Version}' has no download URL.");
 
                 var zipName = $"{v.PacketName ?? v.Version}.zip";
                 if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))

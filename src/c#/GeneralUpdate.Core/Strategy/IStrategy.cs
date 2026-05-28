@@ -7,7 +7,7 @@ namespace GeneralUpdate.Core.Strategy
 {
     /// <summary>
     /// Defines the contract interface for update strategies.
-    /// All platform-specific update strategies (Windows, Linux, macOS, and OSS) must implement this interface
+    /// All platform-specific update strategies (Windows, Linux, macOS, and Oss) must implement this interface
     /// to provide complete update lifecycle management.
     /// </summary>
     /// <remarks>

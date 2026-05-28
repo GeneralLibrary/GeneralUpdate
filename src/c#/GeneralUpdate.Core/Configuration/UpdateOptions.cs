@@ -47,7 +47,7 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>
         ///     The application role type — <see cref="AppType.Client" />, <see cref="AppType.Upgrade" />,
-        ///     or <see cref="AppType.OSS" />.
+        ///     or <see cref="AppType.Oss" />.
         ///     Defaults to <see cref="AppType.Client" />.
         /// </summary>
         public static UpdateOption<AppType> AppType { get; } = UpdateOption.ValueOf<AppType>("APPTYPE", Configuration.AppType.Client);

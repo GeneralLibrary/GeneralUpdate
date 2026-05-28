@@ -11,9 +11,9 @@ public enum AppType
     /// <summary>Upgrade application — applies downloaded update packages, starts main app.</summary>
     Upgrade = 2,
 
-    /// <summary>OSS client mode — checks version config, starts upgrade process.</summary>
-    OSSClient = 3,
+    /// <summary>Oss client mode — checks version config, starts upgrade process.</summary>
+    OssClient = 3,
 
-    /// <summary>OSS upgrade mode — downloads packages from OSS, deploys to client.</summary>
-    OSSUpgrade = 4
+    /// <summary>Oss upgrade mode — downloads packages from Oss, deploys to client.</summary>
+    OssUpgrade = 4
 }
