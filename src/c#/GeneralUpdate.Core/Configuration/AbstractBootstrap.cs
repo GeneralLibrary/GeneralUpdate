@@ -243,27 +243,6 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        /// Registers an update status reporter for reporting update progress and results
-        /// to a server (e.g., GeneralSpacestation).
-        /// </summary>
-        /// <typeparam name="T">The reporter implementation type; must implement
-        /// <c>IUpdateReporter</c> and have a parameterless constructor.</typeparam>
-        /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
-        /// <remarks>
-        /// <para>The reporter is invoked at key points in the update workflow:</para>
-        /// <para>- Update starts: <c>ReportAsync(Updating)</c>.</para>
-        /// <para>- Download completes: <c>ReportAsync(Updating)</c>.</para>
-        /// <para>- Update applied successfully: <c>ReportAsync(Success)</c>.</para>
-        /// <para>- Update failed: <c>ReportAsync(Failure)</c>.</para>
-        /// <para>The default implementation is <c>NoOpUpdateReporter</c> (no-op). All reporter
-        /// invocations are wrapped in try-catch; a single failure does not block the workflow.</para>
-        /// </remarks>
-        public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
-        {
-            _extensions[typeof(Download.Reporting.IUpdateReporter)] = typeof(T);
-            return (TBootstrap)this;
-        }
-
         /// <summary>
         /// Registers an HTTP authentication provider for attaching authentication credentials
         /// to download requests.
