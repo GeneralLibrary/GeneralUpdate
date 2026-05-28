@@ -26,7 +26,7 @@ namespace GeneralUpdate.Core.Silent;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Follows the same AppType dispatch pattern as <see cref="ClientUpdateStrategy"/>:
+/// Follows the same AppType dispatch pattern as <see cref="ClientStrategy"/>:
 /// </para>
 /// <list type="bullet">
 ///   <item><description><b>Upgrade (AppType=2)</b>: Update packages are applied in-place
@@ -329,7 +329,7 @@ public class SilentPollOrchestrator : IDisposable
             return;
         }
 
-        // Split packages by AppType -- mirrors ClientUpdateStrategy
+        // Split packages by AppType -- mirrors ClientStrategy
         var downloadVersions = plan.Assets.Select(a => new VersionInfo
         {
             Name = a.Name,

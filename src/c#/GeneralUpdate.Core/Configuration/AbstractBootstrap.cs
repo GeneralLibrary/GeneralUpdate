@@ -127,7 +127,7 @@ namespace GeneralUpdate.Core.Configuration
         /// and have a parameterless constructor.</typeparam>
         /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
         /// <remarks>
-        /// Once registered, when <c>ClientUpdateStrategy.ResolveOsStrategy()</c> is called, the
+        /// Once registered, when <c>ClientStrategy.ResolveOsStrategy()</c> is called, the
         /// type registered here is used instead of auto-detecting the current operating system.
         /// This extension point takes effect when <see cref="LaunchAsync"/> executes.
         /// </remarks>
@@ -231,7 +231,7 @@ namespace GeneralUpdate.Core.Configuration
         /// <para>Use this method to register custom data sources, such as a local file system,
         /// FTP server, or private cloud storage for fetching update manifests.</para>
         /// <para>This extension point takes effect when
-        /// <c>ClientUpdateStrategy.ExecuteStandardWorkflowAsync()</c> calls
+        /// <c>ClientStrategy.ExecuteStandardWorkflowAsync()</c> calls
         /// <c>downloadSource.ListAsync()</c>.</para>
         /// </remarks>
         public TBootstrap DownloadSource<T>() where T : Download.Abstractions.IDownloadSource, new()

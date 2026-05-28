@@ -24,6 +24,7 @@ namespace GeneralUpdate.Core.Download.Sources;
 /// Workflow:
 /// <list type="number">
 ///   <item>Downloads the version JSON file from the configured URL via HTTP GET.</item>
+/// 
 ///   <item>Parses the JSON into a list of <see cref="VersionOss"/> records using source-generated serialization context.</item>
 ///   <item>Converts each <see cref="VersionOss"/> record into a <see cref="DownloadAsset"/> with name, URL, hash, and version.</item>
 ///   <item>Orders the assets by publish time (<c>PubTime</c>) in ascending order.</item>

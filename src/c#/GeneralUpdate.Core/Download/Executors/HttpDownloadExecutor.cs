@@ -41,7 +41,7 @@ namespace GeneralUpdate.Core.Download.Executors;
 /// </para>
 /// <para>
 /// This executor is used by higher-level components such as <c>DefaultDownloadOrchestrator</c>
-/// and <c>OssUpdateStrategy</c> as the actual HTTP download engine.
+/// and <c>OssStrategy</c> as the actual HTTP download engine.
 /// </para>
 /// </remarks>
 public class HttpDownloadExecutor : IDownloadExecutor

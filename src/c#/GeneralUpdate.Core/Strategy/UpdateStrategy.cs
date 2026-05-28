@@ -40,7 +40,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// The upgrade side is responsible only for applying updates and launching the application -- zero network overhead.
 /// </para>
 /// </remarks>
-public class UpgradeUpdateStrategy : IStrategy
+public class UpdateStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
@@ -111,17 +111,17 @@ public class UpgradeUpdateStrategy : IStrategy
     /// </remarks>
     public async Task ExecuteAsync()
     {
-        if (_configInfo == null) throw new InvalidOperationException("UpgradeUpdateStrategy not configured.");
+        if (_configInfo == null) throw new InvalidOperationException("UpdateStrategy not configured.");
 
         var ctx = BuildUpdateContext();
         try
         {
-            GeneralTracer.Debug("UpgradeUpdateStrategy.ExecuteAsync start.");
+            GeneralTracer.Debug("UpdateStrategy.ExecuteAsync start.");
 
             // Hooks: allow cancellation before applying updates
             if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
             {
-                GeneralTracer.Info("UpgradeUpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+                GeneralTracer.Info("UpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
                 return;
             }
 
@@ -130,13 +130,13 @@ public class UpgradeUpdateStrategy : IStrategy
             // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
             if (_configInfo.UpdateVersions?.Count > 0)
             {
-                GeneralTracer.Info("UpgradeUpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
+                GeneralTracer.Info("UpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
                                    " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
             }
             else
             {
-                GeneralTracer.Info("UpgradeUpdateStrategy: no updates to apply, starting application directly.");
+                GeneralTracer.Info("UpdateStrategy: no updates to apply, starting application directly.");
             }
 
             // Hooks: after all updates applied
@@ -162,14 +162,14 @@ public class UpgradeUpdateStrategy : IStrategy
             }
             else
             {
-                GeneralTracer.Info("UpgradeUpdateStrategy: LaunchClientAfterUpdate=false, skipping app launch.");
+                GeneralTracer.Info("UpdateStrategy: LaunchClientAfterUpdate=false, skipping app launch.");
             }
         }
         catch (Exception ex)
         {
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
-            GeneralTracer.Error("UpgradeUpdateStrategy.ExecuteAsync failed.", ex);
+            GeneralTracer.Error("UpdateStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
     }

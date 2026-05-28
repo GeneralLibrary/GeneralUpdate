@@ -45,7 +45,7 @@ public class OssIntegrationTests
     [Fact]
     public void OssUpdateStrategy_DownloadSource_IsInjected()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         Assert.Null(strategy.DownloadSource);
         Assert.Null(strategy.DownloadOrchestrator);
 
@@ -58,7 +58,7 @@ public class OssIntegrationTests
     [Fact]
     public void OssUpdateStrategy_Hooks_DefaultToNoOp()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         Assert.IsType<NoOpUpdateHooks>(strategy.Hooks);
         Assert.IsType<NoOpUpdateReporter>(strategy.Reporter);
     }
@@ -66,7 +66,7 @@ public class OssIntegrationTests
     [Fact]
     public async Task OssUpdateStrategy_WithoutConfig_Throws()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             strategy.ExecuteAsync());
     }
@@ -75,7 +75,7 @@ public class OssIntegrationTests
     public async Task OssUpdateStrategy_WithoutConfig_ReturnsWithoutError()
     {
         // Oss client without UpdateUrl or local version config: no exception, just returns
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         var config = new GlobalConfigInfo
         {
             UpdateAppName = "TestOss",

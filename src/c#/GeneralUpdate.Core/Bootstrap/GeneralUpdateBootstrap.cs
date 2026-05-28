@@ -37,7 +37,7 @@ namespace GeneralUpdate.Core;
 ///      OS pipeline, then starts the main application.<br/>
 ///    • <see cref="AppType.OssClient"/>/<see cref="AppType.OssUpgrade"/> — Oss-based
 ///      workflow for cloud storage (AliYun, AWS S3, MinIO).<br/>
-/// 4. <b>Platform resolution</b> — <see cref="Strategy.ClientUpdateStrategy.ResolveOsStrategy"/>
+/// 4. <b>Platform resolution</b> — <see cref="ClientStrategy.ResolveOsStrategy"/>
 ///    detects the OS and creates <c>WindowsStrategy</c>, <c>LinuxStrategy</c>, or
 ///    <c>MacStrategy</c> unless overridden via <c>Strategy&lt;T&gt;()</c>.<br/>
 /// 5. <b>Pipeline execution</b> — the OS strategy runs <c>HashMiddleware → CompressMiddleware
@@ -82,7 +82,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <remarks>
     /// Signals the internal <see cref="CancellationTokenSource"/> to request cancellation
     /// of the ongoing update workflow. After calling this method, the running strategy
-    /// (e.g., <see cref="Strategy.ClientUpdateStrategy"/>) will observe the cancellation
+    /// (e.g., <see cref="ClientStrategy"/>) will observe the cancellation
     /// token and terminate the current operation at the next safe checkpoint.
     /// A cancellation message is also written to the trace log.
     /// </remarks>
@@ -112,11 +112,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return appType switch
         {
-            AppType.Client => await LaunchWithStrategy(new ClientUpdateStrategy()),
-            AppType.Upgrade => await LaunchWithStrategy(new UpgradeUpdateStrategy()),
-            AppType.OssClient => await LaunchWithStrategy(new OssUpdateStrategy(AppType.OssClient)),
-            AppType.OssUpgrade => await LaunchWithStrategy(new OssUpdateStrategy(AppType.OssUpgrade)),
-            _ => await LaunchWithStrategy(new ClientUpdateStrategy())
+            AppType.Client => await LaunchWithStrategy(new ClientStrategy()),
+            AppType.Upgrade => await LaunchWithStrategy(new UpdateStrategy()),
+            AppType.OssClient => await LaunchWithStrategy(new OssStrategy(AppType.OssClient)),
+            AppType.OssUpgrade => await LaunchWithStrategy(new OssStrategy(AppType.OssUpgrade)),
+            _ => await LaunchWithStrategy(new ClientStrategy())
         };
     }
 
@@ -160,7 +160,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             switch (roleStrategy)
             {
-                case ClientUpdateStrategy cs:
+                case ClientStrategy cs:
                     cs.DownloadSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
 
                     if (_updatePrecheck != null)
@@ -175,7 +175,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                     if (downloadPipelineFactory != null) cs.SetDownloadPipelineFactory(downloadPipelineFactory);
                     break;
 
-                case UpgradeUpdateStrategy us:
+                case UpdateStrategy us:
                     us.SetDiffPipeline(diffPipeline);
                     break;
             }
@@ -186,10 +186,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             {
                 switch (roleStrategy)
                 {
-                    case ClientUpdateStrategy cs:
+                    case ClientStrategy cs:
                         cs.SetOsStrategy(customOsStrategy);
                         break;
-                    case UpgradeUpdateStrategy us:
+                    case UpdateStrategy us:
                         us.SetOsStrategy(customOsStrategy);
                         break;
                 }

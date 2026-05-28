@@ -66,7 +66,7 @@ namespace GeneralUpdate.Core.Strategy
         public DiffPipeline? DiffPipeline { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the application to launch. Set by the upper-level strategy (such as <see cref="UpgradeUpdateStrategy"/>)
+        /// Gets or sets the name of the application to launch. Set by the upper-level strategy (such as <see cref="UpdateStrategy"/>)
         /// before calling <see cref="StartAppAsync"/>.
         /// </summary>
         public string? LaunchAppName { get; set; }
@@ -81,7 +81,7 @@ namespace GeneralUpdate.Core.Strategy
         /// Gets or sets whether to prefer using the update path. When <c>true</c>, <see cref="StartAppAsync"/>
         /// will first attempt to resolve the application from <see cref="GlobalConfigInfo.UpdatePath"/>,
         /// and fall back to <see cref="GlobalConfigInfo.InstallPath"/> on failure.
-        /// Set by <see cref="ClientUpdateStrategy"/> when launching the upgrade process.
+        /// Set by <see cref="ClientStrategy"/> when launching the upgrade process.
         /// </summary>
         public bool UseUpdatePath { get; set; }
 

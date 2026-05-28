@@ -56,12 +56,12 @@ namespace GeneralUpdate.Core.Strategy;
 /// <para>
 /// 10. <b>Launch Upgrade Process</b>: Delegates to the OS strategy via <c>LaunchUpgradeProcessAsync</c> to start the upgrade executable.</para>
 /// <para>
-/// This class uses a <b>two-layer strategy design</b>: <c>ClientUpdateStrategy</c> acts as the "role" strategy responsible for orchestrating the update flow;
+/// This class uses a <b>two-layer strategy design</b>: <c>ClientStrategy</c> acts as the "role" strategy responsible for orchestrating the update flow;
 /// it internally composes an OS-specific platform strategy (<see cref="WindowsStrategy"/>, <see cref="LinuxStrategy"/>, <see cref="MacStrategy"/>)
 /// to handle platform-related operations (file operations, process management, installation path determination, etc.).
 /// </para>
 /// </remarks>
-public class ClientUpdateStrategy : IStrategy
+public class ClientStrategy : IStrategy
 {
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
@@ -118,7 +118,7 @@ public class ClientUpdateStrategy : IStrategy
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClientUpdateStrategy"/> class.
+    /// Initializes a new instance of the <see cref="ClientStrategy"/> class.
     /// </summary>
     /// <remarks>
     /// Default constructor. All properties use default values (no-op hooks, no-op reporter).
@@ -126,16 +126,16 @@ public class ClientUpdateStrategy : IStrategy
     /// in <see cref="ExecuteStandardWorkflowAsync"/>.
     /// The strategy instance must be initialized via <see cref="Create"/> with a <see cref="GlobalConfigInfo"/>.
     /// </remarks>
-    public ClientUpdateStrategy() { }
+    public ClientStrategy() { }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClientUpdateStrategy"/> class with a custom download orchestrator.
+    /// Initializes a new instance of the <see cref="ClientStrategy"/> class with a custom download orchestrator.
     /// </summary>
     /// <param name="orchestrator">Custom download orchestrator instance to take over the batch download flow. If <c>null</c>, the default orchestrator is used.</param>
     /// <remarks>
     /// The orchestrator passed via this constructor takes priority over the value set via <see cref="SetOrchestrator"/>.
     /// </remarks>
-    public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator)
+    public ClientStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator)
         => _orchestrator = orchestrator;
 
     /// <summary>
@@ -230,11 +230,11 @@ public class ClientUpdateStrategy : IStrategy
     /// </remarks>
     public async Task ExecuteAsync()
     {
-        if (_configInfo == null) throw new InvalidOperationException("ClientUpdateStrategy not configured.");
+        if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
 
         try
         {
-            GeneralTracer.Debug("ClientUpdateStrategy.ExecuteAsync start.");
+            GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
             await CallSmallBowlHomeAsync(_configInfo.Bowl);
             await ExecuteWorkflowAsync();
         }
@@ -243,7 +243,7 @@ public class ClientUpdateStrategy : IStrategy
             var errCtx = BuildUpdateContext();
             await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
-            GeneralTracer.Error("ClientUpdateStrategy.ExecuteAsync failed.", ex);
+            GeneralTracer.Error("ClientStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
     }
@@ -287,7 +287,7 @@ public class ClientUpdateStrategy : IStrategy
     /// allowing the update to be skipped based on business logic.
     /// </summary>
     /// <param name="func">Pre-check callback function that receives an <see cref="UpdateInfoEventArgs"/> parameter and returns <c>true</c> to skip the update, <c>false</c> to continue.</param>
-    /// <returns>Returns the current <see cref="ClientUpdateStrategy"/> instance, supporting fluent chaining.</returns>
+    /// <returns>Returns the current <see cref="ClientStrategy"/> instance, supporting fluent chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <c>null</c>.</exception>
     /// <remarks>
     /// <para>The pre-check callback is invoked in the <see cref="CanSkip"/> method and is only effective for non-forced updates.</para>
@@ -295,7 +295,7 @@ public class ClientUpdateStrategy : IStrategy
     /// such as version number, release date, or update content.</para>
     /// <para>For example: skip an update when the new version only contains non-critical fixes and the current version is below a certain threshold.</para>
     /// </remarks>
-    public ClientUpdateStrategy UseUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
+    public ClientStrategy UseUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));
         return this;
@@ -368,7 +368,7 @@ public class ClientUpdateStrategy : IStrategy
     private async Task ExecuteStandardWorkflowAsync()
     {
         GeneralTracer.Info(
-            $"ClientUpdateStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
+            $"ClientStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
         // Use injected DownloadSource (Hub/HTTP), or default to HttpDownloadSource
         var downloadSource = DownloadSource ?? new Download.Sources.HttpDownloadSource(
@@ -399,7 +399,7 @@ public class ClientUpdateStrategy : IStrategy
             (true, false) => UpdateScenario.MainOnly,
             (true, true) => UpdateScenario.Both,
         };
-        GeneralTracer.Info($"ClientUpdateStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
+        GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
         var versionInfos = downloadPlan.Assets.Select(a => new VersionInfo
@@ -434,14 +434,14 @@ public class ClientUpdateStrategy : IStrategy
         var isForcibly = downloadPlan.IsForcibly;
         if (CanSkip(isForcibly, updateInfoArgs))
         {
-            GeneralTracer.Info("ClientUpdateStrategy: update skipped.");
+            GeneralTracer.Info("ClientStrategy: update skipped.");
             return;
         }
 
         // Scenario None: nothing to update — exit early
         if (scenario == UpdateScenario.None)
         {
-            GeneralTracer.Info("ClientUpdateStrategy: no update available for client or upgrade.");
+            GeneralTracer.Info("ClientStrategy: no update available for client or upgrade.");
             return;
         }
 
@@ -449,7 +449,7 @@ public class ClientUpdateStrategy : IStrategy
         var hooksCtx = BuildUpdateContext();
         if (!await SafeOnBeforeUpdateAsync(hooksCtx).ConfigureAwait(false))
         {
-            GeneralTracer.Info("ClientUpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+            GeneralTracer.Info("ClientStrategy: update cancelled by OnBeforeUpdateAsync hook.");
             return;
         }
 
@@ -465,7 +465,7 @@ public class ClientUpdateStrategy : IStrategy
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
         {
             GeneralTracer.Warn(
-                $"ClientUpdateStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
+                $"ClientStrategy: version {_configInfo.LastVersion} matches known-failed upgrade.");
             return;
         }
 
@@ -476,7 +476,7 @@ public class ClientUpdateStrategy : IStrategy
         }
         else
         {
-            GeneralTracer.Info("ClientUpdateStrategy: backup skipped (BackupEnabled=false).");
+            GeneralTracer.Info("ClientStrategy: backup skipped (BackupEnabled=false).");
         }
 
         _osStrategy!.Create(_configInfo);
@@ -484,7 +484,7 @@ public class ClientUpdateStrategy : IStrategy
         // Download ALL packages via orchestrator (requirement 6: client downloads everything
         // regardless of whether client or upgrade needs updating)
         var orchOptions = Download.Models.DownloadOrchestratorOptions.From(_configInfo);
-        GeneralTracer.Info($"ClientUpdateStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
+        GeneralTracer.Info($"ClientStrategy: downloading {downloadPlan.Assets.Count} asset(s).");
         if (_orchestrator != null)
         {
             await _orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
@@ -515,7 +515,7 @@ public class ClientUpdateStrategy : IStrategy
         var upgradeVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
         var clientVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Client).ToList();
         GeneralTracer.Info(
-            $"ClientUpdateStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
+            $"ClientStrategy: Upgrade packages={upgradeVersions.Count}, MainApp packages={clientVersions.Count}");
 
         // ── Dispatch by scenario — one switch, four states, zero nested if-else ──
         switch (scenario)
@@ -524,7 +524,7 @@ public class ClientUpdateStrategy : IStrategy
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
-                GeneralTracer.Info("ClientUpdateStrategy: Upgrade-only update applied, client continues running.");
+                GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
                 break;
 
             case UpdateScenario.MainOnly:
@@ -560,7 +560,7 @@ public class ClientUpdateStrategy : IStrategy
     private async Task ApplyUpgradePackagesAsync(List<VersionInfo> upgradeVersions)
     {
         if (upgradeVersions.Count == 0) return;
-        GeneralTracer.Info("ClientUpdateStrategy: applying Upgrade packages in place.");
+        GeneralTracer.Info("ClientStrategy: applying Upgrade packages in place.");
         _configInfo!.UpdateVersions = upgradeVersions;
         _osStrategy!.Create(_configInfo);
         await _osStrategy.ExecuteAsync().ConfigureAwait(false);
@@ -589,7 +589,7 @@ public class ClientUpdateStrategy : IStrategy
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
         new EncryptedFileProcessInfoProvider().Send(processInfo);
-        GeneralTracer.Info("ClientUpdateStrategy: ProcessInfo sent with MainApp versions only.");
+        GeneralTracer.Info("ClientStrategy: ProcessInfo sent with MainApp versions only.");
     }
 
     /// <summary>
@@ -612,7 +612,7 @@ public class ClientUpdateStrategy : IStrategy
         }
 
         GeneralTracer.Info(
-            $"ClientUpdateStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
+            $"ClientStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
         await _osStrategy!.StartAppAsync();
     }
 
@@ -676,7 +676,7 @@ public class ClientUpdateStrategy : IStrategy
     private void Backup()
     {
         GeneralTracer.Info(
-            $"ClientUpdateStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
+            $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
             _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
     }

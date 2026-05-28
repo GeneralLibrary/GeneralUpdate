@@ -8,7 +8,7 @@ public class StrategyCreationTests
     [Fact]
     public void ClientUpdateStrategy_Create_ResolvesOsStrategy()
     {
-        var strategy = new ClientUpdateStrategy();
+        var strategy = new ClientStrategy();
         var config = new GlobalConfigInfo
         {
             ClientVersion = "1.0.0",
@@ -24,21 +24,21 @@ public class StrategyCreationTests
     [Fact]
     public void ClientUpdateStrategy_Create_NullConfig_Throws()
     {
-        var strategy = new ClientUpdateStrategy();
+        var strategy = new ClientStrategy();
         Assert.Throws<ArgumentNullException>(() => strategy.Create(null));
     }
 
     [Fact]
     public void ClientUpdateStrategy_UseUpdatePrecheck_Null_Throws()
     {
-        var strategy = new ClientUpdateStrategy();
+        var strategy = new ClientStrategy();
         Assert.Throws<ArgumentNullException>(() => strategy.UseUpdatePrecheck(null));
     }
 
     [Fact]
     public void ClientUpdateStrategy_UseUpdatePrecheck_ValidFunc_ReturnsSelf()
     {
-        var strategy = new ClientUpdateStrategy();
+        var strategy = new ClientStrategy();
         var result = strategy.UseUpdatePrecheck(_ => true);
         Assert.Same(strategy, result);
     }
@@ -46,14 +46,14 @@ public class StrategyCreationTests
     [Fact]
     public async Task ClientUpdateStrategy_ExecuteAsync_NotConfigured_Throws()
     {
-        var strategy = new ClientUpdateStrategy();
+        var strategy = new ClientStrategy();
         await Assert.ThrowsAsync<InvalidOperationException>(() => strategy.ExecuteAsync());
     }
 
     [Fact]
     public void UpgradeUpdateStrategy_Create_ResolvesOsStrategy()
     {
-        var strategy = new UpgradeUpdateStrategy();
+        var strategy = new UpdateStrategy();
         var config = new GlobalConfigInfo
         {
             ClientVersion = "1.0.0",
@@ -69,21 +69,21 @@ public class StrategyCreationTests
     [Fact]
     public void UpgradeUpdateStrategy_Create_NullConfig_Throws()
     {
-        var strategy = new UpgradeUpdateStrategy();
+        var strategy = new UpdateStrategy();
         Assert.Throws<ArgumentNullException>(() => strategy.Create(null));
     }
 
     [Fact]
     public async Task UpgradeUpdateStrategy_ExecuteAsync_NotConfigured_Throws()
     {
-        var strategy = new UpgradeUpdateStrategy();
+        var strategy = new UpdateStrategy();
         await Assert.ThrowsAsync<InvalidOperationException>(() => strategy.ExecuteAsync());
     }
 
     [Fact]
     public void OssUpdateStrategy_Create_ClientRole_Succeeds()
     {
-        var strategy = new OssUpdateStrategy(AppType.OssClient);
+        var strategy = new OssStrategy(AppType.OssClient);
         var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
@@ -92,7 +92,7 @@ public class StrategyCreationTests
     [Fact]
     public void OssUpdateStrategy_Create_UpgradeRole_Succeeds()
     {
-        var strategy = new OssUpdateStrategy(AppType.OssUpgrade);
+        var strategy = new OssStrategy(AppType.OssUpgrade);
         var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
@@ -101,14 +101,14 @@ public class StrategyCreationTests
     [Fact]
     public void OssUpdateStrategy_Create_NullConfig_Throws()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         Assert.Throws<ArgumentNullException>(() => strategy.Create(null));
     }
 
     [Fact]
     public void OssUpdateStrategy_DefaultConstructor_UsesOssClientRole()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
@@ -117,7 +117,7 @@ public class StrategyCreationTests
     [Fact]
     public async Task OssUpdateStrategy_StartApp_NullUpgradeAppName_ReturnsWithoutException()
     {
-        var strategy = new OssUpdateStrategy();
+        var strategy = new OssStrategy(AppType.OssClient);
         strategy.Create(new GeneralUpdate.Core.Configuration.GlobalConfigInfo
         {
             ClientVersion = "1.0.0",
@@ -225,7 +225,7 @@ public class OssVersionHelperTests
         Assert.False(CompareVersions("abc", "xyz"));
     }
 
-    // Simulates OssUpdateStrategy.IsOssUpgrade logic
+    // Simulates OssStrategy.IsOssUpgrade logic
     private static bool CompareVersions(string clientVersion, string serverVersion)
     {
         if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion))
