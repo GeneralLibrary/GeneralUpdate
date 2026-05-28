@@ -5,35 +5,38 @@ using System.Text;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    ///     提供配置对象之间的集中映射工具方法。
-    ///     确保 <see cref="Configinfo" />、<see cref="GlobalConfigInfo" /> 和 <see cref="ProcessInfo" />
-    ///     之间的字段映射保持一致，降低在维护过程中遗漏或错误映射字段的风险。
+    ///     Provides centralized mapping utility methods between configuration objects.
+    ///     Ensures consistent field mapping across <see cref="Configinfo" />, <see cref="GlobalConfigInfo" />,
+    ///     and <see cref="ProcessInfo" />, reducing the risk of missed or incorrectly mapped fields during maintenance.
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         <c>ConfigurationMapper</c> 是更新流程中配置转换的核心枢纽，负责以下两个方向的映射：
+    ///         <c>ConfigurationMapper</c> is the central hub for configuration transformation in the update workflow,
+    ///         responsible for mapping in two directions:
     ///     </para>
     ///     <para>
     ///         <list type="number">
     ///             <item>
     ///                 <description>
-    ///                     <see cref="MapToGlobalConfigInfo" />：将用户提供的 <see cref="Configinfo" />
-    ///                     映射为内部运行时配置 <see cref="GlobalConfigInfo" />。此映射在更新流程初始化阶段执行，
-    ///                     将外部 API 的配置参数传递到内部工作流。
+    ///                     <see cref="MapToGlobalConfigInfo" />: Maps the user-provided <see cref="Configinfo" />
+    ///                     to the internal runtime configuration <see cref="GlobalConfigInfo" />. This mapping is
+    ///                     performed during the update workflow initialization phase, passing external API configuration
+    ///                     parameters into the internal workflow.
     ///                 </description>
     ///             </item>
     ///             <item>
     ///                 <description>
-    ///                     <see cref="MapToProcessInfo" />：将内部运行时配置 <see cref="GlobalConfigInfo" />
-    ///                     映射为进程间通信参数 <see cref="ProcessInfo" />。此映射在客户端准备启动升级进程时执行，
-    ///                     将计算后的所有运行时状态序列化后传递给升级进程。
+    ///                     <see cref="MapToProcessInfo" />: Maps the internal runtime configuration
+    ///                     <see cref="GlobalConfigInfo" /> to the inter-process communication parameters
+    ///                     <see cref="ProcessInfo" />. This mapping is performed when the client is about to launch
+    ///                     the upgrade process, serializing all computed runtime state for the upgrade process.
     ///                 </description>
     ///             </item>
     ///         </list>
     ///     </para>
     ///     <para>
-    ///         通过将所有映射逻辑集中在此类中，避免了在引导代码（Bootstrap）各处分散的字段赋值逻辑，
-    ///         从而简化了维护工作并降低了引入缺陷的可能性。
+    ///         By centralizing all mapping logic in this class, scattered field assignment logic throughout the
+    ///         bootstrap code is avoided, simplifying maintenance and reducing the likelihood of introducing defects.
     ///     </para>
     /// </remarks>
     /// <seealso cref="Configinfo" />
@@ -43,29 +46,29 @@ namespace GeneralUpdate.Core.Configuration
     public static class ConfigurationMapper
     {
         /// <summary>
-        ///     将用户提供的配置 (<see cref="Configinfo" />) 映射到内部运行时配置
-        ///     (<see cref="GlobalConfigInfo" />)。
-        ///     对所有共享的配置属性执行一对一的字段映射。
+        ///     Maps the user-provided configuration (<see cref="Configinfo" />) to the internal runtime configuration
+        ///     (<see cref="GlobalConfigInfo" />).
+        ///     Performs one-to-one field mapping for all shared configuration properties.
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         此方法执行浅拷贝映射，将 <see cref="Configinfo" /> 中的所有公共属性和基类属性
-        ///         逐一赋值到 <see cref="GlobalConfigInfo" /> 实例中。
+        ///         This method performs a shallow copy mapping, assigning all public and base class properties from
+        ///         <see cref="Configinfo" /> to a <see cref="GlobalConfigInfo" /> instance one by one.
         ///     </para>
         ///     <para>
-        ///         如果 <paramref name="target" /> 为 <c>null</c>，将自动创建一个新的
-        ///         <see cref="GlobalConfigInfo" /> 实例。如果 <paramref name="source" /> 为 <c>null</c>，
-        ///         则直接返回空的（或新创建的）目标实例，不会抛出异常。
+        ///         If <paramref name="target" /> is <c>null</c>, a new <see cref="GlobalConfigInfo" /> instance is
+        ///         automatically created. If <paramref name="source" /> is <c>null</c>, the method returns the empty
+        ///         (or newly created) target instance without throwing an exception.
         ///     </para>
         /// </remarks>
         /// <param name="source">
-        ///     包含初始设置的用户提供配置对象。可以为 <c>null</c>。
+        ///     The user-provided configuration object containing initial settings. Can be <c>null</c>.
         /// </param>
         /// <param name="target">
-        ///     待填充的内部配置对象。如果为 <c>null</c>，将自动创建新实例。
+        ///     The internal configuration object to populate. If <c>null</c>, a new instance is automatically created.
         /// </param>
         /// <returns>
-        ///     一个填充了来自 <paramref name="source" /> 的配置值的 <see cref="GlobalConfigInfo" /> 实例。
+        ///     A <see cref="GlobalConfigInfo" /> instance populated with configuration values from <paramref name="source" />.
         /// </returns>
         public static GlobalConfigInfo MapToGlobalConfigInfo(Configinfo source, GlobalConfigInfo target = null)
         {
@@ -104,61 +107,63 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     将内部运行时配置 (<see cref="GlobalConfigInfo" />) 映射到进程间通信参数
-        ///     (<see cref="ProcessInfo" />)。
+        ///     Maps the internal runtime configuration (<see cref="GlobalConfigInfo" />) to inter-process communication
+        ///     parameters (<see cref="ProcessInfo" />).
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         此方法将之前分散在引导代码各处的复杂参数传递逻辑集中到一处管理。
-        ///         生成的 <see cref="ProcessInfo" /> 对象将被序列化为 JSON 字符串，
-        ///         通过命令行参数或标准输入传递给升级进程。
+        ///         This method centralizes the complex parameter passing logic that was previously scattered across
+        ///         the bootstrap code. The resulting <see cref="ProcessInfo" /> object is serialized to a JSON string
+        ///         and passed to the upgrade process via command-line arguments or standard input.
         ///     </para>
         ///     <para>
-        ///         映射过程中需要注意以下几点：
+        ///         The following points should be noted during mapping:
         ///         <list type="bullet">
         ///             <item>
         ///                 <description>
-        ///                     <c>MainAppName</c> 映射到 <c>ProcessInfo.AppName</c>（字段名不同以保持向后兼容）。
+        ///                     <c>MainAppName</c> maps to <c>ProcessInfo.AppName</c> (different field name for backward compatibility).
         ///                 </description>
         ///             </item>
         ///             <item>
         ///                 <description>
-        ///                     <c>ClientVersion</c> 映射到 <c>ProcessInfo.CurrentVersion</c>。
+        ///                     <c>ClientVersion</c> maps to <c>ProcessInfo.CurrentVersion</c>.
         ///                 </description>
         ///             </item>
         ///             <item>
         ///                 <description>
-        ///                     压缩编码 (<see cref="Encoding" />) 和压缩格式 (<see cref="Format" />) 是管道阶段计算后的值。
+        ///                     The compression encoding (<see cref="Encoding" />) and compression format (<see cref="Format" />)
+        ///                     are values computed during the pipeline stage.
         ///                 </description>
         ///             </item>
         ///             <item>
         ///                 <description>
-        ///                     黑名单参数来自 <c>BlackListManager</c>，在映射过程中作为独立参数传入。
+        ///                     Blacklist parameters come from <c>BlackListManager</c> and are passed as separate parameters
+        ///                     during mapping.
         ///                 </description>
         ///             </item>
         ///         </list>
         ///     </para>
         /// </remarks>
         /// <param name="source">
-        ///     包含所有运行时状态的内部配置对象。不能为 <c>null</c>。
+        ///     The internal configuration object containing all runtime state. Must not be <c>null</c>.
         /// </param>
         /// <param name="updateVersions">
-        ///     来自更新服务器响应的版本信息对象列表。
+        ///     The list of version information objects from the update server response.
         /// </param>
         /// <param name="blackFileFormats">
-        ///     来自 <c>BlackListManager</c> 的黑名单文件格式列表。
+        ///     The list of blacklisted file formats from <c>BlackListManager</c>.
         /// </param>
         /// <param name="blackFiles">
-        ///     来自 <c>BlackListManager</c> 的黑名单文件列表。
+        ///     The list of blacklisted files from <c>BlackListManager</c>.
         /// </param>
         /// <param name="skipDirectories">
-        ///     来自 <c>BlackListManager</c> 的需跳过目录列表。
+        ///     The list of directories to skip from <c>BlackListManager</c>.
         /// </param>
         /// <returns>
-        ///     一个准备序列化用于进程间通信的 <see cref="ProcessInfo" /> 对象。
+        ///     A <see cref="ProcessInfo" /> object ready for serialization and inter-process communication.
         /// </returns>
         /// <exception cref="ArgumentNullException">
-        ///     当 <paramref name="source" /> 为 <c>null</c> 时抛出。
+        ///     Thrown when <paramref name="source" /> is <c>null</c>.
         /// </exception>
         public static ProcessInfo MapToProcessInfo(
             GlobalConfigInfo source,

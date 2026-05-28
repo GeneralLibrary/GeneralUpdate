@@ -22,47 +22,48 @@ using GeneralUpdate.Core.Pipeline;
 namespace GeneralUpdate.Core.Strategy;
 
 /// <summary>
-/// 客户端更新策略。负责与服务器校验版本、下载更新包、构造升级端所需的进程信息并启动升级进程。
+/// Client update strategy. Responsible for version verification with the server, downloading update packages,
+/// constructing process information required by the upgrade process, and launching the upgrade process.
 /// </summary>
 /// <remarks>
-/// <para>本策略是 <c>AppType.Client</c> 角色策略，完整更新流程如下：</para>
+/// <para>This strategy serves the <c>AppType.Client</c> role. The complete update workflow is as follows:</para>
 /// <para>
-/// 1. <b>版本校验</b>：通过 <see cref="Download.Abstractions.IDownloadSource.ListAsync"/> 向服务器发送版本信息，
-///    根据返回值设置 <c>IsMainUpdate</c> 和 <c>IsUpgradeUpdate</c> 标志，确定更新场景。
+/// 1. <b>Version Verification</b>: Sends version information to the server via <see cref="Download.Abstractions.IDownloadSource.ListAsync"/>,
+///    and sets the <c>IsMainUpdate</c> and <c>IsUpgradeUpdate</c> flags based on the response to determine the update scenario.
 /// </para>
 /// <para>
-/// 2. <b>事件分发</b>：构造 <see cref="UpdateInfoEventArgs"/> 并通过 <c>EventManager</c> 分发到订阅者。
+/// 2. <b>Event Dispatch</b>: Constructs an <see cref="UpdateInfoEventArgs"/> and dispatches it to subscribers via <c>EventManager</c>.
 /// </para>
 /// <para>
-/// 3. <b>跳过检查</b>：如果非强制更新且预检查回调返回 <c>true</c>，则跳过本次更新。
+/// 3. <b>Skip Check</b>: If the update is not forced and the pre-check callback returns <c>true</c>, the update is skipped.
 /// </para>
 /// <para>
-/// 4. <b>更新前钩子</b>：调用 <c>Hooks.OnBeforeUpdateAsync</c>，允许外部逻辑取消本次更新。
+/// 4. <b>Pre-Update Hook</b>: Calls <c>Hooks.OnBeforeUpdateAsync</c>, allowing external logic to cancel the update.
 /// </para>
 /// <para>
-/// 5. <b>备份</b>：将当前安装目录备份到临时目录（可通过 <c>BackupEnabled</c> 禁用）。
+/// 5. <b>Backup</b>: Backs up the current installation directory to a temporary directory (can be disabled via <c>BackupEnabled</c>).
 /// </para>
 /// <para>
-/// 6. <b>下载</b>：通过下载编排器下载所有更新包，支持自定义策略、执行器和处理管道。
+/// 6. <b>Download</b>: Downloads all update packages through the download orchestrator, supporting custom policies, executors, and processing pipelines.
 /// </para>
 /// <para>
-/// 7. <b>场景分发</b>：根据服务器校验结果执行不同流程：
-///    - <c>UpgradeOnly</c>：仅原地应用升级程序更新包；
-///    - <c>MainOnly</c>：序列化主程序更新包为 <c>ProcessInfo</c> 并通过 IPC 发送，启动升级进程；
-///    - <c>Both</c>：先应用升级程序更新包，再发送主程序信息并启动升级进程。
+/// 7. <b>Scenario Dispatch</b>: Executes different workflows based on the server validation result:
+///    - <c>UpgradeOnly</c>: Applies upgrade program update packages in place only;
+///    - <c>MainOnly</c>: Serializes main program update packages as <c>ProcessInfo</c> and sends via IPC, then starts the upgrade process;
+///    - <c>Both</c>: Applies upgrade program update packages first, then sends main program info and starts the upgrade process.
 /// </para>
 /// <para>
-/// 8. <b>升级应用</b>：通过 <c>ApplyUpgradePackagesAsync</c> 调用 OS 策略管道原地应用增量/全量更新包。
+/// 8. <b>Upgrade Application</b>: Calls <c>ApplyUpgradePackagesAsync</c> to apply incremental/full update packages in place through the OS strategy pipeline.
 /// </para>
 /// <para>
-/// 9. <b>IPC 通信</b>：通过 <c>SendProcessIpc</c> 将主程序更新信息序列化为 JSON 并通过加密 IPC 发送给升级端。
+/// 9. <b>IPC Communication</b>: Serializes main program update information as JSON via <c>SendProcessIpc</c> and sends it to the upgrade process through encrypted IPC.
 /// </para>
 /// <para>
-/// 10. <b>启动升级进程</b>：通过 <c>LaunchUpgradeProcessAsync</c> 委托 OS 策略启动升级端可执行文件。</para>
+/// 10. <b>Launch Upgrade Process</b>: Delegates to the OS strategy via <c>LaunchUpgradeProcessAsync</c> to start the upgrade executable.</para>
 /// <para>
-/// 本类采用<b>双层策略设计</b>：<c>ClientUpdateStrategy</c> 作为"角色"策略，负责编排更新流程；
-/// 内部组合一个 OS 特定的平台策略（<see cref="WindowsStrategy"/>、<see cref="LinuxStrategy"/>、<see cref="MacStrategy"/>）
-/// 处理平台相关操作（文件操作、进程管理、安装路径判断等）。
+/// This class uses a <b>two-layer strategy design</b>: <c>ClientUpdateStrategy</c> acts as the "role" strategy responsible for orchestrating the update flow;
+/// it internally composes an OS-specific platform strategy (<see cref="WindowsStrategy"/>, <see cref="LinuxStrategy"/>, <see cref="MacStrategy"/>)
+/// to handle platform-related operations (file operations, process management, installation path determination, etc.).
 /// </para>
 /// </remarks>
 public class ClientUpdateStrategy : IStrategy
@@ -78,7 +79,7 @@ public class ClientUpdateStrategy : IStrategy
     private int _mainRecordId;
 
     /// <summary>
-    /// 由服务器验证结果确定的更新场景，表示需要更新的目标。
+    /// Update scenario determined by the server validation result, indicating which update targets are needed.
     /// </summary>
     private enum UpdateScenario
     {
@@ -89,122 +90,125 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 获取或设置更新生命周期钩子。由引导程序通过 <c>.Hooks&lt;T&gt;()</c> 注册注入。
+    /// Gets or sets the update lifecycle hooks. Registered and injected by the bootstrap via <c>.Hooks&lt;T&gt;()</c>.
     /// </summary>
-    /// <value>实现了 <c>IUpdateHooks</c> 的钩子实例。默认为 <c>NoOpUpdateHooks</c>（无操作实现）。</value>
+    /// <value>An <c>IUpdateHooks</c> hook instance. Defaults to <c>NoOpUpdateHooks</c> (no-operation implementation).</value>
     /// <remarks>
-    /// 钩子回调在更新流程的关键节点被安全调用（包裹在 try-catch 中），单个钩子失败不会阻断流程。
-    /// 参见 <see cref="SafeOnBeforeUpdateAsync"/>、<see cref="SafeOnAfterUpdateAsync"/> 等方法。
+    /// Hook callbacks are safely invoked at key points in the update flow (wrapped in try-catch), so a single hook failure does not block the flow.
+    /// See <see cref="SafeOnBeforeUpdateAsync"/>, <see cref="SafeOnAfterUpdateAsync"/>, and related methods.
     /// </remarks>
     public Hooks.IUpdateHooks Hooks { get; set; } = new Hooks.NoOpUpdateHooks();
 
     /// <summary>
-    /// 获取或设置更新状态报告器。由引导程序通过 <c>.UpdateReporter&lt;T&gt;()</c> 注册注入。
+    /// Gets or sets the update status reporter. Registered and injected by the bootstrap via <c>.UpdateReporter&lt;T&gt;()</c>.
     /// </summary>
-    /// <value>实现了 <c>IUpdateReporter</c> 的报告器实例。默认为 <c>NoOpUpdateReporter</c>（无操作实现）。</value>
+    /// <value>An <c>IUpdateReporter</c> reporter instance. Defaults to <c>NoOpUpdateReporter</c> (no-operation implementation).</value>
     /// <remarks>
-    /// 报告器在更新开始、下载完成、更新应用成功或失败时向服务器上报状态。
-    /// 所有上报调用都包裹在 try-catch 中，上报失败不会阻断流程。
-    /// 参见 <see cref="SafeReportUpdateStartedAsync"/>、<see cref="SafeReportDownloadCompletedAsync"/> 等方法。
+    /// The reporter reports status to the server when the update starts, download completes, or the update is applied or fails.
+    /// All reporting calls are wrapped in try-catch, so a reporting failure does not block the flow.
+    /// See <see cref="SafeReportUpdateStartedAsync"/>, <see cref="SafeReportDownloadCompletedAsync"/>, and related methods.
     /// </remarks>
     public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
     /// <summary>
-    /// 获取或设置下载数据源。由引导程序通过 <c>.DownloadSource&lt;T&gt;()</c> 注册注入，
-    /// 或在引导程序中通过 <c>HubConfig</c> 配置。
+    /// Gets or sets the download data source. Registered and injected by the bootstrap via <c>.DownloadSource&lt;T&gt;()</c>,
+    /// or configured via <c>HubConfig</c> in the bootstrap.
     /// </summary>
-    /// <value>实现了 <c>IDownloadSource</c> 的数据源实例。为 <c>null</c> 时默认使用 <c>HttpDownloadSource</c>。</value>
+    /// <value>An <c>IDownloadSource</c> data source instance. When <c>null</c>, <c>HttpDownloadSource</c> is used by default.</value>
     /// <remarks>
-    /// 在 <see cref="ExecuteStandardWorkflowAsync"/> 中，如果此属性为 <c>null</c>，
-    /// 则会根据 <c>GlobalConfigInfo</c> 中的 <c>UpdateUrl</c>、版本号等信息自动创建 <c>HttpDownloadSource</c> 实例。
+    /// In <see cref="ExecuteStandardWorkflowAsync"/>, if this property is <c>null</c>,
+    /// an <c>HttpDownloadSource</c> instance is automatically created based on the <c>UpdateUrl</c>, version number,
+    /// and other information in <c>GlobalConfigInfo</c>.
     /// </remarks>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
     /// <summary>
-    /// 初始化 <see cref="ClientUpdateStrategy"/> 的新实例。
+    /// Initializes a new instance of the <see cref="ClientUpdateStrategy"/> class.
     /// </summary>
     /// <remarks>
-    /// 默认构造函数。所有属性使用默认值（无操作钩子、无操作报告器）。
-    /// 下载编排器默认为 <c>null</c>，将在 <see cref="ExecuteStandardWorkflowAsync"/> 中创建默认的 <c>DefaultDownloadOrchestrator</c>。
-    /// 策略实例需要通过 <see cref="Create"/> 方法传入 <see cref="GlobalConfigInfo"/> 完成初始化。
+    /// Default constructor. All properties use default values (no-op hooks, no-op reporter).
+    /// The download orchestrator defaults to <c>null</c> and will be set to a default <c>DefaultDownloadOrchestrator</c>
+    /// in <see cref="ExecuteStandardWorkflowAsync"/>.
+    /// The strategy instance must be initialized via <see cref="Create"/> with a <see cref="GlobalConfigInfo"/>.
     /// </remarks>
     public ClientUpdateStrategy() { }
 
     /// <summary>
-    /// 使用自定义下载编排器初始化 <see cref="ClientUpdateStrategy"/> 的新实例。
+    /// Initializes a new instance of the <see cref="ClientUpdateStrategy"/> class with a custom download orchestrator.
     /// </summary>
-    /// <param name="orchestrator">自定义下载编排器实例，用于接管批量下载流程。如果为 <c>null</c>，则使用默认编排器。</param>
+    /// <param name="orchestrator">Custom download orchestrator instance to take over the batch download flow. If <c>null</c>, the default orchestrator is used.</param>
     /// <remarks>
-    /// 通过此构造函数传入的编排器优先级高于通过 <see cref="SetOrchestrator"/> 方法设置的值。
+    /// The orchestrator passed via this constructor takes priority over the value set via <see cref="SetOrchestrator"/>.
     /// </remarks>
     public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator)
         => _orchestrator = orchestrator;
 
     /// <summary>
-    /// 设置自定义 OS 级别策略。由引导程序通过 <c>.Strategy&lt;T&gt;()</c> 注册注入。
+    /// Sets a custom OS-level strategy. Registered and injected by the bootstrap via <c>.Strategy&lt;T&gt;()</c>.
     /// </summary>
-    /// <param name="strategy">自定义 OS 策略实例。设置后将替换 <see cref="ResolveOsStrategy"/> 中的自动平台探测。</param>
+    /// <param name="strategy">Custom OS strategy instance. When set, replaces the automatic platform detection in <see cref="ResolveOsStrategy"/>.</param>
     /// <remarks>
-    /// 当设置此策略后，<see cref="ResolveOsStrategy"/> 将跳过 <c>RuntimeInformation.IsOSPlatform</c> 的检查，
-    /// 直接使用此处注入的策略。适用于需要完全自定义平台行为的场景。
+    /// When this strategy is set, <see cref="ResolveOsStrategy"/> will skip the <c>RuntimeInformation.IsOSPlatform</c> check
+    /// and use this injected strategy directly. Suitable for scenarios requiring completely custom platform behavior.
     /// </remarks>
     public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
 
     /// <summary>
-    /// 设置自定义下载编排器。由引导程序通过 <c>.DownloadOrchestrator&lt;T&gt;()</c> 注册注入。
+    /// Sets a custom download orchestrator. Registered and injected by the bootstrap via <c>.DownloadOrchestrator&lt;T&gt;()</c>.
     /// </summary>
-    /// <param name="orchestrator">自定义下载编排器实例。为 <c>null</c> 时使用默认的 <c>DefaultDownloadOrchestrator</c>。</param>
+    /// <param name="orchestrator">Custom download orchestrator instance. When <c>null</c>, the default <c>DefaultDownloadOrchestrator</c> is used.</param>
     /// <remarks>
-    /// 设置后将在 <see cref="ExecuteStandardWorkflowAsync"/> 的下载阶段使用此编排器。
-    /// 如果已通过构造函数注入编排器，则构造函数中的值优先。
-    /// 自定义编排器完全接管下载流程，<see cref="SetDownloadPolicy"/>、<see cref="SetDownloadExecutor"/> 和
-    /// <see cref="SetDownloadPipelineFactory"/> 的设置将被忽略。
+    /// When set, this orchestrator is used during the download phase of <see cref="ExecuteStandardWorkflowAsync"/>.
+    /// If an orchestrator was already injected via the constructor, the constructor value takes precedence.
+    /// A custom orchestrator fully takes over the download flow; settings from <see cref="SetDownloadPolicy"/>, <see cref="SetDownloadExecutor"/>,
+    /// and <see cref="SetDownloadPipelineFactory"/> are ignored.
     /// </remarks>
     public void SetOrchestrator(Download.Abstractions.IDownloadOrchestrator? orchestrator) => _orchestrator = orchestrator;
 
     /// <summary>
-    /// 设置自定义下载重试策略。由引导程序通过 <c>.DownloadPolicy&lt;T&gt;()</c> 注册注入。
+    /// Sets a custom download retry policy. Registered and injected by the bootstrap via <c>.DownloadPolicy&lt;T&gt;()</c>.
     /// </summary>
-    /// <param name="policy">自定义下载策略实例。为 <c>null</c> 时使用默认重试行为。</param>
+    /// <param name="policy">Custom download policy instance. When <c>null</c>, the default retry behavior is used.</param>
     /// <remarks>
-    /// 仅在使用默认下载编排器（<c>DefaultDownloadOrchestrator</c>）时生效。
-    /// 如果同时设置了自定义编排器（<see cref="SetOrchestrator"/>），则此策略被忽略。
-    /// 下载策略控制每次失败后的等待时间和最大重试次数。
+    /// Only effective when using the default download orchestrator (<c>DefaultDownloadOrchestrator</c>).
+    /// If a custom orchestrator is set via <see cref="SetOrchestrator"/>, this policy is ignored.
+    /// The download policy controls the wait time between retries and the maximum number of retries.
     /// </remarks>
     public void SetDownloadPolicy(Download.Abstractions.IDownloadPolicy? policy) => _customDownloadPolicy = policy;
 
     /// <summary>
-    /// 设置自定义单文件下载执行器。由引导程序通过 <c>.DownloadExecutor&lt;T&gt;()</c> 注册注入。
+    /// Sets a custom single-file download executor. Registered and injected by the bootstrap via <c>.DownloadExecutor&lt;T&gt;()</c>.
     /// </summary>
-    /// <param name="executor">自定义下载执行器实例。为 <c>null</c> 时使用默认的 HTTP 下载执行器。</param>
+    /// <param name="executor">Custom download executor instance. When <c>null</c>, the default HTTP download executor is used.</param>
     /// <remarks>
-    /// 仅在使用默认下载编排器（<c>DefaultDownloadOrchestrator</c>）时生效。
-    /// 如果同时设置了自定义编排器（<see cref="SetOrchestrator"/>），则此执行器被忽略。
-    /// 可用于实现 FTP、SFTP 或私有协议的文件下载。
+    /// Only effective when using the default download orchestrator (<c>DefaultDownloadOrchestrator</c>).
+    /// If a custom orchestrator is set via <see cref="SetOrchestrator"/>, this executor is ignored.
+    /// Can be used to implement file download via FTP, SFTP, or custom protocols.
     /// </remarks>
     public void SetDownloadExecutor(Download.Abstractions.IDownloadExecutor? executor) => _customDownloadExecutor = executor;
 
     /// <summary>
-    /// 设置自定义下载后处理管道工厂。由引导程序通过 <c>.DownloadPipeline&lt;T&gt;()</c> 注册注入。
+    /// Sets a custom download post-processing pipeline factory. Registered and injected by the bootstrap via <c>.DownloadPipeline&lt;T&gt;()</c>.
     /// </summary>
-    /// <param name="factory">管道工厂委托，接收文件路径参数并返回 <c>IDownloadPipeline</c> 实例。为 <c>null</c> 时跳过管道处理。</param>
+    /// <param name="factory">Pipeline factory delegate that receives a file path and returns an <c>IDownloadPipeline</c> instance. When <c>null</c>, pipeline processing is skipped.</param>
     /// <remarks>
-    /// 仅在使用默认下载编排器（<c>DefaultDownloadOrchestrator</c>）时生效。
-    /// 如果同时设置了自定义编排器（<see cref="SetOrchestrator"/>），则此工厂被忽略。
-    /// 管道工厂在每个文件下载完成后被调用，可用于执行哈希校验、解密、病毒扫描等后处理操作。
+    /// Only effective when using the default download orchestrator (<c>DefaultDownloadOrchestrator</c>).
+    /// If a custom orchestrator is set via <see cref="SetOrchestrator"/>, this factory is ignored.
+    /// The pipeline factory is called after each file download completes and can be used for post-processing operations
+    /// such as hash verification, decryption, or virus scanning.
     /// </remarks>
     public void SetDownloadPipelineFactory(Func<string?, Download.Abstractions.IDownloadPipeline>? factory) => _customDownloadPipelineFactory = factory;
 
     /// <summary>
-    /// 使用全局配置信息初始化策略实例。解析 OS 特定策略并传递差异更新管道。
+    /// Initializes the strategy instance with global configuration information. Resolves the OS-specific strategy and passes the differential update pipeline.
     /// </summary>
-    /// <param name="parameter">全局配置信息，包含版本号、安装路径、更新 URL、应用密钥等。</param>
-    /// <exception cref="ArgumentNullException"><paramref name="parameter"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="parameter">Global configuration information containing version number, install path, update URL, app secret key, etc.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is <c>null</c>.</exception>
     /// <remarks>
-    /// 此方法在 <see cref="ExecuteAsync"/> 执行前调用，完成以下初始化：
-    /// <para>- 保存配置信息到 <c>_configInfo</c> 字段；</para>
-    /// <para>- 通过 <see cref="ResolveOsStrategy"/> 解析当前操作系统对应的平台策略；</para>
-    /// <para>- 如果 OS 策略继承自 <c>AbstractStrategy</c>，传递待设置的差异更新管道（<c>DiffPipeline</c>）。</para>
+    /// This method is called before <see cref="ExecuteAsync"/> and completes the following initialization:
+    /// <para>- Stores the configuration in the <c>_configInfo</c> field;</para>
+    /// <para>- Resolves the platform strategy for the current OS via <see cref="ResolveOsStrategy"/>;</para>
+    /// <para>- If the OS strategy inherits from <c>AbstractStrategy</c>, passes the pending differential pipeline (<c>DiffPipeline</c>).</para>
     /// </remarks>
     public void Create(GlobalConfigInfo parameter)
     {
@@ -217,16 +221,17 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 执行客户端更新流程的入口方法。清理冲突进程、执行标准工作流，并在异常时触发错误事件和报告。
+    /// Entry method for executing the client update process. Cleans up conflicting processes, executes the standard workflow,
+    /// and triggers error events and reports on exceptions.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
-    /// <exception cref="InvalidOperationException">当策略尚未通过 <see cref="Create"/> 方法配置时抛出。</exception>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the strategy has not been configured via <see cref="Create"/>.</exception>
     /// <remarks>
-    /// <para>执行流程：</para>
-    /// <para>1. 调用 <see cref="CallSmallBowlHomeAsync"/> 关闭可能冲突的升级进程（Bowl）。</para>
-    /// <para>2. 调用 <see cref="ExecuteWorkflowAsync"/> 执行核心更新工作流。</para>
-    /// <para>3. 如果上述步骤抛出异常，依次安全调用：错误钩子 → 失败报告 → 日志记录 → 事件分发。</para>
-    /// <para>所有异常都被捕获并通过 <see cref="EventManager"/> 分发为 <see cref="ExceptionEventArgs"/>，不会向上传播。</para>
+    /// <para>Execution flow:</para>
+    /// <para>1. Calls <see cref="CallSmallBowlHomeAsync"/> to shut down potentially conflicting upgrade processes (Bowl).</para>
+    /// <para>2. Calls <see cref="ExecuteWorkflowAsync"/> to execute the core update workflow.</para>
+    /// <para>3. If the above steps throw an exception, safely invokes in order: error hook, failure report, log, and event dispatch.</para>
+    /// <para>All exceptions are caught and dispatched as <see cref="ExceptionEventArgs"/> via <see cref="EventManager"/> without propagating upward.</para>
     /// </remarks>
     public async Task ExecuteAsync()
     {
@@ -251,13 +256,13 @@ public class ClientUpdateStrategy : IStrategy
     private DiffPipeline? _pendingDiffPipeline;
 
     /// <summary>
-    /// 设置差异更新管道，用于在 OS 策略上并行应用增量补丁。
+    /// Sets the differential update pipeline for parallel application of incremental patches on the OS strategy.
     /// </summary>
-    /// <param name="diffPipeline">差异更新管道实例。如果为 <c>null</c>，则清除待设置管道。</param>
+    /// <param name="diffPipeline">Differential update pipeline instance. If <c>null</c>, clears the pending pipeline.</param>
     /// <remarks>
-    /// 如果 OS 策略（通过 <see cref="ResolveOsStrategy"/> 解析）尚未初始化，则将管道暂存到 <c>_pendingDiffPipeline</c> 字段，
-    /// 待 <see cref="Create"/> 方法被调用时传递到 OS 策略的 <c>DiffPipeline</c> 属性。
-    /// 差异管道支持并行应用增量补丁（differential patches），显著加快升级包应用速度。
+    /// If the OS strategy (resolved via <see cref="ResolveOsStrategy"/>) is not yet initialized, the pipeline is stored in the
+    /// <c>_pendingDiffPipeline</c> field and passed to the OS strategy's <c>DiffPipeline</c> property when <see cref="Create"/> is called.
+    /// The differential pipeline supports parallel application of incremental patches, significantly speeding up upgrade package application.
     /// </remarks>
     public void SetDiffPipeline(DiffPipeline? diffPipeline)
     {
@@ -268,13 +273,13 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 启动已更新的应用程序。委托给已解析的 OS 特定策略执行。
+    /// Starts the updated application. Delegates to the resolved OS-specific strategy.
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
-    /// 此方法将启动调用委托给底层 OS 策略（<see cref="WindowsStrategy"/>、<see cref="LinuxStrategy"/> 或 <see cref="MacStrategy"/>）。
-    /// 在 <see cref="LaunchUpgradeProcessAsync"/> 中被调用以启动升级端进程。
-    /// 如果 <c>_osStrategy</c> 为 <c>null</c>（尚未调用 <see cref="Create"/>），调用将被安全忽略。
+    /// This method delegates the launch call to the underlying OS strategy (<see cref="WindowsStrategy"/>, <see cref="LinuxStrategy"/>, or <see cref="MacStrategy"/>).
+    /// It is called within <see cref="LaunchUpgradeProcessAsync"/> to start the upgrade process.
+    /// If <c>_osStrategy</c> is <c>null</c> (<see cref="Create"/> has not been called yet), the call is safely ignored.
     /// </remarks>
     public async Task StartAppAsync()
     {
@@ -283,15 +288,17 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 注册更新预检查回调。在版本校验完成后、实际下载和备份前调用，允许根据业务逻辑决定是否跳过本次更新。
+    /// Registers an update pre-check callback. Called after version validation completes but before actual download and backup,
+    /// allowing the update to be skipped based on business logic.
     /// </summary>
-    /// <param name="func">预检查回调函数，接收 <see cref="UpdateInfoEventArgs"/> 参数，返回 <c>true</c> 表示跳过更新，<c>false</c> 表示继续更新。</param>
-    /// <returns>返回当前 <see cref="ClientUpdateStrategy"/> 实例，支持链式调用。</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="func"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="func">Pre-check callback function that receives an <see cref="UpdateInfoEventArgs"/> parameter and returns <c>true</c> to skip the update, <c>false</c> to continue.</param>
+    /// <returns>Returns the current <see cref="ClientUpdateStrategy"/> instance, supporting fluent chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="func"/> is <c>null</c>.</exception>
     /// <remarks>
-    /// <para>预检查回调在 <see cref="CanSkip"/> 方法中被调用，仅在非强制更新时生效。</para>
-    /// <para>回调接收完整的 <see cref="UpdateInfoEventArgs"/>，可根据版本号、发布日期、更新内容等业务逻辑决定是否跳过。</para>
-    /// <para>例如：当更新版本仅包含非关键修复且当前版本低于某个阈值时跳过更新。</para>
+    /// <para>The pre-check callback is invoked in the <see cref="CanSkip"/> method and is only effective for non-forced updates.</para>
+    /// <para>The callback receives the full <see cref="UpdateInfoEventArgs"/> and can decide whether to skip based on business logic
+    /// such as version number, release date, or update content.</para>
+    /// <para>For example: skip an update when the new version only contains non-critical fixes and the current version is below a certain threshold.</para>
     /// </remarks>
     public ClientUpdateStrategy UseUpdatePrecheck(Func<UpdateInfoEventArgs, bool> func)
     {
@@ -302,12 +309,12 @@ public class ClientUpdateStrategy : IStrategy
     #region Workflow
 
     /// <summary>
-    /// 执行核心更新工作流。根据运行时配置决定执行标准模式或静默模式。
+    /// Executes the core update workflow. Determines whether to run standard mode or silent mode based on runtime configuration.
     /// </summary>
     /// <remarks>
-    /// 当前实现始终调用 <see cref="ExecuteStandardWorkflowAsync"/>。
-    /// 运行时选项（<c>Encoding</c>、<c>Format</c>、<c>DownloadTimeOut</c> 等）
-    /// 已由 <c>Bootstrap.ApplyRuntimeOptions()</c> 设置到 <c>_configInfo</c> 上。
+    /// The current implementation always calls <see cref="ExecuteStandardWorkflowAsync"/>.
+    /// Runtime options (<c>Encoding</c>, <c>Format</c>, <c>DownloadTimeOut</c>, etc.)
+    /// are already set on <c>_configInfo</c> by <c>Bootstrap.ApplyRuntimeOptions()</c>.
     /// </remarks>
     private async Task ExecuteWorkflowAsync()
     {
@@ -318,46 +325,48 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 执行标准客户端更新工作流。包含版本校验、事件分发、跳过检查、钩子调用、备份、下载、场景分发和启动升级进程。
+    /// Executes the standard client update workflow. Includes version validation, event dispatch, skip check, hook invocation,
+    /// backup, download, scenario dispatch, and upgrade process launch.
     /// </summary>
     /// <remarks>
-    /// <para>完整执行流程如下：</para>
+    /// <para>Complete execution flow:</para>
     /// <para>
-    /// <b>步骤 1 — 版本校验</b>：使用 <c>DownloadSource</c> 或默认的 <c>HttpDownloadSource</c> 调用服务器验证版本。
-    /// 返回结果包含更新资源清单以及主程序/升级程序的更新标志位。
+    /// <b>Step 1 - Version Validation</b>: Uses <c>DownloadSource</c> or the default <c>HttpDownloadSource</c> to call the server for version validation.
+    /// The response contains the update asset manifest and update flags for the main program/upgrade program.
     /// </para>
     /// <para>
-    /// <b>步骤 2 — 场景判定</b>：根据服务器的 <c>HasMainUpdate</c> 和 <c>HasUpgradeUpdate</c> 标志确定更新场景：
-    /// <c>None</c>（无需更新）、<c>UpgradeOnly</c>（仅升级程序）、<c>MainOnly</c>（仅主程序）、<c>Both</c>（两者都需要更新）。
+    /// <b>Step 2 - Scenario Determination</b>: Determines the update scenario based on the server's <c>HasMainUpdate</c> and <c>HasUpgradeUpdate</c> flags:
+    /// <c>None</c> (no update needed), <c>UpgradeOnly</c> (upgrade program only), <c>MainOnly</c> (main program only), <c>Both</c> (both need updating).
     /// </para>
     /// <para>
-    /// <b>步骤 3 — 事件分发</b>：构造 <see cref="UpdateInfoEventArgs"/> 并通过 <c>EventManager.Instance.Dispatch</c> 分发。
+    /// <b>Step 3 - Event Dispatch</b>: Constructs an <see cref="UpdateInfoEventArgs"/> and dispatches it via <c>EventManager.Instance.Dispatch</c>.
     /// </para>
     /// <para>
-    /// <b>步骤 4 — 跳过检查</b>：若非强制更新且预检查回调返回 <c>true</c>，则跳过本次更新。
+    /// <b>Step 4 - Skip Check</b>: If the update is not forced and the pre-check callback returns <c>true</c>, the update is skipped.
     /// </para>
     /// <para>
-    /// <b>步骤 5 — 更新前钩子</b>：调用 <c>Hooks.OnBeforeUpdateAsync</c>，返回 <c>false</c> 时取消更新。
+    /// <b>Step 5 - Pre-Update Hook</b>: Calls <c>Hooks.OnBeforeUpdateAsync</c>; cancels the update if it returns <c>false</c>.
     /// </para>
     /// <para>
-    /// <b>步骤 6 — 备份</b>：将当前安装目录备份到临时目录（可通过 <c>BackupEnabled</c> 禁用）。
-    /// 同时初始化黑名单配置以排除不需要备份的文件。
+    /// <b>Step 6 - Backup</b>: Backs up the current installation directory to a temporary directory (can be disabled via <c>BackupEnabled</c>).
+    /// Also initializes the blacklist configuration to exclude files that do not need to be backed up.
     /// </para>
     /// <para>
-    /// <b>步骤 7 — 失败版本检查</b>：通过环境变量 <c>UpgradeFail</c> 检查当前版本是否已知失败，避免重复失败的升级。
+    /// <b>Step 7 - Failed Version Check</b>: Checks whether the current version is a known failed upgrade via the <c>UpgradeFail</c> environment variable,
+    /// avoiding repeated failed upgrades.
     /// </para>
     /// <para>
-    /// <b>步骤 8 — 下载</b>：通过下载编排器下载所有更新包。
-    /// 优先使用自定义编排器（<c>_orchestrator</c>），否则使用 <c>DefaultDownloadOrchestrator</c>，
-    /// 后者支持自定义重试策略、下载执行器和后处理管道。
+    /// <b>Step 8 - Download</b>: Downloads all update packages through the download orchestrator.
+    /// Prefers the custom orchestrator (<c>_orchestrator</c>), otherwise uses <c>DefaultDownloadOrchestrator</c>,
+    /// which supports custom retry policies, download executors, and post-processing pipelines.
     /// </para>
     /// <para>
-    /// <b>步骤 9 — 场景分发</b>：根据判定结果执行不同操作：
+    /// <b>Step 9 - Scenario Dispatch</b>: Executes different operations based on the determined scenario:
     /// <list type="bullet">
-    /// <item><description><c>UpgradeOnly</c>：调用 <see cref="ApplyUpgradePackagesAsync"/> 原地应用升级更新包。</description></item>
-    /// <item><description><c>MainOnly</c>：调用 <see cref="SendProcessIpc"/> 发送主程序更新信息，
-    /// 然后调用 <see cref="LaunchUpgradeProcessAsync"/> 启动升级进程。</description></item>
-    /// <item><description><c>Both</c>：先应用升级更新包，再发送主程序信息并启动升级进程。</description></item>
+    /// <item><description><c>UpgradeOnly</c>: Calls <see cref="ApplyUpgradePackagesAsync"/> to apply upgrade packages in place.</description></item>
+    /// <item><description><c>MainOnly</c>: Calls <see cref="SendProcessIpc"/> to send main program update information,
+    /// then calls <see cref="LaunchUpgradeProcessAsync"/> to start the upgrade process.</description></item>
+    /// <item><description><c>Both</c>: Applies upgrade packages first, then sends main program information and starts the upgrade process.</description></item>
     /// </list>
     /// </para>
     /// </remarks>
@@ -545,13 +554,13 @@ public class ClientUpdateStrategy : IStrategy
     #region Scenario actions
 
     /// <summary>
-    /// 原地应用升级程序（Upgrade）的更新包。委托 OS 策略执行实际的补丁应用操作。
+    /// Applies upgrade (Upgrade) update packages in place. Delegates the actual patch application to the OS strategy.
     /// </summary>
-    /// <param name="upgradeVersions">升级程序的版本信息列表。</param>
+    /// <param name="upgradeVersions">The list of version information for the upgrade program.</param>
     /// <remarks>
-    /// 此方法仅处理 <c>AppType.Upgrade</c> 类型的更新包。
-    /// 将更新包路径设置到 <c>_configInfo.UpdateVersions</c>，然后委托 OS 策略（如 <see cref="WindowsStrategy"/>）
-    /// 通过其管道（增量/全量）逐个应用补丁。
+    /// This method only processes update packages of type <c>AppType.Upgrade</c>.
+    /// It sets the update package paths in <c>_configInfo.UpdateVersions</c> and then delegates to the OS strategy
+    /// (such as <see cref="WindowsStrategy"/>) to apply patches one by one through its pipeline (incremental/full).
     /// </remarks>
     private async Task ApplyUpgradePackagesAsync(List<VersionInfo> upgradeVersions)
     {
@@ -563,15 +572,16 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 将主程序（Client）的更新信息序列化为 <c>ProcessInfo</c> 并通过加密 IPC 发送给升级端进程。
+    /// Serializes the main program (Client) update information as <c>ProcessInfo</c> and sends it to the upgrade process via encrypted IPC.
     /// </summary>
-    /// <param name="clientVersions">主程序的版本信息列表。</param>
+    /// <param name="clientVersions">The list of version information for the main program.</param>
     /// <remarks>
-    /// <para>此方法完成以下操作：</para>
-    /// <para>1. 使用 <c>ConfigurationMapper.MapToProcessInfo</c> 将配置信息和版本列表映射为 <c>ProcessInfo</c> 对象；</para>
-    /// <para>2. 将 <c>ProcessInfo</c> 序列化为 JSON 字符串，存储在 <c>_configInfo.ProcessInfo</c> 中；</para>
-    /// <para>3. 通过 <c>EncryptedFileProcessInfoProvider</c> 将加密后的进程信息发送给升级端。</para>
-    /// <para>升级端（Bowl）收到此信息后，将根据 <c>ProcessInfo</c> 执行实际的安装替换操作。</para>
+    /// <para>This method performs the following operations:</para>
+    /// <para>1. Uses <c>ConfigurationMapper.MapToProcessInfo</c> to map configuration information and version list into a <c>ProcessInfo</c> object;</para>
+    /// <para>2. Serializes the <c>ProcessInfo</c> as a JSON string and stores it in <c>_configInfo.ProcessInfo</c>;</para>
+    /// <para>3. Sends the encrypted process information to the upgrade process via <c>EncryptedFileProcessInfoProvider</c>.</para>
+    /// <para>After the upgrade process (Bowl) receives this information, it will perform the actual installation and replacement operations
+    /// based on the <c>ProcessInfo</c>.</para>
     /// </remarks>
     private void SendProcessIpc(List<VersionInfo> clientVersions)
     {
@@ -588,14 +598,14 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 启动升级进程（Bowl/Upgrade App），委托 OS 策略执行平台特定的进程启动操作。
+    /// Launches the upgrade process (Bowl/Upgrade App), delegating to the OS strategy for platform-specific process startup.
     /// </summary>
     /// <remarks>
-    /// <para>启动前配置 OS 策略的启动参数：</para>
-    /// <para>- <c>LaunchAppName</c>：设置为 <c>_configInfo.UpdateAppName</c>，指定要启动的升级程序文件名；</para>
-    /// <para>- <c>LaunchBowl</c>：设置为 <c>false</c>，避免递归启动 Bowl 进程；</para>
-    /// <para>- <c>UseUpdatePath</c>：根据 <c>_configInfo.UpdatePath</c> 是否为空字符串决定。</para>
-    /// <para>调用 <see cref="StartAppAsync"/> 后，升级进程将接管后续的安装替换操作。</para>
+    /// <para>Configures the OS strategy launch parameters before starting:</para>
+    /// <para>- <c>LaunchAppName</c>: Set to <c>_configInfo.UpdateAppName</c>, specifying the upgrade program file name to launch;</para>
+    /// <para>- <c>LaunchBowl</c>: Set to <c>false</c> to avoid recursively launching the Bowl process;</para>
+    /// <para>- <c>UseUpdatePath</c>: Determined by whether <c>_configInfo.UpdatePath</c> is empty.</para>
+    /// <para>After calling <see cref="StartAppAsync"/>, the upgrade process takes over the subsequent installation and replacement operations.</para>
     /// </remarks>
     private async Task LaunchUpgradeProcessAsync()
     {
@@ -616,15 +626,15 @@ public class ClientUpdateStrategy : IStrategy
     #region Helpers
 
     /// <summary>
-    /// 解析当前操作系统对应的更新策略。优先使用自定义策略，否则根据操作系统自动选择。
+    /// Resolves the update strategy for the current operating system. Prefers a custom strategy, otherwise auto-selects based on the OS.
     /// </summary>
-    /// <returns>OS 特定策略实例（<see cref="WindowsStrategy"/>、<see cref="LinuxStrategy"/> 或 <see cref="MacStrategy"/>）。</returns>
-    /// <exception cref="PlatformNotSupportedException">当前操作系统不受支持（非 Windows、Linux 或 macOS）时抛出。</exception>
+    /// <returns>An OS-specific strategy instance (<see cref="WindowsStrategy"/>, <see cref="LinuxStrategy"/>, or <see cref="MacStrategy"/>).</returns>
+    /// <exception cref="PlatformNotSupportedException">Thrown when the current OS is not supported (not Windows, Linux, or macOS).</exception>
     /// <remarks>
-    /// <para>解析优先级：</para>
-    /// <para>1. 通过 <see cref="SetOsStrategy"/> 设置的自定义策略（由引导程序通过 <c>.Strategy&lt;T&gt;()</c> 注入）；</para>
-    /// <para>2. 根据 <c>RuntimeInformation.IsOSPlatform</c> 自动探测当前操作系统并实例化对应策略。</para>
-    /// <para>如果以上均不匹配，则抛出 <see cref="PlatformNotSupportedException"/>。</para>
+    /// <para>Resolution priority:</para>
+    /// <para>1. Custom strategy set via <see cref="SetOsStrategy"/> (injected by the bootstrap via <c>.Strategy&lt;T&gt;()</c>);</para>
+    /// <para>2. Automatic OS detection via <c>RuntimeInformation.IsOSPlatform</c> to instantiate the corresponding strategy.</para>
+    /// <para>If neither matches, a <see cref="PlatformNotSupportedException"/> is thrown.</para>
     /// </remarks>
     private IStrategy ResolveOsStrategy()
     {
@@ -640,12 +650,13 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 初始化文件黑名单配置。用于备份和文件操作时排除不需要处理的文件、格式和目录。
+    /// Initializes the file blacklist configuration. Used to exclude files, formats, and directories that do not need processing
+    /// during backup and file operations.
     /// </summary>
     /// <remarks>
-    /// 优先使用 <c>_configInfo</c> 中配置的黑名单；如果未配置则使用 <see cref="BlackListDefaults"/> 提供的默认值。
-    /// 黑名单包括：排除的文件名列表（如配置文件）、排除的文件扩展名列表（如 .log）、
-    /// 跳过的目录列表（如临时目录）。
+    /// Prefers the blacklist configured in <c>_configInfo</c>; if not configured, uses the defaults from <see cref="BlackListDefaults"/>.
+    /// The blacklist includes: excluded file names (e.g., config files), excluded file extensions (e.g., .log),
+    /// and skipped directories (e.g., temporary directories).
     /// </remarks>
     private void InitBlackList()
     {
@@ -660,12 +671,12 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 备份当前安装目录到指定的备份目录，用于更新失败时回滚。
+    /// Backs up the current installation directory to the specified backup directory for rollback on update failure.
     /// </summary>
     /// <remarks>
-    /// 备份操作通过 <c>StorageManager.Backup</c> 执行，排除黑名单中配置的目录。
-    /// 备份目录的路径格式为：{InstallPath}/backup_{ClientVersion}。
-    /// 此步骤可通过 <c>GlobalConfigInfo.BackupEnabled</c> 设置为 <c>false</c> 跳过。
+    /// The backup operation is performed via <c>StorageManager.Backup</c>, excluding directories configured in the blacklist.
+    /// The backup directory path format is: {InstallPath}/backup_{ClientVersion}.
+    /// This step can be skipped by setting <c>GlobalConfigInfo.BackupEnabled</c> to <c>false</c>.
     /// </remarks>
     private void Backup()
     {
@@ -676,17 +687,17 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 判断本次更新是否可以被跳过。
+    /// Determines whether the current update can be skipped.
     /// </summary>
-    /// <param name="isForcibly">是否强制更新。强制更新时不可跳过。</param>
-    /// <param name="updateInfo">更新信息事件参数，包含版本列表和响应状态。</param>
-    /// <returns>如果可以跳过则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="isForcibly">Whether the update is forced. A forced update cannot be skipped.</param>
+    /// <param name="updateInfo">Update information event arguments containing the version list and response status.</param>
+    /// <returns>Returns <c>true</c> if the update can be skipped; otherwise <c>false</c>.</returns>
     /// <remarks>
-    /// <para>跳过条件：</para>
-    /// <para>1. <paramref name="isForcibly"/> 为 <c>false</c>（非强制更新）；</para>
-    /// <para>2. 通过 <see cref="UseUpdatePrecheck"/> 注册的预检查回调返回 <c>true</c>。</para>
-    /// <para>如果任意条件不满足（强制更新或无预检查回调），则不可跳过。</para>
-    /// <para>此方法在 <see cref="ExecuteStandardWorkflowAsync"/> 的事件分发之后、备份之前被调用。</para>
+    /// <para>Skip conditions:</para>
+    /// <para>1. <paramref name="isForcibly"/> is <c>false</c> (non-forced update);</para>
+    /// <para>2. The pre-check callback registered via <see cref="UseUpdatePrecheck"/> returns <c>true</c>.</para>
+    /// <para>If either condition is not met (forced update or no pre-check callback), the update cannot be skipped.</para>
+    /// <para>This method is called after event dispatch and before backup in <see cref="ExecuteStandardWorkflowAsync"/>.</para>
     /// </remarks>
     private bool CanSkip(bool isForcibly, UpdateInfoEventArgs updateInfo)
     {
@@ -695,15 +706,16 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 检查指定版本是否已被记录为失败的升级版本。
+    /// Checks whether the specified version has been recorded as a known failed upgrade version.
     /// </summary>
-    /// <param name="version">要检查的版本号字符串。</param>
-    /// <returns>如果该版本曾被标记为失败升级且当前环境变量中的失败版本大于或等于指定版本，则返回 <c>true</c>。</returns>
+    /// <param name="version">The version string to check.</param>
+    /// <returns>Returns <c>true</c> if the version was previously marked as a failed upgrade and the failed version in the environment variable
+    /// is greater than or equal to the specified version.</returns>
     /// <remarks>
-    /// 通过读取环境变量 <c>UpgradeFail</c> 获取已知失败的版本号。
-    /// 如果 <c>UpgradeFail</c> 环境变量为空或 <paramref name="version"/> 为空，则返回 <c>false</c>。
-    /// 版本比较使用 <see cref="Version"/> 类的语义化版本比较。
-    /// 此机制用于避免反复尝试已知失败的升级。
+    /// Reads the known failed version number from the <c>UpgradeFail</c> environment variable.
+    /// If the <c>UpgradeFail</c> environment variable is empty or <paramref name="version"/> is empty, returns <c>false</c>.
+    /// Version comparison uses the semantic version comparison of the <see cref="Version"/> class.
+    /// This mechanism avoids repeatedly attempting known failed upgrades.
     /// </remarks>
     private bool CheckFail(string version)
     {
@@ -714,13 +726,13 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 获取当前运行平台的枚举值。
+    /// Gets the platform type for the current running OS.
     /// </summary>
-    /// <returns>当前平台类型（<see cref="PlatformType.Windows"/>、<see cref="PlatformType.Linux"/>、
-    /// <see cref="PlatformType.MacOS"/> 或 <see cref="PlatformType.Unknown"/>）。</returns>
+    /// <returns>The current platform type (<see cref="PlatformType.Windows"/>, <see cref="PlatformType.Linux"/>,
+    /// <see cref="PlatformType.MacOS"/>, or <see cref="PlatformType.Unknown"/>).</returns>
     /// <remarks>
-    /// 使用 <c>RuntimeInformation.IsOSPlatform</c> 进行运行时检测。
-    /// 此返回值用于构造 <c>HttpDownloadSource</c> 时向服务器告知客户端平台。
+    /// Uses <c>RuntimeInformation.IsOSPlatform</c> for runtime detection.
+    /// The return value is used to inform the server of the client platform when constructing <c>HttpDownloadSource</c>.
     /// </remarks>
     private static PlatformType GetPlatform()
     {
@@ -731,14 +743,15 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 关闭指定名称的冲突进程（Bowl 升级进程），释放文件锁定。
+    /// Shuts down conflicting processes (Bowl upgrade process) by name to release file locks.
     /// </summary>
-    /// <param name="processName">要关闭的进程名称（不含扩展名）。为空或空白时跳过。</param>
+    /// <param name="processName">The name of the process to shut down (without extension). Skipped if null or whitespace.</param>
     /// <remarks>
-    /// 此方法在更新流程的入口处被调用，用于确保升级进程（Bowl）不在运行状态，
-    /// 避免文件锁定导致后续备份或替换操作失败。
-    /// 关闭操作通过 <c>GracefulExit.ShutdownAsync</c> 实现优雅退出。
-    /// 如果指定进程不存在或关闭过程中发生异常，此方法会记录警告但不阻断流程。
+    /// This method is called at the entry point of the update flow to ensure the upgrade process (Bowl) is not running,
+    /// preventing file locks from causing subsequent backup or replacement operations to fail.
+    /// The shutdown is performed gracefully via <c>GracefulExit.ShutdownAsync</c>.
+    /// If the specified process does not exist or an exception occurs during shutdown, this method logs a warning
+    /// but does not block the flow.
     /// </remarks>
     private async Task CallSmallBowlHomeAsync(string processName)
     {
@@ -764,9 +777,9 @@ public class ClientUpdateStrategy : IStrategy
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 构建更新上下文对象，用于传递给钩子和报告器方法。
+    /// Builds an update context object for passing to hook and reporter methods.
     /// </summary>
-    /// <returns>包含当前更新信息的 <see cref="Hooks.UpdateContext"/> 实例。</returns>
+    /// <returns>An <see cref="Hooks.UpdateContext"/> instance containing the current update information.</returns>
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
@@ -779,10 +792,10 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全调用更新前钩子。如果钩子抛出异常，记录警告并返回 <c>true</c>（允许继续更新）。
+    /// Safely invokes the pre-update hook. If the hook throws an exception, logs a warning and returns <c>true</c> (allows the update to continue).
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <returns>钩子返回的值；如果钩子抛出异常则返回 <c>true</c>。</returns>
+    /// <param name="ctx">The update context.</param>
+    /// <returns>The value returned by the hook; returns <c>true</c> if the hook throws an exception.</returns>
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -797,9 +810,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全调用启动应用前钩子。如果钩子抛出异常，记录警告并继续流程。
+    /// Safely invokes the pre-start-app hook. If the hook throws an exception, logs a warning and continues the flow.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -813,10 +826,10 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全调用更新错误钩子。如果钩子抛出异常，记录警告。
+    /// Safely invokes the update error hook. If the hook throws an exception, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <param name="error">更新过程中发生的异常。</param>
+    /// <param name="ctx">The update context.</param>
+    /// <param name="error">The exception that occurred during the update.</param>
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try
@@ -830,9 +843,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全调用更新完成后钩子（升级包应用后）。如果钩子抛出异常，记录警告。
+    /// Safely invokes the post-update hook (after upgrade packages are applied). If the hook throws an exception, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -846,9 +859,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全调用下载完成钩子。如果钩子抛出异常，记录警告。
+    /// Safely invokes the download completed hook. If the hook throws an exception, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -866,9 +879,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全上报更新已开始状态。如果上报失败，记录警告。
+    /// Safely reports the update started status. If the report fails, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -884,9 +897,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全上报下载已完成状态。如果上报失败，记录警告。
+    /// Safely reports the download completed status. If the report fails, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeReportDownloadCompletedAsync(Hooks.UpdateContext ctx)
     {
         try
@@ -902,10 +915,10 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全上报更新失败状态。如果上报失败，记录警告。
+    /// Safely reports the update failed status. If the report fails, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
-    /// <param name="error">导致更新失败的异常。</param>
+    /// <param name="ctx">The update context.</param>
+    /// <param name="error">The exception that caused the update to fail.</param>
     private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
     {
         try
@@ -921,9 +934,9 @@ public class ClientUpdateStrategy : IStrategy
     }
 
     /// <summary>
-    /// 安全上报更新应用成功状态。如果上报失败，记录警告。
+    /// Safely reports the update applied success status. If the report fails, logs a warning.
     /// </summary>
-    /// <param name="ctx">更新上下文。</param>
+    /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try

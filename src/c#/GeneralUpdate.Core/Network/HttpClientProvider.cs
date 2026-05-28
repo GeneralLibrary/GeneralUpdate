@@ -11,6 +11,8 @@ public static class HttpClientProvider
 {
     private static readonly HttpClient _shared = new();
 
-    /// <summary>Shared <see cref="HttpClient"/> instance. Do NOT dispose.</summary>
+    /// <summary>
+    /// Gets the shared <see cref="HttpClient"/> instance. Do NOT dispose.
+    /// </summary>
     public static HttpClient Shared => _shared;
 }

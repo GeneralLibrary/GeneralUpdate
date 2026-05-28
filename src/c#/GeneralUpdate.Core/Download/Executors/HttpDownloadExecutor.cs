@@ -10,31 +10,38 @@ using GeneralUpdate.Core.Download.Models;
 namespace GeneralUpdate.Core.Download.Executors;
 
 /// <summary>
-/// 基于 HTTP 协议的文件下载执行器，支持断点续传（Range 请求头）和分块流式下载。
+/// HTTP-based file download executor supporting resumable downloads via the Range request header
+/// and chunked streaming downloads.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IDownloadExecutor"/> 接口，提供从 HTTP 端点下载文件的核心功能。
+/// This class implements <see cref="IDownloadExecutor"/> and provides the core functionality
+/// for downloading files from HTTP endpoints.
 /// </para>
 /// <para>
-/// 主要特性：
+/// Key features:
 /// <list type="bullet">
-///   <item><term>断点续传</term><description>通过 HTTP Range 请求头从上次中断位置继续下载，
-///        支持通过 <c>enableResume</c> 参数启用或禁用。当服务器不支持部分内容响应时，
-///        自动回退到从头下载。</description></item>
-///   <item><term>分块流式下载</term><description>使用 8KB 缓冲区逐块读取和写入数据流，
-///        避免将整个文件加载到内存中。</description></item>
-///   <item><term>进度报告</term><description>通过 <c>IProgress&lt;DownloadProgress&gt;</c>
-///        每 250 毫秒报告一次下载进度，包含已下载字节数、总字节数和百分比。</description></item>
-///   <item><term>超时控制</term><description>支持通过 <c>timeout</c> 参数设置每次请求的超时时间。</description></item>
-///   <item><term>认证支持</term><description>从 <c>DownloadAsset</c> 中读取认证方案和令牌，
-///        为需要授权的下载源提供 HTTP Bearer 或自定义认证。</description></item>
-///   <item><term>取消支持</term><description>通过 <c>CancellationToken</c> 支持取消正在进行的下载操作。</description></item>
+///   <item><term>Resumable downloads</term><description>Uses the HTTP Range header to continue
+///         downloads from where they were interrupted. Can be enabled or disabled via the
+///         <c>enableResume</c> parameter. Automatically falls back to a full download when the
+///         server does not support partial content responses.</description></item>
+///   <item><term>Chunked streaming download</term><description>Reads and writes data streams in
+///         8 KB chunks, avoiding loading the entire file into memory.</description></item>
+///   <item><term>Progress reporting</term><description>Reports download progress via
+///         <c>IProgress&lt;DownloadProgress&gt;</c> every 250 milliseconds, including bytes
+///         downloaded, total bytes, and percentage.</description></item>
+///   <item><term>Timeout control</term><description>Supports configurable per-request timeouts
+///         via the <c>timeout</c> parameter.</description></item>
+///   <item><term>Authentication support</term><description>Reads authentication scheme and token
+///         from <c>DownloadAsset</c> to provide HTTP Bearer or custom authentication for
+///         authorized download sources.</description></item>
+///   <item><term>Cancellation support</term><description>Supports cancelling in-progress downloads
+///         via <c>CancellationToken</c>.</description></item>
 /// </list>
 /// </para>
 /// <para>
-/// 此执行器被 <c>DefaultDownloadOrchestrator</c> 和 <c>OSSUpdateStrategy</c> 等高层组件使用，
-/// 作为实际的 HTTP 下载引擎。
+/// This executor is used by higher-level components such as <c>DefaultDownloadOrchestrator</c>
+/// and <c>OSSUpdateStrategy</c> as the actual HTTP download engine.
 /// </para>
 /// </remarks>
 public class HttpDownloadExecutor : IDownloadExecutor
@@ -44,12 +51,13 @@ public class HttpDownloadExecutor : IDownloadExecutor
     private readonly bool _enableResume;
 
     /// <summary>
-    /// 使用指定的 HTTP 客户端、超时设置和断点续传选项初始化下载执行器。
+    /// Initializes a new instance of the <see cref="HttpDownloadExecutor"/> class
+    /// with the specified HTTP client, timeout, and resume options.
     /// </summary>
-    /// <param name="client">用于发送 HTTP 请求的 <see cref="HttpClient"/> 实例。不能为 null。</param>
-    /// <param name="timeout">每次 HTTP 请求的超时时间。默认为 30 秒。</param>
-    /// <param name="enableResume">是否启用断点续传功能。默认为 true。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="client"/> 为 null 时抛出。</exception>
+    /// <param name="client">The <see cref="HttpClient"/> instance used to send HTTP requests. Must not be null.</param>
+    /// <param name="timeout">The timeout duration for each HTTP request. Defaults to 30 seconds.</param>
+    /// <param name="enableResume">Whether to enable resumable download support. Defaults to true.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="client"/> is null.</exception>
     public HttpDownloadExecutor(HttpClient client, TimeSpan? timeout = null, bool enableResume = true)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
@@ -58,29 +66,29 @@ public class HttpDownloadExecutor : IDownloadExecutor
     }
 
     /// <summary>
-    /// 异步执行单个下载资产的文件下载操作。
+    /// Asynchronously executes the download of a single asset file.
     /// </summary>
-    /// <param name="asset">要下载的资产信息，包含 URL、文件名、大小和哈希值。</param>
-    /// <param name="destPath">下载文件的目标本地路径。</param>
-    /// <param name="progress">可选的进度报告器，用于报告下载进度。</param>
-    /// <param name="token">可选的取消令牌，用于取消下载操作。</param>
-    /// <returns>包含下载结果（成功/失败、已下载字节数、耗时等）的 <see cref="DownloadResult"/>。</returns>
+    /// <param name="asset">The asset information to download, including URL, file name, size, and hash.</param>
+    /// <param name="destPath">The destination local file path for the download.</param>
+    /// <param name="progress">An optional progress reporter for reporting download progress.</param>
+    /// <param name="token">An optional cancellation token to cancel the download operation.</param>
+    /// <returns>A <see cref="DownloadResult"/> containing the download outcome (success/failure, bytes downloaded, duration, etc.).</returns>
     /// <remarks>
     /// <para>
-    /// 下载流程如下：
+    /// Download flow:
     /// </para>
     /// <list type="number">
-    ///   <item>检查目标文件是否已存在部分下载（断点续传支持）。</item>
-    ///   <item>创建 HTTP GET 请求，如果启用续传且存在部分文件，则添加 Range 请求头。</item>
-    ///   <item>如果资产提供了认证方案和令牌，添加 Authorization 请求头。</item>
-    ///   <item>发送请求并读取响应流。</item>
-    ///   <item>如果服务器返回非 206 PartialContent 状态码，则从头开始下载。</item>
-    ///   <item>使用 <see cref="StreamDownloadAsync"/> 分块读取并写入文件。</item>
-    ///   <item>下载完成后报告 100% 进度。</item>
+    ///   <item>Checks whether a partially downloaded file already exists at the destination (for resume support).</item>
+    ///   <item>Creates an HTTP GET request, adding a Range header if resume is enabled and a partial file exists.</item>
+    ///   <item>If the asset provides an authentication scheme and token, adds an Authorization header.</item>
+    ///   <item>Sends the request and reads the response stream.</item>
+    ///   <item>If the server returns a non-206 PartialContent status code, starts the download from the beginning.</item>
+    ///   <item>Reads and writes the file in chunks using <see cref="StreamDownloadAsync"/> with an 8 KB buffer.</item>
+    ///   <item>Reports 100% progress after the download completes.</item>
     /// </list>
     /// <para>
-    /// 如果下载过程中发生异常（除 <c>OperationCanceledException</c> 外），
-    /// 会返回包含错误信息的 <c>DownloadResult</c>，而不是抛出异常。
+    /// If an exception occurs during download (excluding <c>OperationCanceledException</c>),
+    /// a <c>DownloadResult</c> containing the error information is returned instead of throwing.
     /// </para>
     /// </remarks>
     public async Task<DownloadResult> ExecuteAsync(
@@ -149,25 +157,28 @@ public class HttpDownloadExecutor : IDownloadExecutor
     }
 
     /// <summary>
-    /// 共享的下载循环：从源流读取数据，写入目标流，并报告下载进度。
-    /// 此方法被 HTTP 和 OSS 执行器共用，避免重复的缓冲/读取/写入/进度报告逻辑。
+    /// Shared download loop: reads data from a source stream, writes to a destination stream,
+    /// and reports download progress. This method is reused by both the HTTP and OSS executors
+    /// to avoid duplicating the buffering/reading/writing/progress-reporting logic.
     /// </summary>
-    /// <param name="source">源数据流（通常来自 HTTP 响应流）。</param>
-    /// <param name="dest">目标文件流。</param>
-    /// <param name="totalBytes">服务器报告的内容总大小（可为 -1 表示未知）。</param>
-    /// <param name="existingBytes">已存在的部分下载字节数（断点续传支持）。</param>
-    /// <param name="destPath">目标文件路径（仅用于进度报告中的文件名显示）。</param>
-    /// <param name="progress">可选的进度报告器。</param>
-    /// <param name="sw">用于测量下载耗时的计时器。</param>
-    /// <param name="token">取消令牌。</param>
-    /// <returns>包含实际下载字节数和耗时的元组。</returns>
+    /// <param name="source">The source data stream (typically from an HTTP response stream).</param>
+    /// <param name="dest">The destination file stream.</param>
+    /// <param name="totalBytes">The total content size reported by the server (may be -1 if unknown).</param>
+    /// <param name="existingBytes">The number of already-downloaded bytes (for resume support).</param>
+    /// <param name="destPath">The destination file path (used only for file name display in progress reports).</param>
+    /// <param name="progress">An optional progress reporter.</param>
+    /// <param name="sw">A stopwatch for measuring download duration.</param>
+    /// <param name="token">A cancellation token.</param>
+    /// <returns>A tuple containing the actual bytes downloaded and the elapsed duration.</returns>
     /// <remarks>
     /// <para>
-    /// 下载循环使用 8192 字节（8KB）的缓冲区进行分块读取，避免内存占用过高。
+    /// The download loop uses an 8192-byte (8 KB) buffer for chunked reading to avoid
+    /// excessive memory consumption.
     /// </para>
     /// <para>
-    /// 进度报告每 250 毫秒触发一次，或在下载完成时立即触发。
-    /// 进度信息包含文件名、已下载字节数、总字节数（如果已知）以及完成百分比。
+    /// Progress is reported every 250 milliseconds, or immediately upon download completion.
+    /// Progress information includes the file name, bytes downloaded, total bytes (if known),
+    /// and completion percentage.
     /// </para>
     /// </remarks>
     internal static async Task<(long Downloaded, TimeSpan Elapsed)> StreamDownloadAsync(

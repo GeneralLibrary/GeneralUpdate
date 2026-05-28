@@ -6,23 +6,28 @@ using GeneralUpdate.Core.FileSystem;
 namespace GeneralUpdate.Core.Differential;
 
 /// <summary>
-/// <see cref="ICleanMatcher"/> 的默认实现，保留 Clean 阶段（差异生成）的原始行为。
+/// Default implementation of <see cref="ICleanMatcher"/> that preserves the original behavior
+/// of the Clean stage (differential generation).
 /// </summary>
 /// <remarks>
 /// <para>
-/// DefaultCleanMatcher 实现了差异生成阶段的三种核心匹配操作：
+/// DefaultCleanMatcher implements three core matching operations for the differential
+/// generation stage:
 /// </para>
 /// <list type="bullet">
-///   <item><description><see cref="Compare"/>：委托给 <see cref="StorageManager.Compare"/>，
-///   对新旧两个目录进行完整的递归比较。</description></item>
-///   <item><description><see cref="Except"/>：委托给 <see cref="StorageManager.Except"/>，
-///   以左侧为基准找出右侧不存在的文件（即待删除的文件）。</description></item>
-///   <item><description><see cref="Match"/>：通过文件名称和相对路径的不区分大小写匹配，
-///   在新文件中查找对应的旧版本文件。匹配同时要求两个文件都存在在磁盘上才视为有效匹配。</description></item>
+///   <item><description><see cref="Compare"/>: Delegates to <see cref="StorageManager.Compare"/>,
+///   performing a full recursive comparison of two directories.</description></item>
+///   <item><description><see cref="Except"/>: Delegates to <see cref="StorageManager.Except"/>,
+///   identifying files present in the source but absent in the target
+///   (i.e., files to be deleted).</description></item>
+///   <item><description><see cref="Match"/>: Performs a case-insensitive match on file name and
+///   relative path to find the corresponding old version of a new file.
+///   Both files must exist on disk for the match to be considered valid.</description></item>
 /// </list>
 /// <para>
-/// 此实现的设计目标是保持与早期版本的向后兼容性。
-/// 如需自定义匹配逻辑（如基于文件哈希或元数据的匹配），可实现 <see cref="ICleanMatcher"/> 接口。
+/// This implementation is designed to maintain backward compatibility with earlier versions.
+/// To customize matching logic (e.g., hash-based or metadata-based matching),
+/// implement the <see cref="ICleanMatcher"/> interface directly.
 /// </para>
 /// </remarks>
 public class DefaultCleanMatcher : ICleanMatcher

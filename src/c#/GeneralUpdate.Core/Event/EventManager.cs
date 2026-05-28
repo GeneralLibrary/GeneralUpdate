@@ -7,29 +7,31 @@ using GeneralUpdate.Core;
 namespace GeneralUpdate.Core.Event
 {
     /// <summary>
-    /// 线程安全的事件管理器（发布-订阅模式），基于 <see cref="ConcurrentDictionary{TKey, TValue}"/> 实现。
-    /// 支持无锁竞争地添加、移除和分发事件处理器。
+    /// Thread-safe event manager implementing the publish-subscribe pattern, backed by
+    /// <see cref="ConcurrentDictionary{TKey, TValue}"/>.
+    /// Supports lock-free addition, removal, and dispatching of event handlers.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// EventManager 使用单例模式（通过 <see cref="Instance"/> 属性），
-    /// 是整个 GeneralUpdate 更新生命周期中所有事件的统一调度中心。
+    /// EventManager uses the singleton pattern (via the <see cref="Instance"/> property)
+    /// and serves as the central dispatch hub for all events throughout the GeneralUpdate
+    /// update lifecycle.
     /// </para>
     /// <para>
-    /// 核心设计原则：
+    /// Core design principles:
     /// <list type="bullet">
-    ///   <item><description><b>单例</b>：全局唯一实例，确保所有组件共享同一个事件总线。</description></item>
-    ///   <item><description><b>线程安全</b>：使用 <c>ConcurrentDictionary</c> 避免锁竞争。</description></item>
-    ///   <item><description><b>泛型事件</b>：以 <c>Action&lt;object, TEventArgs&gt;</c> 为事件委托类型，
-    ///   按 <c>TEventArgs</c> 类型自动路由。</description></item>
-    ///   <item><description><b>错误隔离</b>：单个处理器的异常不会影响其他处理器。</description></item>
-    ///   <item><description><b>IDisposable</b>：支持释放时清除所有已注册的处理器。</description></item>
+    ///   <item><description><b>Singleton</b>: A single global instance ensures all components share the same event bus.</description></item>
+    ///   <item><description><b>Thread-safe</b>: Uses <c>ConcurrentDictionary</c> to avoid lock contention.</description></item>
+    ///   <item><description><b>Generic events</b>: Uses <c>Action&lt;object, TEventArgs&gt;</c> as the event delegate type,
+    ///   automatically routing by <c>TEventArgs</c> type.</description></item>
+    ///   <item><description><b>Error isolation</b>: An exception in one handler does not affect other handlers.</description></item>
+    ///   <item><description><b>IDisposable</b>: Clears all registered handlers on disposal.</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// 此管理器被 <see cref="GeneralUpdate.Core.Bootstrap.GeneralUpdateBootstrap"/> 内部使用，
-    /// 在更新流程的关键节点（如下载进度、异常、完成等）触发事件。
-    /// 外部可以通过 <see cref="IUpdateEventListener"/> 接口批量订阅所有事件类型。
+    /// This manager is used internally by <see cref="GeneralUpdate.Core.Bootstrap.GeneralUpdateBootstrap"/>
+    /// to fire events at key points in the update flow (e.g., download progress, exceptions, completion).
+    /// External consumers can subscribe to all event types in bulk via the <see cref="IUpdateEventListener"/> interface.
     /// </para>
     /// </remarks>
     public class EventManager : IDisposable
@@ -41,23 +43,24 @@ namespace GeneralUpdate.Core.Event
         private EventManager() { }
 
         /// <summary>
-        /// 获取 <see cref="EventManager"/> 的单例实例。
+        /// Gets the singleton instance of <see cref="EventManager"/>.
         /// </summary>
-        /// <value>全局唯一的事件管理器实例。</value>
+        /// <value>The global unique event manager instance.</value>
         /// <remarks>
-        /// 使用 <see cref="Lazy{T}"/> 实现线程安全的延迟初始化。
+        /// Uses <see cref="Lazy{T}"/> for thread-safe lazy initialization.
         /// </remarks>
         public static EventManager Instance => _lazy.Value;
 
-                /// <summary>
-        /// 注册一个指定事件类型的监听器。
+        /// <summary>
+        /// Registers a listener for a specified event type.
         /// </summary>
-        /// <typeparam name="TEventArgs">事件参数的类型，必须是 <see cref="EventArgs"/> 的子类。</typeparam>
-        /// <param name="listener">要注册的事件处理器委托。</param>
-        /// <exception cref="ArgumentNullException">当 <paramref name="listener"/> 为 <c>null</c> 时抛出。</exception>
+        /// <typeparam name="TEventArgs">The type of the event argument, which must be a subclass of <see cref="EventArgs"/>.</typeparam>
+        /// <param name="listener">The event handler delegate to register.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listener"/> is <c>null</c>.</exception>
         /// <remarks>
-        /// 同一类型的事件支持注册多个监听器，内部通过 <see cref="Delegate.Combine"/> 实现多播委托。
-        /// 重复添加同一监听器实例会导致该监听器被调用多次。
+        /// Multiple listeners can be registered for the same event type. Internally, this uses
+        /// <see cref="Delegate.Combine"/> to build a multicast delegate.
+        /// Adding the same listener instance multiple times will cause it to be invoked multiple times.
         /// </remarks>
         public void AddListener<TEventArgs>(Action<object, TEventArgs> listener) where TEventArgs : EventArgs
         {
@@ -69,13 +72,14 @@ namespace GeneralUpdate.Core.Event
         }
 
         /// <summary>
-        /// 移除指定事件类型的监听器。
+        /// Removes a listener for a specified event type.
         /// </summary>
-        /// <typeparam name="TEventArgs">事件参数的类型，必须是 <see cref="EventArgs"/> 的子类。</typeparam>
-        /// <param name="listener">要移除的事件处理器委托。</param>
-        /// <exception cref="ArgumentNullException">当 <paramref name="listener"/> 为 <c>null</c> 时抛出。</exception>
+        /// <typeparam name="TEventArgs">The type of the event argument, which must be a subclass of <see cref="EventArgs"/>.</typeparam>
+        /// <param name="listener">The event handler delegate to remove.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listener"/> is <c>null</c>.</exception>
         /// <remarks>
-        /// 如果移除后该事件类型的委托列表为空，则自动从字典中移除该事件类型的条目。
+        /// If the delegate list for this event type becomes empty after removal, the entry is
+        /// automatically removed from the dictionary.
         /// </remarks>
         public void RemoveListener<TEventArgs>(Action<object, TEventArgs> listener) where TEventArgs : EventArgs
         {
@@ -92,19 +96,21 @@ namespace GeneralUpdate.Core.Event
         }
 
         /// <summary>
-        /// 分发指定类型的事件到所有已注册的监听器。
+        /// Dispatches an event of the specified type to all registered listeners.
         /// </summary>
-        /// <typeparam name="TEventArgs">事件参数的类型，必须是 <see cref="EventArgs"/> 的子类。</typeparam>
-        /// <param name="sender">事件发送者。</param>
-        /// <param name="eventArgs">事件参数。</param>
-        /// <exception cref="ArgumentNullException">当 <paramref name="sender"/> 或 <paramref name="eventArgs"/> 为 <c>null</c> 时抛出。</exception>
+        /// <typeparam name="TEventArgs">The type of the event argument, which must be a subclass of <see cref="EventArgs"/>.</typeparam>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="eventArgs">The event arguments.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="sender"/> or <paramref name="eventArgs"/> is <c>null</c>.</exception>
         /// <remarks>
         /// <para>
-        /// 分发策略：
+        /// Dispatch strategy:
         /// <list type="bullet">
-        ///   <item><description>通过 <c>TEventArgs</c> 类型自动查找对应的委托列表。</description></item>
-        ///   <item><description>逐个调用每个已注册的监听器，确保一个监听器的异常不会影响其他监听器。</description></item>
-        ///   <item><description>监听器内发生的异常会被记录到 <see cref="GeneralTracer"/>，不会被重新抛出。</description></item>
+        ///   <item><description>Looks up the delegate list automatically by the <c>TEventArgs</c> type.</description></item>
+        ///   <item><description>Invokes each registered listener individually, ensuring that an exception
+        ///   in one listener does not prevent others from being called.</description></item>
+        ///   <item><description>Exceptions thrown inside listeners are logged via <see cref="GeneralTracer"/>
+        ///   and are not rethrown.</description></item>
         /// </list>
         /// </para>
         /// </remarks>
@@ -133,19 +139,21 @@ namespace GeneralUpdate.Core.Event
         }
 
         /// <summary>
-        /// 清除所有已注册的事件监听器。
+        /// Clears all registered event listeners.
         /// </summary>
         /// <remarks>
-        /// 此操作不可逆，调用后所有已注册的 <see cref="AddListener{TEventArgs}"/> 注册的处理器将被移除。
+        /// This operation is irreversible. After calling this method, all handlers registered via
+        /// <see cref="AddListener{TEventArgs}"/> are removed.
         /// </remarks>
         public void Clear() => _dicDelegates.Clear();
 
         /// <summary>
-        /// 释放事件管理器，清除所有已注册的监听器。
+        /// Releases all resources used by the <see cref="EventManager"/> and clears all registered listeners.
         /// </summary>
         /// <remarks>
-        /// 实现 <see cref="IDisposable"/> 接口，确保在组件生命周期结束时清理事件订阅，
-        /// 防止内存泄漏。多次调用是安全的，第二次及后续调用不会重复清理。
+        /// Implements <see cref="IDisposable"/> to ensure event subscriptions are cleaned up when the
+        /// component lifecycle ends, preventing memory leaks. Multiple calls are safe; subsequent calls
+        /// will not perform any cleanup.
         /// </remarks>
         public void Dispose()
         {

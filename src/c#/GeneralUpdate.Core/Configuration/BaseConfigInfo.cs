@@ -4,22 +4,25 @@ using System.Collections.Generic;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    ///     基础配置抽象类，包含所有配置对象共有的公共字段。
-    ///     作为面向用户的配置 (<see cref="Configinfo" />)、内部运行时状态 (<see cref="GlobalConfigInfo" />)
-    ///     以及进程间通信参数 (<see cref="ProcessInfo" />) 的基类，统一管理公共属性以减少重复代码。
+    ///     Abstract base configuration class containing common fields shared by all configuration objects.
+    ///     Serves as the base class for the user-facing configuration (<see cref="Configinfo" />), the internal
+    ///     runtime state (<see cref="GlobalConfigInfo" />), and the inter-process communication parameters
+    ///     (<see cref="ProcessInfo" />), managing common properties in a single place to reduce code duplication.
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         该类定义了更新流程中通用的配置项，包括应用名称、安装路径、版本号、认证信息、
-    ///         排除列表（黑名单文件、格式、目录）以及网络通信相关参数（URL Scheme、Token 等）。
+    ///         This class defines the configuration items common to the entire update workflow, including application
+    ///         names, installation path, version numbers, authentication information, exclusion lists (blacklisted
+    ///         files, formats, and directories), and network communication parameters (URL scheme, token, etc.).
     ///     </para>
     ///     <para>
-    ///         其中 <c>UpdateAppName</c> 和 <c>InstallPath</c> 提供了合理的默认值，
-    ///         分别为 <c>"Update.exe"</c> 和当前程序运行目录，在未显式配置时可正常工作。
+    ///         <c>UpdateAppName</c> and <c>InstallPath</c> provide sensible defaults (<c>"Update.exe"</c> and the
+    ///         current application directory, respectively), so the system can function even when these values are
+    ///         not explicitly configured.
     ///     </para>
     ///     <para>
-    ///         此类为抽象类，不能直接实例化，必须通过派生类（<see cref="Configinfo" />、
-    ///         <see cref="GlobalConfigInfo" />）使用。
+    ///         This class is abstract and cannot be instantiated directly. It must be used through derived classes
+    ///         (<see cref="Configinfo" />, <see cref="GlobalConfigInfo" />).
     ///     </para>
     /// </remarks>
     /// <seealso cref="Configinfo" />
@@ -28,161 +31,161 @@ namespace GeneralUpdate.Core.Configuration
     public abstract class BaseConfigInfo
     {
         /// <summary>
-        ///     升级应用程序的可执行文件名称（例如 "Update.exe"）。
-        ///     当客户端需要启动升级进程时，使用此名称定位并启动升级程序。
+        ///     The executable file name of the updater application (e.g., "Update.exe").
+        ///     When the client needs to launch the upgrade process, this name is used to locate and start the updater.
         /// </summary>
         /// <remarks>
-        ///     默认值为 <c>"Update.exe"</c>。如果升级程序使用了不同的文件名，
-        ///     需要通过 <see cref="ConfiginfoBuilder.SetUpgradeAppName" /> 进行配置。
+        ///     Defaults to <c>"Update.exe"</c>. If the updater uses a different filename, it must be configured via
+        ///     <see cref="ConfiginfoBuilder.SetUpgradeAppName" />.
         /// </remarks>
         public string UpdateAppName { get; set; } = "Update.exe";
 
         /// <summary>
-        ///     主应用程序的可执行文件名称。
-        ///     用于标识将要被更新的主应用程序进程。
+        ///     The executable file name of the main application.
+        ///     Used to identify the main application process that will be updated.
         /// </summary>
         /// <remarks>
-        ///     该属性在 <see cref="Configinfo.Validate" /> 中会被校验不能为空。
-        ///     在 <see cref="ConfigurationMapper.MapToProcessInfo" /> 中，
-        ///     此值会被映射到 <see cref="ProcessInfo.AppName" /> 属性。
+        ///     This property is validated to be non-empty in <see cref="Configinfo.Validate" />.
+        ///     In <see cref="ConfigurationMapper.MapToProcessInfo" />, this value is mapped to the
+        ///     <see cref="ProcessInfo.AppName" /> property.
         /// </remarks>
         public string MainAppName { get; set; }
 
         /// <summary>
-        ///     应用程序文件的安装路径。
-        ///     这是所有更新文件操作所依据的根目录。
+        ///     The installation path of the application files.
+        ///     This is the root directory for all update file operations.
         /// </summary>
         /// <remarks>
-        ///     默认值为 <c>AppDomain.CurrentDomain.BaseDirectory</c>，
-        ///     即当前程序运行所在的基目录。通常情况下无需手动设置，
-        ///     但在需要将更新文件安装到非默认路径时必须显式配置。
+        ///     Defaults to <c>AppDomain.CurrentDomain.BaseDirectory</c>, the base directory of the currently running
+        ///     application. Typically, manual configuration is not required, but it must be explicitly set when
+        ///     update files need to be installed to a non-default path.
         /// </remarks>
         public string InstallPath { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
 
         /// <summary>
-        ///     升级可执行文件所在的目录路径（可选）。
-        ///     可以是绝对路径，也可以是相对于 <see cref="InstallPath" /> 的相对路径。
+        ///     The directory path where the updater executable is located (optional).
+        ///     Can be an absolute path or a relative path relative to <see cref="InstallPath" />.
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         当设置了此属性时，升级进程将从 <c>UpdatePath</c> 目录启动，
-        ///         而非 <see cref="InstallPath" /> 目录。
+        ///         When this property is set, the upgrade process starts from the <c>UpdatePath</c> directory
+        ///         instead of the <see cref="InstallPath" /> directory.
         ///     </para>
         ///     <para>
-        ///         如果此属性为 null 或空字符串，则回退到 <see cref="InstallPath" />，
-        ///         保持向后兼容性。
+        ///         If this property is null or empty, it falls back to <see cref="InstallPath" /> for backward compatibility.
         ///     </para>
         ///     <para>
-        ///         示例：设置为 <c>"Upgrade"</c> 时，升级程序将位于
-        ///         <c>InstallPath/Upgrade/UpdateAppName</c>。
+        ///         Example: When set to <c>"Upgrade"</c>, the updater will be located at
+        ///         <c>InstallPath/Upgrade/UpdateAppName</c>.
         ///     </para>
         /// </remarks>
         public string UpdatePath { get; set; }
 
         /// <summary>
-        ///     更新日志网页的 URL 地址。
-        ///     用户可通过此地址查看详细的版本变更记录。
+        ///     The URL of the update log web page.
+        ///     Users can view detailed version change records at this address.
         /// </summary>
         /// <remarks>
-        ///     在 <see cref="Configinfo.Validate" /> 中，如果此属性已设置，
-        ///     则会校验其是否为有效的绝对 URI 格式。
+        ///     In <see cref="Configinfo.Validate" />, if this property is set, it is validated to be a valid absolute URI.
         /// </remarks>
         public string UpdateLogUrl { get; set; }
 
         /// <summary>
-        ///     用于身份验证的应用程序密钥。
-        ///     在向更新服务器请求更新信息时，需要此密钥进行身份认证。
+        ///     The application secret key used for authentication.
+        ///     This key is required when requesting update information from the update server.
         /// </summary>
         /// <remarks>
-        ///     该属性为必填项，在 <see cref="Configinfo.Validate" /> 中会校验不能为空。
+        ///     This property is required and is validated to be non-empty in <see cref="Configinfo.Validate" />.
         /// </remarks>
         public string AppSecretKey { get; set; }
 
         /// <summary>
-        ///     客户端应用程序的当前版本号。
-        ///     格式应遵循语义化版本规范（例如 "1.0.0"）。
+        ///     The current version number of the client application.
+        ///     The format should follow semantic versioning conventions (e.g., "1.0.0").
         /// </summary>
         /// <remarks>
-        ///     该属性为必填项，在 <see cref="Configinfo.Validate" /> 中会校验不能为空。
-        ///     通过比较 <c>ClientVersion</c> 与服务端返回的最新版本号，
-        ///     可确定主应用是否需要更新（<see cref="GlobalConfigInfo.IsMainUpdate" />）。
+        ///     This property is required and is validated to be non-empty in <see cref="Configinfo.Validate" />.
+        ///     Comparing <c>ClientVersion</c> against the latest version from the server determines whether the
+        ///     main application needs updating (<see cref="GlobalConfigInfo.IsMainUpdate" />).
         /// </remarks>
         public string ClientVersion { get; set; }
 
         /// <summary>
-        ///     应从更新过程中排除的特定文件列表。
-        ///     黑名单中的文件将在更新操作期间被跳过，不会被覆盖或删除。
+        ///     A list of specific files to exclude from the update process.
+        ///     Files in the blacklist will be skipped during update operations and will not be overwritten or deleted.
         /// </summary>
         /// <remarks>
-        ///     与 <see cref="BlackFormats" /> 和 <see cref="SkipDirectorys" /> 共同构成了
-        ///     更新排除策略，用于保护不应被更新操作影响的关键文件。
+        ///     Together with <see cref="BlackFormats" /> and <see cref="SkipDirectorys" />, this forms the update
+        ///     exclusion strategy that protects critical files from being affected by the update.
         /// </remarks>
         public List<string> BlackFiles { get; set; }
 
         /// <summary>
-        ///     应从更新过程中排除的文件格式扩展名列表。
-        ///     例如：<c>[".log", ".tmp", ".cache"]</c> 将跳过所有具有这些扩展名的文件。
+        ///     A list of file format extensions to exclude from the update process.
+        ///     For example: <c>[".log", ".tmp", ".cache"]</c> will skip all files with these extensions.
         /// </summary>
         /// <remarks>
-        ///     此为批量排除机制，适用于需要跳过某一类文件的场景，
-        ///     与 <see cref="BlackFiles" /> 针对单个文件的排除方式互补。
+        ///     This is a bulk exclusion mechanism, useful for skipping entire categories of files.
+        ///     It complements <see cref="BlackFiles" />, which handles individual file exclusions.
         /// </remarks>
         public List<string> BlackFormats { get; set; }
 
         /// <summary>
-        ///     应在更新过程中跳过的目录路径列表。
-        ///     列表中的整个目录树都将被忽略，不参与任何更新操作。
+        ///     A list of directory paths to skip during the update process.
+        ///     Entire directory trees in this list will be ignored and excluded from all update operations.
         /// </summary>
         public List<string> SkipDirectorys { get; set; }
 
         /// <summary>
-        ///     用于报告更新状态和结果的 API 端点 URL。
-        ///     更新的进度和完成状态将发送到此 URL。
+        ///     The API endpoint URL for reporting update status and results.
+        ///     Update progress and completion status are sent to this URL.
         /// </summary>
         /// <remarks>
-        ///     此 URL 在 <see cref="ConfigurationMapper.MapToProcessInfo" /> 中会映射到
-        ///     <see cref="ProcessInfo.ReportUrl" />，由升级进程在更新完成后进行回调。
+        ///     This URL is mapped to <see cref="ProcessInfo.ReportUrl" /> in
+        ///     <see cref="ConfigurationMapper.MapToProcessInfo" /> and is called back by the upgrade process
+        ///     after the update completes.
         /// </remarks>
         public string ReportUrl { get; set; }
 
         /// <summary>
-        ///     在开始更新前应被终止的进程名称。
-        ///     通常用于关闭可能冲突的后台进程（例如 "Bowl" 进程）。
+        ///     The name of the process to terminate before starting the update.
+        ///     Typically used to shut down conflicting background processes (e.g., the "Bowl" process).
         /// </summary>
         /// <remarks>
-        ///     在更新流程中，启动升级进程之前会尝试终止此名称对应的进程，
-        ///     以避免文件占用导致更新失败。
+        ///     In the update workflow, the system attempts to terminate the process matching this name before
+        ///     launching the upgrade process, to avoid file-locking issues that could cause the update to fail.
         /// </remarks>
         public string Bowl { get; set; }
 
         /// <summary>
-        ///     用于更新请求的 URL 方案（例如 "http" 或 "https"）。
-        ///     此方案决定了与更新服务器通信时使用的协议。
+        ///     The URL scheme used for update requests (e.g., "http" or "https").
+        ///     This scheme determines the protocol used when communicating with the update server.
         /// </summary>
         public string Scheme { get; set; }
 
         /// <summary>
-        ///     用于 API 请求的身份验证令牌。
-        ///     在与更新服务器通信时，此令牌会包含在 HTTP 请求头中。
+        ///     The authentication token used for API requests.
+        ///     This token is included in HTTP request headers when communicating with the update server.
         /// </summary>
         public string Token { get; set; }
 
         /// <summary>
-        ///     包含驱动程序文件的目录路径，用于驱动更新功能。
-        ///     当启用驱动更新时，系统会从此目录定位并安装驱动程序文件。
+        ///     The directory path containing driver files, used for driver-based update functionality.
+        ///     When driver updates are enabled, the system locates and installs driver files from this directory.
         /// </summary>
         public string DriverDirectory { get; set; }
 
         /// <summary>
-        ///     当前更新角色 — 决定 <see cref="Strategy.AbstractStrategy.StartAppAsync" />
-        ///     启动哪个应用程序。
+        ///     The current update role — determines which application is launched by
+        ///     <see cref="Strategy.AbstractStrategy.StartAppAsync" />.
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         当 <see cref="AppType.Client" /> 时，启动 <c>UpdateAppName</c>（升级进程）。
+        ///         When set to <see cref="AppType.Client" />, launches <c>UpdateAppName</c> (the upgrade process).
         ///     </para>
         ///     <para>
-        ///         当 <see cref="AppType.Upgrade" /> 时，启动 <c>MainAppName</c> 主应用和 Bowl 进程。
+        ///         When set to <see cref="AppType.Upgrade" />, launches the <c>MainAppName</c> main application
+        ///         and the Bowl process.
         ///     </para>
         /// </remarks>
         public AppType? AppType { get; set; }

@@ -4,39 +4,49 @@ using System.IO;
 namespace GeneralUpdate.Core.Differential;
 
 /// <summary>
-/// 定义补丁应用（Dirty）阶段的匹配逻辑接口，用于查找与现有应用程序文件对应的差异补丁文件。
+/// Defines the matching logic interface for the Dirty (patch application) stage,
+/// used to find the differential patch file corresponding to an existing application file.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Dirty 阶段（补丁应用阶段）是差异更新的第二步，它与 <see cref="ICleanMatcher"/>
-/// 定义的 Clean 阶段（差异生成阶段）相对应：
+/// The Dirty stage (patch application stage) is the second step of differential updates.
+/// It corresponds to the Clean stage (differential generation stage) defined in
+/// <see cref="ICleanMatcher"/>:
 /// </para>
 /// <list type="bullet">
-///   <item><description><b>Clean 阶段</b>：在服务端/构建时执行，分析新旧版本差异并生成补丁包。</description></item>
-///   <item><description><b>Dirty 阶段</b>：在客户端/运行时执行，接收补丁包并应用到现有文件上。</description></item>
+///   <item><description><b>Clean stage</b>: Executed on the server/build machine. Analyzes differences
+///   between the old and new versions and generates the patch package.</description></item>
+///   <item><description><b>Dirty stage</b>: Executed on the client/at runtime. Receives the patch package
+///   and applies it to existing files.</description></item>
 /// </list>
 /// <para>
-/// DirtyMatcher 负责将补丁目录中的 <c>.patch</c> 文件与客户端现有的应用程序文件建立对应关系。
-/// 匹配成功后将由差异引擎（如 <c>PatchService</c>）将补丁应用到旧文件上，生成更新后的文件。
+/// DirtyMatcher is responsible for establishing a correspondence between <c>.patch</c> files
+/// in the patch directory and the existing application files on the client.
+/// After a successful match, the differential engine (e.g., <c>PatchService</c>) applies
+/// the patch to the old file, producing the updated file.
 /// </para>
 /// <para>
-/// 默认实现请参考 <see cref="DefaultDirtyMatcher"/>，它通过文件名匹配规则查找补丁文件。
+/// Refer to <see cref="DefaultDirtyMatcher"/> for the default implementation, which uses
+/// file name matching rules to locate patch files.
 /// </para>
 /// </remarks>
 public interface IDirtyMatcher
 {
     /// <summary>
-    /// 从可用的补丁文件集合中查找与指定应用程序文件对应的补丁文件。
+    /// Searches the available patch file collection for a patch corresponding to the
+    /// specified application file.
     /// </summary>
-    /// <param name="oldFile">需要被补丁的现有应用程序文件。</param>
-    /// <param name="patchFiles">补丁目录中所有可用文件的集合。</param>
+    /// <param name="oldFile">The existing application file that needs to be patched.</param>
+    /// <param name="patchFiles">The collection of all available files in the patch directory.</param>
     /// <returns>
-    /// 匹配到的补丁 <see cref="FileInfo"/>；如果未找到对应的补丁文件则返回 <c>null</c>
-    /// （表示该文件不需要更新或应直接替换）。
+    /// The matched patch <see cref="FileInfo"/>; or <c>null</c> if no corresponding patch file
+    /// is found (indicating the file does not need an update or should be replaced directly).
     /// </returns>
     /// <remarks>
-    /// 实现应基于文件名、相对路径或其他标识信息建立匹配关系。
-    /// 返回 <c>null</c> 时，调用方应直接复制新版本文件替换旧版本文件。
+    /// Implementations should establish the match based on file name, relative path,
+    /// or other identifying information.
+    /// When <c>null</c> is returned, the caller should directly copy the new version file
+    /// to replace the old version file.
     /// </remarks>
     FileInfo? Match(FileInfo oldFile, IEnumerable<FileInfo> patchFiles);
 }

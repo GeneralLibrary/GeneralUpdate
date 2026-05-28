@@ -4,33 +4,35 @@ using System.Text;
 namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
-    ///     框架级别的更新选项常量定义。
-    ///     每个选项均具有唯一的字符串名称和合理的默认值。
+    ///     Framework-level constant definitions for update options.
+    ///     Each option has a unique string name and a sensible default value.
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         <c>UpdateOptions</c> 是一个静态类，集中定义了更新框架所有可配置选项的
-    ///         <see cref="UpdateOption{T}" /> 实例。每个选项包含一个唯一的字符串名称和框架默认值。
+    ///         <c>UpdateOptions</c> is a static class that centrally defines all configurable options for the update
+    ///         framework as <see cref="UpdateOption{T}" /> instances. Each option contains a unique string name and
+    ///         a framework-defined default value.
     ///     </para>
     ///     <para>
-    ///         与业务相关的配置（URL、密钥、应用名称等）不属于此类，
-    ///         应放置在 <see cref="Configinfo" /> 或 <see cref="BaseConfigInfo" /> 中。
-    ///         此类仅负责行为层面的选项（如是否启用断点续传、重试次数、并发数等）。
+    ///         Business-related configuration (URLs, secrets, application names, etc.) does not belong in this class
+    ///         and should be placed in <see cref="Configinfo" /> or <see cref="BaseConfigInfo" />. This class is
+    ///         concerned only with behavioral options (such as whether to enable resumable downloads, retry count,
+    ///         concurrency level, etc.).
     ///     </para>
     ///     <para>
-    ///         选项值的存储和检索通过 <see cref="UpdateOption.ValueOf{T}(string, T)" /> 实现，
-    ///         该机制基于 <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}" />
-    ///         保证每个名称对应唯一的选项实例（单例模式）。
+    ///         Option values are stored and retrieved via <see cref="UpdateOption.ValueOf{T}(string, T)" />, which
+    ///         uses a <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}" /> to guarantee
+    ///         that each name maps to a unique option instance (singleton pattern).
     ///     </para>
     ///     <para>
-    ///         各选项的默认值来源：
+    ///         Default values for each option:
     ///         <list type="bullet">
-    ///             <item><description>并发下载数默认为 3（<see cref="MaxConcurrency" />）</description></item>
-    ///             <item><description>断点续传默认为启用（<see cref="EnableResume" />）</description></item>
-    ///             <item><description>下载超时默认为 30 秒（<see cref="DownloadTimeout" />）</description></item>
-    ///             <item><description>差异补丁默认为启用（<see cref="PatchEnabled" />）</description></item>
-    ///             <item><description>更新前备份默认为启用（<see cref="BackupEnabled" />）</description></item>
-    ///             <item><description>静默更新默认为禁用（<see cref="Silent" />）</description></item>
+    ///             <item><description>Concurrent downloads default to 3 (<see cref="MaxConcurrency" />)</description></item>
+    ///             <item><description>Resumable downloads default to enabled (<see cref="EnableResume" />)</description></item>
+    ///             <item><description>Download timeout defaults to 30 seconds (<see cref="DownloadTimeout" />)</description></item>
+    ///             <item><description>Differential patching defaults to enabled (<see cref="PatchEnabled" />)</description></item>
+    ///             <item><description>Pre-update backup defaults to enabled (<see cref="BackupEnabled" />)</description></item>
+    ///             <item><description>Silent update defaults to disabled (<see cref="Silent" />)</description></item>
     ///         </list>
     ///     </para>
     /// </remarks>
@@ -44,108 +46,108 @@ namespace GeneralUpdate.Core.Configuration
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     应用程序角色类型 — <see cref="AppType.Client" />、<see cref="AppType.Upgrade" />
-        ///     或 <see cref="AppType.OSS" />。
-        ///     默认值为 <see cref="AppType.Client" />。
+        ///     The application role type — <see cref="AppType.Client" />, <see cref="AppType.Upgrade" />,
+        ///     or <see cref="AppType.OSS" />.
+        ///     Defaults to <see cref="AppType.Client" />.
         /// </summary>
         public static UpdateOption<AppType> AppType { get; } = UpdateOption.ValueOf<AppType>("APPTYPE", Configuration.AppType.Client);
 
         // ════════════════════════════════════════
-        //  差异模式
+        //  Diff Mode
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     差异/补丁生成模式 — <see cref="DiffMode.Serial" />（串行）或
-        ///     <see cref="DiffMode.Parallel" />（并行）。
-        ///     默认值为 <see cref="DiffMode.Serial" />。
+        ///     The diff/patch generation mode — <see cref="DiffMode.Serial" /> (serial) or
+        ///     <see cref="DiffMode.Parallel" /> (parallel).
+        ///     Defaults to <see cref="DiffMode.Serial" />.
         /// </summary>
         public static UpdateOption<DiffMode> DiffMode { get; } = UpdateOption.ValueOf<DiffMode>("DIFFMODE", Configuration.DiffMode.Serial);
 
         // ════════════════════════════════════════
-        //  向后兼容选项
+        //  Backward Compatibility Options
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     更新包使用的压缩编码。
-        ///     默认值为 <see cref="System.Text.Encoding.UTF8" />。
+        ///     The text encoding used for update package compression.
+        ///     Defaults to <see cref="System.Text.Encoding.UTF8" />.
         /// </summary>
         public static UpdateOption<Encoding> Encoding { get; } = UpdateOption.ValueOf<Encoding>("COMPRESSENCODING", System.Text.Encoding.UTF8);
 
         /// <summary>
-        ///     更新包使用的压缩格式。
-        ///     默认值为 <see cref="Configuration.Format.Zip" />。
+        ///     The compression format used for update packages.
+        ///     Defaults to <see cref="Configuration.Format.Zip" />.
         /// </summary>
         public static UpdateOption<Format> Format { get; } = UpdateOption.ValueOf<Format>("COMPRESSFORMAT", Configuration.Format.Zip);
 
         /// <summary>
-        ///     下载操作的超时时间（秒）。
-        ///     默认值为 30 秒。
+        ///     The download operation timeout in seconds.
+        ///     Defaults to 30 seconds.
         /// </summary>
         public static UpdateOption<int?> DownloadTimeout { get; } = UpdateOption.ValueOf<int?>("DOWNLOADTIMEOUT", 30);
 
         /// <summary>
-        ///     是否启用差异补丁更新。
-        ///     默认值为 <c>true</c>。
+        ///     Whether differential patch updates are enabled.
+        ///     Defaults to <c>true</c>.
         /// </summary>
         public static UpdateOption<bool?> PatchEnabled { get; } = UpdateOption.ValueOf<bool?>("PATCH", true);
 
         /// <summary>
-        ///     更新前是否启用备份。
-        ///     默认值为 <c>true</c>。
+        ///     Whether pre-update backup is enabled.
+        ///     Defaults to <c>true</c>.
         /// </summary>
         public static UpdateOption<bool?> BackupEnabled { get; } = UpdateOption.ValueOf<bool?>("BACKUP", true);
 
         /// <summary>
-        ///     是否启用静默后台更新模式。
-        ///     默认值为 <c>false</c>。
+        ///     Whether silent background update mode is enabled.
+        ///     Defaults to <c>false</c>.
         /// </summary>
         public static UpdateOption<bool> Silent { get; } = UpdateOption.ValueOf<bool>("ENABLESILENTUPDATE", false);
 
         // ════════════════════════════════════════
-        //  静默模式选项
+        //  Silent Mode Options
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     静默更新模式下检查更新的轮询间隔（分钟）。
-        ///     默认值为 60 分钟。
+        ///     The polling interval (in minutes) for checking updates in silent mode.
+        ///     Defaults to 60 minutes.
         /// </summary>
         public static UpdateOption<int> SilentPollIntervalMinutes { get; } = UpdateOption.ValueOf<int>("SILENTPOLLINTERVALMINUTES", 60);
 
         // ════════════════════════════════════════
-        //  并发与断点续传选项
+        //  Concurrency and Resume Options
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     最大并发下载操作数。
-        ///     默认值为 3。
+        ///     The maximum number of concurrent download operations.
+        ///     Defaults to 3.
         /// </summary>
         public static UpdateOption<int> MaxConcurrency { get; } = UpdateOption.ValueOf<int>("MAXCONCURRENCY", 3);
 
         /// <summary>
-        ///     是否启用 HTTP 断点续传（基于 Range 请求头）。
-        ///     默认值为 <c>true</c>。
+        ///     Whether HTTP resumable downloads (based on Range headers) are enabled.
+        ///     Defaults to <c>true</c>.
         /// </summary>
         public static UpdateOption<bool> EnableResume { get; } = UpdateOption.ValueOf<bool>("ENABLERESUME", true);
 
         // ════════════════════════════════════════
-        //  容错与重试选项
+        //  Fault Tolerance and Retry Options
         // ════════════════════════════════════════
 
         /// <summary>
-        ///     下载失败时的最大重试次数。
-        ///     默认值为 3。
+        ///     The maximum number of retry attempts on download failure.
+        ///     Defaults to 3.
         /// </summary>
         public static UpdateOption<int> RetryCount { get; } = UpdateOption.ValueOf<int>("RETRYCOUNT", 3);
 
         /// <summary>
-        ///     下载完成后是否执行 SHA256 校验和验证。
-        ///     默认值为 <c>true</c>。
+        ///     Whether to perform SHA256 checksum verification after download.
+        ///     Defaults to <c>true</c>.
         /// </summary>
         public static UpdateOption<bool> VerifyChecksum { get; } = UpdateOption.ValueOf<bool>("VERIFYCHECKSUM", true);
 
         /// <summary>
-        ///     指数退避策略的初始重试间隔。
-        ///     默认值为 1 秒。
+        ///     The initial retry interval for the exponential backoff strategy.
+        ///     Defaults to 1 second.
         /// </summary>
         public static UpdateOption<TimeSpan> RetryInterval { get; } = UpdateOption.ValueOf<TimeSpan>("RETRYINTERVAL", TimeSpan.FromSeconds(1));
     }

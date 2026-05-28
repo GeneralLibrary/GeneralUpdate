@@ -3,29 +3,32 @@ using System;
 namespace GeneralUpdate.Core.Event;
 
 /// <summary>
-/// 更新流程中的异常事件参数，封装异常对象和自定义错误消息。
+/// Event arguments for exceptions that occur during the update flow,
+/// encapsulating the exception object and a custom error message.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 当更新流程中的某个环节（如下载、解压、文件操作等）发生异常时，
-/// 会通过 <see cref="EventManager"/> 分发此事件参数。
+/// When an exception occurs in any stage of the update process (e.g., download,
+/// extraction, file operations), this event argument is dispatched through
+/// <see cref="EventManager"/>.
 /// </para>
 /// <para>
-/// 事件接收方可以通过 <see cref="Exception"/> 属性获取详细的异常信息，
-/// 通过 <see cref="Message"/> 属性获取可读的错误描述。
+/// Event receivers can obtain detailed exception information via the
+/// <see cref="Exception"/> property and a human-readable error description
+/// via the <see cref="Message"/> property.
 /// </para>
 /// </remarks>
 public class ExceptionEventArgs(Exception? exception = null, string? message = null) : EventArgs
 {
     /// <summary>
-    /// 获取与事件关联的异常对象。
+    /// Gets the exception object associated with the event.
     /// </summary>
-    /// <value>可能为 <c>null</c>，如果异常信息仅通过文本消息传递。</value>
+    /// <value>May be <c>null</c> if the error information is conveyed only through a text message.</value>
     public Exception Exception { get; private set; } = exception;
 
     /// <summary>
-    /// 获取自定义的错误描述消息。
+    /// Gets the custom error description message.
     /// </summary>
-    /// <value>可能为 <c>null</c>，如果未提供自定义消息。</value>
+    /// <value>May be <c>null</c> if no custom message was provided.</value>
     public string Message { get; private set; } = message;
 }

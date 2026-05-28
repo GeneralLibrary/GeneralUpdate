@@ -5,45 +5,45 @@ using System.IO;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// 根据 <see cref="FileTreeDiff"/> 差异结果生成增量更新所需的数据包。
-/// 用于 Pipeline 的 PatchMiddleware 进行差异补丁的构建和应用。
+/// Generates the data packages required for incremental updates based on the <see cref="FileTreeDiff"/> difference result.
+/// Used by the Pipeline's PatchMiddleware for constructing and applying differential patches.
 /// </summary>
 /// <remarks>
 /// <para>
-/// FileTreeDiffer 将文件快照比较结果转换为实际的增量更新操作指令：
+/// FileTreeDiffer converts file snapshot comparison results into actual incremental update operation instructions:
 /// </para>
 /// <list type="bullet">
-///   <item><description><see cref="ProduceDeltaPaths"/>：基于差异结果生成需要打包的文件路径对。</description></item>
-///   <item><description><see cref="ProduceDeletes"/>：提取需要在客户端删除的文件列表。</description></item>
-///   <item><description><see cref="ShouldUseDeltaPatching"/>：根据变更比例决策使用增量更新还是全量更新。</description></item>
+///   <item><description><see cref="ProduceDeltaPaths"/>: Generates file path pairs that need to be packaged based on the diff result.</description></item>
+///   <item><description><see cref="ProduceDeletes"/>: Extracts the list of files that need to be deleted on the client side.</description></item>
+///   <item><description><see cref="ShouldUseDeltaPatching"/>: Decides whether to use incremental or full update based on the change ratio.</description></item>
 /// </list>
 /// <para>
-/// 增量更新策略核心原则：变更比例低于阈值时使用增量补丁，高于阈值时建议使用全量包，
-/// 以避免大量小补丁导致的性能开销。
+/// The core principle of the incremental update strategy: use incremental patches when the change ratio is below the threshold,
+/// and recommend a full package when the ratio exceeds the threshold, to avoid the performance overhead of numerous small patches.
 /// </para>
 /// </remarks>
 public static class FileTreeDiffer
 {
     /// <summary>
-    /// 根据差异结果生成需要打包的文件路径对。
+    /// Generates file path pairs that need to be packaged based on the difference result.
     /// </summary>
-    /// <param name="diff">新旧快照的差异结果。</param>
-    /// <param name="updatedRoot">新版本文件的根目录路径。</param>
+    /// <param name="diff">The difference result between the old and new snapshots.</param>
+    /// <param name="updatedRoot">The root directory path of the new version files.</param>
     /// <returns>
-    /// 路径对的只读列表，每对包含 <c>(源文件完整路径, 相对路径)</c>，
-    /// 其中源文件路径指向新版本文件，相对路径用于在更新包中定位。
+    /// A read-only list of path pairs, each containing <c>(source file full path, relative path)</c>,
+    /// where the source path points to the new version file and the relative path is used for locating it in the update package.
     /// </returns>
     /// <remarks>
     /// <para>
-    /// 生成逻辑：
+    /// Generation logic:
     /// <list type="bullet">
-    ///   <item><description>新增文件（Added）：直接包含到增量包中。</description></item>
-    ///   <item><description>修改文件（Modified）：包含到增量包中。</description></item>
-    ///   <item><description>删除文件（Deleted）：不在此处处理，由 <see cref="ProduceDeletes"/> 单独提取。</description></item>
+    ///   <item><description>Added files: Included directly in the delta package.</description></item>
+    ///   <item><description>Modified files: Included in the delta package.</description></item>
+    ///   <item><description>Deleted files: Not handled here; extracted separately by <see cref="ProduceDeletes"/>.</description></item>
     /// </list>
     /// </para>
     /// <para>
-    /// 对于每对路径，会检查源文件是否确实存在于磁盘上，不存在则跳过。
+    /// For each path pair, the method checks whether the source file actually exists on disk and skips it if not.
     /// </para>
     /// </remarks>
     public static IReadOnlyList<(string SourcePath, string RelativePath)> ProduceDeltaPaths(
@@ -73,34 +73,36 @@ public static class FileTreeDiffer
     }
 
     /// <summary>
-    /// 提取差异结果中需要删除的文件相对路径列表。
+    /// Extracts the list of relative paths for files that need to be deleted from the difference result.
     /// </summary>
-    /// <param name="diff">新旧快照的差异结果。</param>
-    /// <returns>需要在客户端删除的文件相对路径只读列表。</returns>
+    /// <param name="diff">The difference result between the old and new snapshots.</param>
+    /// <returns>A read-only list of relative paths for files that need to be deleted on the client side.</returns>
     /// <remarks>
-    /// 此方法直接返回 <see cref="FileTreeDiff.Deleted"/> 列表，该列表包含
-    /// 在旧版本中存在但在新版本中已被移除的所有文件相对路径。
+    /// This method directly returns the <see cref="FileTreeDiff.Deleted"/> list, which contains
+    /// the relative paths of all files that existed in the old version but have been removed in the new version.
     /// </remarks>
     public static IReadOnlyList<string> ProduceDeletes(FileTreeDiff diff)
         => diff.Deleted;
 
     /// <summary>
-    /// 根据变更比例决策最优更新模式：变更比例低时推荐增量更新（delta），比例高时推荐全量更新。
+    /// Decides the optimal update mode based on the change ratio: recommends incremental (delta) update
+    /// when the change ratio is low, and full update when the ratio is high.
     /// </summary>
-    /// <param name="diff">新旧快照的差异结果。</param>
-    /// <param name="totalFileCount">应用程序的文件总数。</param>
-    /// <param name="thresholdPercent">增量更新阈值百分比。当变更文件比例小于等于此值时推荐增量更新，默认为 0.5（50%）。</param>
-    /// <returns>如果推荐使用增量更新（delta patching）则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
+    /// <param name="diff">The difference result between the old and new snapshots.</param>
+    /// <param name="totalFileCount">The total number of files in the application.</param>
+    /// <param name="thresholdPercent">The delta update threshold percentage. When the change file ratio is less than or equal to this value,
+    /// incremental update is recommended. Default is 0.5 (50%).</param>
+    /// <returns><c>true</c> if delta patching is recommended; otherwise, <c>false</c>.</returns>
     /// <remarks>
     /// <para>
-    /// 决策逻辑：变更比例 = (新增 + 修改 + 删除) / 文件总数。
+    /// Decision logic: change ratio = (added + modified + deleted) / total file count.
     /// </para>
     /// <list type="bullet">
-    ///   <item><description>变更比例 &lt;= thresholdPercent：推荐增量更新。少量变更使用补丁更高效。</description></item>
-    ///   <item><description>变更比例 &gt; thresholdPercent：推荐全量更新。大量变更时增量补丁的优势丧失。</description></item>
+    ///   <item><description>Change ratio &lt;= thresholdPercent: Recommends incremental update. Fewer changes make patching more efficient.</description></item>
+    ///   <item><description>Change ratio &gt; thresholdPercent: Recommends full update. The advantage of incremental patches diminishes with many changes.</description></item>
     /// </list>
     /// <para>
-    /// 当 <paramref name="totalFileCount"/> 为 0 时返回 <c>false</c>。
+    /// Returns <c>false</c> when <paramref name="totalFileCount"/> is 0.
     /// </para>
     /// </remarks>
     public static bool ShouldUseDeltaPatching(FileTreeDiff diff, int totalFileCount, double thresholdPercent = 0.5)

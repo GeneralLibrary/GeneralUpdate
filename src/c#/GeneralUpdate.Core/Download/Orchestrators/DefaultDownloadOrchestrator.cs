@@ -17,37 +17,40 @@ using GeneralUpdate.Core.Download.Progress;
 namespace GeneralUpdate.Core.Download.Orchestrators;
 
 /// <summary>
-/// 默认下载编排器，支持并行执行、并发限制、SHA256 校验、断点续传和进度报告。
+/// Default download orchestrator supporting parallel execution, concurrency limiting,
+/// SHA256 verification, resumable downloads, and progress reporting.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 该编排器承载了批量下载的核心业务流程，其工作流程如下：
+/// This orchestrator implements the core batch download workflow:
 /// </para>
 /// <list type="number">
 ///   <item>
-///     <description>接收 <see cref="DownloadPlan"/>，其中包含待下载的资源清单及并发设置。</description>
+///     <description>Receives a <see cref="DownloadPlan"/> containing the asset manifest and concurrency settings.</description>
 ///   </item>
 ///   <item>
-///     <description>使用 <see cref="SemaphoreSlim"/> 控制最大并发数，防止资源耗尽。</description>
+///     <description>Uses a <see cref="SemaphoreSlim"/> to control maximum concurrency and prevent resource exhaustion.</description>
 ///   </item>
 ///   <item>
-///     <description>对每个资源并行执行：创建执行器（<see cref="HttpDownloadExecutor"/> 或自定义 <see cref="IDownloadExecutor"/>），
-///     创建下载管道（默认执行 SHA256 哈希校验），并包装在重试策略（<see cref="IDownloadPolicy"/>）中。</description>
+///     <description>For each asset, executes in parallel: creates an executor (<see cref="HttpDownloadExecutor"/> or custom <see cref="IDownloadExecutor"/>),
+///     creates a download pipeline (default performs SHA256 hash verification), and wraps it in a retry policy (<see cref="IDownloadPolicy"/>).</description>
 ///   </item>
 ///   <item>
-///     <description>每个资源的内部流程：下载文件 -> SHA256 校验 -> 报告进度。</description>
+///     <description>Internal flow per asset: Download file -> SHA256 verification (optional) -> Report progress.</description>
 ///   </item>
 ///   <item>
-///     <description>所有资源完成后，返回 <see cref="DownloadReport"/>，包含每个资源的结果、总下载字节数、总耗时等信息。</description>
+///     <description>After all assets complete, returns a <see cref="DownloadReport"/> containing per-asset results,
+///     total bytes downloaded, total duration, and success/failure counts.</description>
 ///   </item>
 /// </list>
 /// <para>
-/// 所有可配置的行为均由 <see cref="DownloadOrchestratorOptions"/> 驱动，
-/// 该选项映射自引导层定义的 <see cref="UpdateOptions"/>。
+/// All configurable behaviors are driven by <see cref="DownloadOrchestratorOptions"/>,
+/// which maps from the <see cref="UpdateOptions"/> defined in the bootstrap layer.
 /// </para>
 /// <para>
-/// 注意：自定义执行器（<see cref="IDownloadExecutor"/>）在多个并行下载任务间共享单一实例，
-/// 因此实现必须保证线程安全。基于 HttpClient 的执行器满足此要求，因为 HttpClient 设计为支持并发使用。
+/// Note: The custom executor (<see cref="IDownloadExecutor"/>) is shared as a single instance
+/// across parallel download tasks, so implementations must be thread-safe.
+/// HttpClient-based executors satisfy this requirement because HttpClient is designed for concurrent use.
 /// </para>
 /// </remarks>
 public class DefaultDownloadOrchestrator : IDownloadOrchestrator
@@ -62,28 +65,30 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     // satisfy this as HttpClient is designed for concurrent use.
 
     /// <summary>
-    /// 初始化 <see cref="DefaultDownloadOrchestrator"/> 的新实例。
+    /// Initializes a new instance of the <see cref="DefaultDownloadOrchestrator"/> class.
     /// </summary>
-    /// <param name="httpClient">用于 HTTP 下载的 <see cref="HttpClient"/> 实例。不能为 null。</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> instance used for HTTP downloads. Must not be null.</param>
     /// <param name="options">
-    /// 下载编排器选项，包含并发数、超时、校验、断点续传等设置。
-    /// 为 null 时将使用 <see cref="DownloadOrchestratorOptions"/> 的默认值。
+    /// Download orchestrator options including concurrency, timeout, verification, and resume settings.
+    /// If null, default <see cref="DownloadOrchestratorOptions"/> values will be used.
     /// </param>
     /// <param name="policy">
-    /// 重试策略。为 null 时将使用 <see cref="DefaultRetryPolicy"/>，重试次数和间隔取自 <paramref name="options"/>。
+    /// The retry policy. If null, a <see cref="DefaultRetryPolicy"/> will be used with retry count
+    /// and interval taken from <paramref name="options"/>.
     /// </param>
     /// <param name="executor">
-    /// 自定义下载执行器。当需要非 HTTP 的下载方式（如 FTP、本地文件复制）时传入。
-    /// 为 null 时将根据 <paramref name="httpClient"/> 创建 <see cref="HttpDownloadExecutor"/>。
+    /// A custom download executor for non-HTTP download methods (e.g., FTP, local file copy).
+    /// If null, an <see cref="HttpDownloadExecutor"/> will be created from <paramref name="httpClient"/>.
     /// <para>
-    /// 警告：该实例会在所有并行下载任务间共享，实现必须保证线程安全。
+    /// WARNING: This instance is shared across all parallel download tasks; implementations must be thread-safe.
     /// </para>
     /// </param>
     /// <param name="pipelineFactory">
-    /// 自定义下载管道的工厂委托，接收资源的 SHA256 值作为参数，返回 <see cref="IDownloadPipeline"/>。
-    /// 为 null 时将使用 <see cref="DefaultDownloadPipeline"/> 执行 SHA256 校验。
+    /// A factory delegate for creating custom download pipelines. Receives the asset's SHA256 value
+    /// and returns an <see cref="IDownloadPipeline"/>. If null, <see cref="DefaultDownloadPipeline"/>
+    /// is used for SHA256 verification.
     /// </param>
-    /// <exception cref="ArgumentNullException"><paramref name="httpClient"/> 为 null 时抛出。</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is null.</exception>
     public DefaultDownloadOrchestrator(
         HttpClient httpClient,
         DownloadOrchestratorOptions? options = null,
@@ -99,71 +104,80 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     }
 
     /// <summary>
-    /// 执行下载计划中的所有资源，支持并行下载、并发控制、断点续传和 SHA256 校验。
+    /// Executes all assets in the download plan, supporting parallel downloads, concurrency control,
+    /// resumable downloads, and SHA256 verification.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 整体执行流程如下：
+    /// Overall execution flow:
     /// </para>
     /// <list type="number">
     ///   <item>
-    ///     <description>验证 <paramref name="plan"/> 是否包含有效资源；若为空或无资源，直接返回空报告。</description>
+    ///     <description>Validates <paramref name="plan"/> contains valid assets; returns an empty report if null or empty.</description>
     ///   </item>
     ///   <item>
-    ///     <description>创建目标目录 <paramref name="destDir"/>（如不存则自动创建）。</description>
+    ///     <description>Creates the destination directory <paramref name="destDir"/> (auto-creates if it does not exist).</description>
     ///   </item>
     ///   <item>
-    ///     <description>确定有效并发数：若 <see cref="DownloadOrchestratorOptions.DiffMode"/> 为 <see cref="DiffMode.Serial"/> 则强制串行（并发数为 1）；
-    ///     否则取 <paramref name="maxConcurrency"/> 与选项配置值的较大者。</description>
+    ///     <description>Determines effective concurrency: if <see cref="DownloadOrchestratorOptions.DiffMode"/> is
+    ///     <see cref="DiffMode.Serial"/>, forces serial execution (concurrency = 1); otherwise uses the greater of
+    ///     <paramref name="maxConcurrency"/> and the configured value.</description>
     ///   </item>
     ///   <item>
-    ///     <description>使用 <see cref="SemaphoreSlim"/> 限制同时进行的下载任务数量。</description>
+    ///     <description>Uses <see cref="SemaphoreSlim"/> to limit the number of simultaneous download tasks.</description>
     ///   </item>
     ///   <item>
-    ///     <description>对每个资源并行执行以下步骤：</description>
+    ///     <description>For each asset, executes the following steps in parallel:</description>
     ///   </item>
     ///   <item>
-    ///     <description>解析文件名（参见 <see cref="GetFileName"/>）。</description>
+    ///     <description>Resolves the file name (see <see cref="GetFileName"/>).</description>
     ///   </item>
     ///   <item>
-    ///     <description>创建执行器：优先使用自定义执行器，否则创建 <see cref="HttpDownloadExecutor"/>（支持断点续传）。</description>
+    ///     <description>Creates the executor: uses the custom executor if provided, otherwise creates
+    ///     an <see cref="HttpDownloadExecutor"/> (with resume support).</description>
     ///   </item>
     ///   <item>
-    ///     <description>创建下载管道：优先使用工厂委托，否则创建 <see cref="DefaultDownloadPipeline"/> 执行 SHA256 哈希校验。</description>
+    ///     <description>Creates the download pipeline: uses the factory delegate if provided, otherwise creates
+    ///     a <see cref="DefaultDownloadPipeline"/> for SHA256 hash verification.</description>
     ///   </item>
     ///   <item>
-    ///     <description>通过重试策略执行：下载 -> 条件性 SHA256 校验（当 <see cref="DownloadOrchestratorOptions.VerifyChecksum"/> 为 true 时）。</description>
+    ///     <description>Executes through the retry policy: Download -> Conditional SHA256 verification
+    ///     (when <see cref="DownloadOrchestratorOptions.VerifyChecksum"/> is true).</description>
     ///   </item>
     ///   <item>
-    ///     <description>每个步骤均通过 <paramref name="progress"/> 报告器上报以资源名为维度的进度信息。</description>
+    ///     <description>Each step reports progress via <paramref name="progress"/> using the asset name as the dimension.</description>
     ///   </item>
     ///   <item>
-    ///     <description>所有资源完成后，触发一次性完成事件，并汇总返回 <see cref="DownloadReport"/>。</description>
+    ///     <description>After all assets complete, fires a one-time completion event and returns
+    ///     the aggregated <see cref="DownloadReport"/>.</description>
     ///   </item>
     /// </list>
     /// <para>
-    /// 关于断点续传：当 <see cref="DownloadOrchestratorOptions.EnableResume"/> 为 true 时，
-    /// <see cref="HttpDownloadExecutor"/> 会在 HTTP 请求中附加 Range 头，从上次中断处继续下载。
+    /// About resumable downloads: When <see cref="DownloadOrchestratorOptions.EnableResume"/> is true,
+    /// <see cref="HttpDownloadExecutor"/> attaches a Range header to the HTTP request to continue
+    /// downloading from where it was interrupted.
     /// </para>
     /// <para>
-    /// 关于 SHA256 校验：当 <see cref="DownloadOrchestratorOptions.VerifyChecksum"/> 为 false 时，
-    /// 校验步骤将被跳过以提升性能。建议在生产环境中始终保持校验开启。
+    /// About SHA256 verification: When <see cref="DownloadOrchestratorOptions.VerifyChecksum"/> is false,
+    /// the verification step is skipped for improved performance. It is recommended to keep verification
+    /// enabled in production environments.
     /// </para>
     /// </remarks>
-    /// <param name="plan">下载计划，包含待下载的资源列表。</param>
-    /// <param name="destDir">文件下载到的目标目录路径。</param>
+    /// <param name="plan">The download plan containing the list of assets to download.</param>
+    /// <param name="destDir">The destination directory path where files will be saved.</param>
     /// <param name="maxConcurrency">
-    /// 最大并发下载数。默认值为 3。当值小于等于 0 时将回退到 <see cref="DownloadOrchestratorOptions.MaxConcurrency"/>。
+    /// Maximum number of concurrent downloads. Defaults to 3. When set to 0 or a negative value,
+    /// falls back to <see cref="DownloadOrchestratorOptions.MaxConcurrency"/>.
     /// </param>
-    /// <param name="progress">进度报告器，用于接收每个资源的下载进度。</param>
-    /// <param name="token">用于取消操作的 <see cref="CancellationToken"/>。</param>
+    /// <param name="progress">A progress reporter for receiving per-asset download progress.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> to cancel the operation.</param>
     /// <returns>
-    /// <see cref="DownloadReport"/>，包含：
+    /// A <see cref="DownloadReport"/> containing:
     /// <list type="bullet">
-    ///   <item><description>每个资源的详细结果（<see cref="DownloadResult"/>）。</description></item>
-    ///   <item><description>所有成功下载的总字节数。</description></item>
-    ///   <item><description>总耗时。</description></item>
-    ///   <item><description>成功和失败的数量。</description></item>
+    ///   <item><description>Detailed results for each asset (<see cref="DownloadResult"/>).</description></item>
+    ///   <item><description>Total bytes successfully downloaded.</description></item>
+    ///   <item><description>Total elapsed duration.</description></item>
+    ///   <item><description>Counts of successful and failed downloads.</description></item>
     /// </list>
     /// </returns>
     public async Task<DownloadReport> ExecuteAsync(
@@ -275,27 +289,27 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     }
 
     /// <summary>
-    /// 根据资源信息解析最终的文件名。
+    /// Resolves the final file name from the asset information.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 文件名解析优先级如下：
+    /// The file name resolution priority is as follows:
     /// </para>
     /// <list type="number">
     ///   <item>
-    ///     <description>优先使用 <see cref="DownloadAsset.Name"/>，并追加 <see cref="DownloadOrchestratorOptions.Format"/> 对应的扩展名
-    ///     （若名称尚未以该扩展名结尾）。</description>
+    ///     <description>First uses <see cref="DownloadAsset.Name"/> and appends the extension corresponding to
+    ///     <see cref="DownloadOrchestratorOptions.Format"/> (if the name does not already end with that extension).</description>
     ///   </item>
     ///   <item>
-    ///     <description>若名称为空，尝试从 <see cref="DownloadAsset.Url"/> 的 URI 路径中提取文件名。</description>
+    ///     <description>If the name is empty, attempts to extract the file name from the URI path of <see cref="DownloadAsset.Url"/>.</description>
     ///   </item>
     ///   <item>
-    ///     <description>若上述均失败，返回格式为 "{<c>Name</c>}.{<c>Version</c>}" 的回退文件名。</description>
+    ///     <description>If all the above fail, returns a fallback file name in the format "{<c>Name</c>}.{<c>Version</c>}".</description>
     ///   </item>
     /// </list>
     /// </remarks>
-    /// <param name="asset">下载资源信息，包含名称、URL 和版本号。</param>
-    /// <returns>解析后的目标文件名。</returns>
+    /// <param name="asset">The download asset information containing name, URL, and version.</param>
+    /// <returns>The resolved destination file name.</returns>
     private string GetFileName(DownloadAsset asset)
     {
         if (!string.IsNullOrEmpty(asset.Name))

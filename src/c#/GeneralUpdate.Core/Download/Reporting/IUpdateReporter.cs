@@ -9,68 +9,79 @@ using GeneralUpdate.Core;
 namespace GeneralUpdate.Core.Download.Reporting;
 
 /// <summary>
-/// 更新状态报告器接口，用于向远程服务器（兼容 GeneralSpacestation API）报告更新生命周期事件。
+/// Defines a contract for reporting update lifecycle events to a remote server
+/// compatible with the GeneralSpacestation API.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 实现此接口的类负责将更新过程中的状态变化上报到远程服务，以便跟踪更新进度和结果。
-/// 典型的更新状态包括：
-/// <list type="bullet">
-///   <item><see cref="UpdateStatus.Updating"/> — 更新正在进行中。</item>
-///   <item><see cref="UpdateStatus.Success"/> — 更新成功完成。</item>
-///   <item><see cref="UpdateStatus.Failure"/> — 更新失败。</item>
-/// </list>
+/// Implementations are responsible for sending update status changes to a remote service
+/// so that the update progress and outcome can be tracked centrally.
+/// Typical update statuses include:
 /// </para>
+/// <list type="bullet">
+///   <item><description><see cref="UpdateStatus.Updating"/> — The update is in progress.</description></item>
+///   <item><description><see cref="UpdateStatus.Success"/> — The update completed successfully.</description></item>
+///   <item><description><see cref="UpdateStatus.Failure"/> — The update failed.</description></item>
+/// </list>
 /// <para>
-/// 默认实现为 <see cref="NoOpUpdateReporter"/>（空操作），当未配置 ReportUrl 时使用。
-/// 标准实现为 <see cref="HttpUpdateReporter"/>，通过 HTTP POST 将更新状态发送到指定端点。
+/// The default no-op implementation <see cref="NoOpUpdateReporter"/> is used when no ReportUrl is configured.
+/// The standard implementation <see cref="HttpUpdateReporter"/> sends status via HTTP POST to a configured endpoint.
 /// </para>
 /// </remarks>
 public interface IUpdateReporter
 {
     /// <summary>
-    /// 异步报告更新状态到远程服务器。
+    /// Asynchronously reports the update status to the remote server.
     /// </summary>
-    /// <param name="report">包含记录 ID、状态码和类型的更新报告数据。</param>
-    /// <param name="token">用于取消报告操作的取消令牌。</param>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <param name="report">The <see cref="UpdateReport"/> containing the record ID, status code, and type.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> to cancel the report operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task ReportAsync(UpdateReport report, CancellationToken token = default);
 }
 
 /// <summary>
-/// 更新状态枚举，匹配 GeneralSpacestation API 的 ReportDTO 协定。
-/// 1 = 正在更新，2 = 成功，3 = 失败。
+/// Enumerates update status values that match the GeneralSpacestation API ReportDTO contract.
 /// </summary>
+/// <remarks>
+/// Maps to the following integer codes:
+/// <list type="bullet">
+///   <item><description>1 = <see cref="UpdateStatus.Updating"/> — The update is currently in progress.</description></item>
+///   <item><description>2 = <see cref="UpdateStatus.Success"/> — The update completed successfully.</description></item>
+///   <item><description>3 = <see cref="UpdateStatus.Failure"/> — The update failed.</description></item>
+/// </list>
+/// </remarks>
 public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 
 /// <summary>
-/// 与 GeneralSpacestation 兼容的更新报告记录。
-/// 包含版本验证返回的记录 ID（RecordId）、状态码（Status）和类型（Type）。
+/// Represents an update report record compatible with the GeneralSpacestation API.
+/// Contains the record ID returned from version validation, the status code, and the update type.
 /// </summary>
-/// <param name="RecordId">版本验证时返回的记录 ID，用于标识本次更新记录。</param>
-/// <param name="Status">更新状态码：1=正在更新，2=成功，3=失败。默认为 1（正在更新）。</param>
-/// <param name="Type">更新类型：1=升级，2=推送。默认为 1（升级）。</param>
+/// <param name="RecordId">The record ID returned from version validation, used to identify this update record.</param>
+/// <param name="Status">The update status code: 1 = Updating, 2 = Success, 3 = Failure. Defaults to 1 (Updating).</param>
+/// <param name="Type">The update type: 1 = Upgrade, 2 = Push. Defaults to 1 (Upgrade).</param>
 /// <remarks>
-/// 此记录序列化为 JSON 时使用 camelCase 命名策略。
-/// 示例 JSON：{"recordId": 123, "status": 1, "type": 1}
+/// This record is serialized to JSON using camelCase naming policy.
+/// Example JSON: {"recordId": 123, "status": 1, "type": 1}
 /// </remarks>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 
 /// <summary>
-/// 基于 HTTP POST 的更新状态报告器，将 <see cref="UpdateReport"/> 序列化为 JSON
-/// 并发送到指定的远程端点，格式与 GeneralSpacestation ReportDTO 兼容。
+/// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
+/// and sends it to a configured remote endpoint. Compatible with the GeneralSpacestation ReportDTO format.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 此类实现了 <see cref="IUpdateReporter"/> 接口，是标准的 HTTP 更新状态上报实现。
+/// This class implements <see cref="IUpdateReporter"/> and provides the standard HTTP implementation
+/// for reporting update status to a remote server.
 /// </para>
 /// <para>
-/// 工作流程：
+/// Workflow:
 /// <list type="number">
-///   <item>将 <c>UpdateReport</c> 序列化为 JSON 字符串（使用 camelCase 命名策略）。</item>
-///   <item>创建 HTTP POST 请求，设置 Content-Type 为 application/json。</item>
-///   <item>发送请求到配置的报告 URL。</item>
-///   <item>如果请求失败（如网络错误），记录警告日志但不抛出异常，避免影响更新主流程。</item>
+///   <item>Serializes the <see cref="UpdateReport"/> to a JSON string using camelCase naming policy.</item>
+///   <item>Creates an HTTP POST request with Content-Type set to application/json.</item>
+///   <item>Sends the request to the configured report URL.</item>
+///   <item>If the request fails (e.g., network error), logs a warning without throwing an exception,
+///         to avoid disrupting the main update flow.</item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -80,10 +91,10 @@ public class HttpUpdateReporter : IUpdateReporter
     private readonly string _reportUrl;
 
     /// <summary>
-    /// 使用指定的 HTTP 客户端和报告 URL 初始化 HTTP 报告器。
+    /// Initializes a new instance of the <see cref="HttpUpdateReporter"/> class.
     /// </summary>
-    /// <param name="client">用于发送 HTTP 请求的 <see cref="HttpClient"/> 实例。</param>
-    /// <param name="reportUrl">接收更新状态报告的远程 URL。</param>
+    /// <param name="client">The <see cref="HttpClient"/> instance used to send HTTP requests.</param>
+    /// <param name="reportUrl">The remote URL that receives the update status reports.</param>
     public HttpUpdateReporter(HttpClient client, string reportUrl)
     {
         _client = client;
@@ -109,13 +120,19 @@ public class HttpUpdateReporter : IUpdateReporter
 }
 
 /// <summary>
-/// 空操作（No-op）更新状态报告器，当未配置 ReportUrl 时使用。
-/// 所有报告操作都立即返回已完成的任务，不执行任何实际操作。
+/// A no-op (null object) update status reporter that performs no actual work.
+/// Used when no ReportUrl is configured.
 /// </summary>
 /// <remarks>
-/// 此类实现了空对象模式（Null Object Pattern），
-/// 避免在使用方代码中需要判空处理。
-/// 当不需要向服务器报告更新状态时（如本地测试或未配置报告端点），使用此实现。
+/// <para>
+/// This class implements the Null Object Pattern, eliminating the need for null checks
+/// in consumer code. Every report operation returns a completed task immediately without
+/// performing any actual data transmission.
+/// </para>
+/// <para>
+/// Use this implementation when no remote status reporting is needed,
+/// such as during local testing or when the report endpoint is not configured.
+/// </para>
 /// </remarks>
 public class NoOpUpdateReporter : IUpdateReporter
 {

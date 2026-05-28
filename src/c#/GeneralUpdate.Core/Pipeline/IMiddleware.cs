@@ -3,31 +3,32 @@ using System.Threading.Tasks;
 namespace GeneralUpdate.Core.Pipeline
 {
     /// <summary>
-    /// 定义管道中间件的契约接口。
+    /// Defines the contract interface for pipeline middleware.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// 所有管道中间件必须实现此接口。<see cref="InvokeAsync(PipelineContext)"/> 方法在管道构建
-    /// （<see cref="PipelineBuilder"/>）的 <see cref="PipelineBuilder.Build"/> 执行期间按注册顺序
-    /// （FIFO）依次调用。每个中间件负责一个独立的处理阶段，例如哈希验证、解压缩或应用差异补丁。
+    /// All pipeline middleware must implement this interface. The <see cref="InvokeAsync(PipelineContext)"/> method is
+    /// called sequentially in registration order (FIFO) during execution of the pipeline built by
+    /// <see cref="PipelineBuilder"/>. Each middleware is responsible for an independent processing stage,
+    /// such as hash verification, decompression, or applying differential patches.
     /// </para>
     /// <para>
-    /// 中间件之间通过 <see cref="PipelineContext"/> 共享数据。上游中间件将计算结果写入上下文，
-    /// 下游中间件从中读取所需的输入。
+    /// Middleware share data through <see cref="PipelineContext"/>. Upstream middleware write computed results
+    /// into the context, and downstream middleware read the required inputs from it.
     /// </para>
     /// </remarks>
     /// <example>
-    /// 以下示例演示如何实现一个自定义中间件：
+    /// The following example demonstrates how to implement a custom middleware:
     /// <code>
     /// public class MyMiddleware : IMiddleware
     /// {
     ///     public async Task InvokeAsync(PipelineContext context)
     ///     {
-    ///         // 从上下文中读取数据
+    ///         // Read data from the context
     ///         var data = context.Get&lt;string&gt;("MyKey");
-    ///         // 执行处理逻辑
+    ///         // Execute processing logic
     ///         await Task.Run(() => { /* ... */ });
-    ///         // 将结果写回上下文
+    ///         // Write results back to the context
     ///         context.Add("Result", "processed");
     ///     }
     /// }
@@ -36,17 +37,18 @@ namespace GeneralUpdate.Core.Pipeline
     public interface IMiddleware
     {
         /// <summary>
-        /// 异步执行中间件的处理逻辑。
+        /// Asynchronously executes the processing logic of the middleware.
         /// </summary>
         /// <param name="context">
-        /// 管道上下文，包含当前执行环境的状态和中间件之间共享的数据。
-        /// 实现应从该上下文读取输入参数，并将处理结果写入其中。
+        /// The pipeline context, which contains the state of the current execution environment and
+        /// shared data between middleware. Implementations should read input parameters from this context
+        /// and write processing results into it.
         /// </param>
-        /// <returns>表示异步操作的任务。</returns>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         /// <remarks>
-        /// 此方法由 <see cref="PipelineBuilder.Build"/> 在遍历中间件队列时依次调用。
-        /// 实现应避免长时间阻塞，始终使用异步模式（<c>await</c>）。
-        /// 如果处理失败，应抛出异常以中断管道执行。
+        /// This method is called sequentially by <see cref="PipelineBuilder.Build"/> when traversing the
+        /// middleware queue. Implementations should avoid long blocking operations and always use asynchronous
+        /// patterns (<c>await</c>). If processing fails, an exception should be thrown to halt pipeline execution.
         /// </remarks>
         Task InvokeAsync(PipelineContext context);
     }

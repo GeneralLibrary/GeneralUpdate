@@ -21,26 +21,33 @@ using GeneralUpdate.Core.Strategy;
 namespace GeneralUpdate.Core.Silent;
 
 /// <summary>
-/// 静默更新轮询协调器 —— 定期检查更新，在后台静默下载更新包，
-/// 并在进程退出时延迟执行应用程序更新。
+/// Silent update polling orchestrator -- periodically checks for updates,
+/// silently downloads update packages in the background, and defers application
+/// update execution until the process exits.
 /// </summary>
 /// <remarks>
 /// <para>
-/// 遵循与 <see cref="ClientUpdateStrategy"/> 相同的 AppType 分流模式：
+/// Follows the same AppType dispatch pattern as <see cref="ClientUpdateStrategy"/>:
 /// </para>
 /// <list type="bullet">
-///   <item><description><b>Upgrade（AppType=2）</b>：更新包在轮询周期内就地应用，
-///   它们作用于 <c>UpdatePath</c> 而非正在运行的应用的 <c>InstallPath</c>。</description></item>
-///   <item><description><b>Client（AppType=1）</b>：更新包被延迟 —— 存储在 <c>ProcessInfo</c> 中，
-///   在进程退出时通过 IPC 交给 Upgrade 进程执行实际更新。</description></item>
+///   <item><description><b>Upgrade (AppType=2)</b>: Update packages are applied in-place
+///   during the polling cycle. They operate on <c>UpdatePath</c> rather than
+///   the running application's <c>InstallPath</c>.</description></item>
+///   <item><description><b>Client (AppType=1)</b>: Update packages are deferred -- stored in
+///   <c>ProcessInfo</c> and handed off to the Upgrade process via IPC when the
+///   current process exits.</description></item>
 /// </list>
 /// <para>
-/// 核心工作流程：
+/// Core workflow:
 /// <list type="number">
-///   <item><description>启动后台轮询循环，按 <see cref="SilentOptions.PollInterval"/> 间隔检查服务器是否有新版本。</description></item>
-///   <item><description>发现新版本后，在后台静默下载所有更新包。</description></item>
-///   <item><description>Upgrade 包立即应用，Client 包暂存到 <c>ProcessInfo</c> 中。</description></item>
-///   <item><description>监听 <see cref="AppDomain.ProcessExit"/> 事件，在进程退出时启动升级程序。</description></item>
+///   <item><description>Starts a background polling loop that checks the server for new versions
+///   at intervals specified by <see cref="SilentOptions.PollInterval"/>.</description></item>
+///   <item><description>When a new version is found, silently downloads all update packages
+///   in the background.</description></item>
+///   <item><description>Upgrade packages are applied immediately; Client packages are staged
+///   into <c>ProcessInfo</c>.</description></item>
+///   <item><description>Listens to the <see cref="AppDomain.ProcessExit"/> event and launches the
+///   upgrade program when the process exits.</description></item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -59,11 +66,14 @@ public class SilentPollOrchestrator : IDisposable
     private List<VersionInfo> _clientVersions = new();
 
     /// <summary>
-    /// 初始化 <see cref="SilentPollOrchestrator"/> 的新实例。
+    /// Initializes a new instance of the <see cref="SilentPollOrchestrator"/> class.
     /// </summary>
-    /// <param name="configInfo">全局配置信息，包含更新 URL、版本号、产品信息等。</param>
-    /// <param name="options">静默更新选项，包含轮询间隔等配置。</param>
-    /// <exception cref="ArgumentNullException">当 <paramref name="configInfo"/> 或 <paramref name="options"/> 为 <c>null</c> 时抛出。</exception>
+    /// <param name="configInfo">The global configuration information, including update URL,
+    /// version numbers, product information, etc.</param>
+    /// <param name="options">The silent update options, including polling interval and
+    /// client launch behavior.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configInfo"/>
+    /// or <paramref name="options"/> is <c>null</c>.</exception>
     public SilentPollOrchestrator(GlobalConfigInfo configInfo, SilentOptions options)
     {
         _configInfo = configInfo ?? throw new ArgumentNullException(nameof(configInfo));
@@ -71,38 +81,42 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 设置更新生命周期钩子（链式调用方法）。
+    /// Sets the update lifecycle hooks (fluent method).
     /// </summary>
-    /// <param name="hooks">实现 <see cref="IUpdateHooks"/> 接口的钩子实例，用于在更新各阶段插入自定义逻辑。</param>
-    /// <returns>当前 <see cref="SilentPollOrchestrator"/> 实例，支持链式调用。</returns>
+    /// <param name="hooks">An <see cref="IUpdateHooks"/> implementation for injecting
+    /// custom logic at various update stages.</param>
+    /// <returns>The current <see cref="SilentPollOrchestrator"/> instance, enabling fluent chaining.</returns>
     public SilentPollOrchestrator WithHooks(IUpdateHooks? hooks) { _hooks = hooks; return this; }
 
     /// <summary>
-    /// 设置更新进度报告器（链式调用方法）。
+    /// Sets the update progress reporter (fluent method).
     /// </summary>
-    /// <param name="reporter">实现 <see cref="IUpdateReporter"/> 接口的报告器实例。</param>
-    /// <returns>当前 <see cref="SilentPollOrchestrator"/> 实例，支持链式调用。</returns>
+    /// <param name="reporter">An <see cref="IUpdateReporter"/> implementation for reporting
+    /// update status.</param>
+    /// <returns>The current <see cref="SilentPollOrchestrator"/> instance, enabling fluent chaining.</returns>
     public SilentPollOrchestrator WithReporter(IUpdateReporter? reporter) { _reporter = reporter; return this; }
 
     /// <summary>
-    /// 设置自定义操作系统策略（链式调用方法），用于覆盖默认的平台特定更新策略（Windows/Linux/macOS）。
+    /// Sets a custom operating system strategy (fluent method), overriding the default
+    /// platform-specific update strategy (Windows/Linux/macOS).
     /// </summary>
-    /// <param name="strategy">自定义的操作系统策略实例。</param>
-    /// <returns>当前 <see cref="SilentPollOrchestrator"/> 实例，支持链式调用。</returns>
+    /// <param name="strategy">A custom <see cref="IStrategy"/> implementation.</param>
+    /// <returns>The current <see cref="SilentPollOrchestrator"/> instance, enabling fluent chaining.</returns>
     public SilentPollOrchestrator WithOsStrategy(IStrategy? strategy) { _customOsStrategy = strategy; return this; }
 
     /// <summary>
-    /// 启动静默轮询协调器，开始后台检查更新。
+    /// Starts the silent polling orchestrator, beginning background update checks.
     /// </summary>
-    /// <returns>表示启动操作的任务。注意：此任务在轮询循环启动后立即完成，不代表轮询循环已结束。</returns>
+    /// <returns>A task representing the start operation. Note: this task completes as soon as
+    /// the polling loop is launched, not when the polling loop ends.</returns>
     /// <remarks>
     /// <para>
-    /// 启动流程：
+    /// Start flow:
     /// <list type="number">
-    ///   <item><description>注册 <see cref="AppDomain.CurrentDomain.ProcessExit"/> 事件处理器。</description></item>
-    ///   <item><description>创建 <see cref="CancellationTokenSource"/>。</description></item>
-    ///   <item><description>在后台任务中启动轮询循环 <see cref="PollLoopAsync"/>。</description></item>
-    ///   <item><description>为轮询任务附加异常处理器以记录未处理的异常。</description></item>
+    ///   <item><description>Registers the <see cref="AppDomain.CurrentDomain.ProcessExit"/> event handler.</description></item>
+    ///   <item><description>Creates a <see cref="CancellationTokenSource"/>.</description></item>
+    ///   <item><description>Launches the polling loop <see cref="PollLoopAsync"/> in a background task.</description></item>
+    ///   <item><description>Attaches an exception handler to the polling task to log unhandled exceptions.</description></item>
     /// </list>
     /// </para>
     /// </remarks>
@@ -124,15 +138,16 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 停止静默轮询协调器，取消正在进行的轮询和下载操作。
+    /// Stops the silent polling orchestrator, cancelling in-progress polling and download operations.
     /// </summary>
     /// <remarks>
-    /// 调用此方法会：
+    /// Calling this method will:
     /// <list type="bullet">
-    ///   <item><description>取消后台轮询循环。</description></item>
-    ///   <item><description>从 <see cref="AppDomain.CurrentDomain.ProcessExit"/> 注销事件处理器。</description></item>
+    ///   <item><description>Cancel the background polling loop.</description></item>
+    ///   <item><description>Unregister the <see cref="AppDomain.CurrentDomain.ProcessExit"/> event handler.</description></item>
     /// </list>
-    /// 注意：此方法不会取消已经在进行的下载任务，但会阻止新的轮询周期开始。
+    /// Note: This method does not cancel downloads that are already in progress,
+    /// but it prevents new polling cycles from starting.
     /// </remarks>
     public void Stop()
     {
@@ -141,18 +156,23 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 后台轮询循环，按照配置的间隔定期检查更新并执行更新准备。
+    /// Background polling loop that periodically checks for updates and performs
+    /// update preparation at the configured interval.
     /// </summary>
-    /// <param name="token">取消令牌，用于停止轮询循环。</param>
-    /// <returns>表示轮询循环的任务。当准备完成或取消时结束。</returns>
+    /// <param name="token">A cancellation token for stopping the polling loop.</param>
+    /// <returns>A task representing the polling loop. Ends when preparation is complete
+    /// or cancellation is requested.</returns>
     /// <remarks>
-    /// 循环逻辑：
+    /// <para>
+    /// Loop logic:
     /// <list type="number">
-    ///   <item><description>调用 <see cref="PrepareUpdateIfNeededAsync"/> 检查并准备更新。</description></item>
-    ///   <item><description>如果准备完成（<c>_prepared == 1</c>），退出循环。</description></item>
-    ///   <item><description>否则等待 <see cref="SilentOptions.PollInterval"/> 后再次检查。</description></item>
+    ///   <item><description>Calls <see cref="PrepareUpdateIfNeededAsync"/> to check for and prepare updates.</description></item>
+    ///   <item><description>If preparation is complete (<c>_prepared == 1</c>), exits the loop.</description></item>
+    ///   <item><description>Otherwise, waits for <see cref="SilentOptions.PollInterval"/> before checking again.</description></item>
     /// </list>
-    /// 循环中的单个异常不会终止整个循环，而是记录错误后继续下一次轮询。
+    /// Individual exceptions within the loop do not terminate the entire loop;
+    /// errors are logged and polling continues on the next cycle.
+    /// </para>
     /// </remarks>
     private async Task PollLoopAsync(CancellationToken token)
     {
@@ -176,23 +196,26 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 检查是否有可用更新，若有则执行完整的更新准备工作（下载、备份、应用 Upgrade 包、准备 ProcessInfo）。
+    /// Checks for available updates and, if found, performs the full update preparation
+    /// workflow including download, backup, Upgrade package application, and ProcessInfo staging.
     /// </summary>
-    /// <param name="token">取消令牌。</param>
-    /// <returns>表示异步操作的任务。</returns>
+    /// <param name="token">A cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     /// <remarks>
     /// <para>
-    /// 这是静默更新的核心方法，执行完整的工作流：
+    /// This is the core method of the silent update flow, executing the complete workflow:
     /// </para>
     /// <list type="number">
-    ///   <item><description>通过 <see cref="HttpDownloadSource"/> 向服务器查询可用更新。</description></item>
-    ///   <item><description>使用 <see cref="DownloadPlanBuilder"/> 构建下载计划。</description></item>
-    ///   <item><description>检查版本失败记录，跳过已知失败的版本。</description></item>
-    ///   <item><description>调用钩子（hooks）的 <c>OnBeforeUpdateAsync</c> 允许外部取消更新。</description></item>
-    ///   <item><description>初始化黑名单，创建临时目录，执行备份。</description></item>
-    ///   <item><description>使用 <see cref="Download.Orchestrators.DefaultDownloadOrchestrator"/> 下载所有更新包。</description></item>
-    ///   <item><description>按 AppType 分流：Upgrade 包立即通过策略执行，Client 包暂存到 ProcessInfo。</description></item>
-    ///   <item><description>调用钩子的 <c>OnAfterUpdateAsync</c> 通知更新完成。</description></item>
+    ///   <item><description>Queries the server for available updates via <see cref="HttpDownloadSource"/>.</description></item>
+    ///   <item><description>Builds a download plan using <see cref="DownloadPlanBuilder"/>.</description></item>
+    ///   <item><description>Checks version failure records to skip known-failed versions.</description></item>
+    ///   <item><description>Calls hooks' <c>OnBeforeUpdateAsync</c> to allow external cancellation of the update.</description></item>
+    ///   <item><description>Initializes the blacklist, creates a temp directory, and performs backup.</description></item>
+    ///   <item><description>Downloads all update packages using
+    ///   <see cref="Download.Orchestrators.DefaultDownloadOrchestrator"/>.</description></item>
+    ///   <item><description>Dispatches by AppType: Upgrade packages are executed immediately via the
+    ///   platform strategy; Client packages are staged in ProcessInfo.</description></item>
+    ///   <item><description>Calls hooks' <c>OnAfterUpdateAsync</c> to notify that the update is complete.</description></item>
     /// </list>
     /// </remarks>
     private async Task PrepareUpdateIfNeededAsync(CancellationToken token)
@@ -307,7 +330,7 @@ public class SilentPollOrchestrator : IDisposable
             return;
         }
 
-        // Split packages by AppType — mirrors ClientUpdateStrategy
+        // Split packages by AppType -- mirrors ClientUpdateStrategy
         var downloadVersions = plan.Assets.Select(a => new VersionInfo
         {
             Name = a.Name,
@@ -322,7 +345,7 @@ public class SilentPollOrchestrator : IDisposable
         _clientVersions = downloadVersions.Where(v => v.AppType == (int)AppType.Client).ToList();
         GeneralTracer.Info($"SilentPollOrchestrator: Upgrade packages={upgradeVersions.Count}, Client packages={_clientVersions.Count}");
 
-        // Apply Upgrade packages in place — safe because they target UpdatePath
+        // Apply Upgrade packages in place -- safe because they target UpdatePath
         if (upgradeVersions.Count > 0)
         {
             GeneralTracer.Info("SilentPollOrchestrator: applying Upgrade packages.");
@@ -376,22 +399,26 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 进程退出事件处理器 —— 当进程即将退出时，将准备好的 Client 包信息通过 IPC 发送给升级程序并启动升级。
+    /// Process exit event handler -- when the process is about to exit, sends the prepared
+    /// Client package information to the upgrade program via IPC and launches the upgrade.
     /// </summary>
-    /// <param name="sender">事件发送者。</param>
-    /// <param name="e">事件参数。</param>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="e">The event arguments.</param>
     /// <remarks>
     /// <para>
-    /// 此方法在 <see cref="AppDomain.CurrentDomain.ProcessExit"/> 事件触发时被调用。
-    /// 仅在更新已准备好（<c>_prepared == 1</c>）且升级程序尚未启动时执行。
+    /// This method is invoked when the <see cref="AppDomain.CurrentDomain.ProcessExit"/>
+    /// event fires. It only executes when an update has been prepared (<c>_prepared == 1</c>)
+    /// and the upgrade program has not yet been started.
     /// </para>
     /// <para>
-    /// 执行流程：
+    /// Execution flow:
     /// <list type="number">
-    ///   <item><description>通过 <c>Interlocked.Exchange</c> 确保升级程序只启动一次。</description></item>
-    ///   <item><description>解析升级程序的路径（优先使用 UpdatePath，回退到 InstallPath）。</description></item>
-    ///   <item><description>如果存在 Client 包，通过 <see cref="EncryptedFileProcessInfoProvider"/> 发送加密的 ProcessInfo。</description></item>
-    ///   <item><description>启动升级进程（使用 ShellExecute 以提升权限）。</description></item>
+    ///   <item><description>Uses <c>Interlocked.Exchange</c> to ensure the upgrade program is only
+    ///   started once.</description></item>
+    ///   <item><description>Resolves the upgrade program path (prefers UpdatePath, falls back to InstallPath).</description></item>
+    ///   <item><description>If Client packages exist, sends the encrypted ProcessInfo via
+    ///   <see cref="EncryptedFileProcessInfoProvider"/>.</description></item>
+    ///   <item><description>Starts the upgrade process (uses ShellExecute for privilege elevation).</description></item>
     /// </list>
     /// </para>
     /// </remarks>
@@ -401,7 +428,7 @@ public class SilentPollOrchestrator : IDisposable
 
         try
         {
-            // Resolve updater location — prefers UpdatePath, falls back to InstallPath
+            // Resolve updater location -- prefers UpdatePath, falls back to InstallPath
             var updaterDir = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath)
                 ? (Path.IsPathRooted(_configInfo.UpdatePath)
                     ? _configInfo.UpdatePath
@@ -432,13 +459,15 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 尝试通过钩子和报告器报告更新错误。
+    /// Attempts to report an update error through hooks and the reporter.
     /// </summary>
-    /// <param name="ctx">更新上下文，包含应用信息。</param>
-    /// <param name="ex">发生的异常。</param>
+    /// <param name="ctx">The update context containing application information.</param>
+    /// <param name="ex">The exception that occurred.</param>
     /// <remarks>
-    /// 此方法会尽力调用 <c>_hooks.OnUpdateErrorAsync</c> 和 <c>_reporter.ReportAsync</c>，
-    /// 即使这些调用本身抛出异常也不会传播（仅记录警告日志），确保不会因错误报告失败而掩盖原始错误。
+    /// This method makes a best-effort attempt to call <c>_hooks.OnUpdateErrorAsync</c> and
+    /// <c>_reporter.ReportAsync</c>. Even if these calls themselves throw exceptions,
+    /// the exceptions are not propagated (only a warning is logged), ensuring that a
+    /// failure in error reporting does not mask the original error.
     /// </remarks>
     private void TryReportError(UpdateContext ctx, Exception ex)
     {
@@ -455,8 +484,9 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 初始化 <see cref="StorageManager.BlackListMatcher"/>，使用配置中的黑名单列表。
-    /// 如果配置中的列表为空，则使用 <see cref="BlackListDefaults"/> 中的默认值。
+    /// Initializes the <see cref="StorageManager.BlackListMatcher"/> using the configured
+    /// blacklist information. Falls back to <see cref="BlackListDefaults"/> if the
+    /// configured lists are empty.
     /// </summary>
     private void InitBlackList()
     {
@@ -469,11 +499,12 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 根据当前操作系统创建对应的更新策略实例。
-    /// 如果设置了自定义策略（<c>_customOsStrategy</c>），则优先使用。
+    /// Creates the appropriate update strategy instance based on the current operating system.
+    /// Uses the custom strategy (<c>_customOsStrategy</c>) if one has been set.
     /// </summary>
-    /// <returns>与当前平台匹配的 <see cref="IStrategy"/> 实现。</returns>
-    /// <exception cref="PlatformNotSupportedException">当操作系统不是 Windows、Linux 或 macOS 时抛出。</exception>
+    /// <returns>An <see cref="IStrategy"/> implementation matching the current platform.</returns>
+    /// <exception cref="PlatformNotSupportedException">Thrown when the operating system is
+    /// not Windows, Linux, or macOS.</exception>
     private IStrategy CreateStrategy()
     {
         if (_customOsStrategy != null) return _customOsStrategy;
@@ -484,9 +515,9 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 检测当前运行的操作系统平台。
+    /// Detects the current operating system platform.
     /// </summary>
-    /// <returns><see cref="PlatformType"/> 枚举值，表示当前操作系统。</returns>
+    /// <returns>A <see cref="PlatformType"/> enum value representing the current operating system.</returns>
     private static PlatformType GetPlatform()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
@@ -496,13 +527,16 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 检查指定版本是否为已知的失败版本（已记录在环境变量 <c>UpgradeFail</c> 中）。
+    /// Checks whether the specified version is a known failed version (recorded in the
+    /// <c>UpgradeFail</c> environment variable).
     /// </summary>
-    /// <param name="version">要检查的版本号字符串。</param>
-    /// <returns>如果版本号不为空且小于等于环境变量中记录的失败版本号则返回 <c>true</c>。</returns>
+    /// <param name="version">The version string to check.</param>
+    /// <returns><c>true</c> if the version is not null and is less than or equal to the
+    /// failed version recorded in the environment variable.</returns>
     /// <remarks>
-    /// 此功能用于避免反复尝试已知失败的版本更新。
-    /// 通过环境变量 <c>UpgradeFail</c> 记录曾经失败的版本号，如果待更新的版本号小于等于该值则跳过。
+    /// This feature prevents repeatedly attempting known-failed version updates.
+    /// The <c>UpgradeFail</c> environment variable stores a previously failed version number;
+    /// if the candidate version is less than or equal to that value, it is skipped.
     /// </remarks>
     private static bool CheckFail(string? version)
     {
@@ -513,10 +547,11 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
-    /// 释放由 <see cref="SilentPollOrchestrator"/> 占用的资源。
+    /// Releases all resources used by the <see cref="SilentPollOrchestrator"/>.
     /// </summary>
     /// <remarks>
-    /// 调用 <see cref="Stop"/> 停止轮询，然后释放 <see cref="CancellationTokenSource"/>。
+    /// Calls <see cref="Stop"/> to halt polling, then disposes the
+    /// <see cref="CancellationTokenSource"/>.
     /// </remarks>
     public void Dispose()
     {
@@ -526,25 +561,29 @@ public class SilentPollOrchestrator : IDisposable
 }
 
 /// <summary>
-/// 静默更新的配置选项。
+/// Configuration options for silent updates.
 /// </summary>
 /// <remarks>
-/// 通过 <see cref="SilentOptions"/> 可以控制静默更新的轮询行为和客户端重启策略。
+/// <see cref="SilentOptions"/> controls the polling behavior and client restart policy
+/// for silent updates.
 /// </remarks>
 public sealed class SilentOptions
 {
     /// <summary>
-    /// 获取或设置轮询间隔时间。默认为 1 小时。
+    /// Gets or sets the polling interval. The default is 1 hour.
     /// </summary>
-    /// <value>两次更新检查之间的时间间隔。最小建议值不应低于 5 分钟以避免频繁的网络请求。</value>
+    /// <value>The time interval between update checks. The recommended minimum is
+    /// 5 minutes to avoid excessive network requests.</value>
     public TimeSpan PollInterval { get; set; } = TimeSpan.FromHours(1);
 
     /// <summary>
-    /// 获取或设置一个值，指示更新完成后是否自动启动客户端应用程序。
+    /// Gets or sets a value indicating whether the client application should be
+    /// automatically launched after an update completes.
     /// </summary>
     /// <value>
-    /// <c>true</c>（默认值）：升级完成后自动启动客户端；
-    /// <c>false</c>：由调用方手动控制重启时机（适用于维护窗口、编排式发布等场景）。
+    /// <c>true</c> (default): Automatically start the client after the upgrade completes;
+    /// <c>false</c>: The caller controls restart timing manually (suitable for maintenance
+    /// windows, orchestrated deployments, etc.).
     /// </value>
     public bool LaunchClientAfterUpdate { get; set; } = true;
 }

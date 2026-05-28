@@ -4,63 +4,79 @@ using GeneralUpdate.Core.FileSystem;
 namespace GeneralUpdate.Core.Differential;
 
 /// <summary>
-/// 定义差异生成（Clean）阶段的完整匹配策略接口。
-/// 实现者负责目录比较、识别已删除的文件以及将新文件匹配到对应的旧文件。
+/// Defines the complete matching strategy interface for the Clean (differential generation) stage.
+/// Implementations are responsible for directory comparison, identifying deleted files,
+/// and matching new files to their corresponding old files.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Clean 阶段（差异生成阶段）是差异更新的第一步，其核心目标是从新旧两个版本的目录中
-/// 生成差异补丁所需的所有信息。此接口定义了三个关键操作：
+/// The Clean stage (differential generation stage) is the first step of differential updates.
+/// Its core objective is to extract all information needed to generate differential patches
+/// from two versions of a directory. This interface defines three key operations:
 /// </para>
 /// <list type="bullet">
-///   <item><description><see cref="Compare"/>：对新旧目录进行递归比较，获取完整的差异信息。</description></item>
-///   <item><description><see cref="Except"/>：识别在旧版本中存在但在新版本中被移除的文件。</description></item>
-///   <item><description><see cref="Match"/>：将新版本中的文件与旧版本中对应的文件建立匹配关系，
-///   以便后续通过差异算法生成二进制补丁。</description></item>
+///   <item><description><see cref="Compare"/>: Recursively compares the old and new directories
+///   to obtain complete differential information.</description></item>
+///   <item><description><see cref="Except"/>: Identifies files that existed in the old version
+///   but were removed in the new version.</description></item>
+///   <item><description><see cref="Match"/>: Establishes a correspondence between files in the
+///   new version and their counterparts in the old version, enabling subsequent binary
+///   patch generation via a differential algorithm.</description></item>
 /// </list>
 /// <para>
-/// 默认实现请参考 <see cref="DefaultCleanMatcher"/>。
-/// 如果需要自定义匹配逻辑（例如基于文件哈希值或自定义元数据的匹配），可以实现此接口。
+/// Refer to <see cref="DefaultCleanMatcher"/> for the default implementation.
+/// Implement this interface directly if you need custom matching logic
+/// (e.g., hash-based or custom metadata-based matching).
 /// </para>
 /// </remarks>
 public interface ICleanMatcher
 {
     /// <summary>
-    /// 比较源目录和目标目录，返回发生变更的文件集合。
+    /// Compares the source and target directories and returns the collection of files
+    /// that have changed.
     /// </summary>
-    /// <param name="sourcePath">源（旧版本）目录路径。</param>
-    /// <param name="targetPath">目标（新版本）目录路径。</param>
-    /// <returns>包含左右两侧节点列表和差异节点列表的 <see cref="ComparisonResult"/>。</returns>
+    /// <param name="sourcePath">The source (old version) directory path.</param>
+    /// <param name="targetPath">The target (new version) directory path.</param>
+    /// <returns>A <see cref="ComparisonResult"/> containing the left and right node lists
+    /// and the list of differing nodes.</returns>
     /// <remarks>
-    /// 此方法是差异生成的入口点。实现应递归遍历两个目录，
-    /// 通过文件哈希值或元数据比较识别出所有新增、修改和删除的文件。
+    /// This is the entry point for differential generation. Implementations should recursively
+    /// traverse both directories and identify all added, modified, and deleted files
+    /// by comparing file hashes or metadata.
     /// </remarks>
     ComparisonResult Compare(string sourcePath, string targetPath);
 
     /// <summary>
-    /// 返回仅存在于源目录中的文件（即在新版本中被删除的文件）。
+    /// Returns files that exist only in the source directory
+    /// (i.e., files deleted in the new version).
     /// </summary>
-    /// <param name="sourcePath">源（旧版本）目录路径。</param>
-    /// <param name="targetPath">目标（新版本）目录路径。</param>
-    /// <returns>仅存在于源目录中的 <see cref="FileNode"/> 可枚举集合；无差异时返回空集合。</returns>
+    /// <param name="sourcePath">The source (old version) directory path.</param>
+    /// <param name="targetPath">The target (new version) directory path.</param>
+    /// <returns>An enumerable collection of <see cref="FileNode"/> instances that exist only
+    /// in the source directory; an empty collection if there are no differences.</returns>
     /// <remarks>
-    /// 此方法的结果用于在更新包中生成"删除"指令，指示客户端在应用更新时移除这些文件。
+    /// The results of this method are used to generate "delete" instructions in the update package,
+    /// telling the client to remove these files when applying the update.
     /// </remarks>
     IEnumerable<FileNode>? Except(string sourcePath, string targetPath);
 
     /// <summary>
-    /// 尝试从左侧（源）节点集合中找到与指定新文件对应的旧文件节点。
+    /// Attempts to find the old file node corresponding to a specified new file
+    /// from the source (left) node collection.
     /// </summary>
-    /// <param name="newFile">来自目标目录的新文件节点。</param>
-    /// <param name="leftNodes">来自源目录的所有文件节点集合。</param>
+    /// <param name="newFile">The new file node from the target directory.</param>
+    /// <param name="leftNodes">The collection of all file nodes from the source directory.</param>
     /// <returns>
-    /// 匹配到的旧 <see cref="FileNode"/>；如果未找到匹配则返回 <c>null</c>
-    /// （表示该文件为全新文件，应直接复制而非生成差异补丁）。
+    /// The matched old <see cref="FileNode"/>; or <c>null</c> if no match is found
+    /// (indicating the file is entirely new and should be copied directly rather than
+    /// having a differential patch generated).
     /// </returns>
     /// <remarks>
-    /// 对于成功匹配的文件，后续会使用差异算法（如 bsdiff）生成二进制补丁；
-    /// 对于未匹配的新文件，将直接打包完整的文件内容到更新包中。
-    /// 实现应同时校验文件名称和相对路径，确保匹配的准确性。
+    /// For successfully matched files, a differential algorithm (e.g., bsdiff) will be used
+    /// to generate a binary patch. For unmatched new files, the complete file content will
+    /// be packaged into the update package.
+    /// Implementations should verify both the file name and relative path to ensure
+    /// matching accuracy.
     /// </remarks>
     FileNode? Match(FileNode newFile, IEnumerable<FileNode> leftNodes);
 }
