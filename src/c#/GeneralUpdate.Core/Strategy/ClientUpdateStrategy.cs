@@ -36,6 +36,7 @@ public class ClientUpdateStrategy : IStrategy
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
+    private Func<UpdateInfoEventArgs, bool>? _customSkipOption;
     private Download.Abstractions.IDownloadOrchestrator? _orchestrator;
     private Download.Abstractions.IDownloadPolicy? _customDownloadPolicy;
     private Download.Abstractions.IDownloadExecutor? _customDownloadExecutor;
@@ -134,6 +135,11 @@ public class ClientUpdateStrategy : IStrategy
         _updatePrecheck = func ?? throw new ArgumentNullException(nameof(func));
         return this;
     }
+
+    /// <summary>Register a skip condition evaluated AFTER <see cref="UseUpdatePrecheck"/>,
+    /// giving the user access to full update info before deciding whether to skip.</summary>
+    public void UseCustomSkipOption(Func<UpdateInfoEventArgs, bool>? func)
+        => _customSkipOption = func;
 
     #region Workflow
 
@@ -405,7 +411,8 @@ public class ClientUpdateStrategy : IStrategy
     private bool CanSkip(bool isForcibly, UpdateInfoEventArgs updateInfo)
     {
         if (isForcibly) return false;
-        return _updatePrecheck?.Invoke(updateInfo) == true;
+        if (_updatePrecheck?.Invoke(updateInfo) == true) return true;
+        return _customSkipOption?.Invoke(updateInfo) == true;
     }
 
     private bool CheckFail(string version)
