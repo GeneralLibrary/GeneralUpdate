@@ -129,36 +129,6 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
 
-        public TBootstrap DirtyStrategy<T>() where T : Differential.IDirtyStrategy, new()
-        {
-            _extensions[typeof(Differential.IDirtyStrategy)] = typeof(T);
-            return (TBootstrap)this;
-        }
-
-        public TBootstrap BinaryDiffer<T>() where T : IBinaryDiffer, new()
-        {
-            _extensions[typeof(IBinaryDiffer)] = typeof(T);
-            return (TBootstrap)this;
-        }
-
-        public TBootstrap ConfigureBlackList(BlackListConfig config)
-        {
-            _instances[typeof(BlackListConfig)] = config ?? BlackListConfig.Empty;
-            return (TBootstrap)this;
-        }
-
-        /// <summary>
-        /// Configure blacklist via fluent builder action.
-        /// Usage: <c>.ConfigureBlackList(cfg => cfg.AddBlackFiles("*.log").AddBlackFormats(".pdb"))</c>
-        /// </summary>
-        public TBootstrap ConfigureBlackList(Action<FileSystem.BlackListConfigBuilder> configure)
-        {
-            var builder = new FileSystem.BlackListConfigBuilder();
-            configure(builder);
-            _instances[typeof(BlackListConfig)] = builder.Build();
-            return (TBootstrap)this;
-        }
-
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
             if (_extensions.TryGetValue(typeof(TExtension), out var t))
@@ -166,6 +136,12 @@ namespace GeneralUpdate.Core.Configuration
             if (_instances.TryGetValue(typeof(TExtension), out var instance))
                 return instance as TExtension;
             return null;
+        }
+
+        /// <summary>Resolves the registered extension type without instantiating it.</summary>
+        protected Type? ResolveExtensionType<TExtension>() where TExtension : class
+        {
+            return _extensions.TryGetValue(typeof(TExtension), out var t) ? t : null;
         }
     }
 }
