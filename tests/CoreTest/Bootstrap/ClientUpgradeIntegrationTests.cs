@@ -64,7 +64,7 @@ namespace CoreTest.Bootstrap
             // Act - developer chains configuration
             var result = bootstrap
                 .SetConfig(config)
-                .SetCustomSkipOption(_ => false)
+                .AddListenerUpdatePrecheck(_ => false)
                 .AddListenerException((s, e) => { })
                 .AddListenerUpdateInfo((s, e) => { });
 
@@ -121,7 +121,7 @@ namespace CoreTest.Bootstrap
             var skipCalled = false;
             var bootstrap = new GeneralUpdateBootstrap()
                 .SetConfig(config)
-                .SetCustomSkipOption(_ =>
+                .AddListenerUpdatePrecheck(_ =>
                 {
                     skipCalled = true;
                     return true;
@@ -527,7 +527,7 @@ namespace CoreTest.Bootstrap
                     BlackFormats = new List<string> { ".log", ".tmp", ".cache" },
                     SkipDirectorys = new List<string> { "logs", "temp", "cache", "__backups__" }
                 })
-                .SetCustomSkipOption(_ =>
+                .AddListenerUpdatePrecheck(_ =>
                 {
                     skipRequested = true;
                     return false;

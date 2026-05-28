@@ -42,7 +42,6 @@ namespace GeneralUpdate.Core;
 public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
 {
     private GlobalConfigInfo _configInfo = new();
-    private Func<UpdateInfoEventArgs, bool>? _customSkipOption;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private CancellationTokenSource? _cts;
     private DiffPipelineBuilder? _diffPipelineBuilder;
@@ -130,8 +129,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
                     if (_updatePrecheck != null)
                         cs.UseUpdatePrecheck(_updatePrecheck);
-                    if (_customSkipOption != null)
-                        cs.UseCustomSkipOption(_customSkipOption);
 
                     await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
 
@@ -196,12 +193,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             InitBlackList();
         }
 
-        return this;
-    }
-
-    public GeneralUpdateBootstrap SetCustomSkipOption(Func<UpdateInfoEventArgs, bool>? func)
-    {
-        _customSkipOption = func;
         return this;
     }
 
