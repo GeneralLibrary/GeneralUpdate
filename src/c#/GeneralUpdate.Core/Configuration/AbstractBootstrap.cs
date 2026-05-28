@@ -66,18 +66,22 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
         
-        public TBootstrap PipelineFactory<T>() where T : Pipeline.IUpdatePipelineFactory, new()
-        {
-            _extensions[typeof(Pipeline.IUpdatePipelineFactory)] = typeof(T);
-            return (TBootstrap)this;
-        }
-
+        /// <summary>
+        /// Registers a custom retry/timeout policy for download operations.
+        /// Only effective when using the default download orchestrator.
+        /// If <see cref="DownloadOrchestrator{T}"/> is also set, this is ignored.
+        /// </summary>
         public TBootstrap DownloadPolicy<T>() where T : Download.Abstractions.IDownloadPolicy, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadPolicy)] = typeof(T);
             return (TBootstrap)this;
         }
 
+        /// <summary>
+        /// Registers a custom single-file download executor (e.g. for non-HTTP protocols).
+        /// Only effective when using the default download orchestrator.
+        /// If <see cref="DownloadOrchestrator{T}"/> is also set, this is ignored.
+        /// </summary>
         public TBootstrap DownloadExecutor<T>() where T : Download.Abstractions.IDownloadExecutor, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadExecutor)] = typeof(T);
@@ -90,6 +94,11 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
 
+        /// <summary>
+        /// Registers a custom post-download processing pipeline (hash verification, decryption, virus scan).
+        /// Only effective when using the default download orchestrator.
+        /// If <see cref="DownloadOrchestrator{T}"/> is also set, this is ignored.
+        /// </summary>
         public TBootstrap DownloadPipeline<T>() where T : Download.Abstractions.IDownloadPipeline, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadPipeline)] = typeof(T);
@@ -108,15 +117,15 @@ namespace GeneralUpdate.Core.Configuration
             return (TBootstrap)this;
         }
 
+        /// <summary>
+        /// Registers a custom download orchestrator that handles batch downloads end-to-end.
+        /// This is the top-level download abstraction. When set, <see cref="DownloadPolicy{T}"/>,
+        /// <see cref="DownloadExecutor{T}"/>, and <see cref="DownloadPipeline{T}"/> are ignored
+        /// — the custom orchestrator owns the entire download pipeline.
+        /// </summary>
         public TBootstrap DownloadOrchestrator<T>() where T : Download.Abstractions.IDownloadOrchestrator, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadOrchestrator)] = typeof(T);
-            return (TBootstrap)this;
-        }
-
-        public TBootstrap CleanStrategy<T>() where T : Differential.ICleanStrategy, new()
-        {
-            _extensions[typeof(Differential.ICleanStrategy)] = typeof(T);
             return (TBootstrap)this;
         }
 

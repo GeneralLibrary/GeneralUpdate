@@ -110,11 +110,6 @@ namespace CoreTest.Bootstrap
         }
 
 
-        private sealed class StubPipelineFactory : GeneralUpdate.Core.Pipeline.IUpdatePipelineFactory
-        {
-            public Task ExecutePipelineAsync(GeneralUpdate.Core.Pipeline.PipelineContext context, CancellationToken token = default) => Task.CompletedTask;
-        }
-
         private sealed class StubDownloadPolicy : GeneralUpdate.Core.Download.Abstractions.IDownloadPolicy
         {
             public Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken token = default) => action(token);
@@ -159,11 +154,6 @@ namespace CoreTest.Bootstrap
                 => Task.FromResult(new GeneralUpdate.Core.Download.Abstractions.DownloadReport(Array.Empty<GeneralUpdate.Core.Download.Models.DownloadResult>(), 0, TimeSpan.Zero, 0, 0));
         }
 
-        private sealed class StubCleanStrategy : GeneralUpdate.Core.Differential.ICleanStrategy
-        {
-            public Task ExecuteAsync(string sourcePath, string targetPath, string patchPath) => Task.CompletedTask;
-        }
-
         private sealed class StubDirtyStrategy : GeneralUpdate.Core.Differential.IDirtyStrategy
         {
             public Task ExecuteAsync(string appPath, string patchPath) => Task.CompletedTask;
@@ -173,14 +163,12 @@ namespace CoreTest.Bootstrap
         [Fact] public void Inject_Strategy() => Assert.NotNull(B().Strategy<StubStrategy>());
         [Fact] public void Inject_SslPolicy() => Assert.NotNull(B().SslPolicy<StubSslPolicy>());
         [Fact] public void Inject_DirtyStrategy() => Assert.NotNull(B().DirtyStrategy<StubDirtyStrategy>());
-        [Fact] public void Inject_PipelineFactory() => Assert.NotNull(B().PipelineFactory<StubPipelineFactory>());
         [Fact] public void Inject_DownloadPolicy() => Assert.NotNull(B().DownloadPolicy<StubDownloadPolicy>());
         [Fact] public void Inject_DownloadExecutor() => Assert.NotNull(B().DownloadExecutor<StubDownloadExecutor>());
         [Fact] public void Inject_DownloadSource() => Assert.NotNull(B().DownloadSource<StubDownloadSource>());
         [Fact] public void Inject_DownloadPipeline() => Assert.NotNull(B().DownloadPipeline<StubDownloadPipeline>());
         [Fact] public void Inject_UpdateReporter() => Assert.NotNull(B().UpdateReporter<StubUpdateReporter>());
         [Fact] public void Inject_DownloadOrchestrator() => Assert.NotNull(B().DownloadOrchestrator<StubDownloadOrchestrator>());
-        [Fact] public void Inject_CleanStrategy() => Assert.NotNull(B().CleanStrategy<StubCleanStrategy>());
 
         [Fact]
         public void Chain_AllExtensionsInjected()
@@ -194,11 +182,8 @@ namespace CoreTest.Bootstrap
                 .DownloadPipeline<StubDownloadPipeline>()
                 .DownloadOrchestrator<StubDownloadOrchestrator>()
                 .DirtyStrategy<StubDirtyStrategy>()
-                .CleanStrategy<StubCleanStrategy>()
-                .DirtyStrategy<StubDirtyStrategy>()
                 .SslPolicy<StubSslPolicy>()
                 .UpdateAuth<StubUpdateAuth>()
-                .PipelineFactory<StubPipelineFactory>()
                 .Strategy<StubStrategy>();
             Assert.NotNull(b);
         }

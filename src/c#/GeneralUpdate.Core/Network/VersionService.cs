@@ -19,6 +19,7 @@ namespace GeneralUpdate.Core.Network
     {
         private static readonly HttpClient _sharedClient;
         private static ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
+        private static IHttpAuthProvider? _globalAuthProvider;
 
         private readonly IHttpAuthProvider _auth;
         private readonly TimeSpan _timeout;
@@ -34,6 +35,9 @@ namespace GeneralUpdate.Core.Network
         public static void SetSslValidationPolicy(ISslValidationPolicy policy)
             => _globalSslPolicy = policy ?? throw new ArgumentNullException(nameof(policy));
 
+        public static void SetDefaultAuthProvider(IHttpAuthProvider? provider)
+            => _globalAuthProvider = provider;
+
         private static bool SharedCertValidation(HttpRequestMessage m, X509Certificate2? c,
             X509Chain? ch, SslPolicyErrors e)
             => _globalSslPolicy.ValidateCertificate(c, ch, e);
@@ -48,7 +52,7 @@ namespace GeneralUpdate.Core.Network
         public static Task Report(string url, int recordId, int status, int? type,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
-            var a = HttpAuthProviderFactory.Create(scheme, token, null);
+            var a = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, null);
             return new VersionService(a).ReportAsync(url, recordId, status, type, ct);
         }
 
@@ -57,7 +61,7 @@ namespace GeneralUpdate.Core.Network
             AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
-            var a = HttpAuthProviderFactory.Create(scheme, token, appKey);
+            var a = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey);
             return new VersionService(a).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
         }
 

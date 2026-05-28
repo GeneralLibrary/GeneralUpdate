@@ -39,6 +39,7 @@ public class SilentPollOrchestrator : IDisposable
     private int _updaterStarted;
     private IUpdateHooks? _hooks;
     private IUpdateReporter? _reporter;
+    private IStrategy? _customOsStrategy;
     private Configuration.ProcessInfo? _preparedProcessInfo;
     private List<VersionInfo> _clientVersions = new();
 
@@ -50,6 +51,7 @@ public class SilentPollOrchestrator : IDisposable
 
     public SilentPollOrchestrator WithHooks(IUpdateHooks? hooks) { _hooks = hooks; return this; }
     public SilentPollOrchestrator WithReporter(IUpdateReporter? reporter) { _reporter = reporter; return this; }
+    public SilentPollOrchestrator WithOsStrategy(IStrategy? strategy) { _customOsStrategy = strategy; return this; }
 
     public Task StartAsync()
     {
@@ -335,8 +337,9 @@ public class SilentPollOrchestrator : IDisposable
         StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
     }
 
-    private static IStrategy CreateStrategy()
+    private IStrategy CreateStrategy()
     {
+        if (_customOsStrategy != null) return _customOsStrategy;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return new WindowsStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return new LinuxStrategy();
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return new MacStrategy();
