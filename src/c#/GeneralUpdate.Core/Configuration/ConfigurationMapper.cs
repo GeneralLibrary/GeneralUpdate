@@ -103,37 +103,5 @@ namespace GeneralUpdate.Core.Configuration
             );
         }
 
-        /// <summary>
-        /// Copies common configuration fields from a base configuration object to another.
-        /// This utility method helps maintain consistency when transferring configuration data.
-        /// </summary>
-        /// <typeparam name="TSource">The source configuration type (must inherit from BaseConfigInfo).</typeparam>
-        /// <typeparam name="TTarget">The target configuration type (must inherit from BaseConfigInfo).</typeparam>
-        /// <param name="source">The source configuration object to copy from.</param>
-        /// <param name="target">The target configuration object to copy to.</param>
-        public static void CopyBaseFields<TSource, TTarget>(TSource source, TTarget target)
-            where TSource : BaseConfigInfo
-            where TTarget : BaseConfigInfo
-        {
-            if (source == null || target == null)
-                return;
-
-            target.UpdateAppName = source.UpdateAppName;
-            target.MainAppName = source.MainAppName;
-            target.InstallPath = source.InstallPath;
-            target.UpdateLogUrl = source.UpdateLogUrl;
-            target.AppSecretKey = source.AppSecretKey;
-            target.ClientVersion = source.ClientVersion;
-            target.BlackFiles = source.BlackFiles;
-            target.BlackFormats = source.BlackFormats;
-            target.SkipDirectorys = source.SkipDirectorys;
-            target.ReportUrl = source.ReportUrl;
-            target.Bowl = source.Bowl;
-            target.Scheme = source.Scheme;
-            target.Token = source.Token;
-            target.DriverDirectory = source.DriverDirectory;
-            target.AppType = source.AppType;
-            target.UpdatePath = source.UpdatePath;
-        }
     }
 }

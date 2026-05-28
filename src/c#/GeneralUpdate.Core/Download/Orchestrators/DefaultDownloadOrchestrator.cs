@@ -30,6 +30,9 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     private readonly DownloadOrchestratorOptions _options;
     private readonly IDownloadExecutor? _customExecutor;
     private readonly Func<string?, IDownloadPipeline>? _pipelineFactory;
+    // Note: _customExecutor is a single shared instance used across parallel asset downloads.
+    // Implementations of IDownloadExecutor must be thread-safe. HttpClient-based executors
+    // satisfy this as HttpClient is designed for concurrent use.
 
     public DefaultDownloadOrchestrator(
         HttpClient httpClient,

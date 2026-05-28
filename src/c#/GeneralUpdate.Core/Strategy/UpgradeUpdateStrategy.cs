@@ -45,8 +45,6 @@ public class UpgradeUpdateStrategy : IStrategy
         _osStrategy = ResolveOsStrategy();
         if (_osStrategy is AbstractStrategy abs)
         {
-            if (_pendingDirtyStrategy != null) abs.DirtyStrategy = _pendingDirtyStrategy;
-            if (_pendingBinaryDiffer != null) abs.BinaryDiffer = _pendingBinaryDiffer;
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
         }
     }
@@ -116,28 +114,7 @@ public class UpgradeUpdateStrategy : IStrategy
         }
     }
 
-    private IDirtyStrategy? _pendingDirtyStrategy;
-    private IBinaryDiffer? _pendingBinaryDiffer;
     private DiffPipeline? _pendingDiffPipeline;
-
-    /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
-    /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
-    public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
-    {
-        if (_osStrategy is AbstractStrategy abs)
-            abs.DirtyStrategy = dirtyStrategy;
-        else
-            _pendingDirtyStrategy = dirtyStrategy;
-    }
-
-    /// <summary>Sets the file-level binary differ on the underlying OS-level strategy.</summary>
-    public void SetBinaryDiffer(IBinaryDiffer? binaryDiffer)
-    {
-        if (_osStrategy is AbstractStrategy abs)
-            abs.BinaryDiffer = binaryDiffer;
-        else
-            _pendingBinaryDiffer = binaryDiffer;
-    }
 
     /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
     public void SetDiffPipeline(DiffPipeline? diffPipeline)

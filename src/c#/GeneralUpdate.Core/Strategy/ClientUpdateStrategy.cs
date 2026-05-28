@@ -62,6 +62,9 @@ public class ClientUpdateStrategy : IStrategy
 
     public ClientUpdateStrategy() { }
 
+    public ClientUpdateStrategy(Download.Abstractions.IDownloadOrchestrator? orchestrator)
+        => _orchestrator = orchestrator;
+
     /// <summary>Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
     /// When set, this replaces the automatic platform detection in <see cref="ResolveOsStrategy"/>.</summary>
     public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
@@ -84,8 +87,6 @@ public class ClientUpdateStrategy : IStrategy
         _osStrategy = ResolveOsStrategy();
         if (_osStrategy is AbstractStrategy abs)
         {
-            if (_pendingDirtyStrategy != null) abs.DirtyStrategy = _pendingDirtyStrategy;
-            if (_pendingBinaryDiffer != null) abs.BinaryDiffer = _pendingBinaryDiffer;
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
         }
     }
@@ -110,28 +111,7 @@ public class ClientUpdateStrategy : IStrategy
         }
     }
 
-    private IDirtyStrategy? _pendingDirtyStrategy;
-    private IBinaryDiffer? _pendingBinaryDiffer;
     private DiffPipeline? _pendingDiffPipeline;
-
-    /// <summary>Sets the directory-level dirty strategy on the underlying OS-level strategy for differential patch updates.
-    /// Safe to call before or after Create(). If called before, the strategy is cached and applied when Create() resolves _osStrategy.</summary>
-    public void SetDirtyStrategy(IDirtyStrategy? dirtyStrategy)
-    {
-        if (_osStrategy is AbstractStrategy abs)
-            abs.DirtyStrategy = dirtyStrategy;
-        else
-            _pendingDirtyStrategy = dirtyStrategy;
-    }
-
-    /// <summary>Sets the file-level binary differ on the underlying OS-level strategy.</summary>
-    public void SetBinaryDiffer(IBinaryDiffer? binaryDiffer)
-    {
-        if (_osStrategy is AbstractStrategy abs)
-            abs.BinaryDiffer = binaryDiffer;
-        else
-            _pendingBinaryDiffer = binaryDiffer;
-    }
 
     /// <summary>Sets the DiffPipeline on the underlying OS-level strategy for parallel patch application.</summary>
     public void SetDiffPipeline(DiffPipeline? diffPipeline)
@@ -292,16 +272,10 @@ public class ClientUpdateStrategy : IStrategy
         else
         {
             var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
-            try
-            {
-                var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
-                    httpClient, orchOptions, _customDownloadPolicy,
-                    _customDownloadExecutor, _customDownloadPipelineFactory);
-                await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
-            }
-            finally
-            {
-            }
+            var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
+                httpClient, orchOptions, _customDownloadPolicy,
+                _customDownloadExecutor, _customDownloadPipelineFactory);
+            await orchestrator.ExecuteAsync(downloadPlan, _configInfo.TempPath).ConfigureAwait(false);
         }
 
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);

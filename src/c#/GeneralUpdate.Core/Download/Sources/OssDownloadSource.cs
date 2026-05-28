@@ -60,7 +60,7 @@ public class OssDownloadSource : IDownloadSource
                     throw new InvalidOperationException(
                         $"OSS version '{v.PacketName ?? v.Version}' has no download URL.");
 
-                var zipName = $"{v.PacketName ?? v.Version}zip";
+                var zipName = $"{v.PacketName ?? v.Version}.zip";
                 if (!zipName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                     zipName += ".zip";
 
@@ -75,6 +75,11 @@ public class OssDownloadSource : IDownloadSource
             .ToList()
             .AsReadOnly();
 
-        return new DownloadSourceResult { Assets = assets };
+        return new DownloadSourceResult
+        {
+            Assets = assets,
+            HasMainUpdate = assets.Count > 0,
+            HasUpgradeUpdate = assets.Count > 0
+        };
     }
 }

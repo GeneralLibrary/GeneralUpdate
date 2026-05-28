@@ -26,12 +26,6 @@ namespace GeneralUpdate.Core.Strategy
         /// <summary>Reporter for update status reporting.</summary>
         public IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
 
-        /// <summary>Optional binary differ for differential patch updates.</summary>
-        public IDirtyStrategy? DirtyStrategy { get; set; }
-
-        /// <summary>Optional file-level binary differ for patch application.</summary>
-        public IBinaryDiffer? BinaryDiffer { get; set; }
-
         /// <summary>DiffPipeline for parallel patch application with progress reporting.</summary>
         public DiffPipeline? DiffPipeline { get; set; }
 
@@ -111,7 +105,6 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("Hash", version.Hash);
             // Zip middleware
             context.Add("Format", _configinfo.Format);
-            context.Add("Name", version.Name);
             context.Add("Encoding", _configinfo.Encoding);
             // Patch middleware
             // For Upgrade packages, apply to UpdatePath if configured; otherwise fall back to InstallPath
@@ -119,9 +112,6 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("SourcePath", sourcePath);
             context.Add("PatchPath", patchPath);
             context.Add("PatchEnabled", _configinfo.PatchEnabled);
-            // Binary differ for differential patching
-            context.Add("DirtyStrategy", DirtyStrategy);
-            context.Add("BinaryDiffer", BinaryDiffer);
             // DiffPipeline for parallel patch application with progress reporting
             context.Add("DiffPipeline", DiffPipeline);
             

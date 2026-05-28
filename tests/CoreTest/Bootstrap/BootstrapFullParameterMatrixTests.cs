@@ -136,11 +136,6 @@ namespace CoreTest.Bootstrap
             public Task<string> ProcessAsync(string downloadedPath, CancellationToken token = default) => Task.FromResult("");
         }
 
-        private sealed class StubUpdateReporter : GeneralUpdate.Core.Download.Reporting.IUpdateReporter
-        {
-            public Task ReportAsync(GeneralUpdate.Core.Download.Reporting.UpdateReport report, CancellationToken token = default) => Task.CompletedTask;
-        }
-
         private sealed class StubUpdateAuth : GeneralUpdate.Core.Security.IHttpAuthProvider
         {
             public Task ApplyAuthAsync(HttpRequestMessage request, CancellationToken token = default) => Task.CompletedTask;
@@ -154,20 +149,13 @@ namespace CoreTest.Bootstrap
                 => Task.FromResult(new GeneralUpdate.Core.Download.Abstractions.DownloadReport(Array.Empty<GeneralUpdate.Core.Download.Models.DownloadResult>(), 0, TimeSpan.Zero, 0, 0));
         }
 
-        private sealed class StubDirtyStrategy : GeneralUpdate.Core.Differential.IDirtyStrategy
-        {
-            public Task ExecuteAsync(string appPath, string patchPath) => Task.CompletedTask;
-        }
-
         [Fact] public void Inject_Hooks() => Assert.NotNull(B().Hooks<StubHooks>());
         [Fact] public void Inject_Strategy() => Assert.NotNull(B().Strategy<StubStrategy>());
         [Fact] public void Inject_SslPolicy() => Assert.NotNull(B().SslPolicy<StubSslPolicy>());
-        [Fact] public void Inject_DirtyStrategy() => Assert.NotNull(B().DirtyStrategy<StubDirtyStrategy>());
         [Fact] public void Inject_DownloadPolicy() => Assert.NotNull(B().DownloadPolicy<StubDownloadPolicy>());
         [Fact] public void Inject_DownloadExecutor() => Assert.NotNull(B().DownloadExecutor<StubDownloadExecutor>());
         [Fact] public void Inject_DownloadSource() => Assert.NotNull(B().DownloadSource<StubDownloadSource>());
         [Fact] public void Inject_DownloadPipeline() => Assert.NotNull(B().DownloadPipeline<StubDownloadPipeline>());
-        [Fact] public void Inject_UpdateReporter() => Assert.NotNull(B().UpdateReporter<StubUpdateReporter>());
         [Fact] public void Inject_DownloadOrchestrator() => Assert.NotNull(B().DownloadOrchestrator<StubDownloadOrchestrator>());
 
         [Fact]
@@ -175,13 +163,11 @@ namespace CoreTest.Bootstrap
         {
             var b = B()
                 .Hooks<StubHooks>()
-                .UpdateReporter<StubUpdateReporter>()
                 .DownloadPolicy<StubDownloadPolicy>()
                 .DownloadExecutor<StubDownloadExecutor>()
                 .DownloadSource<StubDownloadSource>()
                 .DownloadPipeline<StubDownloadPipeline>()
                 .DownloadOrchestrator<StubDownloadOrchestrator>()
-                .DirtyStrategy<StubDirtyStrategy>()
                 .SslPolicy<StubSslPolicy>()
                 .UpdateAuth<StubUpdateAuth>()
                 .Strategy<StubStrategy>();
