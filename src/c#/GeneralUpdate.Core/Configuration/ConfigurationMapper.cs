@@ -170,14 +170,15 @@ namespace GeneralUpdate.Core.Configuration
             List<VersionInfo> updateVersions,
             List<string> blackFileFormats,
             List<string> blackFiles,
-            List<string> skipDirectories)
+            List<string> skipDirectories,
+            int reportType = 1)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "GlobalConfigInfo source cannot be null");
 
             // 在单一位置创建 ProcessInfo，包含所有必需参数
             // 集中管理 ProcessInfo 的参数映射逻辑
-            return new ProcessInfo(
+            var processInfo = new ProcessInfo(
                 appName: source.MainAppName,                    // MainAppName 映射到 ProcessInfo.UpdateAppName
                 installPath: source.InstallPath,
                 currentVersion: source.ClientVersion,           // ClientVersion 映射到 ProcessInfo.CurrentVersion
@@ -201,6 +202,8 @@ namespace GeneralUpdate.Core.Configuration
                 upgradePath: source.UpdatePath,                  // 自定义升级目录
                 launchClient: source.LaunchClientAfterUpdate
             );
+            processInfo.ReportType = reportType;
+            return processInfo;
         }
     }
 }

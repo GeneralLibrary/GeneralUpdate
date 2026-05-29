@@ -373,5 +373,12 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("LaunchClientAfterUpdate")]
         public bool LaunchClientAfterUpdate { get; set; } = true;
+
+        /// <summary>
+        ///     The report type for status reporting: 1 = Upgrade (active poll), 2 = Push (SignalR push).
+        ///     Passed from ClientStrategy to UpdateStrategy so it uses the same type when reporting.
+        /// </summary>
+        [JsonPropertyName("ReportType")]
+        public int ReportType { get; set; } = 1;
     }
 }

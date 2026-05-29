@@ -76,7 +76,7 @@ public class DiffPipeline
     private readonly IProgress<DiffProgress>? _progress;
 
     private const string PatchExtension = ".patch";
-    private const string DeleteListFileName = "generalupdate_delete_files.json";
+    private const string DeleteListFileName = "generalupdate.delete.json";
 
     /// <summary>
     /// Initializes a new pipeline instance with default options, default binary differ

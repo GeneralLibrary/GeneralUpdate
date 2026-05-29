@@ -118,8 +118,11 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
 
-        var hasMainUpdate = mainResp?.Body?.Count > 0;
-        var hasUpgradeUpdate = upgradeResp?.Body?.Count > 0;
+        // Check that returned VersionInfo items' AppType matches the requested type,
+        // rather than just checking Count > 0. The server may return items whose
+        // AppType doesn't match the request, which would mis-identify the scenario.
+        var hasMainUpdate = mainResp?.Body?.Any(v => v.AppType == (int)AppType.Client) == true;
+        var hasUpgradeUpdate = upgradeResp?.Body?.Any(v => v.AppType == (int)AppType.Upgrade) == true;
 
         var assets = new List<DownloadAsset>();
 

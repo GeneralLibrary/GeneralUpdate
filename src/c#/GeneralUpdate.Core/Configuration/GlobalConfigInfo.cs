@@ -100,6 +100,12 @@ public class GlobalConfigInfo : BaseConfigInfo
     public bool LaunchClientAfterUpdate { get; set; } = true;
 
     /// <summary>
+    ///     The report type for status reporting: 1 = Upgrade (active poll), 2 = Push (SignalR push).
+    ///     Passed from ClientStrategy through ProcessInfo to UpdateStrategy.
+    /// </summary>
+    public int ReportType { get; set; } = 1;
+
+    /// <summary>
     ///     The list of version information objects to be updated.
     ///     Populated from the update server response based on <see cref="IsUpgradeUpdate" /> and <see cref="IsMainUpdate" />.
     /// </summary>
