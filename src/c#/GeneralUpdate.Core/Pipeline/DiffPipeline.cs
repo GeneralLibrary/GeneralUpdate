@@ -62,7 +62,7 @@ namespace GeneralUpdate.Core.Pipeline;
 /// <list type="bullet">
 ///   <item><description>Changed files: Generate/apply binary patches.</description></item>
 ///   <item><description>New files: Copy directly.</description></item>
-///   <item><description>Deleted files: Recorded in <c>generalupdate_delete_files.json</c>; removed during dirty mode execution.</description></item>
+///   <item><description>Deleted files: Recorded in <c>generalupdate.delete.json</c>; removed during dirty mode execution.</description></item>
 ///   <item><description>Unchanged files: Skipped.</description></item>
 /// </list>
 /// </para>
@@ -76,7 +76,7 @@ public class DiffPipeline
     private readonly IProgress<DiffProgress>? _progress;
 
     private const string PatchExtension = ".patch";
-    private const string DeleteListFileName = "generalupdate_delete_files.json";
+    private const string DeleteListFileName = "generalupdate.delete.json";
 
     /// <summary>
     /// Initializes a new pipeline instance with default options, default binary differ
@@ -188,7 +188,7 @@ public class DiffPipeline
     ///   <item><description>For each changed file: computes the relative path, creates a temporary directory,
     ///         and uses <see cref="IBinaryDiffer.CleanAsync"/> to generate a .patch file.</description></item>
     ///   <item><description>For each new file: copies it directly to the corresponding location in the patch output directory.</description></item>
-    ///   <item><description>Generates a <c>generalupdate_delete_files.json</c> manifest recording files that have been
+    ///   <item><description>Generates a <c>generalupdate.delete.json</c> manifest recording files that have been
     ///         deleted from the new version (no longer present in the old version).</description></item>
     /// </list>
     /// </para>
@@ -291,7 +291,7 @@ public class DiffPipeline
     /// <list type="number">
     ///   <item><description>If <paramref name="appPath"/> or <paramref name="patchPath"/> does not exist, returns immediately.</description></item>
     ///   <item><description>Scans all files in the patch directory (skipping blacklisted directories), finds the
-    ///         <c>generalupdate_delete_files.json</c> file, and performs file deletion.</description></item>
+    ///         <c>generalupdate.delete.json</c> file, and performs file deletion.</description></item>
     ///   <item><description>Uses <see cref="IDirtyMatcher.Match"/> to pair patch files with their corresponding old version files.</description></item>
     ///   <item><description>For each matched file pair, safely applies the patch using a temporary file strategy:
     ///         first writes the patch result to a temporary file, then on success deletes the original file and
@@ -302,7 +302,7 @@ public class DiffPipeline
     /// </para>
     /// <para>
     /// Deletion manifest handling details:
-    /// If the patch directory contains a <c>generalupdate_delete_files.json</c> file, this file records the
+    /// If the patch directory contains a <c>generalupdate.delete.json</c> file, this file records the
     /// SHA256 hash values of files that have been deleted in the new version. The system identifies and removes
     /// these files by comparing the recorded hash values with the SHA256 hash of each current file.
     /// </para>
@@ -429,13 +429,13 @@ public class DiffPipeline
     }
 
     /// <summary>
-    /// Processes the deletion manifest (generalupdate_delete_files.json) and removes obsolete files from the application directory.
+    /// Processes the deletion manifest (generalupdate.delete.json) and removes obsolete files from the application directory.
     /// </summary>
     /// <param name="patchFiles">The list of files in the patch directory.</param>
     /// <param name="oldFiles">The list of files in the application directory.</param>
     /// <remarks>
     /// <para>
-    /// This method locates the <c>generalupdate_delete_files.json</c> file in the patch directory,
+    /// This method locates the <c>generalupdate.delete.json</c> file in the patch directory,
     /// which contains a list of SHA256 hash values for files that have been deleted in the new version.
     /// It then scans each file in the application directory, computes its SHA256 hash, and compares it
     /// against the values in the manifest. Matching files are deleted.

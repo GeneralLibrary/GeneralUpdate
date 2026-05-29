@@ -72,6 +72,8 @@ public class ClientStrategy : IStrategy
     private Download.Abstractions.IDownloadExecutor? _customDownloadExecutor;
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
+    private int _upgradeRecordId;
+    private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
     /// Update scenario determined by the server validation result, indicating which update targets are needed.
@@ -159,6 +161,16 @@ public class ClientStrategy : IStrategy
     /// and <see cref="SetDownloadPipelineFactory"/> are ignored.
     /// </remarks>
     public void SetOrchestrator(Download.Abstractions.IDownloadOrchestrator? orchestrator) => _orchestrator = orchestrator;
+
+    /// <summary>
+    /// Sets the report type for status reporting. Injected by the bootstrap for push-triggered updates.
+    /// </summary>
+    /// <param name="reportType">1 = Upgrade (active poll), 2 = Push (SignalR push). Default is 1.</param>
+    /// <remarks>
+    /// When a push notification triggers the update (via SignalR hub), the caller should set this to 2
+    /// so the server can distinguish push-triggered updates from active poll updates.
+    /// </remarks>
+    public void SetReportType(int reportType) => _reportType = reportType;
 
     /// <summary>
     /// Sets a custom download retry policy. Registered and injected by the bootstrap via <c>.DownloadPolicy&lt;T&gt;()</c>.
@@ -427,8 +439,17 @@ public class ClientStrategy : IStrategy
 
         var updateInfoArgs = new UpdateInfoEventArgs(versionResp);
 
-        // Capture the first RecordId for status reporting to GeneralSpacestation
-        _mainRecordId = downloadPlan.Assets.FirstOrDefault().RecordId;
+        // Capture RecordIds per AppType for status reporting.
+        // Client packages are reported by UpdateStrategy (Bowl) via IPC; Upgrade packages
+        // are applied in-place and reported by ClientStrategy.
+        //
+        // Note: _mainRecordId treats null AppType as Client (matching the fallback in
+        // downloadVersions at line ~530). _upgradeRecordId requires an explicit Upgrade
+        // match — assets with omitted AppType are never treated as Upgrade packages.
+        _mainRecordId = downloadPlan.Assets
+            .FirstOrDefault(a => (a.AppType ?? (int)AppType.Client) == (int)AppType.Client)?.RecordId ?? 0;
+        _upgradeRecordId = downloadPlan.Assets
+            .FirstOrDefault(a => a.AppType == (int)AppType.Upgrade)?.RecordId ?? 0;
         EventManager.Instance.Dispatch(this, updateInfoArgs);
 
         var isForcibly = downloadPlan.IsForcibly;
@@ -504,6 +525,7 @@ public class ClientStrategy : IStrategy
         // Build VersionInfo list with AppType preserved from server response.
         var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
         {
+            RecordId = a.RecordId,
             Name = a.Name,
             Hash = a.SHA256,
             Url = a.Url,
@@ -523,12 +545,14 @@ public class ClientStrategy : IStrategy
             case UpdateScenario.UpgradeOnly:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
+                await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
                 break;
 
             case UpdateScenario.MainOnly:
                 SendProcessIpc(clientVersions);
+                await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+                await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
                 await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
                 await LaunchUpgradeProcessAsync().ConfigureAwait(false);
                 break;
@@ -536,11 +560,14 @@ public class ClientStrategy : IStrategy
             case UpdateScenario.Both:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                await SafeReportUpdateAppliedAsync(hooksCtx).ConfigureAwait(false);
+                await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 SendProcessIpc(clientVersions);
                 await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
                 await LaunchUpgradeProcessAsync().ConfigureAwait(false);
                 break;
+            case UpdateScenario.None:
+            default:
+                throw new InvalidOperationException($"Unhandled update scenario: {scenario}");
         }
     }
 
@@ -584,7 +611,8 @@ public class ClientStrategy : IStrategy
             _configInfo!, clientVersions,
             _configInfo!.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
             _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories,
+            _reportType);
 
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
@@ -883,7 +911,7 @@ public class ClientStrategy : IStrategy
         {
             await Reporter
                 .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
+                    (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -901,7 +929,7 @@ public class ClientStrategy : IStrategy
         {
             await Reporter
                 .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
+                    (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -920,7 +948,7 @@ public class ClientStrategy : IStrategy
         {
             await Reporter
                 .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
+                    (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -932,13 +960,13 @@ public class ClientStrategy : IStrategy
     /// Safely reports the update applied success status. If the report fails, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx, int recordId)
     {
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
+                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
+                    (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
@@ -45,6 +46,7 @@ public class UpdateStrategy : IStrategy
     private GlobalConfigInfo? _configInfo;
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
+    private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
     /// Gets or sets the lifecycle hooks. Injected by the bootstrap to execute custom logic at key points in the update flow.
@@ -63,12 +65,18 @@ public class UpdateStrategy : IStrategy
     public void SetOsStrategy(IStrategy? strategy) => _customOsStrategy = strategy;
 
     /// <summary>
+    /// Sets the report type for status reporting. The caller (ClientStrategy) should pass the same
+    /// report type it used, so the server can distinguish push-triggered updates from active polls.
+    /// </summary>
+    /// <param name="reportType">1 = Upgrade (active poll), 2 = Push (SignalR push). Default is 1.</param>
+    public void SetReportType(int reportType) => _reportType = reportType;
+
+    /// <summary>
     /// Initializes the upgrade-side strategy. Receives the global configuration information passed from the client
     /// and resolves the strategy instance for the current operating system.
     /// </summary>
     /// <param name="parameter">Global configuration information containing update package paths, hash values, version information, etc.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
-    /// <exception cref="PlatformNotSupportedException">Thrown by <see cref="ResolveOsStrategy"/> when the current OS is not supported.</exception>
     public void Create(GlobalConfigInfo parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
@@ -83,32 +91,6 @@ public class UpdateStrategy : IStrategy
     /// Executes the upgrade-side update flow. Follows the lifecycle order: pre-update hook, OS update pipeline,
     /// post-update hook, pre-start-app hook, and main application launch.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Detailed Execution Flow:</b>
-    /// <list type="number">
-    ///   <item><description><b>OnBeforeUpdate Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/>.
-    ///   If it returns <c>false</c>, the update is cancelled.</description></item>
-    ///   <item><description><b>OS Update Pipeline:</b> Passes <c>_configInfo.UpdateVersions</c> to
-    ///   <see cref="IStrategy.ExecuteAsync"/>, where the OS strategy processes each version's update package
-    ///   (<c>Hash</c> verification → <c>Decompress</c> extraction → <c>Patch</c> application).</description></item>
-    ///   <item><description><b>OnAfterUpdate Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/>
-    ///   to notify the caller that all updates have been applied.</description></item>
-    ///   <item><description><b>Report Success:</b> Reports the update success status via
-    ///   <see cref="Download.Reporting.IUpdateReporter"/>.</description></item>
-    ///   <item><description><b>OnBeforeStartApp Hook:</b> Calls <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/>,
-    ///   allowing the caller to perform additional operations before launching the application
-    ///   (such as setting executable permissions).</description></item>
-    ///   <item><description><b>Launch Application:</b> When <c>LaunchClientAfterUpdate</c> is <c>true</c>,
-    ///   launches the main application (<c>MainAppName</c>) and the Bowl helper process via the OS strategy.</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// <b>Exception Handling:</b> Any exception in the entire flow is caught by the <c>try-catch</c> block,
-    /// which sequentially triggers <see cref="Hooks.IUpdateHooks.OnUpdateErrorAsync"/>, reports the update failure status,
-    /// logs the error, and dispatches the exception event via <see cref="EventManager"/>.
-    /// </para>
-    /// </remarks>
     public async Task ExecuteAsync()
     {
         if (_configInfo == null) throw new InvalidOperationException("UpdateStrategy not configured.");
@@ -142,7 +124,7 @@ public class UpdateStrategy : IStrategy
             // Hooks: after all updates applied
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
 
-            // Report: update applied successfully
+            // Report: update applied successfully — uses the first Client package's RecordId
             await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
 
             // Hooks: before starting main app (e.g. chmod +x on Linux/macOS)
@@ -180,10 +162,6 @@ public class UpdateStrategy : IStrategy
     /// Sets the differential patch pipeline on the underlying OS-level strategy for parallel patch application.
     /// </summary>
     /// <param name="diffPipeline">The differential pipeline instance. If <c>null</c>, clears the pending pipeline.</param>
-    /// <remarks>
-    /// If the OS strategy is not yet initialized, the pipeline is stored in a pending field
-    /// and passed to the OS strategy's <c>DiffPipeline</c> property when <see cref="Create"/> is called.
-    /// </remarks>
     public void SetDiffPipeline(DiffPipeline? diffPipeline)
     {
         if (_osStrategy is AbstractStrategy abs)
@@ -195,9 +173,6 @@ public class UpdateStrategy : IStrategy
     /// <summary>
     /// Starts the main application. Delegates to the underlying OS strategy for platform-specific application launch logic.
     /// </summary>
-    /// <remarks>
-    /// This method is called externally (e.g., by the Bowl process) to start the main application after the upgrade completes.
-    /// </remarks>
     public async Task StartAppAsync()
     {
         if (_osStrategy != null)
@@ -219,10 +194,6 @@ public class UpdateStrategy : IStrategy
         throw new PlatformNotSupportedException("The current operating system is not supported!");
     }
 
-    // ════════════════════════════════════════════════════════════════
-    // Hooks & Reporter safe wrappers
-    // ════════════════════════════════════════════════════════════════
-
     private Hooks.UpdateContext BuildUpdateContext()
     {
         return new Hooks.UpdateContext(
@@ -236,60 +207,36 @@ public class UpdateStrategy : IStrategy
 
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try
-        {
-            return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}");
-            return true;
-        }
+        try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
     }
 
     private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
     {
-        try
-        {
-            await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}");
-        }
+        try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
     }
 
     private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
     {
-        try
-        {
-            await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}");
-        }
+        try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
     }
 
     private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
     {
-        try
-        {
-            await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}");
-        }
+        try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
+        catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
     }
 
     private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
     {
         try
         {
+            var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success,
-                    1)).ConfigureAwait(false);
+                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
+                    (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -301,10 +248,10 @@ public class UpdateStrategy : IStrategy
     {
         try
         {
+            var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
             await Reporter
-                .ReportAsync(
-                    new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1))
-                .ConfigureAwait(false);
+                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
+                    (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

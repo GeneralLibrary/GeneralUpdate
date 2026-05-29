@@ -177,6 +177,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
                 case UpdateStrategy us:
                     us.SetDiffPipeline(diffPipeline);
+                    us.SetReportType(_configInfo.ReportType);
                     break;
             }
 
@@ -369,6 +370,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             DriverDirectory = processInfo.DriverDirectory,
             UpdatePath = processInfo.UpdatePath,
             LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
+            ReportType = processInfo.ReportType,
             BlackFiles = processInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
             BlackFormats = processInfo.BlackFileFormats ?? BlackListDefaults.DefaultBlackFormats,
             SkipDirectorys = processInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories
