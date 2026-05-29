@@ -544,6 +544,7 @@ public class ClientStrategy : IStrategy
         {
             case UpdateScenario.UpgradeOnly:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
+                WriteBackUpgradeVersion(upgradeVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
@@ -559,6 +560,7 @@ public class ClientStrategy : IStrategy
 
             case UpdateScenario.Both:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
+                WriteBackUpgradeVersion(upgradeVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 SendProcessIpc(clientVersions);
@@ -763,6 +765,35 @@ public class ClientStrategy : IStrategy
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return PlatformType.MacOS;
         return PlatformType.Unknown;
+    }
+
+    /// <summary>
+    /// After upgrade packages have been applied in-place, writes the latest upgrade version
+    /// back to <c>generalupdate.manifest.json</c> so the next poll cycle starts from the
+    /// correct <c>UpgradeClientVersion</c>.
+    /// </summary>
+    /// <param name="upgradeVersions">
+    /// The upgrade version list that was just applied. The last element carries the
+    /// highest target version.
+    /// </param>
+    private static void WriteBackUpgradeVersion(List<VersionInfo> upgradeVersions)
+    {
+        var latestVersion = upgradeVersions.LastOrDefault()?.Version;
+        if (string.IsNullOrEmpty(latestVersion)) return;
+
+        try
+        {
+            ManifestInfo.TryUpdateVersion(
+                AppDomain.CurrentDomain.BaseDirectory,
+                upgradeClientVersion: latestVersion);
+            GeneralTracer.Info(
+                $"ClientStrategy: UpgradeClientVersion updated to {latestVersion} in manifest.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn(
+                $"ClientStrategy: failed to write back UpgradeClientVersion: {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -115,6 +115,10 @@ public class UpdateStrategy : IStrategy
                 GeneralTracer.Info("UpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
                                    " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
+
+                // Write the new ClientVersion back to generalupdate.manifest.json so the
+                // next poll cycle starts from the correct version.
+                WriteBackClientVersion();
             }
             else
             {
@@ -256,6 +260,34 @@ public class UpdateStrategy : IStrategy
         catch (Exception ex)
         {
             GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// After the main-app update pipeline completes, writes the new <c>ClientVersion</c>
+    /// back to <c>generalupdate.manifest.json</c> in the client's install directory so the
+    /// next poll cycle starts from the correct version.
+    /// </summary>
+    private void WriteBackClientVersion()
+    {
+        // Use the latest version from the applied update list; fall back to LastVersion
+        // (which covers the single-package / full-update case).
+        var latestVersion = _configInfo?.UpdateVersions?.LastOrDefault()?.Version
+                            ?? _configInfo?.LastVersion;
+        if (string.IsNullOrEmpty(latestVersion)) return;
+
+        try
+        {
+            ManifestInfo.TryUpdateVersion(
+                _configInfo!.InstallPath,
+                clientVersion: latestVersion);
+            GeneralTracer.Info(
+                $"UpdateStrategy: ClientVersion updated to {latestVersion} in manifest.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn(
+                $"UpdateStrategy: failed to write back ClientVersion: {ex.Message}");
         }
     }
 
