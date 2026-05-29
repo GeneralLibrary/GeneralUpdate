@@ -214,15 +214,18 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
     
     /// <summary>
-    /// Applies the primary configuration object. Validates required fields, maps to
-    /// the internal <see cref="GlobalConfigInfo"/>, and initialises the blacklist
-    /// matcher for file exclusion during update operations.
+    /// Applies the primary configuration object. Missing identity fields are
+    /// auto-discovered from <c>generalupdate.manifest.json</c> or defaults.
+    /// Validates required fields, maps to the internal <see cref="GlobalConfigInfo"/>,
+    /// and initialises the blacklist matcher for file exclusion during update operations.
     /// </summary>
-    /// <param name="configInfo">User-facing configuration. Must have non-null
-    /// <c>UpdateUrl</c>, <c>AppSecretKey</c>, <c>ClientVersion</c>, <c>InstallPath</c>.</param>
+    /// <param name="configInfo">User-facing configuration. Secrets (<c>UpdateUrl</c>,
+    /// <c>AppSecretKey</c>, <c>Token</c>) must be set. Identity fields are auto-filled
+    /// when omitted.</param>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
     {
+        configInfo = AppMetadataDiscoverer.Discover(configInfo);
         configInfo.Validate();
         _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
@@ -277,6 +280,28 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
+    ///     Minimal entry-point: supply only secrets. Identity metadata is auto-discovered
+    ///     from <c>generalupdate.manifest.json</c> and hard-coded defaults.
+    /// </summary>
+    /// <returns>This bootstrap instance for chaining.</returns>
+    public GeneralUpdateBootstrap SetSource(
+        string appSecretKey,
+        string updateUrl,
+        string? reportUrl = null,
+        string? token = null,
+        string? scheme = null)
+    {
+        return SetConfig(new Configinfo
+        {
+            UpdateUrl = updateUrl,
+            AppSecretKey = appSecretKey,
+            Token = token,
+            Scheme = scheme,
+            ReportUrl = reportUrl
+        });
+    }
+
+    /// <summary>
     /// Configure the <see cref="DiffPipeline"/> via a fluent builder action.
     /// If not called, a default pipeline is built with <see cref="BsdiffDiffer"/>,
     /// <see cref="DefaultDirtyMatcher"/>, <see cref="DefaultCleanMatcher"/>,
@@ -318,6 +343,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private void InitializeFromEnvironment()
     {
         // Read ProcessInfo via AES-encrypted file IPC.
+        // The Upgrade process is only ever launched by the Client — no IPC means
+        // there is nothing to do. The Client's manifest.json flows through IPC,
+        // so the Upgrade never needs to load one directly.
         var processInfo = new EncryptedFileProcessInfoProvider().Receive();
         if (processInfo == null) return;
 

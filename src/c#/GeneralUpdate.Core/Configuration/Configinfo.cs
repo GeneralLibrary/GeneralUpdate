@@ -70,8 +70,6 @@ namespace GeneralUpdate.Core.Configuration
         ///             <c>AppSecretKey</c>: Must not be empty.</item>
         ///         <item>
         ///             <c>ClientVersion</c>: Must not be empty.</item>
-        ///         <item>
-        ///             <c>InstallPath</c>: Must not be empty.</item>
         ///     </list>
         ///     <para>
         ///         This method is typically called at the end of the <see cref="ConfiginfoBuilder.Build" /> method
@@ -101,9 +99,6 @@ namespace GeneralUpdate.Core.Configuration
 
             if (string.IsNullOrWhiteSpace(ClientVersion))
                 throw new ArgumentException("ClientVersion cannot be empty");
-
-            if (string.IsNullOrWhiteSpace(InstallPath))
-                throw new ArgumentException("InstallPath cannot be empty");
         }
     }
 }
