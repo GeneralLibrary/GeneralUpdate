@@ -11,4 +11,5 @@ namespace GeneralUpdate.Core.JsonContext;
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
 [JsonSerializable(typeof(Configinfo))]
+[JsonSerializable(typeof(ManifestInfo))]
 public partial class HttpParameterJsonContext: JsonSerializerContext;

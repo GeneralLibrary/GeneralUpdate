@@ -167,7 +167,7 @@ public class ConfiginfoTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_InstallPathNullOrWhitespace_ThrowsArgumentException(string installPath)
+    public void Validate_InstallPathNullOrWhitespace_NoException(string installPath)
     {
         var config = new Configinfo
         {
@@ -178,7 +178,8 @@ public class ConfiginfoTests
             ClientVersion = "1.0.0",
             InstallPath = installPath
         };
-        Assert.Throws<ArgumentException>(() => config.Validate());
+        var exception = Record.Exception(() => config.Validate());
+        Assert.Null(exception);
     }
 
     [Fact]

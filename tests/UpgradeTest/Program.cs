@@ -10,6 +10,10 @@ try
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
+    // Config comes from the encrypted IPC file written by the Client process.
+    // The Client's generalupdate.manifest.json + SetSource flows through IPC,
+    // so the Upgrade never needs to load a manifest directly.
+
     await new GeneralUpdateBootstrap()
         .Option(UpdateOptions.AppType, AppType.Upgrade)
         .Hooks<UpgradeTestHooks>()

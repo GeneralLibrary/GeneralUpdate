@@ -1,0 +1,9 @@
+{
+  "mainAppName": "ClientTest.exe",
+  "clientVersion": "1.0.0",
+  "appType": "Client",
+  "updateAppName": "UpgradeTest.exe",
+  "upgradeClientVersion": "1.0.0",
+  "productId": "2d974e2a-31e6-4887-9bb1-b4689e98c77a",
+  "updatePath": "Upgrade"
+}
