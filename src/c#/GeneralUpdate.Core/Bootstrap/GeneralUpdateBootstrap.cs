@@ -285,9 +285,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     public GeneralUpdateBootstrap SetSource(
         string updateUrl,
         string appSecretKey,
-        string? token = null,
+        string? reportUrl = null,
         string? scheme = null,
-        string? reportUrl = null)
+        string? token = null)
     {
         var config = new Configinfo
         {
