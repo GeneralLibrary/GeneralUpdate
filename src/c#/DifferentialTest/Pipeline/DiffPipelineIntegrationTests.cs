@@ -222,7 +222,7 @@ namespace DifferentialTest.Pipeline
             await pipeline.CleanAsync(sourceDir, targetDir, patchDir);
 
             // Assert
-            var deleteJson = Path.Combine(patchDir, "generalupdate_delete_files.json");
+            var deleteJson = Path.Combine(patchDir, "generalupdate.delete.json");
             Assert.True(File.Exists(deleteJson));
             var content = File.ReadAllText(deleteJson);
             Assert.NotEmpty(content);
@@ -423,7 +423,7 @@ namespace DifferentialTest.Pipeline
 
             // Phase 1: Clean generates delete JSON
             await pipeline.CleanAsync(sourceDir, targetDir, patchDir);
-            Assert.True(File.Exists(Path.Combine(patchDir, "generalupdate_delete_files.json")));
+            Assert.True(File.Exists(Path.Combine(patchDir, "generalupdate.delete.json")));
 
             // Phase 2: app dir has both files
             File.WriteAllBytes(Path.Combine(appDir, "keep.bin"), keepData);

@@ -442,6 +442,10 @@ public class ClientStrategy : IStrategy
         // Capture RecordIds per AppType for status reporting.
         // Client packages are reported by UpdateStrategy (Bowl) via IPC; Upgrade packages
         // are applied in-place and reported by ClientStrategy.
+        //
+        // Note: _mainRecordId treats null AppType as Client (matching the fallback in
+        // downloadVersions at line ~530). _upgradeRecordId requires an explicit Upgrade
+        // match — assets with omitted AppType are never treated as Upgrade packages.
         _mainRecordId = downloadPlan.Assets
             .FirstOrDefault(a => (a.AppType ?? (int)AppType.Client) == (int)AppType.Client)?.RecordId ?? 0;
         _upgradeRecordId = downloadPlan.Assets
@@ -563,7 +567,7 @@ public class ClientStrategy : IStrategy
                 break;
             case UpdateScenario.None:
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new InvalidOperationException($"Unhandled update scenario: {scenario}");
         }
     }
 
