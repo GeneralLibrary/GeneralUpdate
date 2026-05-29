@@ -214,18 +214,16 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
     
     /// <summary>
-    /// Applies the primary configuration object. Missing identity fields are
-    /// auto-discovered from <c>generalupdate.manifest.json</c> or defaults.
-    /// Validates required fields, maps to the internal <see cref="GlobalConfigInfo"/>,
-    /// and initialises the blacklist matcher for file exclusion during update operations.
+    /// Applies the primary configuration object. Validates required fields, maps to
+    /// the internal <see cref="GlobalConfigInfo"/>, and initialises the blacklist
+    /// matcher for file exclusion during update operations.
     /// </summary>
-    /// <param name="configInfo">User-facing configuration. Secrets (<c>UpdateUrl</c>,
-    /// <c>AppSecretKey</c>, <c>Token</c>) must be set. Identity fields are auto-filled
-    /// when omitted.</param>
+    /// <param name="configInfo">User-facing configuration. All required fields must
+    /// be set explicitly — no auto-discovery is performed. Use
+    /// <see cref="SetSource"/> for the zero-config path.</param>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
     {
-        configInfo = AppMetadataDiscoverer.Discover(configInfo);
         configInfo.Validate();
         _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
 
@@ -280,25 +278,27 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
-    ///     Minimal entry-point: supply only secrets. Identity metadata is auto-discovered
+    ///     Zero-config entry-point: supply only secrets. Identity metadata is auto-discovered
     ///     from <c>generalupdate.manifest.json</c> and hard-coded defaults.
     /// </summary>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetSource(
-        string appSecretKey,
         string updateUrl,
-        string? reportUrl = null,
+        string appSecretKey,
         string? token = null,
-        string? scheme = null)
+        string? scheme = null,
+        string? reportUrl = null)
     {
-        return SetConfig(new Configinfo
+        var config = new Configinfo
         {
             UpdateUrl = updateUrl,
             AppSecretKey = appSecretKey,
             Token = token,
             Scheme = scheme,
             ReportUrl = reportUrl
-        });
+        };
+        config = AppMetadataDiscoverer.Discover(config);
+        return SetConfig(config);
     }
 
     /// <summary>
