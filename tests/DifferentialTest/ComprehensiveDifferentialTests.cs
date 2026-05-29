@@ -657,7 +657,7 @@ public class ComprehensiveDifferentialTests : IDisposable
         await pipeline.CleanAsync(src, tgt, patchDir);
 
         // Verify delete list exists
-        Assert.True(File.Exists(Path.Combine(patchDir, "generalupdate_delete_files.json")));
+        Assert.True(File.Exists(Path.Combine(patchDir, "generalupdate.delete.json")));
 
         // Apply patches
         await pipeline.DirtyAsync(app, patchDir);
