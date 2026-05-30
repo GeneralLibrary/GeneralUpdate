@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -320,6 +321,23 @@ namespace GeneralUpdate.Core.Strategy
             }
 
             return CheckPath(_configinfo.InstallPath, name);
+        }
+
+        /// <summary>
+        /// Resolves and starts the target executable using the strategy's platform-specific
+        /// path resolution logic. Does not perform any additional work (no hooks, no shutdown).
+        /// For use by callers that only need process launch, e.g. <see cref="Silent.SilentPollOrchestrator"/>.
+        /// </summary>
+        /// <param name="appName">The name of the executable to launch.</param>
+        /// <param name="preferUpdatePath">When <c>true</c>, checks <c>UpdatePath</c> first.</param>
+        /// <exception cref="FileNotFoundException">Thrown when the executable cannot be resolved.</exception>
+        internal void StartProcess(string appName, bool preferUpdatePath = false)
+        {
+            var appPath = ResolveAppPath(appName, preferUpdatePath);
+            if (string.IsNullOrEmpty(appPath))
+                throw new FileNotFoundException($"Can't find the app {appName}!");
+            GeneralTracer.Info($"AbstractStrategy.StartProcess: launching {appPath}");
+            Process.Start(appPath);
         }
 
         /// <summary>

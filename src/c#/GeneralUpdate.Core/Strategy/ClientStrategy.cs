@@ -76,6 +76,19 @@ public class ClientStrategy : IStrategy
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
+    /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
+    /// The caller (e.g. <see cref="Silent.SilentPollOrchestrator"/>) is responsible for launching the
+    /// upgrade process at a later point. Default is <c>true</c> — standard immediate-launch behaviour.
+    /// </summary>
+    public bool LaunchAfterPrepare { get; set; } = true;
+
+    /// <summary>
+    /// After <see cref="ExecuteAsync"/> completes, <c>true</c> indicates that client packages were
+    /// staged via <see cref="SendProcessIpc"/> and the upgrade process should be launched to apply them.
+    /// </summary>
+    public bool HasPreparedClientUpdate { get; private set; }
+
+    /// <summary>
     /// Update scenario determined by the server validation result, indicating which update targets are needed.
     /// </summary>
     private enum UpdateScenario
@@ -244,6 +257,8 @@ public class ClientStrategy : IStrategy
     public async Task ExecuteAsync()
     {
         if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
+
+        HasPreparedClientUpdate = false;
 
         try
         {
@@ -554,8 +569,11 @@ public class ClientStrategy : IStrategy
                 SendProcessIpc(clientVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                if (LaunchAfterPrepare)
+                {
+                    await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                    await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                }
                 break;
 
             case UpdateScenario.Both:
@@ -563,8 +581,11 @@ public class ClientStrategy : IStrategy
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 SendProcessIpc(clientVersions);
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                if (LaunchAfterPrepare)
+                {
+                    await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                    await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                }
                 break;
             case UpdateScenario.None:
             default:
@@ -625,6 +646,7 @@ public class ClientStrategy : IStrategy
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
         new EncryptedFileProcessInfoProvider().Send(processInfo);
+        HasPreparedClientUpdate = true;
         GeneralTracer.Info("ClientStrategy: ProcessInfo sent with MainApp versions only.");
     }
 
@@ -650,6 +672,52 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Info(
             $"ClientStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
         await _osStrategy!.StartAppAsync();
+    }
+
+    /// <summary>
+    /// Synchronously launches the upgrade process via the configured OS strategy
+    /// after running the pre-launch lifecycle hook. Designed for
+    /// <see cref="Silent.SilentPollOrchestrator"/> to call from
+    /// <see cref="AppDomain.ProcessExit"/>, where the process is already shutting
+    /// down and only path resolution + hook + process start are needed.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="LaunchUpgradeProcessAsync"/>, this method does NOT call
+    /// <see cref="AbstractStrategy.StartAppAsync"/> — it only resolves the path
+    /// via the strategy's <see cref="AbstractStrategy.ResolveAppPath"/> and starts
+    /// the process, without the extra shutdown / Bowl / tracer-dispose work that
+    /// is only appropriate when the current process is about to exit voluntarily.
+    /// </remarks>
+    internal void LaunchUpgradeProcessSync()
+    {
+        // Run the pre-launch lifecycle hook (e.g. UnixPermissionHooks for chmod +x).
+        // In the standard flow this runs inside ExecuteStandardWorkflowAsync; in
+        // silent mode it was deferred and must run now, before the process starts.
+        var ctx = BuildUpdateContext();
+        SafeOnBeforeStartAppAsync(ctx).GetAwaiter().GetResult();
+
+        if (_osStrategy is AbstractStrategy abs)
+        {
+            abs.LaunchAppName = _configInfo!.UpdateAppName;
+            abs.LaunchBowl = false;
+            abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.StartProcess(abs.LaunchAppName!, abs.UseUpdatePath);
+            return;
+        }
+
+        // Fallback: custom IStrategy (non-AbstractStrategy).
+        // For a custom strategy we can't use the platform path resolution, so we
+        // fall back to a simple InstallPath + UpdateAppName lookup.
+        var updaterDir = !string.IsNullOrWhiteSpace(_configInfo!.UpdatePath)
+            ? (Path.IsPathRooted(_configInfo.UpdatePath)
+                ? _configInfo.UpdatePath
+                : Path.Combine(_configInfo.InstallPath, _configInfo.UpdatePath))
+            : _configInfo.InstallPath;
+        var appPath = Path.Combine(updaterDir, _configInfo.UpdateAppName);
+        if (!File.Exists(appPath))
+            throw new FileNotFoundException($"Upgrade application not found: {appPath}");
+        GeneralTracer.Info($"ClientStrategy: launching upgrade process {appPath}");
+        Process.Start(appPath);
     }
 
     #endregion

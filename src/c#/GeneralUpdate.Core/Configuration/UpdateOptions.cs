@@ -113,6 +113,12 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         public static UpdateOption<int> SilentPollIntervalMinutes { get; } = UpdateOption.ValueOf<int>("SILENTPOLLINTERVALMINUTES", 60);
 
+        /// <summary>
+        ///     Whether to automatically launch the client application after the upgrade process completes in silent mode.
+        ///     Defaults to <c>true</c>.
+        /// </summary>
+        public static UpdateOption<bool> LaunchClientAfterUpdate { get; } = UpdateOption.ValueOf<bool>("LAUNCHCLIENTAFTERUPDATE", true);
+
         // ════════════════════════════════════════
         //  Concurrency and Resume Options
         // ════════════════════════════════════════
