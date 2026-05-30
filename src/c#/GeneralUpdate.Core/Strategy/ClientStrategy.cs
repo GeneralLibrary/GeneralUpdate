@@ -591,6 +591,13 @@ public class ClientStrategy : IStrategy
         _configInfo!.UpdateVersions = upgradeVersions;
         _osStrategy!.Create(_configInfo);
         await _osStrategy.ExecuteAsync().ConfigureAwait(false);
+
+        // Only advance the manifest version when every package was applied
+        // successfully. AbstractStrategy catches per-package failures and
+        // continues the loop, so ExecuteAsync() completing is not a
+        // reliable success signal on its own.
+        if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+            WriteBackUpgradeVersion(upgradeVersions);
     }
 
     /// <summary>
@@ -763,6 +770,35 @@ public class ClientStrategy : IStrategy
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return PlatformType.MacOS;
         return PlatformType.Unknown;
+    }
+
+    /// <summary>
+    /// After upgrade packages have been applied in-place, writes the latest upgrade version
+    /// back to <c>generalupdate.manifest.json</c> so the next poll cycle starts from the
+    /// correct <c>UpgradeClientVersion</c>.
+    /// </summary>
+    /// <param name="upgradeVersions">
+    /// The upgrade version list that was just applied. The last element carries the
+    /// highest target version.
+    /// </param>
+    private static void WriteBackUpgradeVersion(List<VersionInfo> upgradeVersions)
+    {
+        var latestVersion = upgradeVersions.LastOrDefault()?.Version;
+        if (string.IsNullOrEmpty(latestVersion)) return;
+
+        try
+        {
+            ManifestInfo.TryUpdateVersion(
+                AppDomain.CurrentDomain.BaseDirectory,
+                upgradeClientVersion: latestVersion);
+            GeneralTracer.Info(
+                $"ClientStrategy: UpgradeClientVersion updated to {latestVersion} in manifest.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn(
+                $"ClientStrategy: failed to write back UpgradeClientVersion: {ex.Message}");
+        }
     }
 
     /// <summary>

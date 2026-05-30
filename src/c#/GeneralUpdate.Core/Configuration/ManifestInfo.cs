@@ -83,4 +83,46 @@ public class ManifestInfo
             AppType = Enum.TryParse<AppType>(AppType, out var at) ? at : null
         };
     }
+
+    /// <summary>
+    ///     Serialize this manifest back to the JSON file at the specified path, or
+    ///     <see cref="AppDomain.CurrentDomain.BaseDirectory"/>/<c>generalupdate.manifest.json</c>
+    ///     when <paramref name="path"/> is <c>null</c>.
+    /// </summary>
+    public void Save(string? path = null)
+    {
+        var filePath = path ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName);
+        var json = JsonSerializer.Serialize(this, HttpParameterJsonContext.Default.ManifestInfo);
+        File.WriteAllText(filePath, json);
+    }
+
+    /// <summary>
+    ///     Load the manifest from <paramref name="baseDirectory"/>, update the specified version
+    ///     fields, and save it back. Does nothing silently when the manifest file does not exist.
+    /// </summary>
+    /// <param name="baseDirectory">
+    ///     The directory containing <c>generalupdate.manifest.json</c>.
+    /// </param>
+    /// <param name="clientVersion">
+    ///     If non-null, overwrites <see cref="ClientVersion"/> with this value.
+    /// </param>
+    /// <param name="upgradeClientVersion">
+    ///     If non-null, overwrites <see cref="UpgradeClientVersion"/> with this value.
+    /// </param>
+    public static void TryUpdateVersion(
+        string baseDirectory,
+        string? clientVersion = null,
+        string? upgradeClientVersion = null)
+    {
+        var manifestPath = Path.Combine(baseDirectory, FileName);
+        var manifest = Load(manifestPath);
+        if (manifest == null) return;
+
+        if (clientVersion != null)
+            manifest.ClientVersion = clientVersion;
+        if (upgradeClientVersion != null)
+            manifest.UpgradeClientVersion = upgradeClientVersion;
+
+        manifest.Save(manifestPath);
+    }
 }
