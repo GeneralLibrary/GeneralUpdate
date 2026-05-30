@@ -91,13 +91,13 @@ public class ProcessInfoTests
     }
 
     [Fact]
-    public void Ctor_ReportUrlNull_ThrowsArgumentNullException()
+    public void Ctor_ReportUrlNull_DoesNotThrow()
     {
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
-                Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, null, "backup", null, null, null, null, null, null, null, null));
-        Assert.Contains("reportUrl", ex.Message);
+        // ReportUrl is now optional — when not specified, no status reporting is performed.
+        var info = new ProcessInfo("app", ExistingDir, "1.0", "2.0", null,
+            Encoding.UTF8, "ZIP", 30, "key",
+            SingleVersion, null, "backup", null, null, null, null, null, null, null, null);
+        Assert.Null(info.ReportUrl);
     }
 
     [Fact]

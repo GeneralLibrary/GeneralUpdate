@@ -65,21 +65,6 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 
 /// <summary>
-/// A no-op (null object) update status reporter that performs no actual work.
-/// Used when no ReportUrl is configured.
-/// </summary>
-/// <remarks>
-/// <para>
-/// This class implements the Null Object Pattern, eliminating the need for null checks
-/// in consumer code. Every report operation returns a completed task immediately without
-/// performing any actual data transmission.
-/// </para>
-/// <para>
-/// Use this implementation when no remote status reporting is needed,
-/// such as during local testing or when the report endpoint is not configured.
-/// </para>
-/// </remarks>
-/// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
 /// and sends it to a configured remote endpoint. Compatible with the GeneralSpacestation ReportDTO format.
 /// </summary>
