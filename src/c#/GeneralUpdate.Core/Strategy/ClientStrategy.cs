@@ -76,6 +76,19 @@ public class ClientStrategy : IStrategy
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
+    /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
+    /// The caller (e.g. <see cref="Silent.SilentPollOrchestrator"/>) is responsible for launching the
+    /// upgrade process at a later point. Default is <c>true</c> — standard immediate-launch behaviour.
+    /// </summary>
+    public bool LaunchAfterPrepare { get; set; } = true;
+
+    /// <summary>
+    /// After <see cref="ExecuteAsync"/> completes, <c>true</c> indicates that client packages were
+    /// staged via <see cref="SendProcessIpc"/> and the upgrade process should be launched to apply them.
+    /// </summary>
+    public bool HasPreparedClientUpdate { get; private set; }
+
+    /// <summary>
     /// Update scenario determined by the server validation result, indicating which update targets are needed.
     /// </summary>
     private enum UpdateScenario
@@ -244,6 +257,8 @@ public class ClientStrategy : IStrategy
     public async Task ExecuteAsync()
     {
         if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
+
+        HasPreparedClientUpdate = false;
 
         try
         {
@@ -554,8 +569,11 @@ public class ClientStrategy : IStrategy
                 SendProcessIpc(clientVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                if (LaunchAfterPrepare)
+                {
+                    await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                    await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                }
                 break;
 
             case UpdateScenario.Both:
@@ -563,8 +581,11 @@ public class ClientStrategy : IStrategy
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 SendProcessIpc(clientVersions);
-                await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
-                await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                if (LaunchAfterPrepare)
+                {
+                    await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
+                    await LaunchUpgradeProcessAsync().ConfigureAwait(false);
+                }
                 break;
             case UpdateScenario.None:
             default:
@@ -625,6 +646,7 @@ public class ClientStrategy : IStrategy
         _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
             ProcessInfoJsonContext.Default.ProcessInfo);
         new EncryptedFileProcessInfoProvider().Send(processInfo);
+        HasPreparedClientUpdate = true;
         GeneralTracer.Info("ClientStrategy: ProcessInfo sent with MainApp versions only.");
     }
 

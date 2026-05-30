@@ -135,76 +135,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
             if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
-            // Resolve hooks from extensions
-            var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
-            roleStrategy.Hooks = hooks;
+            ConfigureStrategy(roleStrategy);
 
-            // Resolve reporter from extensions; default to HttpUpdateReporter.
-            // When ReportUrl is not configured, HttpUpdateReporter is effectively a no-op.
-            var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
-                           new Download.Reporting.HttpUpdateReporter();
-
-            if (reporter is Download.Reporting.HttpUpdateReporter httpReporter)
-                httpReporter.ReportUrl = _configInfo.ReportUrl;
-
-            roleStrategy.Reporter = reporter;
-
-            // ── Download components ──
-            var downloadOrchestrator = ResolveExtension<Download.Abstractions.IDownloadOrchestrator>();
-            var downloadPolicy = ResolveExtension<Download.Abstractions.IDownloadPolicy>();
-            var downloadExecutor = ResolveExtension<Download.Abstractions.IDownloadExecutor>();
-
-            // Build download pipeline factory from registered extension type
-            Func<string?, Download.Abstractions.IDownloadPipeline>? downloadPipelineFactory = null;
-            var pipelineType = ResolveExtensionType<Download.Abstractions.IDownloadPipeline>();
-            if (pipelineType != null)
-            {
-                var stringCtor = pipelineType.GetConstructor([typeof(string)]);
-                if (stringCtor != null)
-                    downloadPipelineFactory = hash => (Download.Abstractions.IDownloadPipeline)stringCtor.Invoke([hash]);
-                else
-                    downloadPipelineFactory = _ => (Download.Abstractions.IDownloadPipeline)Activator.CreateInstance(pipelineType);
-            }
-
-            var diffPipeline = BuildDiffPipeline();
-
-            switch (roleStrategy)
-            {
-                case ClientStrategy cs:
-                    cs.DownloadSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
-
-                    if (_updatePrecheck != null)
-                        cs.UseUpdatePrecheck(_updatePrecheck);
-
-                    await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
-
-                    cs.SetDiffPipeline(diffPipeline);
-                    if (downloadOrchestrator != null) cs.SetOrchestrator(downloadOrchestrator);
-                    if (downloadPolicy != null) cs.SetDownloadPolicy(downloadPolicy);
-                    if (downloadExecutor != null) cs.SetDownloadExecutor(downloadExecutor);
-                    if (downloadPipelineFactory != null) cs.SetDownloadPipelineFactory(downloadPipelineFactory);
-                    break;
-
-                case UpdateStrategy us:
-                    us.SetDiffPipeline(diffPipeline);
-                    us.SetReportType(_configInfo.ReportType);
-                    break;
-            }
-
-            // Inject custom OS-level strategy if registered via Strategy<T>()
-            var customOsStrategy = ResolveExtension<IStrategy>();
-            if (customOsStrategy != null)
-            {
-                switch (roleStrategy)
-                {
-                    case ClientStrategy cs:
-                        cs.SetOsStrategy(customOsStrategy);
-                        break;
-                    case UpdateStrategy us:
-                        us.SetOsStrategy(customOsStrategy);
-                        break;
-                }
-            }
+            if (roleStrategy is ClientStrategy cs)
+                await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
 
             roleStrategy.Create(_configInfo);
 
@@ -420,34 +354,103 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     /// <summary>
     /// Silent update mode — starts a background poll loop and returns immediately.
-    /// The orchestrator checks for updates periodically and prepares them.
-    /// When the host process exits, the prepared update is applied.
+    /// Uses the same fully-configured <see cref="ClientStrategy"/> as the standard flow;
+    /// the orchestrator only adds polling and deferred-upgrade-on-exit on top.
     /// </summary>
-    private async Task LaunchSilentAsync()
+    private async Task<GeneralUpdateBootstrap> LaunchSilentAsync()
     {
         GeneralTracer.Info("GeneralUpdateBootstrap: starting silent update mode.");
-        var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
-        var silentOptions = new Silent.SilentOptions
-        {
-            PollInterval = TimeSpan.FromMinutes(pollMinutes)
-        };
-        var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
-        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
-                       new Download.Reporting.HttpUpdateReporter();
-        if (reporter is Download.Reporting.HttpUpdateReporter httpRep)
-            httpRep.ReportUrl = _configInfo.ReportUrl;
+
+        ApplyRuntimeOptions();
+
+        // Network-level extensions (global, applied before any HTTP call)
         var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
         if (sslPolicy != null) Network.VersionService.SetSslValidationPolicy(sslPolicy);
         var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
         if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
-        var orchestrator = new Silent.SilentPollOrchestrator(_configInfo, silentOptions)
-            .WithHooks(hooks)
-            .WithReporter(reporter)
-            .WithOsStrategy(ResolveExtension<IStrategy>());
+        var strategy = new ClientStrategy();
+        ConfigureStrategy(strategy);
 
+        strategy.LaunchAfterPrepare = false;
+
+        var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
+        var launchClient = GetOption(UpdateOptions.LaunchClientAfterUpdate);
+        var silentOptions = new Silent.SilentOptions
+        {
+            PollInterval = TimeSpan.FromMinutes(pollMinutes),
+            LaunchClientAfterUpdate = launchClient
+        };
+
+        var orchestrator = new Silent.SilentPollOrchestrator(strategy, _configInfo, silentOptions);
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
+
+        return this;
+    }
+
+    /// <summary>
+    /// Applies all registered extensions (hooks, reporter, download components,
+    /// DiffPipeline, custom OS strategy) to a role strategy. Shared by the standard
+    /// and silent boot paths so they are always configured identically.
+    /// </summary>
+    private void ConfigureStrategy(IStrategy roleStrategy)
+    {
+        var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
+        roleStrategy.Hooks = hooks;
+
+        var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
+                       new Download.Reporting.HttpUpdateReporter();
+        if (reporter is Download.Reporting.HttpUpdateReporter httpReporter)
+            httpReporter.ReportUrl = _configInfo.ReportUrl;
+        roleStrategy.Reporter = reporter;
+
+        var diffPipeline = BuildDiffPipeline();
+
+        // Download components
+        var downloadOrchestrator = ResolveExtension<Download.Abstractions.IDownloadOrchestrator>();
+        var downloadPolicy = ResolveExtension<Download.Abstractions.IDownloadPolicy>();
+        var downloadExecutor = ResolveExtension<Download.Abstractions.IDownloadExecutor>();
+
+        Func<string?, Download.Abstractions.IDownloadPipeline>? downloadPipelineFactory = null;
+        var pipelineType = ResolveExtensionType<Download.Abstractions.IDownloadPipeline>();
+        if (pipelineType != null)
+        {
+            var stringCtor = pipelineType.GetConstructor([typeof(string)]);
+            if (stringCtor != null)
+                downloadPipelineFactory = hash => (Download.Abstractions.IDownloadPipeline)stringCtor.Invoke([hash]);
+            else
+                downloadPipelineFactory = _ => (Download.Abstractions.IDownloadPipeline)Activator.CreateInstance(pipelineType);
+        }
+
+        switch (roleStrategy)
+        {
+            case ClientStrategy cs:
+                cs.DownloadSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
+                cs.SetDiffPipeline(diffPipeline);
+                if (downloadOrchestrator != null) cs.SetOrchestrator(downloadOrchestrator);
+                if (downloadPolicy != null) cs.SetDownloadPolicy(downloadPolicy);
+                if (downloadExecutor != null) cs.SetDownloadExecutor(downloadExecutor);
+                if (downloadPipelineFactory != null) cs.SetDownloadPipelineFactory(downloadPipelineFactory);
+                if (_updatePrecheck != null) cs.UseUpdatePrecheck(_updatePrecheck);
+                break;
+
+            case UpdateStrategy us:
+                us.SetDiffPipeline(diffPipeline);
+                us.SetReportType(_configInfo.ReportType);
+                break;
+        }
+
+        // Custom OS-level strategy (registered via Strategy<T>())
+        var customOsStrategy = ResolveExtension<IStrategy>();
+        if (customOsStrategy != null)
+        {
+            switch (roleStrategy)
+            {
+                case ClientStrategy cs: cs.SetOsStrategy(customOsStrategy); break;
+                case UpdateStrategy us: us.SetOsStrategy(customOsStrategy); break;
+            }
+        }
     }
 
     private DiffPipeline BuildDiffPipeline()
