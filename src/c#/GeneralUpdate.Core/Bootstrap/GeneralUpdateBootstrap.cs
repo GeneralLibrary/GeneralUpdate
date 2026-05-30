@@ -139,6 +139,20 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
             roleStrategy.Hooks = hooks;
 
+            // Resolve reporter from extensions. If ReportUrl is not configured,
+            // force NoOpUpdateReporter regardless of what the user registered.
+            Download.Reporting.IUpdateReporter reporter;
+            if (string.IsNullOrWhiteSpace(_configInfo.ReportUrl))
+            {
+                reporter = new Download.Reporting.NoOpUpdateReporter();
+            }
+            else
+            {
+                reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
+                           new Download.Reporting.NoOpUpdateReporter();
+            }
+            roleStrategy.Reporter = reporter;
+
             // ── Download components ──
             var downloadOrchestrator = ResolveExtension<Download.Abstractions.IDownloadOrchestrator>();
             var downloadPolicy = ResolveExtension<Download.Abstractions.IDownloadPolicy>();

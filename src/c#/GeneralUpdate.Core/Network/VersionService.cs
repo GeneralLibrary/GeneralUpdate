@@ -57,7 +57,7 @@ namespace GeneralUpdate.Core.Network
     /// <list type="bullet">
     ///   <item><description>At startup, call <see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
     ///   to check whether the server has a new version.</description></item>
-    ///   <item><description>After download completes, call <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>
+    ///   <item><description>After download completes, use <see cref="Download.Reporting.IUpdateReporter.ReportAsync"/>
     ///   to report the update status.</description></item>
     /// </list>
     /// </para>
@@ -147,43 +147,6 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// Reports the update status to the server for a specified record.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// This is a backward-compatible static convenience method that internally creates
-        /// a <see cref="VersionService"/> instance and calls <see cref="ReportAsync"/>.
-        /// </para>
-        /// <para>
-        /// Execution flow:
-        /// <list type="number">
-        ///   <item><description>Resolves the authentication provider: uses the global provider
-        ///   (<see cref="SetDefaultAuthProvider"/>) first; otherwise creates one via
-        ///   <see cref="HttpAuthProviderFactory.Create"/>.</description></item>
-        ///   <item><description>Creates a temporary <see cref="VersionService"/> instance.</description></item>
-        ///   <item><description>Calls <see cref="ReportAsync"/> to perform the report.</description></item>
-        /// </list>
-        /// </para>
-        /// </remarks>
-        /// <param name="url">The server API URL.</param>
-        /// <param name="recordId">The update record identifier.</param>
-        /// <param name="status">The current status code.</param>
-        /// <param name="type">The update type (may be null).</param>
-        /// <param name="scheme">The authentication scheme (e.g., "bearer", "apikey", "hmac"), used to create the auth provider. Ignored when a global auth provider is set.</param>
-        /// <param name="token">The authentication token or key, used together with <paramref name="scheme"/>.</param>
-        /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        public static Task Report(string url, int recordId, int status, int? type,
-            string scheme = null, string token = null, CancellationToken ct = default)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-                return Task.CompletedTask;
-
-            var a = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, null);
-            return new VersionService(a).ReportAsync(url, recordId, status, type, ct);
-        }
-
-        /// <summary>
         /// Validates the current version against the server to check for available updates.
         /// </summary>
         /// <remarks>
@@ -219,8 +182,8 @@ namespace GeneralUpdate.Core.Network
             AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
-            var a = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey);
-            return new VersionService(a).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
+            var auth = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey);
+            return new VersionService(auth).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
         }
 
         /// <summary>
@@ -248,31 +211,6 @@ namespace GeneralUpdate.Core.Network
             int appType, string appKey, int platform, string productId,
             string scheme = null, string token = null, CancellationToken ct = default)
             => Validate(url, version, (AppType)appType, appKey, (PlatformType)platform, productId, scheme, token, ct);
-
-        /// <summary>
-        /// Asynchronously reports the update record status to the server.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Execution flow:
-        /// <list type="number">
-        ///   <item><description>Constructs a parameter dictionary with the record ID, status, and type.</description></item>
-        ///   <item><description>Sends the parameters via a POST request using <see cref="PostAsync{T}"/>.</description></item>
-        ///   <item><description>Deserializes the response into a <see cref="BaseResponseDTO{T}"/> of type <see cref="bool"/>.</description></item>
-        /// </list>
-        /// </para>
-        /// </remarks>
-        /// <param name="url">The server API URL.</param>
-        /// <param name="recordId">The update record identifier.</param>
-        /// <param name="status">The current status code.</param>
-        /// <param name="type">The update type (may be null).</param>
-        /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task ReportAsync(string url, int recordId, int status, int? type, CancellationToken t = default)
-        {
-            var p = new Dictionary<string, object> { ["recordId"] = recordId, ["status"] = status, ["type"] = type };
-            await PostAsync<BaseResponseDTO<bool>>(url, p, ReportRespJsonContext.Default.BaseResponseDTOBoolean, t);
-        }
 
         /// <summary>
         /// Asynchronously validates the version by querying the server for available updates.

@@ -84,6 +84,7 @@ public class UpdateStrategy : IStrategy
         if (_osStrategy is AbstractStrategy abs)
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
+            abs.Reporter = this.Reporter;
         }
     }
 
