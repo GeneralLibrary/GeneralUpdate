@@ -176,6 +176,9 @@ namespace GeneralUpdate.Core.Network
         public static Task Report(string url, int recordId, int status, int? type,
             string scheme = null, string token = null, CancellationToken ct = default)
         {
+            if (string.IsNullOrWhiteSpace(url))
+                return Task.CompletedTask;
+
             var a = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, null);
             return new VersionService(a).ReportAsync(url, recordId, status, type, ct);
         }

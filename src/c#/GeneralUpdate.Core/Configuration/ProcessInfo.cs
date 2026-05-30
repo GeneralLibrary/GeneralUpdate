@@ -110,7 +110,7 @@ namespace GeneralUpdate.Core.Configuration
         ///                 <description><paramref name="updateVersions" />: Must not be null or an empty collection</description>
         ///             </item>
         ///             <item>
-        ///                 <description><paramref name="reportUrl" />: Must not be null</description>
+        ///                 <description><paramref name="reportUrl" />: Optional; status reporting is skipped when null or empty</description>
         ///             </item>
         ///             <item>
         ///                 <description><paramref name="backupDirectory" />: Must not be null</description>
@@ -145,7 +145,7 @@ namespace GeneralUpdate.Core.Configuration
         /// <exception cref="ArgumentNullException">
         ///     Thrown when <paramref name="appName" />, <paramref name="installPath" />,
         ///     <paramref name="currentVersion" />, <paramref name="lastVersion" />,
-        ///     <paramref name="appSecretKey" />, <paramref name="reportUrl" />, or
+        ///     <paramref name="appSecretKey" />, or
         ///     <paramref name="backupDirectory" /> is <c>null</c>.
         /// </exception>
         /// <exception cref="ArgumentException">
@@ -198,7 +198,8 @@ namespace GeneralUpdate.Core.Configuration
             UpdateVersions = updateVersions;
 
             // Set report and backup parameters
-            ReportUrl = reportUrl ?? throw new ArgumentNullException(nameof(reportUrl));
+            // ReportUrl is optional — when not specified, no status reporting is performed.
+            ReportUrl = reportUrl;
             BackupDirectory = backupDirectory ?? throw new ArgumentNullException(nameof(backupDirectory));
 
             // Set optional parameters
