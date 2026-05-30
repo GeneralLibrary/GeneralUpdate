@@ -116,9 +116,12 @@ public class UpdateStrategy : IStrategy
                                    " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
 
-                // Write the new ClientVersion back to generalupdate.manifest.json so the
-                // next poll cycle starts from the correct version.
-                WriteBackClientVersion();
+                // Only advance the manifest version when every package was applied
+                // successfully. AbstractStrategy catches per-package failures and
+                // continues the loop, so ExecuteAsync() completing is not a
+                // reliable success signal on its own.
+                if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+                    WriteBackClientVersion();
             }
             else
             {

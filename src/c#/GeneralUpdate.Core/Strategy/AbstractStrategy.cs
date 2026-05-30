@@ -86,6 +86,14 @@ namespace GeneralUpdate.Core.Strategy
         public bool UseUpdatePath { get; set; }
 
         /// <summary>
+        /// After <see cref="ExecuteAsync"/> completes, indicates whether every package in the
+        /// current batch was applied without error. A per-package failure does not prevent the
+        /// loop from continuing, so callers must inspect this flag before treating the batch
+        /// as fully successful (e.g. before writing updated version numbers to the manifest).
+        /// </summary>
+        public bool AllPackagesSucceeded { get; private set; }
+
+        /// <summary>
         /// Starts the main application. Virtual method, overridden by subclasses to provide platform-specific application launch implementations.
         /// </summary>
         /// <remarks>
@@ -132,6 +140,7 @@ namespace GeneralUpdate.Core.Strategy
         {
             try
             {
+                AllPackagesSucceeded = true;
                 var status = ReportType.None;
                 var patchPath = StorageManager.GetTempDirectory(Patchs);
                 foreach (var version in _configinfo.UpdateVersions)
@@ -146,6 +155,7 @@ namespace GeneralUpdate.Core.Strategy
                     catch (Exception e)
                     {
                         status = ReportType.Failure;
+                        AllPackagesSucceeded = false;
                         HandleExecuteException(e);
                         TryRollback();
                     }
@@ -170,6 +180,7 @@ namespace GeneralUpdate.Core.Strategy
             }
             catch (Exception e)
             {
+                AllPackagesSucceeded = false;
                 HandleExecuteException(e);
             }
         }

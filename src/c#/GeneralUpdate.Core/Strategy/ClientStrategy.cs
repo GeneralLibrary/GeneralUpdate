@@ -544,7 +544,6 @@ public class ClientStrategy : IStrategy
         {
             case UpdateScenario.UpgradeOnly:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
-                WriteBackUpgradeVersion(upgradeVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
@@ -560,7 +559,6 @@ public class ClientStrategy : IStrategy
 
             case UpdateScenario.Both:
                 await ApplyUpgradePackagesAsync(upgradeVersions).ConfigureAwait(false);
-                WriteBackUpgradeVersion(upgradeVersions);
                 await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                 await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                 SendProcessIpc(clientVersions);
@@ -593,6 +591,13 @@ public class ClientStrategy : IStrategy
         _configInfo!.UpdateVersions = upgradeVersions;
         _osStrategy!.Create(_configInfo);
         await _osStrategy.ExecuteAsync().ConfigureAwait(false);
+
+        // Only advance the manifest version when every package was applied
+        // successfully. AbstractStrategy catches per-package failures and
+        // continues the loop, so ExecuteAsync() completing is not a
+        // reliable success signal on its own.
+        if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+            WriteBackUpgradeVersion(upgradeVersions);
     }
 
     /// <summary>

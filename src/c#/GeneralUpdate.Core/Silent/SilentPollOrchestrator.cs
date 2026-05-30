@@ -355,6 +355,11 @@ public class SilentPollOrchestrator : IDisposable
                 strategy.Create(_configInfo);
                 await strategy.ExecuteAsync().ConfigureAwait(false);
                 GeneralTracer.Info("SilentPollOrchestrator: Upgrade packages applied.");
+
+                // Only advance the manifest version when every package was applied
+                // successfully — the same gating used by ClientStrategy.
+                if ((strategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+                    WriteBackUpgradeVersion(upgradeVersions);
             }
             catch (Exception ex)
             {
@@ -523,6 +528,35 @@ public class SilentPollOrchestrator : IDisposable
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return PlatformType.MacOS;
         return PlatformType.Unknown;
+    }
+
+    /// <summary>
+    /// After upgrade packages have been applied in-place, writes the latest upgrade version
+    /// back to <c>generalupdate.manifest.json</c> so the next poll cycle starts from the
+    /// correct <c>UpgradeClientVersion</c>.
+    /// </summary>
+    /// <param name="upgradeVersions">
+    /// The upgrade version list that was just applied. The last element carries the
+    /// highest target version.
+    /// </param>
+    private void WriteBackUpgradeVersion(List<VersionInfo> upgradeVersions)
+    {
+        var latestVersion = upgradeVersions.LastOrDefault()?.Version;
+        if (string.IsNullOrEmpty(latestVersion)) return;
+
+        try
+        {
+            ManifestInfo.TryUpdateVersion(
+                _configInfo.InstallPath,
+                upgradeClientVersion: latestVersion);
+            GeneralTracer.Info(
+                $"SilentPollOrchestrator: UpgradeClientVersion updated to {latestVersion} in manifest.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn(
+                $"SilentPollOrchestrator: failed to write back UpgradeClientVersion: {ex.Message}");
+        }
     }
 
     /// <summary>
