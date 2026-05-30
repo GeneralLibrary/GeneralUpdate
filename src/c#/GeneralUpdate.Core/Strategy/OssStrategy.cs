@@ -84,10 +84,10 @@ public class OssStrategy : IStrategy
     /// Gets or sets the update status reporter for reporting update progress and results to the server or event system.
     /// </summary>
     /// <remarks>
-    /// The default implementation is <c>NoOpUpdateReporter</c> (no operation). Set this property to inject custom reporter implementations
+    /// The default implementation is <c>HttpUpdateReporter</c>. Set this property to inject custom reporter implementations
     /// to report update status (updating, success, failure) to a remote service (such as GeneralSpacestation).
     /// </remarks>
-    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
 
     /// <summary>
     /// Gets or sets the download source for retrieving the download asset list from remote storage.

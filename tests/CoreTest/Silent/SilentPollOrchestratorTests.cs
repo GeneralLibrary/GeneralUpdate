@@ -56,7 +56,7 @@ public class SilentPollOrchestratorTests
     {
         var orchestrator = new SilentPollOrchestrator(
             CreateValidConfig(), new SilentOptions());
-        var result = orchestrator.WithReporter(new GeneralUpdate.Core.Download.Reporting.NoOpUpdateReporter());
+        var result = orchestrator.WithReporter(new GeneralUpdate.Core.Download.Reporting.HttpUpdateReporter());
         Assert.Same(orchestrator, result);
         orchestrator.Dispose();
     }

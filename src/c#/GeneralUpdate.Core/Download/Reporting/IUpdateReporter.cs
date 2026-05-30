@@ -23,8 +23,8 @@ namespace GeneralUpdate.Core.Download.Reporting;
 ///   <item><description><see cref="UpdateStatus.Failure"/> — The update failed.</description></item>
 /// </list>
 /// <para>
-/// The default no-op implementation <see cref="NoOpUpdateReporter"/> is used when no ReportUrl is configured.
-/// The standard implementation <see cref="HttpUpdateReporter"/> sends status via HTTP POST to a configured endpoint.
+/// The default implementation <see cref="HttpUpdateReporter"/> sends status via HTTP POST to the configured endpoint.
+/// When <see cref="HttpUpdateReporter.ReportUrl"/> is not set, reporting is silently skipped.
 /// </para>
 /// </remarks>
 public interface IUpdateReporter
@@ -149,25 +149,4 @@ public class HttpUpdateReporter : IUpdateReporter
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
     }
-}
-
-/// <summary>
-/// A no-op (null object) update status reporter that performs no actual work.
-/// Used when no ReportUrl is configured.
-/// </summary>
-/// <remarks>
-/// <para>
-/// This class implements the Null Object Pattern, eliminating the need for null checks
-/// in consumer code. Every report operation returns a completed task immediately without
-/// performing any actual data transmission.
-/// </para>
-/// <para>
-/// Use this implementation when no remote status reporting is needed,
-/// such as during local testing or when the report endpoint is not configured.
-/// </para>
-/// </remarks>
-public class NoOpUpdateReporter : IUpdateReporter
-{
-    public Task ReportAsync(UpdateReport report, CancellationToken token = default)
-        => Task.CompletedTask;
 }

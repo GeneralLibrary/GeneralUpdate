@@ -139,19 +139,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
             roleStrategy.Hooks = hooks;
 
-            // Resolve reporter from extensions. When ReportUrl is configured and no
-            // custom reporter is registered, default to HttpUpdateReporter so that
-            // the previous VersionService.Report behavior is preserved.
-            Download.Reporting.IUpdateReporter reporter;
-            if (string.IsNullOrWhiteSpace(_configInfo.ReportUrl))
-            {
-                reporter = new Download.Reporting.NoOpUpdateReporter();
-            }
-            else
-            {
-                reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
+            // Resolve reporter from extensions; default to HttpUpdateReporter.
+            // When ReportUrl is not configured, HttpUpdateReporter is effectively a no-op.
+            var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
                            new Download.Reporting.HttpUpdateReporter();
-            }
 
             if (reporter is Download.Reporting.HttpUpdateReporter httpReporter)
                 httpReporter.ReportUrl = _configInfo.ReportUrl;
@@ -442,7 +433,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         };
         var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
         var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
-                       new Download.Reporting.NoOpUpdateReporter();
+                       new Download.Reporting.HttpUpdateReporter();
+        if (reporter is Download.Reporting.HttpUpdateReporter httpRep)
+            httpRep.ReportUrl = _configInfo.ReportUrl;
         var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
         if (sslPolicy != null) Network.VersionService.SetSslValidationPolicy(sslPolicy);
         var authProvider = ResolveExtension<Security.IHttpAuthProvider>();

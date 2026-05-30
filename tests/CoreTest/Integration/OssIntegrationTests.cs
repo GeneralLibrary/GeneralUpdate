@@ -60,7 +60,7 @@ public class OssIntegrationTests
     {
         var strategy = new OssStrategy(AppType.OssClient);
         Assert.IsType<NoOpUpdateHooks>(strategy.Hooks);
-        Assert.IsType<NoOpUpdateReporter>(strategy.Reporter);
+        Assert.IsType<HttpUpdateReporter>(strategy.Reporter);
     }
 
     [Fact]
