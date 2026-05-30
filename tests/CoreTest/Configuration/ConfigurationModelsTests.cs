@@ -12,58 +12,58 @@ namespace CoreTest.Configuration
     /// <summary>
     /// Unit tests for configuration models used across the update framework.
     /// Covers:
-    ///   - BlackListConfig (new config-based blacklist with IReadOnlyList)
+    ///   - BlackPolicy (new config-based blacklist with IReadOnlyList)
     ///   - HubConfig (SignalR hub configuration)
     ///   - DownloadAsset / DownloadPlan / DownloadProgress / DownloadResult (download pipeline models)
     ///   - DownloadStatus / DownloadPriority enums
     ///   - AppType / DiffMode / UpdateMode / PlatformType / OssProvider enums
-    ///   - UpdateOption&lt;T&gt; value semantics
+    ///   - Option&lt;T&gt; value semantics
     ///   - UpdateReport / UpdateStatus types
     /// </summary>
     public class ConfigurationModelsTests
     {
-        #region BlackListConfig
+        #region BlackPolicy
 
         [Fact]
-        public void BlackListConfig_Empty_HasAllNullLists()
+        public void BlackPolicy_Empty_HasAllNullLists()
         {
-            var config = BlackListConfig.Empty;
+            var config = BlackPolicy.Empty;
             Assert.NotNull(config);
-            Assert.Null(config.BlackFiles);
-            Assert.Null(config.BlackFormats);
-            Assert.Null(config.SkipDirectorys);
+            Assert.Null(config.Files);
+            Assert.Null(config.Formats);
+            Assert.Null(config.Directories);
         }
 
         [Fact]
-        public void BlackListConfig_WithAllFields_SetsCorrectly()
+        public void BlackPolicy_WithAllFields_SetsCorrectly()
         {
-            var config = new BlackListConfig(
-                BlackFiles: new List<string> { "*.pdb", "*.config", "secret.key" },
-                BlackFormats: new List<string> { ".log", ".tmp", ".cache" },
-                SkipDirectorys: new List<string> { "logs", "temp", "__backups__" }
+            var config = new BlackPolicy(
+                Files: new List<string> { "*.pdb", "*.config", "secret.key" },
+                Formats: new List<string> { ".log", ".tmp", ".cache" },
+                Directories: new List<string> { "logs", "temp", "__backups__" }
             );
 
-            Assert.NotNull(config.BlackFiles);
-            Assert.Equal(3, config.BlackFiles.Count);
-            Assert.Contains("*.pdb", config.BlackFiles);
-            Assert.NotNull(config.BlackFormats);
-            Assert.Equal(3, config.BlackFormats.Count);
-            Assert.NotNull(config.SkipDirectorys);
-            Assert.Equal(3, config.SkipDirectorys.Count);
+            Assert.NotNull(config.Files);
+            Assert.Equal(3, config.Files.Count);
+            Assert.Contains("*.pdb", config.Files);
+            Assert.NotNull(config.Formats);
+            Assert.Equal(3, config.Formats.Count);
+            Assert.NotNull(config.Directories);
+            Assert.Equal(3, config.Directories.Count);
         }
 
         [Fact]
-        public void BlackListConfig_Partial_SingleListOnly()
+        public void BlackPolicy_Partial_SingleListOnly()
         {
-            var config = new BlackListConfig(
-                BlackFiles: new List<string> { "*.pdb" },
-                BlackFormats: null,
-                SkipDirectorys: null
+            var config = new BlackPolicy(
+                Files: new List<string> { "*.pdb" },
+                Formats: null,
+                Directories: null
             );
 
-            Assert.Single(config.BlackFiles);
-            Assert.Null(config.BlackFormats);
-            Assert.Null(config.SkipDirectorys);
+            Assert.Single(config.Files);
+            Assert.Null(config.Formats);
+            Assert.Null(config.Directories);
         }
 
         #endregion
@@ -283,41 +283,41 @@ namespace CoreTest.Configuration
 
         #endregion
 
-        #region UpdateOption<T> Semantics
+        #region Option<T> Semantics
 
         [Fact]
-        public void UpdateOption_ValueOf_String_DefaultsCorrectly()
+        public void Option_ValueOf_String_DefaultsCorrectly()
         {
-            var option = UpdateOption.ValueOf<string>("STRING_KEY", "hello");
+            var option = Option.ValueOf<string>("STRING_KEY", "hello");
             Assert.Equal("STRING_KEY", option.Name);
             Assert.Equal("hello", option.DefaultValue);
         }
 
         [Fact]
-        public void UpdateOption_ValueOf_Int_DefaultsCorrectly()
+        public void Option_ValueOf_Int_DefaultsCorrectly()
         {
-            var option = UpdateOption.ValueOf<int>("INT_KEY", 42);
+            var option = Option.ValueOf<int>("INT_KEY", 42);
             Assert.Equal(42, option.DefaultValue);
         }
 
         [Fact]
-        public void UpdateOption_ValueOf_Bool_DefaultsCorrectly()
+        public void Option_ValueOf_Bool_DefaultsCorrectly()
         {
-            var option = UpdateOption.ValueOf<bool>("BOOL_KEY", true);
+            var option = Option.ValueOf<bool>("BOOL_KEY", true);
             Assert.True(option.DefaultValue);
         }
 
         [Fact]
-        public void UpdateOption_ValueOf_NullableInt_DefaultsCorrectly()
+        public void Option_ValueOf_NullableInt_DefaultsCorrectly()
         {
-            var option = UpdateOption.ValueOf<int?>("NULLABLE_KEY", null);
+            var option = Option.ValueOf<int?>("NULLABLE_KEY", null);
             Assert.Null(option.DefaultValue);
         }
 
         [Fact]
-        public void UpdateOption_ValueOf_Enum_DefaultsCorrectly()
+        public void Option_ValueOf_Enum_DefaultsCorrectly()
         {
-            var option = UpdateOption.ValueOf<AppType>("ENUM_KEY", AppType.Client);
+            var option = Option.ValueOf<AppType>("ENUM_KEY", AppType.Client);
             Assert.Equal(AppType.Client, option.DefaultValue);
         }
 

@@ -44,7 +44,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// <para>
 /// 7. <b>Scenario Dispatch</b>: Executes different workflows based on the server validation result:
 ///    - <c>UpgradeOnly</c>: Applies upgrade program update packages in place only;
-///    - <c>MainOnly</c>: Serializes main program update packages as <c>ProcessInfo</c> and sends via IPC, then starts the upgrade process;
+///    - <c>MainOnly</c>: Serializes main program update packages as <c>ProcessContract</c> and sends via IPC, then starts the upgrade process;
 ///    - <c>Both</c>: Applies upgrade program update packages first, then sends main program info and starts the upgrade process.
 /// </para>
 /// <para>
@@ -63,7 +63,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// </remarks>
 public class ClientStrategy : IStrategy
 {
-    private GlobalConfigInfo? _configInfo;
+    private UpdateContext? _configInfo;
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
@@ -128,7 +128,7 @@ public class ClientStrategy : IStrategy
     /// <remarks>
     /// In <see cref="ExecuteStandardWorkflowAsync"/>, if this property is <c>null</c>,
     /// an <c>HttpDownloadSource</c> instance is automatically created based on the <c>UpdateUrl</c>, version number,
-    /// and other information in <c>GlobalConfigInfo</c>.
+    /// and other information in <c>UpdateContext</c>.
     /// </remarks>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
 
@@ -139,7 +139,7 @@ public class ClientStrategy : IStrategy
     /// Default constructor. All properties use default values (no-op hooks, no-op reporter).
     /// The download orchestrator defaults to <c>null</c> and will be set to a default <c>DefaultDownloadOrchestrator</c>
     /// in <see cref="ExecuteStandardWorkflowAsync"/>.
-    /// The strategy instance must be initialized via <see cref="Create"/> with a <see cref="GlobalConfigInfo"/>.
+    /// The strategy instance must be initialized via <see cref="Create"/> with a <see cref="UpdateContext"/>.
     /// </remarks>
     public ClientStrategy() { }
 
@@ -230,7 +230,7 @@ public class ClientStrategy : IStrategy
     /// <para>- Resolves the platform strategy for the current OS via <see cref="ResolveOsStrategy"/>;</para>
     /// <para>- If the OS strategy inherits from <c>AbstractStrategy</c>, passes the pending differential pipeline (<c>DiffPipeline</c>).</para>
     /// </remarks>
-    public void Create(GlobalConfigInfo parameter)
+    public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
@@ -430,7 +430,7 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
-        var versionInfos = downloadPlan.Assets.Select(a => new VersionInfo
+        var versionInfos = downloadPlan.Assets.Select(a => new VersionEntry
         {
             RecordId = a.RecordId,
             Name = a.Name,
@@ -493,7 +493,7 @@ public class ClientStrategy : IStrategy
         // Report: update started
         await SafeReportUpdateStartedAsync(hooksCtx).ConfigureAwait(false);
 
-        InitBlackList();
+        InitBlackPolicy();
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
             $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
@@ -538,8 +538,8 @@ public class ClientStrategy : IStrategy
         await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
         await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
 
-        // Build VersionInfo list with AppType preserved from server response.
-        var downloadVersions = downloadPlan.Assets.Select(a => new VersionInfo
+        // Build VersionEntry list with AppType preserved from server response.
+        var downloadVersions = downloadPlan.Assets.Select(a => new VersionEntry
         {
             RecordId = a.RecordId,
             Name = a.Name,
@@ -606,7 +606,7 @@ public class ClientStrategy : IStrategy
     /// It sets the update package paths in <c>_configInfo.UpdateVersions</c> and then delegates to the OS strategy
     /// (such as <see cref="WindowsStrategy"/>) to apply patches one by one through its pipeline (incremental/full).
     /// </remarks>
-    private async Task ApplyUpgradePackagesAsync(List<VersionInfo> upgradeVersions)
+    private async Task ApplyUpgradePackagesAsync(List<VersionEntry> upgradeVersions)
     {
         if (upgradeVersions.Count == 0) return;
         GeneralTracer.Info("ClientStrategy: applying Upgrade packages in place.");
@@ -623,31 +623,31 @@ public class ClientStrategy : IStrategy
     }
 
     /// <summary>
-    /// Serializes the main program (Client) update information as <c>ProcessInfo</c> and sends it to the upgrade process via encrypted IPC.
+    /// Serializes the main program (Client) update information as <c>ProcessContract</c> and sends it to the upgrade process via encrypted IPC.
     /// </summary>
     /// <param name="clientVersions">The list of version information for the main program.</param>
     /// <remarks>
     /// <para>This method performs the following operations:</para>
-    /// <para>1. Uses <c>ConfigurationMapper.MapToProcessInfo</c> to map configuration information and version list into a <c>ProcessInfo</c> object;</para>
-    /// <para>2. Serializes the <c>ProcessInfo</c> as a JSON string and stores it in <c>_configInfo.ProcessInfo</c>;</para>
-    /// <para>3. Sends the encrypted process information to the upgrade process via <c>EncryptedFileProcessInfoProvider</c>.</para>
+    /// <para>1. Uses <c>ConfigurationMapper.MapToProcessContract</c> to map configuration information and version list into a <c>ProcessContract</c> object;</para>
+    /// <para>2. Serializes the <c>ProcessContract</c> as a JSON string and stores it in <c>_configInfo.ProcessContract</c>;</para>
+    /// <para>3. Sends the encrypted process information to the upgrade process via <c>EncryptedFileProcessContractProvider</c>.</para>
     /// <para>After the upgrade process (Bowl) receives this information, it will perform the actual installation and replacement operations
-    /// based on the <c>ProcessInfo</c>.</para>
+    /// based on the <c>ProcessContract</c>.</para>
     /// </remarks>
-    private void SendProcessIpc(List<VersionInfo> clientVersions)
+    private void SendProcessIpc(List<VersionEntry> clientVersions)
     {
-        var processInfo = ConfigurationMapper.MapToProcessInfo(
+        var processInfo = ConfigurationMapper.MapToProcessContract(
             _configInfo!, clientVersions,
-            _configInfo!.BlackFormats ?? BlackListDefaults.DefaultBlackFormats,
-            _configInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories,
+            _configInfo!.Formats ?? BlackDefaults.DefaultFormats,
+            _configInfo.Files ?? BlackDefaults.DefaultFiles,
+            _configInfo.Directories ?? BlackDefaults.DefaultDirectories,
             _reportType);
 
-        _configInfo.ProcessInfo = JsonSerializer.Serialize(processInfo,
-            ProcessInfoJsonContext.Default.ProcessInfo);
-        new EncryptedFileProcessInfoProvider().Send(processInfo);
+        _configInfo.ProcessContract = JsonSerializer.Serialize(processInfo,
+            ProcessContractJsonContext.Default.ProcessContract);
+        new EncryptedFileProcessContractProvider().Send(processInfo);
         HasPreparedClientUpdate = true;
-        GeneralTracer.Info("ClientStrategy: ProcessInfo sent with MainApp versions only.");
+        GeneralTracer.Info("ClientStrategy: ProcessContract sent with MainApp versions only.");
     }
 
     /// <summary>
@@ -753,20 +753,20 @@ public class ClientStrategy : IStrategy
     /// during backup and file operations.
     /// </summary>
     /// <remarks>
-    /// Prefers the blacklist configured in <c>_configInfo</c>; if not configured, uses the defaults from <see cref="BlackListDefaults"/>.
+    /// Prefers the blacklist configured in <c>_configInfo</c>; if not configured, uses the defaults from <see cref="BlackDefaults"/>.
     /// The blacklist includes: excluded file names (e.g., config files), excluded file extensions (e.g., .log),
     /// and skipped directories (e.g., temporary directories).
     /// </remarks>
-    private void InitBlackList()
+    private void InitBlackPolicy()
     {
-        var effectiveConfig = new BlackListConfig(
-            _configInfo!.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
-            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
-            _configInfo.SkipDirectorys?.Count > 0
-                ? _configInfo.SkipDirectorys
-                : BlackListDefaults.DefaultSkipDirectories
+        var effectiveConfig = new BlackPolicy(
+            _configInfo!.Files?.Count > 0 ? _configInfo.Files : BlackDefaults.DefaultFiles,
+            _configInfo.Formats?.Count > 0 ? _configInfo.Formats : BlackDefaults.DefaultFormats,
+            _configInfo.Directories?.Count > 0
+                ? _configInfo.Directories
+                : BlackDefaults.DefaultDirectories
         );
-        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
+        StorageManager.BlackMatcher = new BlackMatcher(effectiveConfig);
     }
 
     /// <summary>
@@ -775,14 +775,14 @@ public class ClientStrategy : IStrategy
     /// <remarks>
     /// The backup operation is performed via <c>StorageManager.Backup</c>, excluding directories configured in the blacklist.
     /// The backup directory path format is: {InstallPath}/backup_{ClientVersion}.
-    /// This step can be skipped by setting <c>GlobalConfigInfo.BackupEnabled</c> to <c>false</c>.
+    /// This step can be skipped by setting <c>UpdateContext.BackupEnabled</c> to <c>false</c>.
     /// </remarks>
     private void Backup()
     {
         GeneralTracer.Info(
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            _configInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories);
+            _configInfo.Directories ?? BlackDefaults.DefaultDirectories);
     }
 
     /// <summary>
@@ -850,7 +850,7 @@ public class ClientStrategy : IStrategy
     /// The upgrade version list that was just applied. The last element carries the
     /// highest target version.
     /// </param>
-    private static void WriteBackUpgradeVersion(List<VersionInfo> upgradeVersions)
+    private static void WriteBackUpgradeVersion(List<VersionEntry> upgradeVersions)
     {
         var latestVersion = upgradeVersions.LastOrDefault()?.Version;
         if (string.IsNullOrEmpty(latestVersion)) return;
@@ -907,10 +907,10 @@ public class ClientStrategy : IStrategy
     /// <summary>
     /// Builds an update context object for passing to hook and reporter methods.
     /// </summary>
-    /// <returns>An <see cref="Hooks.UpdateContext"/> instance containing the current update information.</returns>
-    private Hooks.UpdateContext BuildUpdateContext()
+    /// <returns>An <see cref="Hooks.HookContext"/> instance containing the current update information.</returns>
+    private Hooks.HookContext BuildUpdateContext()
     {
-        return new Hooks.UpdateContext(
+        return new Hooks.HookContext(
             _configInfo?.UpdateAppName ?? "unknown",
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
@@ -924,7 +924,7 @@ public class ClientStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <returns>The value returned by the hook; returns <c>true</c> if the hook throws an exception.</returns>
-    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -941,7 +941,7 @@ public class ClientStrategy : IStrategy
     /// Safely invokes the pre-start-app hook. If the hook throws an exception, logs a warning and continues the flow.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnBeforeStartAppAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -958,7 +958,7 @@ public class ClientStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <param name="error">The exception that occurred during the update.</param>
-    private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeOnUpdateErrorAsync(Hooks.HookContext ctx, Exception error)
     {
         try
         {
@@ -974,7 +974,7 @@ public class ClientStrategy : IStrategy
     /// Safely invokes the post-update hook (after upgrade packages are applied). If the hook throws an exception, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnAfterUpdateAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -990,7 +990,7 @@ public class ClientStrategy : IStrategy
     /// Safely invokes the download completed hook. If the hook throws an exception, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnDownloadCompletedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -1010,7 +1010,7 @@ public class ClientStrategy : IStrategy
     /// Safely reports the update started status. If the report fails, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportUpdateStartedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -1028,7 +1028,7 @@ public class ClientStrategy : IStrategy
     /// Safely reports the download completed status. If the report fails, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportDownloadCompletedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -1047,7 +1047,7 @@ public class ClientStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <param name="error">The exception that caused the update to fail.</param>
-    private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeReportUpdateFailedAsync(Hooks.HookContext ctx, Exception error)
     {
         try
         {
@@ -1065,7 +1065,7 @@ public class ClientStrategy : IStrategy
     /// Safely reports the update applied success status. If the report fails, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx, int recordId)
+    private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx, int recordId)
     {
         try
         {

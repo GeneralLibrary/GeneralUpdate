@@ -43,7 +43,7 @@ public class LinuxStrategy : AbstractStrategy
     /// This method is called by the pipeline execution flow in <c>AbstractStrategy</c>.
     /// It logs the version number and patch path, then calls the base class's <c>CreatePipelineContext</c> method to create the context object.
     /// </remarks>
-    protected override PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
+    protected override PipelineContext CreatePipelineContext(VersionEntry version, string patchPath)
     {
         GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.CreatePipelineContext: building context for version={version.Version}, patchPath={patchPath}");
         var context = base.CreatePipelineContext(version, patchPath);

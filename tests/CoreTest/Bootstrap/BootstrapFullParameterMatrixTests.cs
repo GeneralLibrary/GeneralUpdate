@@ -15,9 +15,9 @@ using Xunit;
 namespace CoreTest.Bootstrap
 {
     /// <summary>
-    /// Full parameter matrix tests -- verifies ALL framework-level UpdateOptions
-    /// can be set via .Option() without throwing. Business fields (UpdateUrl, Token, etc.)
-    /// are now stored in Configinfo, not in UpdateOptions.
+    /// Full parameter matrix tests -- verifies ALL framework-level Option
+    /// can be set via .SetOption() without throwing. Business fields (UpdateUrl, Token, etc.)
+    /// are now stored in UpdateRequest, not in Option.
     /// </summary>
     public class BootstrapFullParameterMatrixTests : IDisposable
     {
@@ -35,7 +35,7 @@ namespace CoreTest.Bootstrap
         }
 
         private GeneralUpdateBootstrap B() => new GeneralUpdateBootstrap()
-            .SetConfig(new Configinfo
+            .SetConfig(new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -47,36 +47,36 @@ namespace CoreTest.Bootstrap
             });
 
         #region Core
-        [Fact] public void AppType_Client() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Client));
-        [Fact] public void AppType_Upgrade() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.Upgrade));
-        [Fact] public void AppType_OssClient() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OssClient));
-        [Fact] public void AppType_OssUpgrade() => Assert.NotNull(B().Option(UpdateOptions.AppType, AppType.OssUpgrade));
-        [Fact] public void DiffMode_Serial() => Assert.NotNull(B().Option(UpdateOptions.DiffMode, DiffMode.Serial));
-        [Fact] public void DiffMode_Parallel() => Assert.NotNull(B().Option(UpdateOptions.DiffMode, DiffMode.Parallel));
-        [Fact] public void Encoding_Utf8() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.UTF8));
-        [Fact] public void Encoding_Ascii() => Assert.NotNull(B().Option(UpdateOptions.Encoding, Encoding.ASCII));
-        [Fact] public void Format_ZIP() => Assert.NotNull(B().Option(UpdateOptions.Format, Format.Zip));
+        [Fact] public void AppType_Client() => Assert.NotNull(B().SetOption(Option.AppType, AppType.Client));
+        [Fact] public void AppType_Upgrade() => Assert.NotNull(B().SetOption(Option.AppType, AppType.Upgrade));
+        [Fact] public void AppType_OssClient() => Assert.NotNull(B().SetOption(Option.AppType, AppType.OssClient));
+        [Fact] public void AppType_OssUpgrade() => Assert.NotNull(B().SetOption(Option.AppType, AppType.OssUpgrade));
+        [Fact] public void DiffMode_Serial() => Assert.NotNull(B().SetOption(Option.DiffMode, DiffMode.Serial));
+        [Fact] public void DiffMode_Parallel() => Assert.NotNull(B().SetOption(Option.DiffMode, DiffMode.Parallel));
+        [Fact] public void Encoding_Utf8() => Assert.NotNull(B().SetOption(Option.Encoding, Encoding.UTF8));
+        [Fact] public void Encoding_Ascii() => Assert.NotNull(B().SetOption(Option.Encoding, Encoding.ASCII));
+        [Fact] public void Format_ZIP() => Assert.NotNull(B().SetOption(Option.Format, Format.Zip));
         [Theory][InlineData(10)][InlineData(30)][InlineData(60)][InlineData(300)]
-        public void DownloadTimeout_Various(int t) => Assert.NotNull(B().Option(UpdateOptions.DownloadTimeout, t));
-        [Fact] public void PatchEnabled_True() => Assert.NotNull(B().Option(UpdateOptions.PatchEnabled, true));
-        [Fact] public void PatchEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.PatchEnabled, false));
-        [Fact] public void BackupEnabled_False() => Assert.NotNull(B().Option(UpdateOptions.BackupEnabled, false));
-        [Fact] public void Silent_True() => Assert.NotNull(B().Option(UpdateOptions.Silent, true));
+        public void DownloadTimeout_Various(int t) => Assert.NotNull(B().SetOption(Option.DownloadTimeout, t));
+        [Fact] public void PatchEnabled_True() => Assert.NotNull(B().SetOption(Option.PatchEnabled, true));
+        [Fact] public void PatchEnabled_False() => Assert.NotNull(B().SetOption(Option.PatchEnabled, false));
+        [Fact] public void BackupEnabled_False() => Assert.NotNull(B().SetOption(Option.BackupEnabled, false));
+        [Fact] public void Silent_True() => Assert.NotNull(B().SetOption(Option.Silent, true));
         #endregion
 
         #region Silent
         [Theory][InlineData(15)][InlineData(30)][InlineData(60)]
-        public void SilentPollInterval_Various(int m) => Assert.NotNull(B().Option(UpdateOptions.SilentPollIntervalMinutes, m));
+        public void SilentPollInterval_Various(int m) => Assert.NotNull(B().SetOption(Option.SilentPollIntervalMinutes, m));
         #endregion
 
         #region Download Performance
         [Theory][InlineData(1)][InlineData(3)][InlineData(5)][InlineData(10)]
-        public void MaxConcurrency_Various(int c) => Assert.NotNull(B().Option(UpdateOptions.MaxConcurrency, c));
-        [Fact] public void EnableResume_False() => Assert.NotNull(B().Option(UpdateOptions.EnableResume, false));
+        public void MaxConcurrency_Various(int c) => Assert.NotNull(B().SetOption(Option.MaxConcurrency, c));
+        [Fact] public void EnableResume_False() => Assert.NotNull(B().SetOption(Option.EnableResume, false));
         [Theory][InlineData(1)][InlineData(3)][InlineData(5)]
-        public void RetryCount_Various(int c) => Assert.NotNull(B().Option(UpdateOptions.RetryCount, c));
-        [Fact] public void VerifyChecksum_False() => Assert.NotNull(B().Option(UpdateOptions.VerifyChecksum, false));
-        [Fact] public void RetryInterval_Custom() => Assert.NotNull(B().Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(3)));
+        public void RetryCount_Various(int c) => Assert.NotNull(B().SetOption(Option.RetryCount, c));
+        [Fact] public void VerifyChecksum_False() => Assert.NotNull(B().SetOption(Option.VerifyChecksum, false));
+        [Fact] public void RetryInterval_Custom() => Assert.NotNull(B().SetOption(Option.RetryInterval, TimeSpan.FromSeconds(3)));
         #endregion
 
         #region Blacklist/Misc
@@ -86,16 +86,16 @@ namespace CoreTest.Bootstrap
 
         private sealed class StubHooks : GeneralUpdate.Core.Hooks.IUpdateHooks
         {
-            public Task<bool> OnBeforeUpdateAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.FromResult(true);
+            public Task<bool> OnBeforeUpdateAsync(GeneralUpdate.Core.Hooks.HookContext ctx) => Task.FromResult(true);
             public Task OnDownloadCompletedAsync(GeneralUpdate.Core.Hooks.DownloadContext ctx) => Task.CompletedTask;
-            public Task OnAfterUpdateAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.CompletedTask;
-            public Task OnUpdateErrorAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx, Exception ex) => Task.CompletedTask;
-            public Task OnBeforeStartAppAsync(GeneralUpdate.Core.Hooks.UpdateContext ctx) => Task.CompletedTask;
+            public Task OnAfterUpdateAsync(GeneralUpdate.Core.Hooks.HookContext ctx) => Task.CompletedTask;
+            public Task OnUpdateErrorAsync(GeneralUpdate.Core.Hooks.HookContext ctx, Exception ex) => Task.CompletedTask;
+            public Task OnBeforeStartAppAsync(GeneralUpdate.Core.Hooks.HookContext ctx) => Task.CompletedTask;
         }
 
         private sealed class StubStrategy : GeneralUpdate.Core.Strategy.IStrategy
         {
-            public void Create(GlobalConfigInfo parameter) { }
+            public void Create(UpdateContext parameter) { }
             public IUpdateHooks Hooks { get; set; }
             public IUpdateReporter Reporter { get; set; }
             public Task ExecuteAsync() => Task.CompletedTask;
@@ -179,21 +179,21 @@ namespace CoreTest.Bootstrap
         [Fact] public void Chain_AllFrameworkOptions()
         {
             var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Client)
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, Format.Zip)
-                .Option(UpdateOptions.DownloadTimeout, 120)
-                .Option(UpdateOptions.PatchEnabled, true)
-                .Option(UpdateOptions.BackupEnabled, true)
-                .Option(UpdateOptions.Silent, false)
-                .Option(UpdateOptions.MaxConcurrency, 4)
-                .Option(UpdateOptions.EnableResume, true)
-                .Option(UpdateOptions.RetryCount, 5)
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
-                .Option(UpdateOptions.SilentPollIntervalMinutes, 30)
-                .SetConfig(new Configinfo
+                .SetOption(Option.AppType, AppType.Client)
+                .SetOption(Option.DiffMode, DiffMode.Parallel)
+                .SetOption(Option.Encoding, Encoding.UTF8)
+                .SetOption(Option.Format, Format.Zip)
+                .SetOption(Option.DownloadTimeout, 120)
+                .SetOption(Option.PatchEnabled, true)
+                .SetOption(Option.BackupEnabled, true)
+                .SetOption(Option.Silent, false)
+                .SetOption(Option.MaxConcurrency, 4)
+                .SetOption(Option.EnableResume, true)
+                .SetOption(Option.RetryCount, 5)
+                .SetOption(Option.VerifyChecksum, true)
+                .SetOption(Option.RetryInterval, TimeSpan.FromSeconds(2))
+                .SetOption(Option.SilentPollIntervalMinutes, 30)
+                .SetConfig(new UpdateRequest
                 {
                     UpdateUrl = "https://update.example.com/api/v2",
                     MainAppName = "MyProduct.exe",
@@ -209,33 +209,33 @@ namespace CoreTest.Bootstrap
         [Fact] public void Chain_SilentClient()
         {
             var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Client)
-                .Option(UpdateOptions.Silent, true)
-                .Option(UpdateOptions.SilentPollIntervalMinutes, 15)
-                .SetConfig(new Configinfo { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetOption(Option.AppType, AppType.Client)
+                .SetOption(Option.Silent, true)
+                .SetOption(Option.SilentPollIntervalMinutes, 15)
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
             Assert.NotNull(b);
         }
 
         [Fact] public void Chain_ParallelDiffHighConcurrency()
         {
             var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel).Option(UpdateOptions.MaxConcurrency, 8)
-                .SetConfig(new Configinfo { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetOption(Option.DiffMode, DiffMode.Parallel).SetOption(Option.MaxConcurrency, 8)
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
             Assert.NotNull(b);
         }
 
         [Fact] public void Chain_UpgradeNoBackup()
         {
             var b = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Upgrade).Option(UpdateOptions.BackupEnabled, false)
-                .Option(UpdateOptions.PatchEnabled, true).Option(UpdateOptions.VerifyChecksum, true)
-                .SetConfig(new Configinfo { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetOption(Option.AppType, AppType.Upgrade).SetOption(Option.BackupEnabled, false)
+                .SetOption(Option.PatchEnabled, true).SetOption(Option.VerifyChecksum, true)
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
             Assert.NotNull(b);
         }
 
         [Fact] public void Chain_ClientAndUpgrade_BothFullyConfigured()
         {
-            var sharedConfig = new Configinfo
+            var sharedConfig = new UpdateRequest
             {
                 UpdateUrl = "https://update.enterprise.com/api/v2",
                 UpdateAppName = "Update.exe", MainAppName = "EnterpriseApp.exe",
@@ -245,25 +245,25 @@ namespace CoreTest.Bootstrap
                 UpdateLogUrl = "https://enterprise.com/releases",
                 ReportUrl = "https://telemetry.enterprise.com/api/report",
                 Scheme = "HMAC", Token = "hmac-prod-secret", Bowl = "Bowl.exe",
-                BlackFiles = new List<string> { "*.pdb" },
-                BlackFormats = new List<string> { ".log", ".tmp" },
-                SkipDirectorys = new List<string> { "logs", "temp" }
+                Files = new List<string> { "*.pdb" },
+                Formats = new List<string> { ".log", ".tmp" },
+                Directories = new List<string> { "logs", "temp" }
             };
 
             var client = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Client)
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, Format.Zip)
-                .Option(UpdateOptions.DownloadTimeout, 120)
-                .Option(UpdateOptions.PatchEnabled, true)
-                .Option(UpdateOptions.BackupEnabled, true)
-                .Option(UpdateOptions.Silent, false)
-                .Option(UpdateOptions.MaxConcurrency, 4)
-                .Option(UpdateOptions.EnableResume, true)
-                .Option(UpdateOptions.RetryCount, 5)
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(2))
+                .SetOption(Option.AppType, AppType.Client)
+                .SetOption(Option.DiffMode, DiffMode.Parallel)
+                .SetOption(Option.Encoding, Encoding.UTF8)
+                .SetOption(Option.Format, Format.Zip)
+                .SetOption(Option.DownloadTimeout, 120)
+                .SetOption(Option.PatchEnabled, true)
+                .SetOption(Option.BackupEnabled, true)
+                .SetOption(Option.Silent, false)
+                .SetOption(Option.MaxConcurrency, 4)
+                .SetOption(Option.EnableResume, true)
+                .SetOption(Option.RetryCount, 5)
+                .SetOption(Option.VerifyChecksum, true)
+                .SetOption(Option.RetryInterval, TimeSpan.FromSeconds(2))
                 .SetConfig(sharedConfig)
                 .AddListenerUpdatePrecheck(args =>
                 {
@@ -279,16 +279,16 @@ namespace CoreTest.Bootstrap
             Assert.NotNull(client);
 
             var upgrade = new GeneralUpdateBootstrap()
-                .Option(UpdateOptions.AppType, AppType.Upgrade)
-                .Option(UpdateOptions.DiffMode, DiffMode.Parallel)
-                .Option(UpdateOptions.Encoding, Encoding.UTF8)
-                .Option(UpdateOptions.Format, Format.Zip)
-                .Option(UpdateOptions.DownloadTimeout, 30)
-                .Option(UpdateOptions.PatchEnabled, true)
-                .Option(UpdateOptions.BackupEnabled, false)
-                .Option(UpdateOptions.MaxConcurrency, 2)
-                .Option(UpdateOptions.VerifyChecksum, true)
-                .Option(UpdateOptions.RetryInterval, TimeSpan.FromSeconds(1))
+                .SetOption(Option.AppType, AppType.Upgrade)
+                .SetOption(Option.DiffMode, DiffMode.Parallel)
+                .SetOption(Option.Encoding, Encoding.UTF8)
+                .SetOption(Option.Format, Format.Zip)
+                .SetOption(Option.DownloadTimeout, 30)
+                .SetOption(Option.PatchEnabled, true)
+                .SetOption(Option.BackupEnabled, false)
+                .SetOption(Option.MaxConcurrency, 2)
+                .SetOption(Option.VerifyChecksum, true)
+                .SetOption(Option.RetryInterval, TimeSpan.FromSeconds(1))
                 .SetConfig(sharedConfig)
                 .AddListenerException((s, e) => { })
                 .AddListenerUpdateInfo((s, e) => { });

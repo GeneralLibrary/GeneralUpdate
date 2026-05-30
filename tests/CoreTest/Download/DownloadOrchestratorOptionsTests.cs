@@ -9,7 +9,7 @@ namespace CoreTest.Download;
 /// Unit tests for <see cref="DownloadOrchestratorOptions"/> covering:
 ///   - default values
 ///   - SanitizeMaxConcurrency clamping
-///   - From(GlobalConfigInfo) mapping
+///   - From(UpdateContext) mapping
 /// </summary>
 public class DownloadOrchestratorOptionsTests
 {
@@ -71,12 +71,12 @@ public class DownloadOrchestratorOptionsTests
 
     #endregion
 
-    #region From(GlobalConfigInfo)
+    #region From(UpdateContext)
 
     [Fact]
     public void From_CopiesAllFields()
     {
-        var config = new GlobalConfigInfo
+        var config = new UpdateContext
         {
             MaxConcurrency = 5,
             EnableResume = false,
@@ -101,7 +101,7 @@ public class DownloadOrchestratorOptionsTests
     [Fact]
     public void From_DefaultsWhenConfigIsMinimal()
     {
-        var config = new GlobalConfigInfo();
+        var config = new UpdateContext();
 
         var opts = DownloadOrchestratorOptions.From(config);
 
@@ -113,7 +113,7 @@ public class DownloadOrchestratorOptionsTests
     [Fact]
     public void From_SanitizesMaxConcurrency()
     {
-        var config = new GlobalConfigInfo { MaxConcurrency = -5 };
+        var config = new UpdateContext { MaxConcurrency = -5 };
         var opts = DownloadOrchestratorOptions.From(config);
         Assert.Equal(1, opts.MaxConcurrency);
     }
@@ -121,7 +121,7 @@ public class DownloadOrchestratorOptionsTests
     [Fact]
     public void From_ClampsNegativeRetryCount()
     {
-        var config = new GlobalConfigInfo { RetryCount = -1 };
+        var config = new UpdateContext { RetryCount = -1 };
         var opts = DownloadOrchestratorOptions.From(config);
         Assert.Equal(0, opts.RetryCount);
     }
@@ -129,7 +129,7 @@ public class DownloadOrchestratorOptionsTests
     [Fact]
     public void From_FallsBackDownloadTimeoutWhenZero()
     {
-        var config = new GlobalConfigInfo { DownloadTimeOut = 0 };
+        var config = new UpdateContext { DownloadTimeOut = 0 };
         var opts = DownloadOrchestratorOptions.From(config);
         Assert.Equal(TimeSpan.FromSeconds(30), opts.DownloadTimeout);
     }
@@ -137,7 +137,7 @@ public class DownloadOrchestratorOptionsTests
     [Fact]
     public void From_SerialMode()
     {
-        var config = new GlobalConfigInfo { DiffMode = DiffMode.Serial };
+        var config = new UpdateContext { DiffMode = DiffMode.Serial };
         var opts = DownloadOrchestratorOptions.From(config);
         Assert.Equal(DiffMode.Serial, opts.DiffMode);
     }

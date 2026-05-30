@@ -17,7 +17,7 @@ public class FileTreeEnumeratorTests
             File.WriteAllText(Path.Combine(tmpDir, "a.txt"), "a");
             File.WriteAllText(Path.Combine(tmpDir, "b.dll"), "b");
 
-            var enumerator = FileTreeEnumerator.FromConfig(BlackListConfig.Empty);
+            var enumerator = FileTreeEnumerator.FromConfig(BlackPolicy.Empty);
             var files = enumerator.EnumerateFiles(tmpDir).ToList();
 
             Assert.Equal(2, files.Count);
@@ -36,7 +36,7 @@ public class FileTreeEnumeratorTests
             File.WriteAllText(Path.Combine(tmpDir, "data.pdb"), "b");
             File.WriteAllText(Path.Combine(tmpDir, "config.xml"), "c");
 
-            var config = new BlackListConfig(BlackFormats: new[] { ".pdb", ".xml" });
+            var config = new BlackPolicy(Formats: new[] { ".pdb", ".xml" });
             var enumerator = FileTreeEnumerator.FromConfig(config);
             var files = enumerator.EnumerateFiles(tmpDir).ToList();
 
@@ -58,7 +58,7 @@ public class FileTreeEnumeratorTests
             File.WriteAllText(Path.Combine(tmpDir, "main.exe"), "a");
             File.WriteAllText(Path.Combine(logDir, "app.log"), "b");
 
-            var config = new BlackListConfig(SkipDirectorys: new[] { "logs" });
+            var config = new BlackPolicy(Directories: new[] { "logs" });
             var enumerator = FileTreeEnumerator.FromConfig(config);
             var files = enumerator.EnumerateFiles(tmpDir).ToList();
 
@@ -71,7 +71,7 @@ public class FileTreeEnumeratorTests
     [Fact]
     public void EnumerateFiles_NonExistentDirectory_ReturnsEmpty()
     {
-        var enumerator = FileTreeEnumerator.FromConfig(BlackListConfig.Empty);
+        var enumerator = FileTreeEnumerator.FromConfig(BlackPolicy.Empty);
         var files = enumerator.EnumerateFiles("C:\\does\\not\\exist").ToList();
         Assert.Empty(files);
     }

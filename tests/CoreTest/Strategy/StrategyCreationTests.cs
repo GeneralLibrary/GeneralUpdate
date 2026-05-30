@@ -9,7 +9,7 @@ public class StrategyCreationTests
     public void ClientUpdateStrategy_Create_ResolvesOsStrategy()
     {
         var strategy = new ClientStrategy();
-        var config = new GlobalConfigInfo
+        var config = new UpdateContext
         {
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
@@ -54,7 +54,7 @@ public class StrategyCreationTests
     public void UpgradeUpdateStrategy_Create_ResolvesOsStrategy()
     {
         var strategy = new UpdateStrategy();
-        var config = new GlobalConfigInfo
+        var config = new UpdateContext
         {
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
@@ -84,7 +84,7 @@ public class StrategyCreationTests
     public void OssUpdateStrategy_Create_ClientRole_Succeeds()
     {
         var strategy = new OssStrategy(AppType.OssClient);
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
+        var config = new UpdateContext { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
@@ -93,7 +93,7 @@ public class StrategyCreationTests
     public void OssUpdateStrategy_Create_UpgradeRole_Succeeds()
     {
         var strategy = new OssStrategy(AppType.OssUpgrade);
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
+        var config = new UpdateContext { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
@@ -109,7 +109,7 @@ public class StrategyCreationTests
     public void OssUpdateStrategy_DefaultConstructor_UsesOssClientRole()
     {
         var strategy = new OssStrategy(AppType.OssClient);
-        var config = new GlobalConfigInfo { ClientVersion = "1.0.0", UpdateAppName = "app" };
+        var config = new UpdateContext { ClientVersion = "1.0.0", UpdateAppName = "app" };
         var ex = Record.Exception(() => strategy.Create(config));
         Assert.Null(ex);
     }
@@ -118,7 +118,7 @@ public class StrategyCreationTests
     public async Task OssUpdateStrategy_StartApp_NullUpgradeAppName_ReturnsWithoutException()
     {
         var strategy = new OssStrategy(AppType.OssClient);
-        strategy.Create(new GeneralUpdate.Core.Configuration.GlobalConfigInfo
+        strategy.Create(new GeneralUpdate.Core.Configuration.UpdateContext
         {
             ClientVersion = "1.0.0",
             MainAppName = null,
@@ -141,7 +141,7 @@ public class AbstractStrategyCheckPathTests
     {
         // Use WindowsStrategy to access CheckPath (it inherits from AbstractStrategy)
         var strategy = new WindowsStrategy();
-        strategy.Create(new GlobalConfigInfo());
+        strategy.Create(new UpdateContext());
         var result = InvokeCheckPath(strategy, path, name);
         Assert.Equal(string.Empty, result);
     }
@@ -156,7 +156,7 @@ public class AbstractStrategyCheckPathTests
         try
         {
             var strategy = new WindowsStrategy();
-            strategy.Create(new GlobalConfigInfo());
+            strategy.Create(new UpdateContext());
             var result = InvokeCheckPath(strategy, dir, name);
             Assert.Equal(fullPath, result);
         }
@@ -167,7 +167,7 @@ public class AbstractStrategyCheckPathTests
     public void CheckPath_FileNotExists_ReturnsEmpty()
     {
         var strategy = new WindowsStrategy();
-        strategy.Create(new GlobalConfigInfo());
+        strategy.Create(new UpdateContext());
         var result = InvokeCheckPath(strategy, Path.GetTempPath(),
             $"nonexistent_{Guid.NewGuid():N}.dll");
         Assert.Equal(string.Empty, result);

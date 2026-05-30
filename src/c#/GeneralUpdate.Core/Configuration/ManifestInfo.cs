@@ -67,12 +67,12 @@ public class ManifestInfo
     }
 
     /// <summary>
-    ///     Convert this manifest to a minimally populated <see cref="Configinfo"/>.
+    ///     Convert this manifest to a minimally populated <see cref="UpdateRequest"/>.
     ///     Caller must still supply secrets (<c>UpdateUrl</c>, <c>AppSecretKey</c>, <c>Token</c>).
     /// </summary>
-    public Configinfo ToConfiginfo()
+    public UpdateRequest ToUpdateRequest()
     {
-        return new Configinfo
+        return new UpdateRequest
         {
             MainAppName = MainAppName,
             ClientVersion = ClientVersion,

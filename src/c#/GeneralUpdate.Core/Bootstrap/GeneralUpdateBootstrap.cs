@@ -25,7 +25,7 @@ namespace GeneralUpdate.Core;
 /// <remarks>
 /// <para><b>Core flow:</b></para>
 /// <para>
-/// 1. <b>Configuration</b> — <see cref="SetConfig(Configinfo)"/> loads parameters (versions, paths, URLs).<br/>
+/// 1. <b>Configuration</b> — <see cref="SetConfig(UpdateRequest)"/> loads parameters (versions, paths, URLs).<br/>
 /// 2. <b>Extension resolution</b> — <see cref="LaunchWithStrategy"/> resolves all registered
 ///    extension points (strategy, hooks, download components, network policies) and injects
 ///    them into the role strategy.<br/>
@@ -44,7 +44,7 @@ namespace GeneralUpdate.Core;
 ///    → PatchMiddleware</c> for each update version.<br/>
 /// 6. <b>App launch</b> — the OS strategy starts the updated main application.
 /// </para>
-/// <para><b>Silent mode:</b> when <c>Option(UpdateOptions.Silent, true)</c> is set on
+/// <para><b>Silent mode:</b> when <c>Option(Option.Silent, true)</c> is set on
 /// <see cref="AppType.Client"/>, launches a background poll loop via
 /// <see cref="Silent.SilentPollOrchestrator"/> and returns immediately. Updates are
 /// prepared on process exit.</para>
@@ -55,20 +55,20 @@ namespace GeneralUpdate.Core;
 /// <example>
 /// <code>
 /// var result = await new GeneralUpdateBootstrap()
-///     .SetConfig(new Configinfo {
+///     .SetConfig(new UpdateRequest {
 ///         UpdateUrl = "https://api.example.com",
 ///         ClientVersion = "1.0.0",
 ///         InstallPath = @"C:\MyApp",
 ///         AppSecretKey = "my-key"
 ///     })
-///     .Option(UpdateOptions.AppType, AppType.Client)
+///     .SetOption(Option.AppType, AppType.Client)
 ///     .Hooks&lt;MyCustomHooks&gt;()
 ///     .LaunchAsync();
 /// </code>
 /// </example>
 public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, IStrategy>
 {
-    private GlobalConfigInfo _configInfo = new();
+    private UpdateContext _configInfo = new();
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private CancellationTokenSource? _cts;
     private DiffPipelineBuilder? _diffPipelineBuilder;
@@ -100,11 +100,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <returns>This bootstrap instance for chaining.</returns>
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
-        var appType = GetOption(UpdateOptions.AppType);
+        var appType = GetOption(Option.AppType);
         _configInfo.AppType = appType;
 
         // Silent mode: start background poll and return immediately
-        if (appType == AppType.Client && GetOption(UpdateOptions.Silent))
+        if (appType == AppType.Client && GetOption(Option.Silent))
         {
             await LaunchSilentAsync().ConfigureAwait(false);
             return this;
@@ -160,23 +160,23 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     
     /// <summary>
     /// Applies the primary configuration object. Validates required fields, maps to
-    /// the internal <see cref="GlobalConfigInfo"/>, and initialises the blacklist
+    /// the internal <see cref="UpdateContext"/>, and initialises the blacklist
     /// matcher for file exclusion during update operations.
     /// </summary>
     /// <param name="configInfo">User-facing configuration. All required fields must
     /// be set explicitly — no auto-discovery is performed. Use
     /// <see cref="SetSource"/> for the zero-config path.</param>
     /// <returns>This bootstrap instance for chaining.</returns>
-    public GeneralUpdateBootstrap SetConfig(Configinfo configInfo)
+    public GeneralUpdateBootstrap SetConfig(UpdateRequest configInfo)
     {
         configInfo.Validate();
-        _configInfo = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
+        _configInfo = ConfigurationMapper.MapToUpdateContext(configInfo);
 
-        var appType = GetOption(UpdateOptions.AppType);
+        var appType = GetOption(Option.AppType);
         if (appType != AppType.Upgrade)
         {
             _configInfo.TempPath = StorageManager.GetTempDirectory("upgrade_temp");
-            InitBlackList();
+            InitBlackPolicy();
         }
 
         return this;
@@ -193,11 +193,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <returns>This bootstrap instance for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="filePath"/> is <c>null</c> or whitespace.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the specified file does not exist.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the JSON file cannot be deserialised into a valid <see cref="Configinfo"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the JSON file cannot be deserialised into a valid <see cref="UpdateRequest"/>.</exception>
     /// <remarks>
-    /// Reads the file content as UTF-8 JSON, deserialises it into a <see cref="Configinfo"/>
+    /// Reads the file content as UTF-8 JSON, deserialises it into a <see cref="UpdateRequest"/>
     /// using the source-generated JSON serialisation context (<see cref="JsonContext.HttpParameterJsonContext"/>),
-    /// then delegates to <see cref="SetConfig(Configinfo)"/> for validation and mapping.
+    /// then delegates to <see cref="SetConfig(UpdateRequest)"/> for validation and mapping.
     /// </remarks>
     public GeneralUpdateBootstrap SetConfig(string filePath)
     {
@@ -215,7 +215,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             throw new FileNotFoundException($"Config file not found: {fullPath}");
 
         var json = File.ReadAllText(fullPath);
-        var config = JsonSerializer.Deserialize(json, JsonContext.HttpParameterJsonContext.Default.Configinfo);
+        var config = JsonSerializer.Deserialize(json, JsonContext.HttpParameterJsonContext.Default.UpdateRequest);
         if (config == null)
             throw new InvalidOperationException($"Failed to parse config file: {fullPath}");
 
@@ -234,7 +234,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         string? scheme = null,
         string? token = null)
     {
-        var config = new Configinfo
+        var config = new UpdateRequest
         {
             UpdateUrl = updateUrl,
             AppSecretKey = appSecretKey,
@@ -287,14 +287,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitializeFromEnvironment()
     {
-        // Read ProcessInfo via AES-encrypted file IPC.
+        // Read ProcessContract via AES-encrypted file IPC.
         // The Upgrade process is only ever launched by the Client — no IPC means
         // there is nothing to do. The Client's manifest.json flows through IPC,
         // so the Upgrade never needs to load one directly.
-        var processInfo = new EncryptedFileProcessInfoProvider().Receive();
+        var processInfo = new EncryptedFileProcessContractProvider().Receive();
         if (processInfo == null) return;
 
-        _configInfo = new GlobalConfigInfo
+        _configInfo = new UpdateContext
         {
             MainAppName = processInfo.AppName,
             InstallPath = processInfo.InstallPath,
@@ -315,41 +315,41 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             UpdatePath = processInfo.UpdatePath,
             LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
             ReportType = processInfo.ReportType,
-            BlackFiles = processInfo.BlackFiles ?? BlackListDefaults.DefaultBlackFiles,
-            BlackFormats = processInfo.BlackFileFormats ?? BlackListDefaults.DefaultBlackFormats,
-            SkipDirectorys = processInfo.SkipDirectorys ?? BlackListDefaults.DefaultSkipDirectories
+            Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
+            Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
+            Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
         };
 
-        StorageManager.BlackListMatcher = DefaultBlackListMatcher.FromConfigInfo(_configInfo);
+        StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
     }
 
     /// <summary>
-    /// Applies UpdateOptions to _configInfo.
+    /// Applies Option to _configInfo.
     /// Uses ??= only for values that InitializeFromEnvironment() may have already
     /// populated on the Upgrade path (Encoding, Format, DownloadTimeOut).
-    /// All other options are always applied from UpdateOptions — their defaults
+    /// All other options are always applied from Option — their defaults
     /// are already functionally reasonable (e.g. MaxConcurrency=3, RetryCount=3).
     /// </summary>
     private void ApplyRuntimeOptions()
     {
         // Preserve Upgrade path values set by InitializeFromEnvironment()
-        _configInfo.Encoding ??= GetOption(UpdateOptions.Encoding);
-        _configInfo.Format = GetOption(UpdateOptions.Format);
+        _configInfo.Encoding ??= GetOption(Option.Encoding);
+        _configInfo.Format = GetOption(Option.Format);
         if (_configInfo.DownloadTimeOut <= 0)
-            _configInfo.DownloadTimeOut = GetOption(UpdateOptions.DownloadTimeout) ?? 60;
+            _configInfo.DownloadTimeOut = GetOption(Option.DownloadTimeout) ?? 60;
 
         // bool? options: use ??= so user-configured false is preserved
-        _configInfo.PatchEnabled ??= GetOption(UpdateOptions.PatchEnabled);
-        _configInfo.BackupEnabled ??= GetOption(UpdateOptions.BackupEnabled);
+        _configInfo.PatchEnabled ??= GetOption(Option.PatchEnabled);
+        _configInfo.BackupEnabled ??= GetOption(Option.BackupEnabled);
 
-        // Always apply from UpdateOptions — no other code sets these before
+        // Always apply from Option — no other code sets these before
         // ApplyRuntimeOptions() runs. Defaults are functionally reasonable.
-        _configInfo.MaxConcurrency = GetOption(UpdateOptions.MaxConcurrency);
-        _configInfo.EnableResume = GetOption(UpdateOptions.EnableResume);
-        _configInfo.RetryCount = GetOption(UpdateOptions.RetryCount);
-        _configInfo.RetryInterval = GetOption(UpdateOptions.RetryInterval);
-        _configInfo.VerifyChecksum = GetOption(UpdateOptions.VerifyChecksum);
-        _configInfo.DiffMode = GetOption(UpdateOptions.DiffMode);
+        _configInfo.MaxConcurrency = GetOption(Option.MaxConcurrency);
+        _configInfo.EnableResume = GetOption(Option.EnableResume);
+        _configInfo.RetryCount = GetOption(Option.RetryCount);
+        _configInfo.RetryInterval = GetOption(Option.RetryInterval);
+        _configInfo.VerifyChecksum = GetOption(Option.VerifyChecksum);
+        _configInfo.DiffMode = GetOption(Option.DiffMode);
     }
 
     /// <summary>
@@ -374,8 +374,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         strategy.LaunchAfterPrepare = false;
 
-        var pollMinutes = GetOption(UpdateOptions.SilentPollIntervalMinutes);
-        var launchClient = GetOption(UpdateOptions.LaunchClientAfterUpdate);
+        var pollMinutes = GetOption(Option.SilentPollIntervalMinutes);
+        var launchClient = GetOption(Option.LaunchClientAfterUpdate);
         var silentOptions = new Silent.SilentOptions
         {
             PollInterval = TimeSpan.FromMinutes(pollMinutes),
@@ -477,18 +477,18 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         };
     }
 
-    private void InitBlackList()
+    private void InitBlackPolicy()
     {
-        // Build blacklist matcher from GlobalConfigInfo and set on StorageManager.
+        // Build blacklist matcher from UpdateContext and set on StorageManager.
         // The matcher combines user config with system defaults.
-        var effectiveConfig = new BlackListConfig(
-            _configInfo.BlackFiles?.Count > 0 ? _configInfo.BlackFiles : BlackListDefaults.DefaultBlackFiles,
-            _configInfo.BlackFormats?.Count > 0 ? _configInfo.BlackFormats : BlackListDefaults.DefaultBlackFormats,
-            _configInfo.SkipDirectorys?.Count > 0
-                ? _configInfo.SkipDirectorys
-                : BlackListDefaults.DefaultSkipDirectories
+        var effectiveConfig = new BlackPolicy(
+            _configInfo.Files?.Count > 0 ? _configInfo.Files : BlackDefaults.DefaultFiles,
+            _configInfo.Formats?.Count > 0 ? _configInfo.Formats : BlackDefaults.DefaultFormats,
+            _configInfo.Directories?.Count > 0
+                ? _configInfo.Directories
+                : BlackDefaults.DefaultDirectories
         );
-        StorageManager.BlackListMatcher = new DefaultBlackListMatcher(effectiveConfig);
+        StorageManager.BlackMatcher = new BlackMatcher(effectiveConfig);
     }
 
     private async Task CallSmallBowlHomeAsync(string processName)

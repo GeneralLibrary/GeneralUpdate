@@ -9,7 +9,7 @@ namespace CoreTest.Bootstrap
     /// <summary>
     /// Comprehensive integration tests for Client <-> Upgrade mutual upgrade process.
     /// Tests the full lifecycle: Client validates versions, downloads packages,
-    /// passes ProcessInfo to Upgrade, and Upgrade applies updates.
+    /// passes ProcessContract to Upgrade, and Upgrade applies updates.
     ///
     /// Covers:
     ///   - Client-only upgrade (main app update)
@@ -39,13 +39,13 @@ namespace CoreTest.Bootstrap
         /// <summary>
         /// Scenario: Both client and upgrade need updates.
         /// Client validates both versions, downloads upgrade packages,
-        /// serializes ProcessInfo, and prepares for upgrade handoff.
+        /// serializes ProcessContract, and prepares for upgrade handoff.
         /// </summary>
         [Fact]
         public void ClientUpgrade_MutualUpdate_BothNeedUpdates_ConfiguresCorrectly()
         {
             // Arrange - emulate a developer configuring for mutual update
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com/updates",
                 UpdateAppName = "Update.exe",
@@ -80,7 +80,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void ClientUpgrade_MainAppOnly_ConfiguresCorrectly()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com/updates",
                 MainAppName = "MyApp.exe",
@@ -107,7 +107,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void ClientUpgrade_ForciblyUpdate_SkipCallbackIsIgnored()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com/updates",
                 MainAppName = "MyApp.exe",
@@ -133,12 +133,12 @@ namespace CoreTest.Bootstrap
 
         #endregion
 
-        #region VersionInfo Scenarios (Cross-version / Forcibly / Freeze)
+        #region VersionEntry Scenarios (Cross-version / Forcibly / Freeze)
 
         [Fact]
-        public void VersionInfo_WithAllFields_SerializesCorrectly()
+        public void VersionEntry_WithAllFields_SerializesCorrectly()
         {
-            var versionInfo = new VersionInfo
+            var versionInfo = new VersionEntry
             {
                 RecordId = 1001,
                 Name = "client-app-v1.0.0-to-v2.0.0.zip",
@@ -170,9 +170,9 @@ namespace CoreTest.Bootstrap
         }
 
         [Fact]
-        public void VersionInfo_NonForcibly_UserCanSkip()
+        public void VersionEntry_NonForcibly_UserCanSkip()
         {
-            var versionInfo = new VersionInfo
+            var versionInfo = new VersionEntry
             {
                 RecordId = 1002,
                 Name = "optional-update.zip",
@@ -190,9 +190,9 @@ namespace CoreTest.Bootstrap
         }
 
         [Fact]
-        public void VersionInfo_MultipleVersions_SortByReleaseDate()
+        public void VersionEntry_MultipleVersions_SortByReleaseDate()
         {
-            var versions = new List<VersionInfo>
+            var versions = new List<VersionEntry>
             {
                 new() { Version = "1.0.3", ReleaseDate = new DateTime(2026, 5, 15), Format = "ZIP" },
                 new() { Version = "1.0.1", ReleaseDate = new DateTime(2026, 5, 1), Format = "ZIP" },
@@ -208,12 +208,12 @@ namespace CoreTest.Bootstrap
 
         #endregion
 
-        #region ProcessInfo IPC Serialization
+        #region ProcessContract IPC Serialization
 
         [Fact]
-        public void ProcessInfo_FullSerialization_RoundTripPreservesAllFields()
+        public void ProcessContract_FullSerialization_RoundTripPreservesAllFields()
         {
-            var processInfo = new ProcessInfo
+            var processInfo = new ProcessContract
             {
                 AppName = "MyApp.exe",
                 CurrentVersion = "1.0.0",
@@ -223,23 +223,23 @@ namespace CoreTest.Bootstrap
                 CompressFormat = "ZIP",
                 DownloadTimeOut = 60,
                 AppSecretKey = "secret-key-123",
-                UpdateVersions = new List<VersionInfo>
+                UpdateVersions = new List<VersionEntry>
                 {
                     new() { Version = "2.0.0", Url = "https://cdn.example.com/update.zip", Hash = "sha256hash", Size = 50 * 1024 * 1024L, Format = "ZIP", ReleaseDate = DateTime.UtcNow }
                 },
                 UpdateLogUrl = "https://myapp.com/changelog",
                 ReportUrl = "https://api.example.com/reports",
                 BackupDirectory = @"C:\Program Files\MyApp\__backups\1.0.0",
-                BlackFiles = new List<string> { "*.pdb", "*.xml" },
-                BlackFileFormats = new List<string> { ".pdb", ".xml" },
-                SkipDirectorys = new List<string> { "logs", "cache", "__backups__" },
+                Files = new List<string> { "*.pdb", "*.xml" },
+                Formats = new List<string> { ".pdb", ".xml" },
+                Directories = new List<string> { "logs", "cache", "__backups__" },
                 Scheme = "Bearer",
                 Token = "jwt-token-xyz",
                 DriverDirectory = @"C:\drivers"
             };
 
-            var json = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-            var deserialized = JsonSerializer.Deserialize<ProcessInfo>(json, ProcessInfoJsonContext.Default.ProcessInfo);
+            var json = JsonSerializer.Serialize(processInfo, ProcessContractJsonContext.Default.ProcessContract);
+            var deserialized = JsonSerializer.Deserialize<ProcessContract>(json, ProcessContractJsonContext.Default.ProcessContract);
 
             Assert.NotNull(deserialized);
             Assert.Equal("MyApp.exe", deserialized.AppName);
@@ -261,31 +261,31 @@ namespace CoreTest.Bootstrap
             Assert.Equal("2.0.0", deserialized.UpdateVersions[0].Version);
             Assert.Equal("sha256hash", deserialized.UpdateVersions[0].Hash);
 
-            Assert.NotNull(deserialized.BlackFiles);
-            Assert.Contains("*.pdb", deserialized.BlackFiles);
-            Assert.Contains("*.xml", deserialized.BlackFiles);
+            Assert.NotNull(deserialized.Files);
+            Assert.Contains("*.pdb", deserialized.Files);
+            Assert.Contains("*.xml", deserialized.Files);
 
-            Assert.NotNull(deserialized.SkipDirectorys);
-            Assert.Contains("logs", deserialized.SkipDirectorys);
-            Assert.Contains("cache", deserialized.SkipDirectorys);
+            Assert.NotNull(deserialized.Directories);
+            Assert.Contains("logs", deserialized.Directories);
+            Assert.Contains("cache", deserialized.Directories);
         }
 
         [Fact]
-        public void ProcessInfo_MinimalFields_DeserializesWithoutError()
+        public void ProcessContract_MinimalFields_DeserializesWithoutError()
         {
-            var processInfo = new ProcessInfo
+            var processInfo = new ProcessContract
             {
                 AppName = "MyApp.exe",
                 CurrentVersion = "1.0.0",
                 InstallPath = _testBaseDir,
-                UpdateVersions = new List<VersionInfo>
+                UpdateVersions = new List<VersionEntry>
                 {
                     new() { Version = "2.0.0", Url = "https://cdn.example.com/update.zip", Format = "ZIP" }
                 }
             };
 
-            var json = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-            var deserialized = JsonSerializer.Deserialize<ProcessInfo>(json, ProcessInfoJsonContext.Default.ProcessInfo);
+            var json = JsonSerializer.Serialize(processInfo, ProcessContractJsonContext.Default.ProcessContract);
+            var deserialized = JsonSerializer.Deserialize<ProcessContract>(json, ProcessContractJsonContext.Default.ProcessContract);
 
             Assert.NotNull(deserialized);
             Assert.Equal("MyApp.exe", deserialized.AppName);
@@ -293,25 +293,25 @@ namespace CoreTest.Bootstrap
         }
 
         [Fact]
-        public void ProcessInfo_BlackList_RoundTripPreservesRules()
+        public void ProcessContract_BlackList_RoundTripPreservesRules()
         {
-            var processInfo = new ProcessInfo
+            var processInfo = new ProcessContract
             {
                 AppName = "MyApp.exe",
                 CurrentVersion = "1.0.0",
                 InstallPath = _testBaseDir,
-                BlackFiles = new List<string> { "*.pdb", "*.config", "secret.key" },
-                BlackFileFormats = new List<string> { ".log", ".tmp", ".cache", ".pdb" },
-                SkipDirectorys = new List<string> { "logs", "temp", "cache", "node_modules", "__backups__" }
+                Files = new List<string> { "*.pdb", "*.config", "secret.key" },
+                Formats = new List<string> { ".log", ".tmp", ".cache", ".pdb" },
+                Directories = new List<string> { "logs", "temp", "cache", "node_modules", "__backups__" }
             };
 
-            var json = JsonSerializer.Serialize(processInfo, ProcessInfoJsonContext.Default.ProcessInfo);
-            var deserialized = JsonSerializer.Deserialize<ProcessInfo>(json, ProcessInfoJsonContext.Default.ProcessInfo);
+            var json = JsonSerializer.Serialize(processInfo, ProcessContractJsonContext.Default.ProcessContract);
+            var deserialized = JsonSerializer.Deserialize<ProcessContract>(json, ProcessContractJsonContext.Default.ProcessContract);
 
             Assert.NotNull(deserialized);
-            Assert.Equal(3, deserialized.BlackFiles.Count);
-            Assert.Equal(4, deserialized.BlackFileFormats.Count);
-            Assert.Equal(5, deserialized.SkipDirectorys.Count);
+            Assert.Equal(3, deserialized.Files.Count);
+            Assert.Equal(4, deserialized.Formats.Count);
+            Assert.Equal(5, deserialized.Directories.Count);
         }
 
         #endregion
@@ -382,9 +382,9 @@ namespace CoreTest.Bootstrap
         #region ConfigurationMapper Tests
 
         [Fact]
-        public void ConfigurationMapper_MapToGlobalConfigInfo_MapsAllFields()
+        public void ConfigurationMapper_MapToUpdateContext_MapsAllFields()
         {
-            var configInfo = new Configinfo
+            var configInfo = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com/updates",
                 UpdateAppName = "Update.exe",
@@ -400,12 +400,12 @@ namespace CoreTest.Bootstrap
                 Token = "jwt-token",
                 Bowl = "Bowl.exe",
                 DriverDirectory = @"C:\drivers",
-                BlackFiles = new List<string> { "*.pdb" },
-                BlackFormats = new List<string> { ".log" },
-                SkipDirectorys = new List<string> { "logs" }
+                Files = new List<string> { "*.pdb" },
+                Formats = new List<string> { ".log" },
+                Directories = new List<string> { "logs" }
             };
 
-            var globalConfig = ConfigurationMapper.MapToGlobalConfigInfo(configInfo);
+            var globalConfig = ConfigurationMapper.MapToUpdateContext(configInfo);
 
             Assert.NotNull(globalConfig);
             Assert.Equal("https://api.example.com/updates", globalConfig.UpdateUrl);
@@ -422,10 +422,10 @@ namespace CoreTest.Bootstrap
             Assert.Equal("jwt-token", globalConfig.Token);
             Assert.Equal("Bowl.exe", globalConfig.Bowl);
             Assert.Equal(@"C:\drivers", globalConfig.DriverDirectory);
-            Assert.NotNull(globalConfig.BlackFiles);
-            Assert.Contains("*.pdb", globalConfig.BlackFiles);
-            Assert.NotNull(globalConfig.SkipDirectorys);
-            Assert.Contains("logs", globalConfig.SkipDirectorys);
+            Assert.NotNull(globalConfig.Files);
+            Assert.Contains("*.pdb", globalConfig.Files);
+            Assert.NotNull(globalConfig.Directories);
+            Assert.Contains("logs", globalConfig.Directories);
         }
 
 
@@ -444,7 +444,7 @@ namespace CoreTest.Bootstrap
             var updateInfo = 0;
 
             var bootstrap = new GeneralUpdateBootstrap()
-                .SetConfig(new Configinfo
+                .SetConfig(new UpdateRequest
                 {
                     UpdateUrl = "https://api.example.com",
                     MainAppName = "TestApp.exe",
@@ -507,7 +507,7 @@ namespace CoreTest.Bootstrap
             var skipRequested = false;
 
             var bootstrap = new GeneralUpdateBootstrap()
-                .SetConfig(new Configinfo
+                .SetConfig(new UpdateRequest
                 {
                     UpdateUrl = "https://update.mycompany.com/api",
                     UpdateAppName = "Update.exe",
@@ -523,9 +523,9 @@ namespace CoreTest.Bootstrap
                     Token = "eyJhbGciOiJIUzI1NiIs...",
                     Bowl = "Bowl.exe",
                     DriverDirectory = @"C:\Program Files\MyProduct\drivers",
-                    BlackFiles = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
-                    BlackFormats = new List<string> { ".log", ".tmp", ".cache" },
-                    SkipDirectorys = new List<string> { "logs", "temp", "cache", "__backups__" }
+                    Files = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
+                    Formats = new List<string> { ".log", ".tmp", ".cache" },
+                    Directories = new List<string> { "logs", "temp", "cache", "__backups__" }
                 })
                 .AddListenerUpdatePrecheck(_ =>
                 {
@@ -547,7 +547,7 @@ namespace CoreTest.Bootstrap
         public void DeveloperScenario_MinimalSetup_OnlyRequiredFields()
         {
             var bootstrap = new GeneralUpdateBootstrap()
-                .SetConfig(new Configinfo
+                .SetConfig(new UpdateRequest
                 {
                     UpdateUrl = "https://update.mycompany.com/api",
                     MainAppName = "MyApp.exe",

@@ -6,7 +6,7 @@ namespace GeneralUpdate.Core.Ipc;
 /// <summary>
 /// Shared AES encryption utilities for IPC.
 /// Used by both <see cref="Environments"/> (key-value IPC) and
-/// <see cref="EncryptedFileProcessInfoProvider"/> (structured ProcessInfo IPC).
+/// <see cref="EncryptedFileProcessContractProvider"/> (structured ProcessContract IPC).
 /// </summary>
 public static class IpcEncryption
 {

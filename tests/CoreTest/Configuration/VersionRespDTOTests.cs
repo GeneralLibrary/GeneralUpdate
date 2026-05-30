@@ -32,7 +32,7 @@ public class VersionRespDTOTests
     [Fact]
     public void FullAssignment_AllPropertiesSet()
     {
-        var versions = new List<VersionInfo>
+        var versions = new List<VersionEntry>
         {
             new() { Version = "2.0.0", Hash = "abc", Name = "update.zip" }
         };
@@ -116,7 +116,7 @@ public class VersionRespDTOTests
         var resp = new VersionRespDTO
         {
             Code = 200,
-            Body = new List<VersionInfo>(),
+            Body = new List<VersionEntry>(),
             Message = "no updates"
         };
 
@@ -128,7 +128,7 @@ public class VersionRespDTOTests
     public void Body_WithMultipleVersions_Works()
     {
         var versions = Enumerable.Range(1, 5).Select(i =>
-            new VersionInfo { Version = $"{i}.0.0", Hash = $"hash{i}" }).ToList();
+            new VersionEntry { Version = $"{i}.0.0", Hash = $"hash{i}" }).ToList();
 
         var resp = new VersionRespDTO { Body = versions };
 

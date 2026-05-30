@@ -7,9 +7,9 @@ namespace CoreTest.Ipc;
 
 public class EncryptedFileIpcTests
 {
-    private static ProcessInfo CreateTestInfo(string appName, string currentVersion)
+    private static ProcessContract CreateTestInfo(string appName, string currentVersion)
     {
-        return new ProcessInfo
+        return new ProcessContract
         {
             AppName = appName,
             CurrentVersion = currentVersion,
@@ -21,7 +21,7 @@ public class EncryptedFileIpcTests
     [Fact]
     public void Send_And_Receive_RoundTrip()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
+        var provider = new EncryptedFileProcessContractProvider();
         var info = CreateTestInfo("TestApp", "1.0.0");
 
         provider.Send(info);
@@ -35,7 +35,7 @@ public class EncryptedFileIpcTests
     [Fact]
     public void Receive_Without_Send_ReturnsNull()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
+        var provider = new EncryptedFileProcessContractProvider();
         var received = provider.Receive();
         Assert.Null(received);
     }
@@ -43,7 +43,7 @@ public class EncryptedFileIpcTests
     [Fact]
     public void Data_Confidentiality_And_SingleRead()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
+        var provider = new EncryptedFileProcessContractProvider();
         var info = CreateTestInfo("SecureApp", "1.0.0");
 
         provider.Send(info);
@@ -60,7 +60,7 @@ public class EncryptedFileIpcTests
     [Fact]
     public async Task Async_Api_Delegates_To_Sync()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
+        var provider = new EncryptedFileProcessContractProvider();
         var info = CreateTestInfo("AsyncApp", "1.0.0");
 
         await provider.SendAsync(info);

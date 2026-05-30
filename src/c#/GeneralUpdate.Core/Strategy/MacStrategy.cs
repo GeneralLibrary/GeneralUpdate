@@ -98,7 +98,7 @@ public class MacStrategy : AbstractStrategy
     /// The MacStrategy's <c>Create</c> implementation directly stores the configuration information in the internal field <c>_configinfo</c>,
     /// without calling the base class implementation. This provides a more lightweight initialization approach.
     /// </remarks>
-    public override void Create(GlobalConfigInfo configInfo) => _configinfo = configInfo;
+    public override void Create(UpdateContext configInfo) => _configinfo = configInfo;
 
     /// <summary>
     /// Builds the macOS platform update middleware pipeline.

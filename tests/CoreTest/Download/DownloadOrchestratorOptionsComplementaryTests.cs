@@ -11,7 +11,7 @@ public class DownloadOrchestratorOptionsComplementaryTests
     [Fact]
     public void From_DownloadTimeOutNegative_DefaultsTo30Seconds()
     {
-        var config = new GeneralUpdate.Core.Configuration.GlobalConfigInfo
+        var config = new GeneralUpdate.Core.Configuration.UpdateContext
         {
             DownloadTimeOut = -5
         };
@@ -22,7 +22,7 @@ public class DownloadOrchestratorOptionsComplementaryTests
     [Fact]
     public void From_RetryCountNegative_ClampedToZero()
     {
-        var config = new GeneralUpdate.Core.Configuration.GlobalConfigInfo
+        var config = new GeneralUpdate.Core.Configuration.UpdateContext
         {
             RetryCount = -5
         };

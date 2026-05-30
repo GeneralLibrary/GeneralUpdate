@@ -8,14 +8,14 @@ namespace GeneralUpdate.Core.Hooks;
 /// <summary>Lifecycle hooks for update processes.</summary>
 public interface IUpdateHooks
 {
-    Task<bool> OnBeforeUpdateAsync(UpdateContext ctx);
+    Task<bool> OnBeforeUpdateAsync(HookContext ctx);
     Task OnDownloadCompletedAsync(DownloadContext ctx);
-    Task OnAfterUpdateAsync(UpdateContext ctx);
-    Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex);
-    Task OnBeforeStartAppAsync(UpdateContext ctx);
+    Task OnAfterUpdateAsync(HookContext ctx);
+    Task OnUpdateErrorAsync(HookContext ctx, Exception ex);
+    Task OnBeforeStartAppAsync(HookContext ctx);
 }
 
-public record UpdateContext(
+public record HookContext(
     string UpdateAppName,
     string InstallPath,
     string CurrentVersion,
@@ -35,26 +35,26 @@ public record DownloadContext(
 /// <summary>Default no-op hooks.</summary>
 public class NoOpUpdateHooks : IUpdateHooks
 {
-    public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) => Task.FromResult(true);
+    public Task<bool> OnBeforeUpdateAsync(HookContext ctx) => Task.FromResult(true);
     public Task OnDownloadCompletedAsync(DownloadContext ctx) => Task.CompletedTask;
-    public Task OnAfterUpdateAsync(UpdateContext ctx) => Task.CompletedTask;
-    public Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex) => Task.CompletedTask;
-    public Task OnBeforeStartAppAsync(UpdateContext ctx) => Task.CompletedTask;
+    public Task OnAfterUpdateAsync(HookContext ctx) => Task.CompletedTask;
+    public Task OnUpdateErrorAsync(HookContext ctx, Exception ex) => Task.CompletedTask;
+    public Task OnBeforeStartAppAsync(HookContext ctx) => Task.CompletedTask;
 }
 
 /// <summary>Unix permission hooks — chmod +x main app before start.</summary>
 public class UnixPermissionHooks : IUpdateHooks
 {
-    public async Task OnBeforeStartAppAsync(UpdateContext ctx)
+    public async Task OnBeforeStartAppAsync(HookContext ctx)
     {
         var mainApp = Path.Combine(ctx.InstallPath, ctx.UpdateAppName);
         if (File.Exists(mainApp))
             await Task.Run(() => Process.Start("chmod", $"+x \"{mainApp}\"").WaitForExit());
     }
-    public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) => Task.FromResult(true);
+    public Task<bool> OnBeforeUpdateAsync(HookContext ctx) => Task.FromResult(true);
     public Task OnDownloadCompletedAsync(DownloadContext ctx) => Task.CompletedTask;
-    public Task OnAfterUpdateAsync(UpdateContext ctx) => Task.CompletedTask;
-    public Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex) => Task.CompletedTask;
+    public Task OnAfterUpdateAsync(HookContext ctx) => Task.CompletedTask;
+    public Task OnUpdateErrorAsync(HookContext ctx, Exception ex) => Task.CompletedTask;
 }
 
 /// <summary>User-supplied permission script hook.</summary>
@@ -64,7 +64,7 @@ public class CustomPermissionHooks : IUpdateHooks
     public CustomPermissionHooks(string scriptPath)
         => _scriptPath = scriptPath ?? throw new ArgumentNullException(nameof(scriptPath));
 
-    public async Task OnBeforeStartAppAsync(UpdateContext ctx)
+    public async Task OnBeforeStartAppAsync(HookContext ctx)
     {
         var psi = new ProcessStartInfo(_scriptPath, ctx.InstallPath)
         {
@@ -76,8 +76,8 @@ public class CustomPermissionHooks : IUpdateHooks
             throw new InvalidOperationException(
                 $"Permission script '{_scriptPath}' failed (exit {proc.ExitCode})");
     }
-    public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) => Task.FromResult(true);
+    public Task<bool> OnBeforeUpdateAsync(HookContext ctx) => Task.FromResult(true);
     public Task OnDownloadCompletedAsync(DownloadContext ctx) => Task.CompletedTask;
-    public Task OnAfterUpdateAsync(UpdateContext ctx) => Task.CompletedTask;
-    public Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex) => Task.CompletedTask;
+    public Task OnAfterUpdateAsync(HookContext ctx) => Task.CompletedTask;
+    public Task OnUpdateErrorAsync(HookContext ctx, Exception ex) => Task.CompletedTask;
 }

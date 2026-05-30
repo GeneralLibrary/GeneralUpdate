@@ -15,7 +15,7 @@ try
     // so the Upgrade never needs to load a manifest directly.
 
     await new GeneralUpdateBootstrap()
-        .Option(UpdateOptions.AppType, AppType.Upgrade)
+        .SetOption(Option.AppType, AppType.Upgrade)
         .Hooks<UpgradeTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
         .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
@@ -34,13 +34,13 @@ catch (Exception ex)
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
 {
-    var v = e.Version as VersionInfo;
+    var v = e.Version as VersionEntry;
     Console.WriteLine($"[Apply] {v?.Version}: {e.ProgressPercentage}%");
 }
 
 static void OnDownloadCompleted(object sender, MultiDownloadCompletedEventArgs e)
 {
-    var v = e.Version as VersionInfo;
+    var v = e.Version as VersionEntry;
     Console.WriteLine($"[Apply] {v?.Version}: {(e.IsCompleted ? "SUCCESS" : "FAILED")}");
 }
 
@@ -53,7 +53,7 @@ static void OnAllDownloadCompleted(object sender, MultiAllDownloadCompletedEvent
 
 static void OnDownloadError(object sender, MultiDownloadErrorEventArgs e)
 {
-    var v = e.Version as VersionInfo;
+    var v = e.Version as VersionEntry;
     Console.WriteLine($"[Apply] Error @ {v?.Version}: {e.Exception.Message}");
 }
 
@@ -64,7 +64,7 @@ static void OnException(object sender, ExceptionEventArgs e)
 
 sealed class UpgradeTestHooks : IUpdateHooks
 {
-    public async Task<bool> OnBeforeUpdateAsync(UpdateContext ctx)
+    public async Task<bool> OnBeforeUpdateAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnBeforeUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
         return await Task.FromResult(true);
@@ -76,19 +76,19 @@ sealed class UpgradeTestHooks : IUpdateHooks
         await Task.CompletedTask;
     }
 
-    public async Task OnAfterUpdateAsync(UpdateContext ctx)
+    public async Task OnAfterUpdateAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnAfterUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
         await Task.CompletedTask;
     }
 
-    public async Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex)
+    public async Task OnUpdateErrorAsync(HookContext ctx, Exception ex)
     {
         Console.WriteLine($"[Hook] OnUpdateError: {ctx.CurrentVersion} -> {ctx.TargetVersion} | {ex.Message}");
         await Task.CompletedTask;
     }
 
-    public async Task OnBeforeStartAppAsync(UpdateContext ctx)
+    public async Task OnBeforeStartAppAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnBeforeStartApp: {ctx.UpdateAppName} @ {ctx.InstallPath}");
         await Task.CompletedTask;
