@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
@@ -142,7 +140,9 @@ public class SilentPollOrchestrator : IDisposable
     /// </summary>
     /// <remarks>
     /// The encrypted IPC file was already written by <see cref="ClientStrategy.SendProcessIpc"/>
-    /// during the last successful poll cycle. This handler only starts the upgrade executable.
+    /// during the last successful poll cycle. This handler delegates the actual process
+    /// launch to <see cref="ClientStrategy.LaunchUpgradeProcessSync"/>, which reuses the
+    /// configured OS strategy for path resolution and runs the pre-launch lifecycle hook.
     /// </remarks>
     private void OnProcessExit(object? sender, EventArgs e)
     {
@@ -159,21 +159,8 @@ public class SilentPollOrchestrator : IDisposable
                 return;
             }
 
-            var updaterDir = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath)
-                ? (Path.IsPathRooted(_configInfo.UpdatePath)
-                    ? _configInfo.UpdatePath
-                    : Path.Combine(_configInfo.InstallPath, _configInfo.UpdatePath))
-                : _configInfo.InstallPath;
-            var updaterPath = Path.Combine(updaterDir, _configInfo.UpdateAppName);
-
-            if (!File.Exists(updaterPath))
-            {
-                GeneralTracer.Warn($"SilentPollOrchestrator: updater not found at {updaterPath}, cannot launch.");
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo { UseShellExecute = true, FileName = updaterPath });
-            GeneralTracer.Info($"SilentPollOrchestrator: launched updater {updaterPath}");
+            _strategy.LaunchUpgradeProcessSync();
+            GeneralTracer.Info("SilentPollOrchestrator: upgrade process launched via ClientStrategy.");
         }
         catch (Exception ex)
         {
