@@ -56,7 +56,7 @@ public class UpdateStrategy : IStrategy
     /// <summary>
     /// Gets or sets the update status reporter. Injected by the bootstrap to report update progress and results to the server or caller.
     /// </summary>
-    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
 
     /// <summary>
     /// Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
@@ -84,6 +84,7 @@ public class UpdateStrategy : IStrategy
         if (_osStrategy is AbstractStrategy abs)
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
+            abs.Reporter = this.Reporter;
         }
     }
 

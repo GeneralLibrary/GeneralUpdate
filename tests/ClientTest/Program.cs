@@ -1,6 +1,7 @@
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
+using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Hooks;
 

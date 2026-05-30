@@ -42,7 +42,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <remarks>
         /// The reporter can be used to report update status (updating, success, failure) to a remote service
         /// (such as GeneralSpacestation) or trigger local events via <c>EventManager</c>.
-        /// The default implementation uses <c>NoOpUpdateReporter</c> (no operation).
+        /// The default implementation is <c>HttpUpdateReporter</c>.
         /// </remarks>
         IUpdateReporter Reporter { get; set; }
 

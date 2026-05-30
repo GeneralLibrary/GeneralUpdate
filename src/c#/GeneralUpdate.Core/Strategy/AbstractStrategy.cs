@@ -6,9 +6,10 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Configuration;
-using GeneralUpdate.Core.Network;
+
 using GeneralUpdate.Core.Hooks;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
+using UpdateReport = GeneralUpdate.Core.Download.Reporting.UpdateReport;
 
 namespace GeneralUpdate.Core.Strategy
 {
@@ -30,7 +31,7 @@ namespace GeneralUpdate.Core.Strategy
     ///   <item><description>Calls <see cref="BuildPipeline"/> (abstract method, implemented by subclasses) to obtain the middleware builder.</description></item>
     ///   <item><description>Executes <c>PipelineBuilder.Build()</c> to run the registered middleware in FIFO order:
     ///   <c>Hash</c> (integrity verification) → <c>Decompress</c> (extract update package) → <c>Patch</c> (apply incremental patches).</description></item>
-    ///   <item><description>Reports the update result for the current version to the server via <see cref="VersionService.Report"/>.</description></item>
+    ///   <item><description>Reports the update result for the current version via <see cref="Reporter"/>.</description></item>
     ///   <item><description>Deletes the processed archive file.</description></item>
     /// </list>
     /// </para>
@@ -58,7 +59,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <summary>
         /// Gets or sets the update status reporter. Responsible for reporting the processing progress and final result of each version to the server.
         /// </summary>
-        public IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+        public IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
 
         /// <summary>
         /// Gets or sets the differential patch pipeline. Supports parallel application of incremental patches and progress reporting.
@@ -161,12 +162,7 @@ namespace GeneralUpdate.Core.Strategy
                     }
                     finally
                     {
-                        await VersionService.Report(_configinfo.ReportUrl
-                            , version.RecordId
-                            , status
-                            , version.AppType
-                            , _configinfo.Scheme
-                            , _configinfo.Token);
+                        await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, version.AppType ?? 1));
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.

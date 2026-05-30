@@ -23,8 +23,8 @@ namespace GeneralUpdate.Core.Download.Reporting;
 ///   <item><description><see cref="UpdateStatus.Failure"/> — The update failed.</description></item>
 /// </list>
 /// <para>
-/// The default no-op implementation <see cref="NoOpUpdateReporter"/> is used when no ReportUrl is configured.
-/// The standard implementation <see cref="HttpUpdateReporter"/> sends status via HTTP POST to a configured endpoint.
+/// The default implementation <see cref="HttpUpdateReporter"/> sends status via HTTP POST to the configured endpoint.
+/// When <see cref="HttpUpdateReporter.ReportUrl"/> is not set, reporting is silently skipped.
 /// </para>
 /// </remarks>
 public interface IUpdateReporter
@@ -86,26 +86,59 @@ public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 /// </remarks>
 public class HttpUpdateReporter : IUpdateReporter
 {
-    private readonly HttpClient _client;
-    private readonly string _reportUrl;
+    private HttpClient _client;
+    private string _reportUrl;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpUpdateReporter"/> class.
+    /// Gets or sets the report URL for update status reporting.
+    /// When null or empty, <see cref="ReportAsync"/> is a no-op.
+    /// </summary>
+    public string ReportUrl
+    {
+        get => _reportUrl;
+        set => _reportUrl = value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Gets or sets the <see cref="HttpClient"/> used for HTTP requests.
+    /// If not set, a default instance is created in the parameterless constructor.
+    /// </summary>
+    public HttpClient Client
+    {
+        get => _client;
+        set => _client = value ?? throw new ArgumentNullException(nameof(value));
+    }
+
+    /// <summary>
+    /// Parameterless constructor required by the extension resolution mechanism.
+    /// Uses a default HttpClient and empty ReportUrl (no-op until configured).
+    /// </summary>
+    public HttpUpdateReporter()
+    {
+        _client = new HttpClient();
+        _reportUrl = string.Empty;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpUpdateReporter"/> class
+    /// with a specific client and report URL.
     /// </summary>
     /// <param name="client">The <see cref="HttpClient"/> instance used to send HTTP requests.</param>
     /// <param name="reportUrl">The remote URL that receives the update status reports.</param>
     public HttpUpdateReporter(HttpClient client, string reportUrl)
     {
-        _client = client;
-        _reportUrl = reportUrl;
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _reportUrl = reportUrl ?? string.Empty;
     }
 
     public async Task ReportAsync(UpdateReport report, CancellationToken token = default)
     {
         try
         {
+            if(string.IsNullOrWhiteSpace(_reportUrl))
+                return;
+            
             var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -116,25 +149,4 @@ public class HttpUpdateReporter : IUpdateReporter
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
     }
-}
-
-/// <summary>
-/// A no-op (null object) update status reporter that performs no actual work.
-/// Used when no ReportUrl is configured.
-/// </summary>
-/// <remarks>
-/// <para>
-/// This class implements the Null Object Pattern, eliminating the need for null checks
-/// in consumer code. Every report operation returns a completed task immediately without
-/// performing any actual data transmission.
-/// </para>
-/// <para>
-/// Use this implementation when no remote status reporting is needed,
-/// such as during local testing or when the report endpoint is not configured.
-/// </para>
-/// </remarks>
-public class NoOpUpdateReporter : IUpdateReporter
-{
-    public Task ReportAsync(UpdateReport report, CancellationToken token = default)
-        => Task.CompletedTask;
 }

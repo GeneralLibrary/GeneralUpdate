@@ -99,13 +99,13 @@ public class ClientStrategy : IStrategy
     /// <summary>
     /// Gets or sets the update status reporter. Registered and injected by the bootstrap via <c>.UpdateReporter&lt;T&gt;()</c>.
     /// </summary>
-    /// <value>An <c>IUpdateReporter</c> reporter instance. Defaults to <c>NoOpUpdateReporter</c> (no-operation implementation).</value>
+    /// <value>An <c>IUpdateReporter</c> reporter instance. Defaults to <c>HttpUpdateReporter</c>.</value>
     /// <remarks>
     /// The reporter reports status to the server when the update starts, download completes, or the update is applied or fails.
     /// All reporting calls are wrapped in try-catch, so a reporting failure does not block the flow.
     /// See <see cref="SafeReportUpdateStartedAsync"/>, <see cref="SafeReportDownloadCompletedAsync"/>, and related methods.
     /// </remarks>
-    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.NoOpUpdateReporter();
+    public Download.Reporting.IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
 
     /// <summary>
     /// Gets or sets the download data source. Registered and injected by the bootstrap via <c>.DownloadSource&lt;T&gt;()</c>,
@@ -224,6 +224,7 @@ public class ClientStrategy : IStrategy
         if (_osStrategy is AbstractStrategy abs)
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
+            abs.Reporter = this.Reporter;
         }
     }
 

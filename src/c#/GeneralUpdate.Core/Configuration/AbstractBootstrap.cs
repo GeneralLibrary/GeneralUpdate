@@ -109,7 +109,7 @@ namespace GeneralUpdate.Core.Configuration
         /// <para>- Download completes: <c>ReportAsync(Updating)</c>.</para>
         /// <para>- Update applied successfully: <c>ReportAsync(Success)</c>.</para>
         /// <para>- Update failed: <c>ReportAsync(Failure)</c>.</para>
-        /// <para>The default implementation is <c>NoOpUpdateReporter</c> (no-op). All reporter
+        /// <para>The default implementation is <c>HttpUpdateReporter</c>. All reporter
         /// invocations are wrapped in try-catch; a single failure does not block the workflow.</para>
         /// </remarks>
         public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
