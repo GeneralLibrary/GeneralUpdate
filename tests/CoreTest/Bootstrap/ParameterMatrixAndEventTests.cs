@@ -196,7 +196,8 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key"
+                AppSecretKey = "key",
+                MainAppName = null!
             };
 
             Assert.Throws<ArgumentException>(() => config.Validate());
@@ -209,7 +210,8 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
-                AppSecretKey = "key"
+                AppSecretKey = "key",
+                ClientVersion = null!
             };
 
             Assert.Throws<ArgumentException>(() => config.Validate());
