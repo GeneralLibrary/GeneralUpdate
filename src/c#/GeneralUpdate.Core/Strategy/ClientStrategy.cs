@@ -409,16 +409,29 @@ public class ClientStrategy : IStrategy
             _configInfo.Scheme,
             _configInfo.Token);
 
-        // Call server validation — returns assets plus per-side flags from the two Validate calls
+        // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
-        var downloadPlan = Download.DownloadPlanBuilder.Build(sourceResult.Assets, _configInfo.ClientVersion);
 
-        // Detect update status from SERVER validation results: IsMainUpdate is true only when
-        // the server returned version info for the Client call, IsUpgradeUpdate only when
-        // the server returned version info for the Upgrade call (requirement 1).
-        _configInfo.IsMainUpdate = sourceResult.HasMainUpdate;
-        _configInfo.IsUpgradeUpdate = sourceResult.HasUpgradeUpdate;
-        _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
+        // Read local manifest to get the version installed at last update.
+        // Caller's explicit value takes precedence; manifest is a fallback.
+        var manifest = ManifestInfo.Load();
+        var localClientVersion = _configInfo!.ClientVersion ?? manifest?.ClientVersion;
+        var localUpgradeVersion = _configInfo!.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
+
+        // ═══════════════════════════════════════════════════════════════
+        // Version comparison: take max server version per AppType and
+        // compare once against the local manifest version.
+        // Each AppType uses its own version track — no cross-fallback.
+        // ═══════════════════════════════════════════════════════════════
+        _configInfo.IsMainUpdate = Download.DownloadPlanBuilder.HasUpdate(
+            sourceResult.Assets,
+            AppType.Client,
+            localClientVersion);
+
+        _configInfo.IsUpgradeUpdate = Download.DownloadPlanBuilder.HasUpdate(
+            sourceResult.Assets,
+            AppType.Upgrade,
+            localUpgradeVersion);
 
         var scenario = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
         {
@@ -427,6 +440,27 @@ public class ClientStrategy : IStrategy
             (true, false) => UpdateScenario.MainOnly,
             (true, true) => UpdateScenario.Both,
         };
+
+        // Scenario None: local is already the latest — dispatch empty event and exit early
+        if (scenario == UpdateScenario.None)
+        {
+            GeneralTracer.Info("ClientStrategy: local version is already the latest, no update needed.");
+            var emptyResp = new VersionRespDTO
+            {
+                Code = 404,
+                Body = new List<VersionEntry>(),
+                Message = "No updates available."
+            };
+            EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(emptyResp));
+            return;
+        }
+
+        // Build the download plan only when an update is actually needed
+        var downloadPlan = Download.DownloadPlanBuilder.Build(
+            sourceResult.Assets,
+            localClientVersion,
+            localUpgradeVersion);
+        _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
@@ -472,13 +506,6 @@ public class ClientStrategy : IStrategy
         if (CanSkip(isForcibly, updateInfoArgs))
         {
             GeneralTracer.Info("ClientStrategy: update skipped.");
-            return;
-        }
-
-        // Scenario None: nothing to update — exit early
-        if (scenario == UpdateScenario.None)
-        {
-            GeneralTracer.Info("ClientStrategy: no update available for client or upgrade.");
             return;
         }
 
