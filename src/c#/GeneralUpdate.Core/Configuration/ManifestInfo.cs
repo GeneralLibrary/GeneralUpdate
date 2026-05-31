@@ -34,7 +34,7 @@ public class ManifestInfo
     [JsonPropertyName("updatePath")]
     public string UpdatePath { get; set; }
 
-    private const string FileName = "generalupdate.manifest.json";
+    public const string FileName = "generalupdate.manifest.json";
 
     /// <summary>
     ///     Load manifest from <see cref="AppDomain.CurrentDomain.BaseDirectory"/>.
@@ -47,21 +47,33 @@ public class ManifestInfo
     }
 
     /// <summary>
-    ///     Load manifest from a specific path. Returns <c>null</c> when the file does not exist.
+    ///     Load manifest from a specific file path. Returns <c>null</c> when the file does
+    ///     not exist or cannot be deserialized.
     /// </summary>
-    public static ManifestInfo? Load(string path)
+    /// <param name="filePath">
+    ///     Full path to <c>generalupdate.manifest.json</c>. When passing a directory,
+    ///     use <c>Path.Combine(dir, ManifestInfo.FileName)</c> instead.
+    /// </param>
+    public static ManifestInfo? Load(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            if (!string.IsNullOrWhiteSpace(filePath))
+                GeneralTracer.Warn($"Manifest file not found: {filePath}");
             return null;
+        }
 
         try
         {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize(json, HttpParameterJsonContext.Default.ManifestInfo);
+            var json = File.ReadAllText(filePath);
+            var manifest = JsonSerializer.Deserialize(json, HttpParameterJsonContext.Default.ManifestInfo);
+            if (manifest == null)
+                GeneralTracer.Warn($"Manifest deserialization returned null for: {filePath}");
+            return manifest;
         }
-        catch
+        catch (Exception ex)
         {
-            // Malformed JSON, permission denied, etc. — treat as missing.
+            GeneralTracer.Warn($"Failed to load manifest from {filePath}: {ex.Message}");
             return null;
         }
     }
