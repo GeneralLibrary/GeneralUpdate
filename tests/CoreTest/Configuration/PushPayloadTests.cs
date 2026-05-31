@@ -6,7 +6,7 @@ namespace CoreTest.Configuration;
 /// AAAT unit tests for <see cref="PushPayload"/> — property defaults, set/get, JSON serialization attrs.
 /// Covers: all nullable bool?/int?/DateTime?/string? properties, null vs non-null, IsForcibly/IsFreeze tri-state.
 /// </summary>
-public class PacketTests
+public class PushPayloadTests
 {
     [Fact]
     public void Ctor_Default_AllPropertiesAreNullOrDefault()

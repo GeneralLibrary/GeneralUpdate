@@ -29,7 +29,6 @@ namespace GeneralUpdate.Core.Configuration
     ///     </para>
     /// </remarks>
     /// <seealso cref="Option{T}" />
-    /// <seealso cref="Options" />
     public class Option
     {
         /// <summary>
@@ -162,7 +161,6 @@ namespace GeneralUpdate.Core.Configuration
     /// </remarks>
     /// <seealso cref="Option" />
     /// <seealso cref="OptionValue{T}" />
-    /// <seealso cref="Options" />
     public sealed class Option<T> : Option
     {
         /// <summary>
