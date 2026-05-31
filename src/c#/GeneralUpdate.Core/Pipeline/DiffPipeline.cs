@@ -507,7 +507,22 @@ public class DiffPipeline
                 if (parentFolder?.Exists == false)
                     parentFolder.Create();
 
-                File.Copy(file.FullName, targetPath, true);
+                // Atomic replace via temp file, same strategy as ApplyPatch.
+                // Avoids file-in-use errors when the process just exited.
+                var safeName = targetFileName.Replace(Path.DirectorySeparatorChar, '_');
+                var tempPath = Path.Combine(appPath, $"{Path.GetRandomFileName()}_{safeName}");
+                File.Copy(file.FullName, tempPath, true);
+
+                // Use File.Replace for atomic overwrite (handles locked targets gracefully)
+                if (File.Exists(targetPath))
+                {
+                    File.SetAttributes(targetPath, FileAttributes.Normal);
+                    File.Replace(tempPath, targetPath, null, true);
+                }
+                else
+                {
+                    File.Move(tempPath, targetPath);
+                }
             }
 
             if (Directory.Exists(patchPath))
