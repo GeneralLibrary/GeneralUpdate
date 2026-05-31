@@ -9,42 +9,37 @@ namespace GeneralUpdate.Core.Configuration;
 public static class AppMetadataDiscoverer
 {
     /// <summary>
-    ///     Discover and fill every null-or-empty identity field in <paramref name="seed"/>.
+    ///     Discover and fill every null-or-empty identity field in <paramref name="context"/>
+    ///     from <c>generalupdate.manifest.json</c>. Called by <see cref="ClientStrategy"/>
+    ///     during <c>ExecuteStandardWorkflowAsync</c> so that manifest discovery is owned
+    ///     by the strategy rather than the bootstrap.
     /// </summary>
-    public static UpdateRequest Discover(UpdateRequest seed)
+    public static void Discover(UpdateContext context)
     {
-        if (seed == null)
-            throw new System.ArgumentNullException(nameof(seed));
+        if (context == null)
+            throw new System.ArgumentNullException(nameof(context));
 
-        var manifest = ManifestInfo.Load();
+        var installPath = context.InstallPath;
+        var manifestPath = System.IO.Path.Combine(installPath, ManifestInfo.FileName);
+        var manifest = ManifestInfo.Load(manifestPath);
 
-        // Identity fields — manifest overrides defaults, not just nulls.
-        // (UpdateConfiguration pre-fills UpdateAppName with "Update.exe", so simple
-        //  null-coalescing would never pick up the manifest value.)
-        if (manifest != null)
-        {
-            if (!string.IsNullOrWhiteSpace(manifest.MainAppName))
-                seed.MainAppName = manifest.MainAppName;
-            if (!string.IsNullOrWhiteSpace(manifest.UpdateAppName))
-                seed.UpdateAppName = manifest.UpdateAppName;
-            if (!string.IsNullOrWhiteSpace(manifest.ClientVersion))
-                seed.ClientVersion = manifest.ClientVersion;
-            if (!string.IsNullOrWhiteSpace(manifest.UpgradeClientVersion))
-                seed.UpgradeClientVersion = manifest.UpgradeClientVersion;
-            if (!string.IsNullOrWhiteSpace(manifest.ProductId))
-                seed.ProductId = manifest.ProductId;
-            if (!string.IsNullOrWhiteSpace(manifest.UpdatePath))
-                seed.UpdatePath = manifest.UpdatePath;
-            if (!string.IsNullOrWhiteSpace(manifest.AppType)
-                && Enum.TryParse<AppType>(manifest.AppType, out var at))
-                seed.AppType = at;
-        }
+        if (manifest == null) return;
 
-        // Hard-coded fallbacks only when neither seed nor manifest provided a value.
-        seed.MainAppName ??= "Client";
-        seed.UpdateAppName ??= "Update.exe";
-        seed.InstallPath ??= AppDomain.CurrentDomain.BaseDirectory;
-
-        return seed;
+        // Only fill empty fields — caller-provided values take precedence.
+        if (string.IsNullOrWhiteSpace(context.MainAppName) && !string.IsNullOrWhiteSpace(manifest.MainAppName))
+            context.MainAppName = manifest.MainAppName;
+        if (string.IsNullOrWhiteSpace(context.UpdateAppName) && !string.IsNullOrWhiteSpace(manifest.UpdateAppName))
+            context.UpdateAppName = manifest.UpdateAppName;
+        if (string.IsNullOrWhiteSpace(context.ClientVersion) && !string.IsNullOrWhiteSpace(manifest.ClientVersion))
+            context.ClientVersion = manifest.ClientVersion;
+        if (string.IsNullOrWhiteSpace(context.UpgradeClientVersion) && !string.IsNullOrWhiteSpace(manifest.UpgradeClientVersion))
+            context.UpgradeClientVersion = manifest.UpgradeClientVersion;
+        if (string.IsNullOrWhiteSpace(context.ProductId) && !string.IsNullOrWhiteSpace(manifest.ProductId))
+            context.ProductId = manifest.ProductId;
+        if (string.IsNullOrWhiteSpace(context.UpdatePath) && !string.IsNullOrWhiteSpace(manifest.UpdatePath))
+            context.UpdatePath = manifest.UpdatePath;
+        if (context.AppType == null && !string.IsNullOrWhiteSpace(manifest.AppType)
+            && Enum.TryParse<AppType>(manifest.AppType, out var at))
+            context.AppType = at;
     }
 }

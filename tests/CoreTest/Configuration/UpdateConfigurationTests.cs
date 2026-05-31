@@ -18,10 +18,10 @@ public class UpdateConfigurationTests
     }
 
     [Fact]
-    public void Ctor_MainAppName_DefaultsToNull()
+    public void Ctor_MainAppName_DefaultsToClient()
     {
         var config = new TestableConfig();
-        Assert.Null(config.MainAppName);
+        Assert.Equal("Client", config.MainAppName);
     }
 
     [Fact]
@@ -47,10 +47,10 @@ public class UpdateConfigurationTests
     }
 
     [Fact]
-    public void Ctor_ClientVersion_DefaultsToNull()
+    public void Ctor_ClientVersion_DefaultsToVersion()
     {
         var config = new TestableConfig();
-        Assert.Null(config.ClientVersion);
+        Assert.Equal("1.0.0.0", config.ClientVersion);
     }
 
     [Fact]
