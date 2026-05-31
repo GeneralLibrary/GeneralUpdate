@@ -412,11 +412,23 @@ public class ClientStrategy : IStrategy
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
 
-        // Read local manifest to get the version installed at last update.
+        // Read local manifest from the install path, not BaseDirectory.
+        // UpdateStrategy writes versions back to InstallPath after each update;
+        // using the parameterless Load() would read from BaseDirectory instead
+        // and could pick up a stale manifest when InstallPath is customized.
         // Caller's explicit value takes precedence; manifest is a fallback.
-        var manifest = ManifestInfo.Load();
-        var localClientVersion = _configInfo!.ClientVersion ?? manifest?.ClientVersion;
-        var localUpgradeVersion = _configInfo!.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
+        var installPath = _configInfo!.InstallPath;
+        var manifest = ManifestInfo.Load(installPath);
+        var localClientVersion = _configInfo.ClientVersion ?? manifest?.ClientVersion;
+        var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
+
+        // Pre-resolve upgrade version with client-version fallback so that
+        // HasUpdate and Build agree on the same version. Build internally
+        // falls back to clientVersion when upgradeClientVersion is null or
+        // unparseable; applying the same fallback here avoids a mismatch where
+        // the scenario says "update needed" but the download plan ends up empty.
+        var resolvedUpgradeVersion =
+            !string.IsNullOrWhiteSpace(localUpgradeVersion) ? localUpgradeVersion : localClientVersion;
 
         // ═══════════════════════════════════════════════════════════════
         // Version comparison: take max server version per AppType and
@@ -431,7 +443,7 @@ public class ClientStrategy : IStrategy
         _configInfo.IsUpgradeUpdate = Download.DownloadPlanBuilder.HasUpdate(
             sourceResult.Assets,
             AppType.Upgrade,
-            localUpgradeVersion);
+            resolvedUpgradeVersion);
 
         var scenario = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
         {
@@ -459,7 +471,7 @@ public class ClientStrategy : IStrategy
         var downloadPlan = Download.DownloadPlanBuilder.Build(
             sourceResult.Assets,
             localClientVersion,
-            localUpgradeVersion);
+            resolvedUpgradeVersion);
         _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
@@ -646,7 +658,7 @@ public class ClientStrategy : IStrategy
         // continues the loop, so ExecuteAsync() completing is not a
         // reliable success signal on its own.
         if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
-            WriteBackUpgradeVersion(upgradeVersions);
+            WriteBackUpgradeVersion(upgradeVersions, _configInfo!.InstallPath);
     }
 
     /// <summary>
@@ -877,7 +889,7 @@ public class ClientStrategy : IStrategy
     /// The upgrade version list that was just applied. The last element carries the
     /// highest target version.
     /// </param>
-    private static void WriteBackUpgradeVersion(List<VersionEntry> upgradeVersions)
+    private static void WriteBackUpgradeVersion(List<VersionEntry> upgradeVersions, string installPath)
     {
         var latestVersion = upgradeVersions.LastOrDefault()?.Version;
         if (string.IsNullOrEmpty(latestVersion)) return;
@@ -885,7 +897,7 @@ public class ClientStrategy : IStrategy
         try
         {
             ManifestInfo.TryUpdateVersion(
-                AppDomain.CurrentDomain.BaseDirectory,
+                installPath,
                 upgradeClientVersion: latestVersion);
             GeneralTracer.Info(
                 $"ClientStrategy: UpgradeClientVersion updated to {latestVersion} in manifest.");
