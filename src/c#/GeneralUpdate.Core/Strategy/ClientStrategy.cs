@@ -412,15 +412,14 @@ public class ClientStrategy : IStrategy
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
 
-        // Read local manifest from the install path, not BaseDirectory.
+        // Discover identity metadata from the manifest in InstallPath.
         // UpdateStrategy writes versions back to InstallPath after each update;
         // using the parameterless Load() would read from BaseDirectory instead
         // and could pick up a stale manifest when InstallPath is customized.
         // Caller's explicit value takes precedence; manifest is a fallback.
-        var installPath = _configInfo!.InstallPath;
-        var manifest = ManifestInfo.Load(Path.Combine(installPath, ManifestInfo.FileName));
-        var localClientVersion = _configInfo.ClientVersion ?? manifest?.ClientVersion;
-        var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
+        AppMetadataDiscoverer.Discover(_configInfo!);
+        var localClientVersion = _configInfo!.ClientVersion;
+        var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? localClientVersion;
 
         // Pre-resolve upgrade version with client-version fallback so that
         // HasUpdate and Build agree on the same version. Build internally

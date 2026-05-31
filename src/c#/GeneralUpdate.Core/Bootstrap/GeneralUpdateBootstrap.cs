@@ -223,8 +223,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
-    ///     Zero-config entry-point: supply only secrets. Identity metadata is auto-discovered
-    ///     from <c>generalupdate.manifest.json</c> and hard-coded defaults.
+    ///     Zero-config entry-point: supply only secrets. Provides sensible identity defaults
+    ///     that pass <see cref="UpdateRequest.Validate"/>; the real identity metadata is
+    ///     discovered later by <see cref="ClientStrategy"/> from <c>generalupdate.manifest.json</c>.
     /// </summary>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetSource(
@@ -242,7 +243,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             Scheme = scheme,
             ReportUrl = reportUrl
         };
-        config = AppMetadataDiscoverer.Discover(config);
         return SetConfig(config);
     }
 
