@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Models;
 
 namespace GeneralUpdate.Core.Download;
@@ -33,35 +34,74 @@ namespace GeneralUpdate.Core.Download;
 public static class DownloadPlanBuilder
 {
     /// <summary>
-    /// Builds a download plan from a list of download assets, filtering and ordering
-    /// based on the current client version.
+    /// Determines whether an update is needed for the specified <see cref="AppType"/>.
+    /// Takes the maximum server-side version for the given AppType (excluding frozen
+    /// packages) and compares it once against the local manifest version.
+    /// </summary>
+    /// <param name="assets">All assets returned by the download source.</param>
+    /// <param name="appType">The AppType to check (<see cref="AppType.Client"/> or <see cref="AppType.Upgrade"/>).</param>
+    /// <param name="localVersion">
+    /// The local version from <c>generalupdate.manifest.json</c>:
+    /// <see cref="UpdateConfiguration.ClientVersion"/> for Client,
+    /// <see cref="UpdateConfiguration.UpgradeClientVersion"/> for Upgrade.
+    /// When null or unparseable, returns <c>true</c> (safe: can't prove up-to-date → proceed with update).
+    /// </param>
+    /// <returns><c>true</c> when the max server version is strictly greater than the local version,
+    /// or when the local version cannot be determined.</returns>
+    public static bool HasUpdate(
+        IEnumerable<DownloadAsset> assets,
+        AppType appType,
+        string? localVersion)
+    {
+        if (assets == null)
+            return false;
+
+        // Fast path: empty collection — no need to enumerate
+        if (assets is ICollection<DownloadAsset> { Count: 0 })
+            return false;
+
+        // Collect server versions for the target AppType (exclude frozen packages)
+        var serverVersions = assets
+            .Where(a => !a.IsFreeze)
+            .Where(a => (a.AppType ?? (int)AppType.Client) == (int)appType)
+            .Select(a => ParseVersion(a.Version))
+            .Where(v => v != null)
+            .ToList();
+
+        if (serverVersions.Count == 0)
+            return false;
+
+        // If the local version cannot be read or parsed, we can't prove we're
+        // up to date — err on the side of updating rather than silently skipping.
+        if (string.IsNullOrWhiteSpace(localVersion)
+            || !Version.TryParse(localVersion, out var local))
+            return true;
+
+        // Compare: max server version > local version?
+        return serverVersions.Max()! > local;
+    }
+
+    /// <summary>
+    /// Builds a download plan with AppType-aware version filtering.
+    /// Client-type assets are compared against <paramref name="clientVersion"/>.
+    /// Upgrade-type assets are compared against <paramref name="upgradeClientVersion"/>
+    /// (falling back to <paramref name="clientVersion"/> when null/unparseable).
     /// </summary>
     /// <param name="assets">The list of assets retrieved from the download source.</param>
-    /// <param name="currentVersion">The current client version string.</param>
-    /// <returns>
-    /// A <see cref="DownloadPlan"/> containing ordered assets suitable for download.
-    /// Returns <see cref="DownloadPlan.Empty"/> if no update is needed.
-    /// </returns>
-    /// <remarks>
-    /// <para>
-    /// Build process:
-    /// </para>
-    /// <list type="number">
-    ///   <item>Validates input: if assets is null or the current version cannot be parsed, returns an empty plan.</item>
-    ///   <item>Filters out frozen packages: removes assets with <c>IsFreeze = true</c>.</item>
-    ///   <item>Checks for forced updates: if any asset is marked as forced, the entire plan is marked as forced.</item>
-    ///   <item>Version filtering: retains only assets with versions higher than the current version.</item>
-    ///   <item>Compatibility check: ensures each asset's <c>MinClientVersion</c> is compatible with the current version.</item>
-    ///   <item>Ascending sort: orders assets by version number from lowest to highest.</item>
-    /// </list>
-    /// <para>
-    /// If no assets match the criteria, returns <c>DownloadPlan.Empty</c>.
-    /// </para>
-    /// </remarks>
-    public static DownloadPlan Build(IEnumerable<DownloadAsset> assets, string currentVersion)
+    /// <param name="clientVersion">The current client (main app) version.</param>
+    /// <param name="upgradeClientVersion">
+    /// The current upgrade (updater) version, or null to fall back to <paramref name="clientVersion"/>.
+    /// </param>
+    public static DownloadPlan Build(
+        IEnumerable<DownloadAsset> assets,
+        string clientVersion,
+        string? upgradeClientVersion)
     {
         if (assets == null) return DownloadPlan.Empty;
-        if (ParseVersion(currentVersion) == null) return DownloadPlan.Empty;
+        var parsedClient = ParseVersion(clientVersion);
+        if (parsedClient == null) return DownloadPlan.Empty;
+
+        var parsedUpgrade = ParseVersion(upgradeClientVersion) ?? parsedClient;
 
         // 1. Filter out frozen packages
         var active = assets
@@ -73,16 +113,21 @@ public static class DownloadPlanBuilder
         // 2. Check for forced update
         var isForcibly = active.Any(a => a.IsForcibly);
 
-        // 3. Filter and sort: keep only packages higher than current version,
-        //    respecting MinClientVersion compatibility.
+        // 3. AppType-aware version filtering: keep only packages whose version
+        //    is strictly greater than the local version for that AppType.
         var candidates = active
             .Where(a =>
             {
                 var pv = ParseVersion(a.Version);
                 if (pv == null) return false;
-                return pv > ParseVersion(currentVersion);
+
+                var localVersion = (a.AppType == (int)AppType.Upgrade)
+                    ? parsedUpgrade
+                    : parsedClient;
+
+                return pv > localVersion;
             })
-            .Where(a => IsCompatible(a.MinClientVersion, currentVersion))
+            .Where(a => IsCompatible(a.MinClientVersion, clientVersion))
             .OrderBy(a => ParseVersion(a.Version))
             .ToList();
 
@@ -90,6 +135,19 @@ public static class DownloadPlanBuilder
 
         return new DownloadPlan(candidates, isForcibly);
     }
+
+    /// <summary>
+    /// Builds a download plan from a list of download assets, filtering and ordering
+    /// based on the current client version.
+    /// </summary>
+    /// <param name="assets">The list of assets retrieved from the download source.</param>
+    /// <param name="currentVersion">The current client version string.</param>
+    /// <returns>
+    /// A <see cref="DownloadPlan"/> containing ordered assets suitable for download.
+    /// Returns <see cref="DownloadPlan.Empty"/> if no update is needed.
+    /// </returns>
+    public static DownloadPlan Build(IEnumerable<DownloadAsset> assets, string currentVersion)
+        => Build(assets, currentVersion, upgradeClientVersion: null);
 
     /// <summary>
     /// Checks whether the specified MinClientVersion is compatible with the current client version.

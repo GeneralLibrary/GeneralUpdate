@@ -409,16 +409,41 @@ public class ClientStrategy : IStrategy
             _configInfo.Scheme,
             _configInfo.Token);
 
-        // Call server validation — returns assets plus per-side flags from the two Validate calls
+        // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
-        var downloadPlan = Download.DownloadPlanBuilder.Build(sourceResult.Assets, _configInfo.ClientVersion);
 
-        // Detect update status from SERVER validation results: IsMainUpdate is true only when
-        // the server returned version info for the Client call, IsUpgradeUpdate only when
-        // the server returned version info for the Upgrade call (requirement 1).
-        _configInfo.IsMainUpdate = sourceResult.HasMainUpdate;
-        _configInfo.IsUpgradeUpdate = sourceResult.HasUpgradeUpdate;
-        _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
+        // Read local manifest from the install path, not BaseDirectory.
+        // UpdateStrategy writes versions back to InstallPath after each update;
+        // using the parameterless Load() would read from BaseDirectory instead
+        // and could pick up a stale manifest when InstallPath is customized.
+        // Caller's explicit value takes precedence; manifest is a fallback.
+        var installPath = _configInfo!.InstallPath;
+        var manifest = ManifestInfo.Load(installPath);
+        var localClientVersion = _configInfo.ClientVersion ?? manifest?.ClientVersion;
+        var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
+
+        // Pre-resolve upgrade version with client-version fallback so that
+        // HasUpdate and Build agree on the same version. Build internally
+        // falls back to clientVersion when upgradeClientVersion is null or
+        // unparseable; applying the same fallback here avoids a mismatch where
+        // the scenario says "update needed" but the download plan ends up empty.
+        var resolvedUpgradeVersion =
+            !string.IsNullOrWhiteSpace(localUpgradeVersion) ? localUpgradeVersion : localClientVersion;
+
+        // ═══════════════════════════════════════════════════════════════
+        // Version comparison: take max server version per AppType and
+        // compare once against the local manifest version.
+        // Each AppType uses its own version track — no cross-fallback.
+        // ═══════════════════════════════════════════════════════════════
+        _configInfo.IsMainUpdate = Download.DownloadPlanBuilder.HasUpdate(
+            sourceResult.Assets,
+            AppType.Client,
+            localClientVersion);
+
+        _configInfo.IsUpgradeUpdate = Download.DownloadPlanBuilder.HasUpdate(
+            sourceResult.Assets,
+            AppType.Upgrade,
+            resolvedUpgradeVersion);
 
         var scenario = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
         {
@@ -427,6 +452,27 @@ public class ClientStrategy : IStrategy
             (true, false) => UpdateScenario.MainOnly,
             (true, true) => UpdateScenario.Both,
         };
+
+        // Scenario None: local is already the latest — dispatch empty event and exit early
+        if (scenario == UpdateScenario.None)
+        {
+            GeneralTracer.Info("ClientStrategy: local version is already the latest, no update needed.");
+            var emptyResp = new VersionRespDTO
+            {
+                Code = 404,
+                Body = new List<VersionEntry>(),
+                Message = "No updates available."
+            };
+            EventManager.Instance.Dispatch(this, new UpdateInfoEventArgs(emptyResp));
+            return;
+        }
+
+        // Build the download plan only when an update is actually needed
+        var downloadPlan = Download.DownloadPlanBuilder.Build(
+            sourceResult.Assets,
+            localClientVersion,
+            resolvedUpgradeVersion);
+        _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
@@ -472,13 +518,6 @@ public class ClientStrategy : IStrategy
         if (CanSkip(isForcibly, updateInfoArgs))
         {
             GeneralTracer.Info("ClientStrategy: update skipped.");
-            return;
-        }
-
-        // Scenario None: nothing to update — exit early
-        if (scenario == UpdateScenario.None)
-        {
-            GeneralTracer.Info("ClientStrategy: no update available for client or upgrade.");
             return;
         }
 
@@ -619,7 +658,7 @@ public class ClientStrategy : IStrategy
         // continues the loop, so ExecuteAsync() completing is not a
         // reliable success signal on its own.
         if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
-            WriteBackUpgradeVersion(upgradeVersions);
+            WriteBackUpgradeVersion(upgradeVersions, _configInfo!.InstallPath);
     }
 
     /// <summary>
@@ -850,7 +889,7 @@ public class ClientStrategy : IStrategy
     /// The upgrade version list that was just applied. The last element carries the
     /// highest target version.
     /// </param>
-    private static void WriteBackUpgradeVersion(List<VersionEntry> upgradeVersions)
+    private static void WriteBackUpgradeVersion(List<VersionEntry> upgradeVersions, string installPath)
     {
         var latestVersion = upgradeVersions.LastOrDefault()?.Version;
         if (string.IsNullOrEmpty(latestVersion)) return;
@@ -858,7 +897,7 @@ public class ClientStrategy : IStrategy
         try
         {
             ManifestInfo.TryUpdateVersion(
-                AppDomain.CurrentDomain.BaseDirectory,
+                installPath,
                 upgradeClientVersion: latestVersion);
             GeneralTracer.Info(
                 $"ClientStrategy: UpgradeClientVersion updated to {latestVersion} in manifest.");
