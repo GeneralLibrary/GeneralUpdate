@@ -418,7 +418,7 @@ public class ClientStrategy : IStrategy
         // and could pick up a stale manifest when InstallPath is customized.
         // Caller's explicit value takes precedence; manifest is a fallback.
         var installPath = _configInfo!.InstallPath;
-        var manifest = ManifestInfo.Load(installPath);
+        var manifest = ManifestInfo.Load(Path.Combine(installPath, ManifestInfo.FileName));
         var localClientVersion = _configInfo.ClientVersion ?? manifest?.ClientVersion;
         var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? manifest?.UpgradeClientVersion;
 
