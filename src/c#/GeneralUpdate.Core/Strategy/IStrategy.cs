@@ -90,6 +90,6 @@ namespace GeneralUpdate.Core.Strategy
         /// Configuration information includes key settings such as <c>InstallPath</c>, <c>MainAppName</c>, <c>UpdateAppName</c>, <c>ClientVersion</c>,
         /// and <c>PatchEnabled</c>.
         /// </remarks>
-        void Create(GlobalConfigInfo parameter);
+        void Create(UpdateContext parameter);
     }
 }

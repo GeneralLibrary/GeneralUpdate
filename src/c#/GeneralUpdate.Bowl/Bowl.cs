@@ -296,7 +296,7 @@ public sealed class Bowl
                 "ProcessInfo environment variable not set.");
         }
 
-        var processInfo = JsonSerializer.Deserialize<ProcessInfo>(json);
+        var processInfo = JsonSerializer.Deserialize<ProcessContract>(json);
         if (processInfo == null)
         {
             GeneralTracer.Fatal("Bowl.CreateParameter: failed to deserialize ProcessInfo JSON.");

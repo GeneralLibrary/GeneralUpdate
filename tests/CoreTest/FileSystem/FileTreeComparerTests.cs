@@ -175,7 +175,7 @@ public class FileTreeComparerTests
             var filePath = Path.Combine(rootPath, "test.txt");
             File.WriteAllText(filePath, "data");
 
-            var config = BlackListConfig.Empty;
+            var config = BlackPolicy.Empty;
             var enumerator = FileTreeEnumerator.FromConfig(config);
 
             var snapshot = FileTreeSnapshot.FromEnumerator(rootPath, enumerator);

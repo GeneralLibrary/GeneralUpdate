@@ -10,10 +10,10 @@ using GeneralUpdate.Core.JsonContext;
 namespace GeneralUpdate.Core.Ipc;
 
 /// <summary>IPC provider for Client-to-Upgrade process communication.</summary>
-public interface IProcessInfoProvider
+public interface IProcessContractProvider
 {
-    Task SendAsync(ProcessInfo info, CancellationToken token = default);
-    Task<ProcessInfo?> ReceiveAsync(CancellationToken token = default);
+    Task SendAsync(ProcessContract info, CancellationToken token = default);
+    Task<ProcessContract?> ReceiveAsync(CancellationToken token = default);
 }
 
 /// <summary>
@@ -22,12 +22,12 @@ public interface IProcessInfoProvider
 /// processes agree on the file location without needing out-of-band coordination.
 /// File is deleted after a successful read.
 /// </summary>
-public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
+public class EncryptedFileProcessContractProvider : IProcessContractProvider
 {
     private const string FileName = "process_info.enc";
 
     private static readonly byte[] Key = SHA256.Create()
-        .ComputeHash(Encoding.UTF8.GetBytes("GeneralUpdate.ProcessInfo.IPC.v1"));
+        .ComputeHash(Encoding.UTF8.GetBytes("GeneralUpdate.ProcessContract.IPC.v1"));
     private static readonly byte[] IV = new byte[16] { 0x47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     private readonly string _filePath;
@@ -41,14 +41,14 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
         return Path.Combine(dir, FileName);
     }
 
-    public EncryptedFileProcessInfoProvider(string? basePath = null)
+    public EncryptedFileProcessContractProvider(string? basePath = null)
     {
         var dir = basePath ?? Path.Combine(Path.GetTempPath(), "GeneralUpdate", "ipc");
         Directory.CreateDirectory(dir);
         _filePath = Path.Combine(dir, FileName);
     }
 
-    public Task SendAsync(ProcessInfo info, CancellationToken token = default)
+    public Task SendAsync(ProcessContract info, CancellationToken token = default)
     {
         Send(info);
         return Task.CompletedTask;
@@ -58,21 +58,21 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
     /// Encrypt <paramref name="info"/> and write to the deterministic IPC file.
     /// Overwrites any existing file from a previous (stale) session.
     /// </summary>
-    public void Send(ProcessInfo info)
+    public void Send(ProcessContract info)
     {
-        var json = JsonSerializer.Serialize(info, ProcessInfoJsonContext.Default.ProcessInfo);
+        var json = JsonSerializer.Serialize(info, ProcessContractJsonContext.Default.ProcessContract);
         var plainBytes = Encoding.UTF8.GetBytes(json);
         IpcEncryption.EncryptToFile(plainBytes, _filePath, Key, IV);
     }
 
-    public Task<ProcessInfo?> ReceiveAsync(CancellationToken token = default)
+    public Task<ProcessContract?> ReceiveAsync(CancellationToken token = default)
         => Task.FromResult(Receive());
 
     /// <summary>
     /// Read and decrypt the IPC file, then delete it so a stale file is never re-read.
     /// Returns null if the file does not exist or decryption fails.
     /// </summary>
-    public ProcessInfo? Receive()
+    public ProcessContract? Receive()
     {
         if (!File.Exists(_filePath)) return null;
 
@@ -83,6 +83,6 @@ public class EncryptedFileProcessInfoProvider : IProcessInfoProvider
         catch { /* best-effort cleanup */ }
 
         var json = Encoding.UTF8.GetString(plain);
-        return JsonSerializer.Deserialize(json, ProcessInfoJsonContext.Default.ProcessInfo);
+        return JsonSerializer.Deserialize(json, ProcessContractJsonContext.Default.ProcessContract);
     }
 }

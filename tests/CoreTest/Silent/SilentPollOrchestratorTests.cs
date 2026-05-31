@@ -6,9 +6,9 @@ namespace CoreTest.Silent;
 
 public class SilentPollOrchestratorTests
 {
-    private static GlobalConfigInfo CreateValidConfig()
+    private static UpdateContext CreateValidConfig()
     {
-        return new GlobalConfigInfo
+        return new UpdateContext
         {
             UpdateUrl = "https://api.example.com/update",
             ClientVersion = "1.0.0",

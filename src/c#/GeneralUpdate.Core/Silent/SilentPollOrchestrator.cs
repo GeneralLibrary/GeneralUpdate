@@ -37,7 +37,7 @@ namespace GeneralUpdate.Core.Silent;
 public class SilentPollOrchestrator : IDisposable
 {
     private readonly ClientStrategy _strategy;
-    private readonly GlobalConfigInfo _configInfo;
+    private readonly UpdateContext _configInfo;
     private readonly SilentOptions _options;
     private CancellationTokenSource? _cts;
     private Task? _pollingTask;
@@ -55,7 +55,7 @@ public class SilentPollOrchestrator : IDisposable
     /// <param name="configInfo">The global configuration.</param>
     /// <param name="options">Polling interval and restart behaviour.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is <c>null</c>.</exception>
-    public SilentPollOrchestrator(ClientStrategy strategy, GlobalConfigInfo configInfo, SilentOptions options)
+    public SilentPollOrchestrator(ClientStrategy strategy, UpdateContext configInfo, SilentOptions options)
     {
         _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
         _configInfo = configInfo ?? throw new ArgumentNullException(nameof(configInfo));
@@ -74,7 +74,7 @@ public class SilentPollOrchestrator : IDisposable
         _strategy.Create(_configInfo);
 
         // Must be set before the first poll cycle so that when ClientStrategy calls
-        // SendProcessIpc(), the correct value flows into ProcessInfo / IPC.
+        // SendProcessIpc(), the correct value flows into ProcessContract / IPC.
         _configInfo.LaunchClientAfterUpdate = _options.LaunchClientAfterUpdate;
 
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;

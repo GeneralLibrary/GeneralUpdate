@@ -27,7 +27,7 @@ public readonly record struct FileEntry(
 /// </summary>
 /// <remarks>
 /// <para>
-/// FileTreeSnapshot is created by <see cref="FileTreeEnumerator"/> in conjunction with <see cref="IBlackListMatcher"/>,
+/// FileTreeSnapshot is created by <see cref="FileTreeEnumerator"/> in conjunction with <see cref="IBlackMatcher"/>,
 /// automatically skipping blacklisted files and directories during file traversal.
 /// </para>
 /// <para>

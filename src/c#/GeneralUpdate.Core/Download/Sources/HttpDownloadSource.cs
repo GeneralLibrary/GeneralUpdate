@@ -118,7 +118,7 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             _appSecretKey, _platform, _productId,
             _scheme, _token, token);
 
-        // Check that returned VersionInfo items' AppType matches the requested type,
+        // Check that returned VersionEntry items' AppType matches the requested type,
         // rather than just checking Count > 0. The server may return items whose
         // AppType doesn't match the request, which would mis-identify the scenario.
         var hasMainUpdate = mainResp?.Body?.Any(v => v.AppType == (int)AppType.Client) == true;
@@ -129,13 +129,13 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         if (mainResp?.Body != null)
         {
             foreach (var v in mainResp.Body)
-                assets.Add(MapVersionInfo(v));
+                assets.Add(MapVersionEntry(v));
         }
 
         if (upgradeResp?.Body != null)
         {
             foreach (var v in upgradeResp.Body)
-                assets.Add(MapVersionInfo(v));
+                assets.Add(MapVersionEntry(v));
         }
 
         // Deduplicate by URL — both Validate calls may return the same packages
@@ -148,14 +148,14 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     }
 
     /// <summary>
-    /// Maps a server-returned <see cref="VersionInfo"/> object to a <see cref="DownloadAsset"/> object.
+    /// Maps a server-returned <see cref="VersionEntry"/> object to a <see cref="DownloadAsset"/> object.
     /// </summary>
     /// <param name="v">The version information returned by the server.</param>
     /// <returns>
     /// A <see cref="DownloadAsset"/> instance populated with the name, URL, size, hash value,
     /// version number, forced-update flag, freeze flag, authentication information, and other metadata.
     /// </returns>
-    private static DownloadAsset MapVersionInfo(VersionInfo v)
+    private static DownloadAsset MapVersionEntry(VersionEntry v)
     {
         return new DownloadAsset(
             Name: v.Name ?? v.Version ?? "unknown",

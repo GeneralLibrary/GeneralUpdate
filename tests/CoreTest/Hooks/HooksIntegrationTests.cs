@@ -12,7 +12,7 @@ public class HooksIntegrationTests
     public async Task NoOpUpdateHooks_AllReturnDefault()
     {
         var hooks = new NoOpUpdateHooks();
-        var ctx = new UpdateContext("TestApp", "/path", "1.0.0", "1.0.1", AppType.Client);
+        var ctx = new HookContext("TestApp", "/path", "1.0.0", "1.0.1", AppType.Client);
 
         var beforeResult = await hooks.OnBeforeUpdateAsync(ctx);
         Assert.True(beforeResult);
@@ -28,7 +28,7 @@ public class HooksIntegrationTests
     public async Task UnixPermissionHooks_BeforeStartApp_DoesNotThrow()
     {
         var hooks = new UnixPermissionHooks();
-        var ctx = new UpdateContext("non_existent_app", "/tmp/test", "1.0.0", null, AppType.Client);
+        var ctx = new HookContext("non_existent_app", "/tmp/test", "1.0.0", null, AppType.Client);
 
         await hooks.OnBeforeStartAppAsync(ctx);
     }
@@ -44,7 +44,7 @@ public class HooksIntegrationTests
     public void CustomPermissionHooks_StoresScriptPath()
     {
         var hooks = new CustomPermissionHooks("/usr/local/bin/my-script.sh");
-        var ctx = new UpdateContext("app", "/path", "1.0.0", null, AppType.Client);
+        var ctx = new HookContext("app", "/path", "1.0.0", null, AppType.Client);
 
         // CustomPermissionHooks throws when script fails
         var ex = Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -55,7 +55,7 @@ public class HooksIntegrationTests
     public async Task CustomPermissionHooks_BeforeUpdate_Allows()
     {
         var hooks = new CustomPermissionHooks("/bin/true");
-        var ctx = new UpdateContext("app", "/path", "1.0.0", "1.0.1", AppType.Client);
+        var ctx = new HookContext("app", "/path", "1.0.0", "1.0.1", AppType.Client);
 
         var result = await hooks.OnBeforeUpdateAsync(ctx);
         Assert.True(result);
@@ -64,7 +64,7 @@ public class HooksIntegrationTests
     [Fact]
     public void UpdateContext_PropertiesSet()
     {
-        var ctx = new UpdateContext("MyApp", "/opt/myapp", "1.0.0", "2.0.0", AppType.Client);
+        var ctx = new HookContext("MyApp", "/opt/myapp", "1.0.0", "2.0.0", AppType.Client);
 
         Assert.Equal("MyApp", ctx.UpdateAppName);
         Assert.Equal("/opt/myapp", ctx.InstallPath);

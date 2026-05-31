@@ -50,7 +50,7 @@ namespace GeneralUpdate.Core.Strategy
         /// Global configuration information containing parameters such as update package path, temporary directory, report URL, and version list.
         /// Initialized by the <see cref="Create"/> method and used by the pipeline execution loop.
         /// </summary>
-        protected GlobalConfigInfo _configinfo = new();
+        protected UpdateContext _configinfo = new();
 
         /// <summary>
         /// Gets or sets the lifecycle hooks. Injected by the bootstrap to execute custom logic before and after updates.
@@ -81,8 +81,8 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>
         /// Gets or sets whether to prefer using the update path. When <c>true</c>, <see cref="StartAppAsync"/>
-        /// will first attempt to resolve the application from <see cref="GlobalConfigInfo.UpdatePath"/>,
-        /// and fall back to <see cref="GlobalConfigInfo.InstallPath"/> on failure.
+        /// will first attempt to resolve the application from <see cref="UpdateContext.UpdatePath"/>,
+        /// and fall back to <see cref="UpdateContext.InstallPath"/> on failure.
         /// Set by <see cref="ClientStrategy"/> when launching the upgrade process.
         /// </summary>
         public bool UseUpdatePath { get; set; }
@@ -113,7 +113,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <para>
         /// <b>Pipeline Execution Loop Details:</b>
         /// <list type="number">
-        ///   <item><description><b>Iterate Versions:</b> Retrieves <see cref="VersionInfo"/> objects one by one from <c>_configinfo.UpdateVersions</c>.</description></item>
+        ///   <item><description><b>Iterate Versions:</b> Retrieves <see cref="VersionEntry"/> objects one by one from <c>_configinfo.UpdateVersions</c>.</description></item>
         ///   <item><description><b>Build Context:</b> Calls <see cref="CreatePipelineContext"/> to create a
         ///   <see cref="PipelineContext"/> containing key parameters such as the archive path (composed of <c>TempPath</c> and the version name),
         ///   hash value, compression format, source path, and patch configuration.</description></item>
@@ -186,7 +186,7 @@ namespace GeneralUpdate.Core.Strategy
         /// Initializes the strategy instance. Receives global configuration information and stores it for subsequent use.
         /// </summary>
         /// <param name="parameter">Global configuration information containing parameters such as update package path, temporary directory, report URL, and version list.</param>
-        public virtual void Create(GlobalConfigInfo parameter) => _configinfo = parameter;
+        public virtual void Create(UpdateContext parameter) => _configinfo = parameter;
 
         /// <summary>
         /// Creates the pipeline context, populating common parameters and platform-specific parameters.
@@ -215,7 +215,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <param name="version">The current version information to be processed, containing name, hash, application type, etc.</param>
         /// <param name="patchPath">The temporary storage directory path for patch files.</param>
         /// <returns>The populated pipeline context instance.</returns>
-        protected virtual PipelineContext CreatePipelineContext(VersionInfo version, string patchPath)
+        protected virtual PipelineContext CreatePipelineContext(VersionEntry version, string patchPath)
         {
             var context = new PipelineContext();
             // Common parameters
@@ -304,7 +304,7 @@ namespace GeneralUpdate.Core.Strategy
         }
 
         /// <summary>
-        /// Resolves the full path of the executable. Optionally checks <see cref="GlobalConfigInfo.UpdatePath"/> first,
+        /// Resolves the full path of the executable. Optionally checks <see cref="UpdateContext.UpdatePath"/> first,
         /// then falls back to <c>InstallPath</c> on failure.
         /// </summary>
         /// <param name="name">The name of the executable file.</param>
@@ -360,7 +360,7 @@ namespace GeneralUpdate.Core.Strategy
         /// </remarks>
         /// <param name="version">The current version information to be processed, used to determine the application type.</param>
         /// <returns>The full path of the target installation directory.</returns>
-        protected string ResolveTargetPath(VersionInfo version)
+        protected string ResolveTargetPath(VersionEntry version)
         {
             if (version.AppType == 2 && !string.IsNullOrWhiteSpace(_configinfo.UpdatePath))
                 return ResolveUpdateDir();
@@ -369,8 +369,8 @@ namespace GeneralUpdate.Core.Strategy
         }
 
         /// <summary>
-        /// Resolves <see cref="GlobalConfigInfo.UpdatePath"/> to an absolute path.
-        /// Relative paths are combined with <see cref="GlobalConfigInfo.InstallPath"/>.
+        /// Resolves <see cref="UpdateContext.UpdatePath"/> to an absolute path.
+        /// Relative paths are combined with <see cref="UpdateContext.InstallPath"/>.
         /// </summary>
         private string ResolveUpdateDir()
         {
@@ -418,7 +418,7 @@ namespace GeneralUpdate.Core.Strategy
         /// Only removes the specific file — other packages in the same directory
         /// may belong to a different AppType and must be kept for downstream processes.
         /// </summary>
-        private void DeleteVersionZip(VersionInfo version)
+        private void DeleteVersionZip(VersionEntry version)
         {
             if (string.IsNullOrWhiteSpace(_configinfo.TempPath)) return;
 

@@ -60,10 +60,10 @@ namespace BowlTest.Integration
         }
 
         /// <summary>
-        /// Tests that parameter paths are correctly constructed from ProcessInfo.
+        /// Tests that parameter paths are correctly constructed from ProcessContract.
         /// </summary>
         [Fact]
-        public void ParameterConstruction_FromProcessInfo_CreatesCorrectPaths()
+        public void ParameterConstruction_FromProcessContract_CreatesCorrectPaths()
         {
             // Arrange
             var installPath = "/path/to/install";
@@ -100,7 +100,7 @@ namespace BowlTest.Integration
         /// Tests that extended field can store version information.
         /// </summary>
         [Fact]
-        public void ExtendedField_StoresVersionInformation()
+        public void ExtendedField_StoresVersionEntryrmation()
         {
             // Arrange
             var versions = new[] { "1.0.0", "2.1.3", "10.5.2-beta" };
@@ -119,10 +119,10 @@ namespace BowlTest.Integration
         }
 
         /// <summary>
-        /// Tests that ProcessInfo JSON with all required fields parses correctly.
+        /// Tests that ProcessContract JSON with all required fields parses correctly.
         /// </summary>
         [Fact]
-        public void ProcessInfoJson_WithAllFields_ParsesCorrectly()
+        public void ProcessContractJson_WithAllFields_ParsesCorrectly()
         {
             // Arrange
             var json = @"{
@@ -132,7 +132,7 @@ namespace BowlTest.Integration
             }";
 
             // Act
-            var processInfo = JsonSerializer.Deserialize<ProcessInfoDto>(json);
+            var processInfo = JsonSerializer.Deserialize<ProcessContractDto>(json);
 
             // Assert
             Assert.NotNull(processInfo);
@@ -142,9 +142,9 @@ namespace BowlTest.Integration
         }
 
         /// <summary>
-        /// Helper class for ProcessInfo JSON deserialization testing.
+        /// Helper class for ProcessContract JSON deserialization testing.
         /// </summary>
-        private class ProcessInfoDto
+        private class ProcessContractDto
         {
             public string? AppName { get; set; }
             public string? InstallPath { get; set; }

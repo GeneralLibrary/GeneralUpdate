@@ -6,8 +6,8 @@ namespace GeneralUpdate.Core.Configuration
 {
     /// <summary>
     ///     Provides centralized mapping utility methods between configuration objects.
-    ///     Ensures consistent field mapping across <see cref="Configinfo" />, <see cref="GlobalConfigInfo" />,
-    ///     and <see cref="ProcessInfo" />, reducing the risk of missed or incorrectly mapped fields during maintenance.
+    ///     Ensures consistent field mapping across <see cref="UpdateRequest" />, <see cref="UpdateContext" />,
+    ///     and <see cref="ProcessContract" />, reducing the risk of missed or incorrectly mapped fields during maintenance.
     /// </summary>
     /// <remarks>
     ///     <para>
@@ -18,17 +18,17 @@ namespace GeneralUpdate.Core.Configuration
     ///         <list type="number">
     ///             <item>
     ///                 <description>
-    ///                     <see cref="MapToGlobalConfigInfo" />: Maps the user-provided <see cref="Configinfo" />
-    ///                     to the internal runtime configuration <see cref="GlobalConfigInfo" />. This mapping is
+    ///                     <see cref="MapToUpdateContext" />: Maps the user-provided <see cref="UpdateRequest" />
+    ///                     to the internal runtime configuration <see cref="UpdateContext" />. This mapping is
     ///                     performed during the update workflow initialization phase, passing external API configuration
     ///                     parameters into the internal workflow.
     ///                 </description>
     ///             </item>
     ///             <item>
     ///                 <description>
-    ///                     <see cref="MapToProcessInfo" />: Maps the internal runtime configuration
-    ///                     <see cref="GlobalConfigInfo" /> to the inter-process communication parameters
-    ///                     <see cref="ProcessInfo" />. This mapping is performed when the client is about to launch
+    ///                     <see cref="MapToProcessContract" />: Maps the internal runtime configuration
+    ///                     <see cref="UpdateContext" /> to the inter-process communication parameters
+    ///                     <see cref="ProcessContract" />. This mapping is performed when the client is about to launch
     ///                     the upgrade process, serializing all computed runtime state for the upgrade process.
     ///                 </description>
     ///             </item>
@@ -39,24 +39,24 @@ namespace GeneralUpdate.Core.Configuration
     ///         bootstrap code is avoided, simplifying maintenance and reducing the likelihood of introducing defects.
     ///     </para>
     /// </remarks>
-    /// <seealso cref="Configinfo" />
-    /// <seealso cref="GlobalConfigInfo" />
-    /// <seealso cref="ProcessInfo" />
-    /// <seealso cref="VersionInfo" />
+    /// <seealso cref="UpdateRequest" />
+    /// <seealso cref="UpdateContext" />
+    /// <seealso cref="ProcessContract" />
+    /// <seealso cref="VersionEntry" />
     public static class ConfigurationMapper
     {
         /// <summary>
-        ///     Maps the user-provided configuration (<see cref="Configinfo" />) to the internal runtime configuration
-        ///     (<see cref="GlobalConfigInfo" />).
+        ///     Maps the user-provided configuration (<see cref="UpdateRequest" />) to the internal runtime configuration
+        ///     (<see cref="UpdateContext" />).
         ///     Performs one-to-one field mapping for all shared configuration properties.
         /// </summary>
         /// <remarks>
         ///     <para>
         ///         This method performs a shallow copy mapping, assigning all public and base class properties from
-        ///         <see cref="Configinfo" /> to a <see cref="GlobalConfigInfo" /> instance one by one.
+        ///         <see cref="UpdateRequest" /> to a <see cref="UpdateContext" /> instance one by one.
         ///     </para>
         ///     <para>
-        ///         If <paramref name="target" /> is <c>null</c>, a new <see cref="GlobalConfigInfo" /> instance is
+        ///         If <paramref name="target" /> is <c>null</c>, a new <see cref="UpdateContext" /> instance is
         ///         automatically created. If <paramref name="source" /> is <c>null</c>, the method returns the empty
         ///         (or newly created) target instance without throwing an exception.
         ///     </para>
@@ -68,13 +68,13 @@ namespace GeneralUpdate.Core.Configuration
         ///     The internal configuration object to populate. If <c>null</c>, a new instance is automatically created.
         /// </param>
         /// <returns>
-        ///     A <see cref="GlobalConfigInfo" /> instance populated with configuration values from <paramref name="source" />.
+        ///     A <see cref="UpdateContext" /> instance populated with configuration values from <paramref name="source" />.
         /// </returns>
-        public static GlobalConfigInfo MapToGlobalConfigInfo(Configinfo source, GlobalConfigInfo target = null)
+        public static UpdateContext MapToUpdateContext(UpdateRequest source, UpdateContext target = null)
         {
             // 如果 source 和 target 均未提供，则创建新实例
             if (target == null)
-                target = new GlobalConfigInfo();
+                target = new UpdateContext();
 
             // 如果 source 为 null，则直接返回空的 target
             if (source == null)
@@ -87,9 +87,9 @@ namespace GeneralUpdate.Core.Configuration
             target.InstallPath = source.InstallPath;
             target.UpdateLogUrl = source.UpdateLogUrl;
             target.AppSecretKey = source.AppSecretKey;
-            target.BlackFiles = source.BlackFiles;
-            target.BlackFormats = source.BlackFormats;
-            target.SkipDirectorys = source.SkipDirectorys;
+            target.Files = source.Files;
+            target.Formats = source.Formats;
+            target.Directories = source.Directories;
             target.ReportUrl = source.ReportUrl;
             target.Bowl = source.Bowl;
             target.Scheme = source.Scheme;
@@ -97,8 +97,6 @@ namespace GeneralUpdate.Core.Configuration
             target.DriverDirectory = source.DriverDirectory;
             target.AppType = source.AppType;
             target.UpdatePath = source.UpdatePath;
-
-            // 映射 GlobalConfigInfo 特有字段
             target.UpdateUrl = source.UpdateUrl;
             target.UpgradeClientVersion = source.UpgradeClientVersion;
             target.ProductId = source.ProductId;
@@ -107,13 +105,13 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        ///     Maps the internal runtime configuration (<see cref="GlobalConfigInfo" />) to inter-process communication
-        ///     parameters (<see cref="ProcessInfo" />).
+        ///     Maps the internal runtime configuration (<see cref="UpdateContext" />) to inter-process communication
+        ///     parameters (<see cref="ProcessContract" />).
         /// </summary>
         /// <remarks>
         ///     <para>
         ///         This method centralizes the complex parameter passing logic that was previously scattered across
-        ///         the bootstrap code. The resulting <see cref="ProcessInfo" /> object is serialized to a JSON string
+        ///         the bootstrap code. The resulting <see cref="ProcessContract" /> object is serialized to a JSON string
         ///         and passed to the upgrade process via command-line arguments or standard input.
         ///     </para>
         ///     <para>
@@ -121,12 +119,12 @@ namespace GeneralUpdate.Core.Configuration
         ///         <list type="bullet">
         ///             <item>
         ///                 <description>
-        ///                     <c>MainAppName</c> maps to <c>ProcessInfo.AppName</c> (different field name for backward compatibility).
+        ///                     <c>MainAppName</c> maps to <c>ProcessContract.AppName</c> (different field name for backward compatibility).
         ///                 </description>
         ///             </item>
         ///             <item>
         ///                 <description>
-        ///                     <c>ClientVersion</c> maps to <c>ProcessInfo.CurrentVersion</c>.
+        ///                     <c>ClientVersion</c> maps to <c>ProcessContract.CurrentVersion</c>.
         ///                 </description>
         ///             </item>
         ///             <item>
@@ -160,28 +158,28 @@ namespace GeneralUpdate.Core.Configuration
         ///     The list of directories to skip from <c>BlackListManager</c>.
         /// </param>
         /// <returns>
-        ///     A <see cref="ProcessInfo" /> object ready for serialization and inter-process communication.
+        ///     A <see cref="ProcessContract" /> object ready for serialization and inter-process communication.
         /// </returns>
         /// <exception cref="ArgumentNullException">
         ///     Thrown when <paramref name="source" /> is <c>null</c>.
         /// </exception>
-        public static ProcessInfo MapToProcessInfo(
-            GlobalConfigInfo source,
-            List<VersionInfo> updateVersions,
+        public static ProcessContract MapToProcessContract(
+            UpdateContext source,
+            List<VersionEntry> updateVersions,
             List<string> blackFileFormats,
             List<string> blackFiles,
             List<string> skipDirectories,
             int reportType = 1)
         {
             if (source == null)
-                throw new ArgumentNullException(nameof(source), "GlobalConfigInfo source cannot be null");
+                throw new ArgumentNullException(nameof(source), "UpdateContext source cannot be null");
 
-            // 在单一位置创建 ProcessInfo，包含所有必需参数
-            // 集中管理 ProcessInfo 的参数映射逻辑
-            var processInfo = new ProcessInfo(
-                appName: source.MainAppName,                    // MainAppName 映射到 ProcessInfo.UpdateAppName
+            // 在单一位置创建 ProcessContract，包含所有必需参数
+            // 集中管理 ProcessContract 的参数映射逻辑
+            var processInfo = new ProcessContract(
+                appName: source.MainAppName,                    // MainAppName 映射到 ProcessContract.UpdateAppName
                 installPath: source.InstallPath,
-                currentVersion: source.ClientVersion,           // ClientVersion 映射到 ProcessInfo.CurrentVersion
+                currentVersion: source.ClientVersion,           // ClientVersion 映射到 ProcessContract.CurrentVersion
                 lastVersion: source.LastVersion,                // 调用此方法前已计算好的值
                 updateLogUrl: source.UpdateLogUrl,
                 compressEncoding: source.Encoding,               // 调用此方法前已计算好的值

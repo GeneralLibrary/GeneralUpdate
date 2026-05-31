@@ -28,7 +28,7 @@ namespace GeneralUpdate.Core.FileSystem
     ///   <item><description><c>CleanBackup</c> / <c>ListBackups</c>: Manage historical backup versions with support for retaining the most recent N versions.</description></item>
     /// </list>
     /// <para>
-    /// A blacklist matcher can be set via the <see cref="BlackListMatcher"/> static property to exclude specific files or directories during file traversal.
+    /// A blacklist matcher can be set via the <see cref="BlackMatcher"/> static property to exclude specific files or directories during file traversal.
     /// All public methods are thread-safe static methods; however, the <see cref="Compare"/> method uses instance state internally,
     /// so concurrent calls should be avoided on the same instance.
     /// </para>
@@ -49,14 +49,14 @@ namespace GeneralUpdate.Core.FileSystem
         /// Gets or sets the optional path/file blacklist matcher.
         /// </summary>
         /// <value>
-        /// An instance implementing the <see cref="IBlackListMatcher"/> interface, used to exclude blacklisted files or directories during file traversal.
+        /// An instance implementing the <see cref="IBlackMatcher"/> interface, used to exclude blacklisted files or directories during file traversal.
         /// Must be set before any file operations are performed.
         /// </value>
         /// <remarks>
         /// When this property is set, the <see cref="ReadFileNode"/> method automatically skips files and directories that match the blacklist during file system traversal.
-        /// Example of setting: <c>StorageManager.BlackListMatcher = new DefaultBlackListMatcher(config);</c>
+        /// Example of setting: <c>StorageManager.BlackMatcher = new BlackMatcher(config);</c>
         /// </remarks>
-        public static IBlackListMatcher? BlackListMatcher { get; set; }
+        public static IBlackMatcher? BlackMatcher { get; set; }
         
         private ComparisonResult ComparisonResult { get; set; }
 
@@ -449,7 +449,7 @@ namespace GeneralUpdate.Core.FileSystem
         /// Traversal logic:
         /// <list type="bullet">
         ///   <item><description>Enumerates all files in the current directory, computing the SHA-256 hash and relative path for each file.</description></item>
-        ///   <item><description>If <see cref="BlackListMatcher"/> is set, files matching the blacklist are skipped.</description></item>
+        ///   <item><description>If <see cref="BlackMatcher"/> is set, files matching the blacklist are skipped.</description></item>
         ///   <item><description>Recursively traverses all subdirectories, skipping those that match the blacklist.</description></item>
         /// </list>
         /// </para>
@@ -469,7 +469,7 @@ namespace GeneralUpdate.Core.FileSystem
 
             foreach (var subPath in Directory.EnumerateFiles(path))
             {
-                if (BlackListMatcher != null && BlackListMatcher.IsBlacklisted(subPath)) continue;
+                if (BlackMatcher != null && BlackMatcher.IsBlacklisted(subPath)) continue;
 
                 var hashAlgorithm = new Sha256HashAlgorithm();
                 var hash = hashAlgorithm.ComputeHash(subPath);
@@ -488,7 +488,7 @@ namespace GeneralUpdate.Core.FileSystem
 
             foreach (var subPath in Directory.EnumerateDirectories(path))
             {
-                if (BlackListMatcher != null && BlackListMatcher.ShouldSkipDirectory(subPath)) continue;
+                if (BlackMatcher != null && BlackMatcher.ShouldSkipDirectory(subPath)) continue;
                 resultFiles.AddRange(ReadFileNode(subPath, rootPath));
             }
 
@@ -575,7 +575,7 @@ namespace GeneralUpdate.Core.FileSystem
     /// <list type="bullet">
     ///   <item><description><see cref="KeepVersions"/>: The number of historical backup versions to retain.</description></item>
     ///   <item><description><see cref="BackupRoot"/>: Custom backup root directory (optional).</description></item>
-    ///   <item><description><see cref="SkipDirectories"/>: The list of subdirectory names to skip during backup.</description></item>
+    ///   <item><description><see cref="Directories"/>: The list of subdirectory names to skip during backup.</description></item>
     ///   <item><description><see cref="Enabled"/>: Whether the backup feature is enabled.</description></item>
     /// </list>
     /// </para>
@@ -598,7 +598,7 @@ namespace GeneralUpdate.Core.FileSystem
         /// <remarks>
         /// Uses containment matching (<c>string.Contains</c>) for evaluation. A directory is skipped if its name contains any string in the list.
         /// </remarks>
-        public List<string> SkipDirectories { get; set; } = new();
+        public List<string> Directories { get; set; } = new();
 
         /// <summary>
         /// Whether the backup feature is enabled. Default is <c>true</c>.

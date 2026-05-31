@@ -3,7 +3,7 @@ using System;
 namespace GeneralUpdate.Core.Configuration;
 
 /// <summary>
-///     Fills missing identity fields in a <see cref="Configinfo"/> by probing
+///     Fills missing identity fields in a <see cref="UpdateRequest"/> by probing
 ///     <c>generalupdate.manifest.json</c>, then falling back to hard-coded defaults.
 /// </summary>
 public static class AppMetadataDiscoverer
@@ -11,7 +11,7 @@ public static class AppMetadataDiscoverer
     /// <summary>
     ///     Discover and fill every null-or-empty identity field in <paramref name="seed"/>.
     /// </summary>
-    public static Configinfo Discover(Configinfo seed)
+    public static UpdateRequest Discover(UpdateRequest seed)
     {
         if (seed == null)
             throw new System.ArgumentNullException(nameof(seed));
@@ -19,7 +19,7 @@ public static class AppMetadataDiscoverer
         var manifest = ManifestInfo.Load();
 
         // Identity fields — manifest overrides defaults, not just nulls.
-        // (BaseConfigInfo pre-fills UpdateAppName with "Update.exe", so simple
+        // (UpdateConfiguration pre-fills UpdateAppName with "Update.exe", so simple
         //  null-coalescing would never pick up the manifest value.)
         if (manifest != null)
         {

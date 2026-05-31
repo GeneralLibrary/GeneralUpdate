@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// <para>
 /// <b>Execution Flow:</b>
 /// <list type="number">
-///   <item><description>Receives the <see cref="GlobalConfigInfo"/> passed from the client via the <see cref="Create"/> method,
+///   <item><description>Receives the <see cref="UpdateContext"/> passed from the client via the <see cref="Create"/> method,
 ///   which contains already-downloaded update package paths, hash values, and other metadata.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> lifecycle hook,
 ///   allowing the caller to execute custom logic or cancel the operation before applying updates.</description></item>
@@ -43,7 +43,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// </remarks>
 public class UpdateStrategy : IStrategy
 {
-    private GlobalConfigInfo? _configInfo;
+    private UpdateContext? _configInfo;
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
@@ -77,7 +77,7 @@ public class UpdateStrategy : IStrategy
     /// </summary>
     /// <param name="parameter">Global configuration information containing update package paths, hash values, version information, etc.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameter"/> is null.</exception>
-    public void Create(GlobalConfigInfo parameter)
+    public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
         _osStrategy = ResolveOsStrategy();
@@ -202,9 +202,9 @@ public class UpdateStrategy : IStrategy
         throw new PlatformNotSupportedException("The current operating system is not supported!");
     }
 
-    private Hooks.UpdateContext BuildUpdateContext()
+    private Hooks.HookContext BuildUpdateContext()
     {
-        return new Hooks.UpdateContext(
+        return new Hooks.HookContext(
             _configInfo?.UpdateAppName ?? "unknown",
             _configInfo?.InstallPath ?? AppDomain.CurrentDomain.BaseDirectory,
             _configInfo?.ClientVersion ?? "0.0.0",
@@ -213,31 +213,31 @@ public class UpdateStrategy : IStrategy
         );
     }
 
-    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.HookContext ctx)
     {
         try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
     }
 
-    private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnAfterUpdateAsync(Hooks.HookContext ctx)
     {
         try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
     }
 
-    private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnBeforeStartAppAsync(Hooks.HookContext ctx)
     {
         try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
     }
 
-    private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeOnUpdateErrorAsync(Hooks.HookContext ctx, Exception error)
     {
         try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
     }
 
-    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -252,7 +252,7 @@ public class UpdateStrategy : IStrategy
         }
     }
 
-    private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeReportUpdateFailedAsync(Hooks.HookContext ctx, Exception error)
     {
         try
         {

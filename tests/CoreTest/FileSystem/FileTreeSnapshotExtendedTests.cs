@@ -80,7 +80,7 @@ public class FileTreeSnapshotExtendedTests
         Directory.CreateDirectory(rootPath);
         try
         {
-            var config = BlackListConfig.Empty;
+            var config = BlackPolicy.Empty;
             var enumerator = FileTreeEnumerator.FromConfig(config);
             var snapshot = FileTreeSnapshot.FromEnumerator(rootPath, enumerator);
 
@@ -106,7 +106,7 @@ public class FileTreeSnapshotExtendedTests
             File.WriteAllText(Path.Combine(rootPath, "b.txt"), "bb");
             File.WriteAllText(Path.Combine(rootPath, "c.txt"), "ccc");
 
-            var config = BlackListConfig.Empty;
+            var config = BlackPolicy.Empty;
             var enumerator = FileTreeEnumerator.FromConfig(config);
             var snapshot = FileTreeSnapshot.FromEnumerator(rootPath, enumerator);
 
@@ -146,7 +146,7 @@ public class FileTreeSnapshotExtendedTests
             File.WriteAllText(Path.Combine(rootPath, "root.txt"), "r");
             File.WriteAllText(Path.Combine(subDir, "sub.txt"), "s");
 
-            var config = BlackListConfig.Empty;
+            var config = BlackPolicy.Empty;
             var enumerator = FileTreeEnumerator.FromConfig(config);
             var snapshot = FileTreeSnapshot.FromEnumerator(rootPath, enumerator);
 

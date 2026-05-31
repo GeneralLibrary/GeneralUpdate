@@ -76,7 +76,7 @@ public class OssIntegrationTests
     {
         // Oss client without UpdateUrl or local version config: no exception, just returns
         var strategy = new OssStrategy(AppType.OssClient);
-        var config = new GlobalConfigInfo
+        var config = new UpdateContext
         {
             UpdateAppName = "TestOss",
             ClientVersion = "1.0.0",

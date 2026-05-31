@@ -6,7 +6,7 @@ using GeneralUpdate.Core.Configuration;
 namespace GeneralUpdate.Core.FileSystem;
 
 /// <summary>
-/// Recursively enumerates all files in a specified directory while applying blacklist filtering via <see cref="IBlackListMatcher"/>.
+/// Recursively enumerates all files in a specified directory while applying blacklist filtering via <see cref="IBlackMatcher"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -14,24 +14,24 @@ namespace GeneralUpdate.Core.FileSystem;
 /// </para>
 /// <list type="number">
 ///   <item><description>Begins recursive traversal from the root directory level by level.</description></item>
-///   <item><description>For each file, calls <c>IBlackListMatcher.IsBlacklisted</c> to determine whether to skip it.</description></item>
-///   <item><description>For each subdirectory, calls <c>IBlackListMatcher.ShouldSkipDirectory</c> to determine whether to enter it.</description></item>
+///   <item><description>For each file, calls <c>IBlackMatcher.IsBlacklisted</c> to determine whether to skip it.</description></item>
+///   <item><description>For each subdirectory, calls <c>IBlackMatcher.ShouldSkipDirectory</c> to determine whether to enter it.</description></item>
 /// </list>
 /// <para>
 /// This traverser is commonly used as an input source for creating <see cref="FileTreeSnapshot"/> instances.
-/// It can be created directly from a <see cref="BlackListConfig"/> via the <see cref="FromConfig"/> factory method.
+/// It can be created directly from a <see cref="BlackPolicy"/> via the <see cref="FromConfig"/> factory method.
 /// </para>
 /// </remarks>
 public class FileTreeEnumerator
 {
-    private readonly IBlackListMatcher _matcher;
+    private readonly IBlackMatcher _matcher;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FileTreeEnumerator"/> class with the specified blacklist matcher.
     /// </summary>
     /// <param name="matcher">The blacklist matcher instance.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="matcher"/> is <c>null</c>.</exception>
-    public FileTreeEnumerator(IBlackListMatcher matcher)
+    public FileTreeEnumerator(IBlackMatcher matcher)
     {
         _matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
     }
@@ -78,13 +78,13 @@ public class FileTreeEnumerator
     }
 
     /// <summary>
-    /// Quickly creates a <see cref="FileTreeEnumerator"/> instance from a <see cref="BlackListConfig"/> configuration.
+    /// Quickly creates a <see cref="FileTreeEnumerator"/> instance from a <see cref="BlackPolicy"/> configuration.
     /// </summary>
     /// <param name="config">The blacklist configuration object.</param>
     /// <returns>A configured <see cref="FileTreeEnumerator"/> instance.</returns>
     /// <remarks>
-    /// This factory method uses <see cref="DefaultBlackListMatcher"/> as the underlying blacklist matcher implementation.
+    /// This factory method uses <see cref="BlackMatcher"/> as the underlying blacklist matcher implementation.
     /// </remarks>
-    public static FileTreeEnumerator FromConfig(BlackListConfig config)
-        => new(new DefaultBlackListMatcher(config));
+    public static FileTreeEnumerator FromConfig(BlackPolicy config)
+        => new(new BlackMatcher(config));
 }

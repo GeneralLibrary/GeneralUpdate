@@ -69,16 +69,16 @@ public class IpcEncryptionTests
     }
 }
 
-public class EncryptedFileProcessInfoProviderTests
+public class EncryptedFileProcessContractProviderTests
 {
     [Fact]
-    public void SendAndReceive_RoundTrip_ProcessInfoPreserved()
+    public void SendAndReceive_RoundTrip_ProcessContractPreserved()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
-        var info = new GeneralUpdate.Core.Configuration.ProcessInfo(
+        var provider = new EncryptedFileProcessContractProvider();
+        var info = new GeneralUpdate.Core.Configuration.ProcessContract(
             "MyApp", Path.GetTempPath(), "1.0.0", "2.0.0",
             null, System.Text.Encoding.UTF8, ".zip", 30, "secret",
-            new List<GeneralUpdate.Core.Configuration.VersionInfo> { new() { Version = "2.0.0" } },
+            new List<GeneralUpdate.Core.Configuration.VersionEntry> { new() { Version = "2.0.0" } },
             "https://report.example.com", "C:\\backup",
             null, null, null, null, null, null, null, null);
 
@@ -94,7 +94,7 @@ public class EncryptedFileProcessInfoProviderTests
     [Fact]
     public void Receive_NoFile_ReturnsNull()
     {
-        var provider = new EncryptedFileProcessInfoProvider();
+        var provider = new EncryptedFileProcessContractProvider();
         var result = provider.Receive();
         Assert.Null(result);
     }

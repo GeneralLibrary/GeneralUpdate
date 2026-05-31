@@ -41,15 +41,15 @@ namespace CoreTest.Bootstrap
             public bool AfterUpdateCalled { get; private set; }
             public bool ErrorCalled { get; private set; }
             public bool BeforeStartAppCalled { get; private set; }
-            public UpdateContext? BeforeCtx { get; private set; }
+            public HookContext? BeforeCtx { get; private set; }
             public DownloadContext? DownloadCtx { get; private set; }
             public Exception? CapturedError { get; private set; }
 
-            public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) { BeforeUpdateCalled = true; BeforeCtx = ctx; return Task.FromResult(true); }
+            public Task<bool> OnBeforeUpdateAsync(HookContext ctx) { BeforeUpdateCalled = true; BeforeCtx = ctx; return Task.FromResult(true); }
             public Task OnDownloadCompletedAsync(DownloadContext ctx) { DownloadCompletedCalled = true; DownloadCtx = ctx; return Task.CompletedTask; }
-            public Task OnAfterUpdateAsync(UpdateContext ctx) { AfterUpdateCalled = true; return Task.CompletedTask; }
-            public Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex) { ErrorCalled = true; CapturedError = ex; return Task.CompletedTask; }
-            public Task OnBeforeStartAppAsync(UpdateContext ctx) { BeforeStartAppCalled = true; return Task.CompletedTask; }
+            public Task OnAfterUpdateAsync(HookContext ctx) { AfterUpdateCalled = true; return Task.CompletedTask; }
+            public Task OnUpdateErrorAsync(HookContext ctx, Exception ex) { ErrorCalled = true; CapturedError = ex; return Task.CompletedTask; }
+            public Task OnBeforeStartAppAsync(HookContext ctx) { BeforeStartAppCalled = true; return Task.CompletedTask; }
         }
 
         #endregion
@@ -62,7 +62,7 @@ namespace CoreTest.Bootstrap
         public async Task TrackingHooks_OnBeforeUpdate_ReturnsTrueAndRecordsContext()
         {
             var hooks = new TrackingHooks();
-            var ctx = new UpdateContext("MyApp.exe", "/install", "1.0.0", "2.0.0", AppType.Client);
+            var ctx = new HookContext("MyApp.exe", "/install", "1.0.0", "2.0.0", AppType.Client);
             var result = await hooks.OnBeforeUpdateAsync(ctx);
             Assert.True(result);
             Assert.Equal("1.0.0", hooks.BeforeCtx!.CurrentVersion);
@@ -72,17 +72,17 @@ namespace CoreTest.Bootstrap
         public async Task TrackingHooks_OnBeforeUpdate_CanReject()
         {
             var hooks = new RejectingHooks();
-            var ctx = new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client);
+            var ctx = new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client);
             Assert.False(await hooks.OnBeforeUpdateAsync(ctx));
         }
 
         private sealed class RejectingHooks : IUpdateHooks
         {
-            public Task<bool> OnBeforeUpdateAsync(UpdateContext ctx) => Task.FromResult(false);
+            public Task<bool> OnBeforeUpdateAsync(HookContext ctx) => Task.FromResult(false);
             public Task OnDownloadCompletedAsync(DownloadContext ctx) => Task.CompletedTask;
-            public Task OnAfterUpdateAsync(UpdateContext ctx) => Task.CompletedTask;
-            public Task OnUpdateErrorAsync(UpdateContext ctx, Exception ex) => Task.CompletedTask;
-            public Task OnBeforeStartAppAsync(UpdateContext ctx) => Task.CompletedTask;
+            public Task OnAfterUpdateAsync(HookContext ctx) => Task.CompletedTask;
+            public Task OnUpdateErrorAsync(HookContext ctx, Exception ex) => Task.CompletedTask;
+            public Task OnBeforeStartAppAsync(HookContext ctx) => Task.CompletedTask;
         }
 
         [Fact]
@@ -107,7 +107,7 @@ namespace CoreTest.Bootstrap
         public async Task TrackingHooks_OnAfterUpdate_RecordsCall()
         {
             var hooks = new TrackingHooks();
-            await hooks.OnAfterUpdateAsync(new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client));
+            await hooks.OnAfterUpdateAsync(new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client));
             Assert.True(hooks.AfterUpdateCalled);
         }
 
@@ -116,7 +116,7 @@ namespace CoreTest.Bootstrap
         {
             var hooks = new TrackingHooks();
             var ex = new InvalidOperationException("Hash verification failed");
-            await hooks.OnUpdateErrorAsync(new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client), ex);
+            await hooks.OnUpdateErrorAsync(new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client), ex);
             Assert.Equal("Hash verification failed", hooks.CapturedError!.Message);
         }
 
@@ -124,7 +124,7 @@ namespace CoreTest.Bootstrap
         public async Task TrackingHooks_FullLifecycle_AllMethodsCalled()
         {
             var hooks = new TrackingHooks();
-            var uctx = new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client);
+            var uctx = new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client);
             var dctx = new DownloadContext("pkg.zip", "2.0.0", 100, TimeSpan.FromSeconds(10), "/tmp/pkg.zip", true);
             await hooks.OnBeforeUpdateAsync(uctx);
             await hooks.OnDownloadCompletedAsync(dctx);
@@ -142,11 +142,11 @@ namespace CoreTest.Bootstrap
         public async Task NoOpUpdateHooks_AllMethods_ReturnDefaults()
         {
             var hooks = new NoOpUpdateHooks();
-            Assert.True(await hooks.OnBeforeUpdateAsync(new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client)));
+            Assert.True(await hooks.OnBeforeUpdateAsync(new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client)));
             await hooks.OnDownloadCompletedAsync(new DownloadContext("pkg.zip", "2.0.0", 100, TimeSpan.FromSeconds(10), "/tmp/pkg.zip", true));
-            await hooks.OnAfterUpdateAsync(new UpdateContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client));
-            await hooks.OnUpdateErrorAsync(new UpdateContext("App.exe", "/app", "1.0.0", null, AppType.Client), new Exception("test"));
-            await hooks.OnBeforeStartAppAsync(new UpdateContext("App.exe", "/app", "2.0.0", null, AppType.Client));
+            await hooks.OnAfterUpdateAsync(new HookContext("App.exe", "/app", "1.0.0", "2.0.0", AppType.Client));
+            await hooks.OnUpdateErrorAsync(new HookContext("App.exe", "/app", "1.0.0", null, AppType.Client), new Exception("test"));
+            await hooks.OnBeforeStartAppAsync(new HookContext("App.exe", "/app", "2.0.0", null, AppType.Client));
         }
 
         #endregion
@@ -190,7 +190,7 @@ namespace CoreTest.Bootstrap
         public void UpdateStatusListener_AllMethods_AreCallable()
         {
             var listener = new TestEventListener();
-            var vi = new VersionInfo { Version = "2.0.0", Url = "https://cdn.example.com/pkg.zip", Format = "ZIP" };
+            var vi = new VersionEntry { Version = "2.0.0", Url = "https://cdn.example.com/pkg.zip", Format = "ZIP" };
             listener.OnAllDownloadCompleted(new MultiAllDownloadCompletedEventArgs(true, new List<(object, string)>()));
             listener.OnDownloadCompleted(new MultiDownloadCompletedEventArgs(vi, true));
             listener.OnDownloadError(new MultiDownloadErrorEventArgs(new Exception("test"), vi));
@@ -220,7 +220,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void UpdateContext_AllFields_SetCorrectly()
         {
-            var ctx = new UpdateContext("MyApp.exe", "/opt/app", "3.2.1", "4.0.0", AppType.Client);
+            var ctx = new HookContext("MyApp.exe", "/opt/app", "3.2.1", "4.0.0", AppType.Client);
             Assert.Equal("MyApp.exe", ctx.UpdateAppName);
             Assert.Equal("3.2.1", ctx.CurrentVersion);
             Assert.Equal("4.0.0", ctx.TargetVersion);

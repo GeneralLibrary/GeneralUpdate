@@ -15,12 +15,12 @@ namespace CoreTest.Bootstrap
     /// <summary>
     /// Comprehensive parameter matrix and event notification tests.
     /// Covers:
-    ///   - All UpdateOptions parameter combinations
+    ///   - All Option parameter combinations
     ///   - Event notification pipeline (all 7 event types)
     ///   - Push upgrade simulation via events
     ///   - BlackList configuration variations
     ///   - Various encoding/format combinations
-    ///   - Configinfo validation edge cases
+    ///   - UpdateRequest validation edge cases
     /// </summary>
     public class ParameterMatrixAndEventTests : IDisposable
     {
@@ -52,7 +52,7 @@ namespace CoreTest.Bootstrap
                 capturedArgs = args;
             });
 
-            var versionBodies = new List<VersionInfo>
+            var versionBodies = new List<VersionEntry>
             {
                 new() { Version = "2.0.0", Url = "https://cdn.example.com/v2.zip", IsForcibly = true, Format = "ZIP", Size = 50 * 1024 * 1024L }
             };
@@ -99,7 +99,7 @@ namespace CoreTest.Bootstrap
             EventManager.Instance.AddListener<UpdateInfoEventArgs>((s, e) => count2++);
             EventManager.Instance.AddListener<UpdateInfoEventArgs>((s, e) => count3++);
 
-            var args = new UpdateInfoEventArgs(new VersionRespDTO { Code = 200, Body = new List<VersionInfo>() });
+            var args = new UpdateInfoEventArgs(new VersionRespDTO { Code = 200, Body = new List<VersionEntry>() });
 
             EventManager.Instance.Dispatch(this, args);
 
@@ -143,11 +143,11 @@ namespace CoreTest.Bootstrap
             EventManager.Instance.Dispatch(this,
                 new MultiAllDownloadCompletedEventArgs(true, new List<(object, string)>()));
             EventManager.Instance.Dispatch(this,
-                new MultiDownloadCompletedEventArgs(new VersionInfo(), true));
+                new MultiDownloadCompletedEventArgs(new VersionEntry(), true));
             EventManager.Instance.Dispatch(this,
-                new MultiDownloadErrorEventArgs(new Exception(), new VersionInfo()));
+                new MultiDownloadErrorEventArgs(new Exception(), new VersionEntry()));
             EventManager.Instance.Dispatch(this,
-                new MultiDownloadStatisticsEventArgs(new VersionInfo(), TimeSpan.Zero, "0 B/s", 0, 0, 0));
+                new MultiDownloadStatisticsEventArgs(new VersionEntry(), TimeSpan.Zero, "0 B/s", 0, 0, 0));
 
             Assert.True(allDownloadCalled);
             Assert.True(downloadCalled);
@@ -157,12 +157,12 @@ namespace CoreTest.Bootstrap
 
         #endregion
 
-        #region Configinfo Validation Matrix
+        #region UpdateRequest Validation Matrix
 
         [Fact]
         public void Configinfo_Validate_WithAllFields_Passes()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -179,7 +179,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void Configinfo_Validate_MissingUpdateUrl_Throws()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
@@ -192,7 +192,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void Configinfo_Validate_MissingMainAppName_Throws()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 ClientVersion = "1.0.0",
@@ -205,7 +205,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void Configinfo_Validate_MissingClientVersion_Throws()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -222,7 +222,7 @@ namespace CoreTest.Bootstrap
         [InlineData("HMAC", "hmac-secret")]
         public void Configinfo_Validate_VariousAuthSchemes_Passes(string scheme, string token)
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -238,7 +238,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void Configinfo_WithBlackLists_ValidatesSuccessfully()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -246,15 +246,15 @@ namespace CoreTest.Bootstrap
                 AppSecretKey = "key",
                 Scheme = "https",
                 Token = "token",
-                BlackFiles = new List<string> { "*.pdb", "*.config" },
-                BlackFormats = new List<string> { ".log", ".tmp" },
-                SkipDirectorys = new List<string> { "logs", "temp" }
+                Files = new List<string> { "*.pdb", "*.config" },
+                Formats = new List<string> { ".log", ".tmp" },
+                Directories = new List<string> { "logs", "temp" }
             };
 
             config.Validate();
-            Assert.Equal(2, config.BlackFiles.Count);
-            Assert.Equal(2, config.BlackFormats.Count);
-            Assert.Equal(2, config.SkipDirectorys.Count);
+            Assert.Equal(2, config.Files.Count);
+            Assert.Equal(2, config.Formats.Count);
+            Assert.Equal(2, config.Directories.Count);
         }
 
         #endregion
@@ -264,42 +264,42 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void BlackListManager_VariousConfigurations_AcceptsAllRules()
         {
-            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
+            var manager = new BlackMatcher(BlackPolicy.Empty);
 
             Assert.NotNull(manager);
-            Assert.NotNull(BlackListDefaults.DefaultBlackFiles);
-            Assert.NotNull(BlackListDefaults.DefaultBlackFormats);
-            Assert.NotNull(BlackListDefaults.DefaultSkipDirectories);
+            Assert.NotNull(BlackDefaults.DefaultFiles);
+            Assert.NotNull(BlackDefaults.DefaultFormats);
+            Assert.NotNull(BlackDefaults.DefaultDirectories);
             Assert.False(manager.IsBlacklisted("test.dll"));
         }
 
         [Fact]
         public void BlackListManager_EmptyLists_DoesNotThrow()
         {
-            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
+            var manager = new BlackMatcher(BlackPolicy.Empty);
             Assert.NotNull(manager);
         }
 
         [Fact]
         public void BlackListManager_NullList_DoesNotThrow()
         {
-            var manager = new DefaultBlackListMatcher(BlackListConfig.Empty);
+            var manager = new BlackMatcher(BlackPolicy.Empty);
             Assert.NotNull(manager);
         }
 
         #endregion
 
-        #region UpdateOption Matrix
+        #region Option Matrix
 
         [Fact]
-        public void UpdateOption_AllConstants_AreAccessible()
+        public void Option_AllConstants_AreAccessible()
         {
-            Assert.NotNull(UpdateOptions.Encoding);
-            Assert.NotNull(UpdateOptions.Format);
-            Assert.NotNull(UpdateOptions.DownloadTimeout);
-            Assert.NotNull(UpdateOptions.PatchEnabled);
-            Assert.NotNull(UpdateOptions.BackupEnabled);
-            Assert.NotNull(UpdateOptions.Silent);
+            Assert.NotNull(Option.Encoding);
+            Assert.NotNull(Option.Format);
+            Assert.NotNull(Option.DownloadTimeout);
+            Assert.NotNull(Option.PatchEnabled);
+            Assert.NotNull(Option.BackupEnabled);
+            Assert.NotNull(Option.Silent);
         }
 
         #endregion
@@ -312,7 +312,7 @@ namespace CoreTest.Bootstrap
             var pushNotification = new UpdateInfoEventArgs(new VersionRespDTO
             {
                 Code = 200,
-                Body = new List<VersionInfo>
+                Body = new List<VersionEntry>
                 {
                     new()
                     {
@@ -354,7 +354,7 @@ namespace CoreTest.Bootstrap
             var pushNotification = new UpdateInfoEventArgs(new VersionRespDTO
             {
                 Code = 200,
-                Body = new List<VersionInfo>
+                Body = new List<VersionEntry>
                 {
                     new()
                     {
@@ -390,7 +390,7 @@ namespace CoreTest.Bootstrap
             var pushNotification = new UpdateInfoEventArgs(new VersionRespDTO
             {
                 Code = 200,
-                Body = new List<VersionInfo>
+                Body = new List<VersionEntry>
                 {
                     new() { Version = "1.0.1", Url = "https://cdn.example.com/v1.0.1.zip", ReleaseDate = new DateTime(2026, 1, 1), Format = "ZIP", Size = 5 * 1024 * 1024L },
                     new() { Version = "1.0.2", Url = "https://cdn.example.com/v1.0.2.zip", ReleaseDate = new DateTime(2026, 2, 1), Format = "ZIP", Size = 5 * 1024 * 1024L },
@@ -489,7 +489,7 @@ namespace CoreTest.Bootstrap
         [Fact]
         public void Configinfo_FullConfiguration_AllFieldsValid()
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://update.mycompany.com/v2/api",
                 UpdateAppName = "Update.exe",
@@ -505,15 +505,15 @@ namespace CoreTest.Bootstrap
                 Token = "hmac-secret-key",
                 Bowl = "Bowl.exe",
                 DriverDirectory = @"C:\Program Files\EnterpriseApp\drivers",
-                BlackFiles = new List<string> { "*.pdb", "*.config", "*.Development.json" },
-                BlackFormats = new List<string> { ".log", ".tmp", ".cache", ".etl" },
-                SkipDirectorys = new List<string> { "logs", "temp", "cache", "Diagnostics", "__backups__" }
+                Files = new List<string> { "*.pdb", "*.config", "*.Development.json" },
+                Formats = new List<string> { ".log", ".tmp", ".cache", ".etl" },
+                Directories = new List<string> { "logs", "temp", "cache", "Diagnostics", "__backups__" }
             };
 
             config.Validate();
-            Assert.Equal(3, config.BlackFiles.Count);
-            Assert.Equal(4, config.BlackFormats.Count);
-            Assert.Equal(5, config.SkipDirectorys.Count);
+            Assert.Equal(3, config.Files.Count);
+            Assert.Equal(4, config.Formats.Count);
+            Assert.Equal(5, config.Directories.Count);
         }
 
         [Theory]
@@ -523,7 +523,7 @@ namespace CoreTest.Bootstrap
         [InlineData("2026.5.24-rc1")]
         public void Configinfo_VariousVersionFormats_ValidatesSuccessfully(string version)
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
@@ -543,7 +543,7 @@ namespace CoreTest.Bootstrap
         [InlineData("http://192.168.1.100:8080/api/update")]
         public void Configinfo_VariousUpdateUrls_ValidatesSuccessfully(string url)
         {
-            var config = new Configinfo
+            var config = new UpdateRequest
             {
                 UpdateUrl = url,
                 MainAppName = "MyApp.exe",

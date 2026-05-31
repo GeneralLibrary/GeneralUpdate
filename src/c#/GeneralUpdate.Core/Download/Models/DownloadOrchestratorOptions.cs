@@ -62,9 +62,9 @@ public class DownloadOrchestratorOptions
     public Configuration.Format Format { get; set; } = Configuration.Format.Zip;
 
     /// <summary>
-    /// Creates a <see cref="DownloadOrchestratorOptions"/> from <see cref="Configuration.GlobalConfigInfo"/>.
+    /// Creates a <see cref="DownloadOrchestratorOptions"/> from <see cref="Configuration.UpdateContext"/>.
     /// </summary>
-    public static DownloadOrchestratorOptions From(Configuration.GlobalConfigInfo config)
+    public static DownloadOrchestratorOptions From(Configuration.UpdateContext config)
     {
         return new DownloadOrchestratorOptions
         {

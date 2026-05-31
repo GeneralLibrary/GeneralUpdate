@@ -21,10 +21,10 @@ namespace GeneralUpdate.Core.Configuration
     ///   <c>.DownloadSource&lt;T&gt;()</c> and are lazily instantiated on demand through
     ///   <see cref="ResolveExtension{TExtension}"/>.<br/>
     /// - The <c>_instances</c> dictionary stores already-instantiated singleton objects
-    ///   (e.g., <c>BlackListConfig</c>). These take precedence over lazy registrations
+    ///   (e.g., <c>BlackPolicy</c>). These take precedence over lazy registrations
     ///   in <c>_extensions</c>.<br/>
-    /// - The <see cref="Option{T}(UpdateOption{T}, T)"/> method provides fluent configuration
-    ///   options, read via <see cref="GetOption{T}(UpdateOption{T}?)"/>, with a default-value
+    /// - The <see cref="Option{T}(Option{T}, T)"/> method provides fluent configuration
+    ///   options, read via <see cref="GetOption{T}(Option{T}?)"/>, with a default-value
     ///   fallback mechanism.
     /// </para>
     /// <para>Typical usage: chain extension registrations together, then call
@@ -34,17 +34,17 @@ namespace GeneralUpdate.Core.Configuration
         where TBootstrap : AbstractBootstrap<TBootstrap, TStrategy>
         where TStrategy : IStrategy
     {
-        private readonly ConcurrentDictionary<UpdateOption, UpdateOptionValue> _options;
+        private readonly ConcurrentDictionary<Option, OptionValue> _options;
 
         /// <summary>User-registered extension type mappings (interface type → implementation type), used for lazy instantiation.</summary>
         private readonly Dictionary<Type, Type> _extensions = new();
 
-        /// <summary>Registered singleton instances (e.g., <c>BlackListConfig</c>).</summary>
+        /// <summary>Registered singleton instances (e.g., <c>BlackPolicy</c>).</summary>
         private readonly Dictionary<Type, object> _instances = new();
 
         protected internal AbstractBootstrap()
         {
-            _options = new ConcurrentDictionary<UpdateOption, UpdateOptionValue>();
+            _options = new ConcurrentDictionary<Option, OptionValue>();
         }
 
         public abstract Task<TBootstrap> LaunchAsync();
@@ -58,17 +58,17 @@ namespace GeneralUpdate.Core.Configuration
         /// from the dictionary so that subsequent reads fall back to the default value.</param>
         /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
         /// <remarks>
-        /// Options are stored in a <c>ConcurrentDictionary</c> to guarantee thread safety.
+        /// Option are stored in a <c>ConcurrentDictionary</c> to guarantee thread safety.
         /// When <paramref name="value"/> is <c>null</c>, the entry is removed, causing
-        /// <see cref="GetOption{T}(UpdateOption{T}?)"/> to return
-        /// <see cref="UpdateOption{T}.DefaultValue"/>.
+        /// <see cref="GetOption{T}(Option{T}?)"/> to return
+        /// <see cref="Option{T}.DefaultValue"/>.
         /// </remarks>
-        public TBootstrap Option<T>(UpdateOption<T> option, T value)
+        public TBootstrap SetOption<T>(Option<T> option, T value)
         {
             if (value == null)
                 _options.TryRemove(option, out _);
             else
-                _options[option] = new UpdateOptionValue<T>(option, value);
+                _options[option] = new OptionValue<T>(option, value);
             return (TBootstrap)this;
         }
 
@@ -79,14 +79,14 @@ namespace GeneralUpdate.Core.Configuration
         /// <typeparam name="T">The type of the option value.</typeparam>
         /// <param name="option">The option key to retrieve; can be <c>null</c>.</param>
         /// <returns>
-        /// The registered value if found; otherwise, <see cref="UpdateOption{T}.DefaultValue"/>.
+        /// The registered value if found; otherwise, <see cref="Option{T}.DefaultValue"/>.
         /// </returns>
         /// <remarks>
         /// First attempts to look up the option in the <c>_options</c> dictionary.
-        /// If not found, falls back to <see cref="UpdateOption{T}.DefaultValue"/>.
-        /// This is the companion read method for <see cref="Option{T}(UpdateOption{T}, T)"/>.
+        /// If not found, falls back to <see cref="Option{T}.DefaultValue"/>.
+        /// This is the companion read method for <see cref="Option{T}(Option{T}, T)"/>.
         /// </remarks>
-        protected T GetOption<T>(UpdateOption<T>? option)
+        protected T GetOption<T>(Option<T>? option)
         {
             if (option == null) return default!;
             if (_options.TryGetValue(option, out var val) && val != null)

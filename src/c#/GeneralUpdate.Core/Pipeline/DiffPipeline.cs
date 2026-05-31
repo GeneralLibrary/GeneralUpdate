@@ -326,7 +326,7 @@ public class DiffPipeline
         var reporter = progress ?? _progress;
         if (!Directory.Exists(appPath) || !Directory.Exists(patchPath)) return;
 
-        var skipDirectory = BlackListDefaults.DefaultSkipDirectories;
+        var skipDirectory = BlackDefaults.DefaultDirectories;
         var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory).ToList();
         var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory).ToList();
 
@@ -499,7 +499,7 @@ public class DiffPipeline
             foreach (var file in comparisonResult.DifferentNodes)
             {
                 var extensionName = Path.GetExtension(file.FullName);
-                if (BlackListDefaults.DefaultBlackFormats.Contains(extensionName)) continue;
+                if (BlackDefaults.DefaultFormats.Contains(extensionName)) continue;
 
                 var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
                 var targetPath = Path.Combine(appPath, targetFileName);

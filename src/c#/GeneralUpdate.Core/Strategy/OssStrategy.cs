@@ -52,7 +52,7 @@ namespace GeneralUpdate.Core.Strategy;
 public class OssStrategy : IStrategy
 {
     private readonly AppType _role;
-    private GlobalConfigInfo? _configInfo;
+    private UpdateContext? _configInfo;
     private readonly string _appPath = AppDomain.CurrentDomain.BaseDirectory;
     private const int DefaultTimeOut = 60;
 
@@ -118,7 +118,7 @@ public class OssStrategy : IStrategy
     /// The configuration information is stored in internal fields for subsequent use, including install path,
     /// version number, and download timeout settings.
     /// </remarks>
-    public void Create(GlobalConfigInfo parameter)
+    public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
     }
@@ -202,7 +202,7 @@ public class OssStrategy : IStrategy
 
         var versions = JsonSerializer.Deserialize(
             File.ReadAllText(versionsFilePath),
-            JsonContext.VersionOssJsonContext.Default.ListVersionOss);
+            JsonContext.OssVersionRecordJsonContext.Default.ListOssVersionRecord);
         if (versions == null || versions.Count == 0)
         {
             GeneralTracer.Info("OssStrategy: no versions found, aborting.");
@@ -293,7 +293,7 @@ public class OssStrategy : IStrategy
             {
                 var versions = JsonSerializer.Deserialize(
                     File.ReadAllText(jsonPath),
-                    JsonContext.VersionOssJsonContext.Default.ListVersionOss);
+                    JsonContext.OssVersionRecordJsonContext.Default.ListOssVersionRecord);
                 if (versions == null || versions.Count == 0)
                     throw new InvalidOperationException("No versions found in Oss configuration.");
 
@@ -475,9 +475,9 @@ public class OssStrategy : IStrategy
     /// Builds the update context for passing update-related information to lifecycle hooks.
     /// </summary>
     /// <returns>An <c>UpdateContext</c> instance containing application name, install path, version number, and other information.</returns>
-    private Hooks.UpdateContext BuildUpdateContext()
+    private Hooks.HookContext BuildUpdateContext()
     {
-        return new Hooks.UpdateContext(
+        return new Hooks.HookContext(
             _configInfo?.UpdateAppName ?? "unknown",
             _configInfo?.InstallPath ?? _appPath,
             _configInfo?.ClientVersion ?? "0.0.0",
@@ -491,7 +491,7 @@ public class OssStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <returns>The result of the hook invocation; defaults to true (continue updating) if the hook throws an exception.</returns>
-    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.HookContext ctx)
     {
         try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
@@ -500,7 +500,7 @@ public class OssStrategy : IStrategy
     /// Safely invokes the pre-start-app hook, catching and logging exceptions.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnBeforeStartAppAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnBeforeStartAppAsync(Hooks.HookContext ctx)
     {
         try { await Hooks.OnBeforeStartAppAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnBeforeStartAppAsync hook failed: {ex.Message}"); }
@@ -510,7 +510,7 @@ public class OssStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <param name="error">The exception that occurred during the update.</param>
-    private async Task SafeOnUpdateErrorAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeOnUpdateErrorAsync(Hooks.HookContext ctx, Exception error)
     {
         try { await Hooks.OnUpdateErrorAsync(ctx, error).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnUpdateErrorAsync hook failed: {ex.Message}"); }
@@ -519,7 +519,7 @@ public class OssStrategy : IStrategy
     /// Safely invokes the post-update hook, catching and logging exceptions.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnAfterUpdateAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnAfterUpdateAsync(Hooks.HookContext ctx)
     {
         try { await Hooks.OnAfterUpdateAsync(ctx).ConfigureAwait(false); }
         catch (Exception ex) { GeneralTracer.Warn($"OnAfterUpdateAsync hook failed: {ex.Message}"); }
@@ -528,7 +528,7 @@ public class OssStrategy : IStrategy
     /// Safely invokes the download completed hook, catching and logging exceptions.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnDownloadCompletedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeOnDownloadCompletedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -543,7 +543,7 @@ public class OssStrategy : IStrategy
     /// Safely reports the update started status, catching and logging exceptions.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportUpdateStartedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportUpdateStartedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -555,7 +555,7 @@ public class OssStrategy : IStrategy
     /// Safely reports the update applied status, catching and logging exceptions.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeReportUpdateAppliedAsync(Hooks.UpdateContext ctx)
+    private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx)
     {
         try
         {
@@ -568,7 +568,7 @@ public class OssStrategy : IStrategy
     /// </summary>
     /// <param name="ctx">The update context.</param>
     /// <param name="error">The exception that occurred during the update.</param>
-    private async Task SafeReportUpdateFailedAsync(Hooks.UpdateContext ctx, Exception error)
+    private async Task SafeReportUpdateFailedAsync(Hooks.HookContext ctx, Exception error)
     {
         try
         {

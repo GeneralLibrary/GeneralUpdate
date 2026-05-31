@@ -35,7 +35,7 @@ public class UpgradeHubService : IUpgradeHubService
             }).WithAutomaticReconnect(new RandomRetryPolicy());
         builder.Services.Configure<JsonHubProtocolOptions>(o =>
         {
-            o.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, PacketJsonContext.Default);
+            o.PayloadSerializerOptions.TypeInfoResolverChain.Insert(0, PushPayloadJsonContext.Default);
         });
         return builder.Build();
     }

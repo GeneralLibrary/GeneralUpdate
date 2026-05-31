@@ -45,7 +45,7 @@ namespace GeneralUpdate.Core.Download.Orchestrators;
 /// </list>
 /// <para>
 /// All configurable behaviors are driven by <see cref="DownloadOrchestratorOptions"/>,
-/// which maps from the <see cref="UpdateOptions"/> defined in the bootstrap layer.
+/// which maps from the <see cref="Option"/> defined in the bootstrap layer.
 /// </para>
 /// <para>
 /// Note: The custom executor (<see cref="IDownloadExecutor"/>) is shared as a single instance

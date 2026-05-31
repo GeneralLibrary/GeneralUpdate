@@ -5,17 +5,17 @@ namespace CoreTest.Configuration;
 
 /// <summary>
 /// Unit tests for configuration model/DTO classes following AAAT (Arrange-Act-Assert-TearDown).
-/// Covers: VersionInfo, VersionOss, BaseResponseDTO, VersionRespDTO.
+/// Covers: VersionEntry, OssVersionRecord, BaseResponseDTO, VersionRespDTO.
 /// </summary>
 public class VersionModelTests
 {
-    #region VersionInfo — property defaults and JSON serialization
+    #region VersionEntry — property defaults and JSON serialization
 
     [Fact]
-    public void VersionInfo_DefaultInstance_AllNullablePropertiesAreNull()
+    public void VersionEntry_DefaultInstance_AllNullablePropertiesAreNull()
     {
         // Arrange & Act
-        var vi = new VersionInfo();
+        var vi = new VersionEntry();
 
         // Assert
         Assert.Equal(0, vi.RecordId);
@@ -36,13 +36,13 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionInfo_AllProperties_SetCorrectly()
+    public void VersionEntry_AllProperties_SetCorrectly()
     {
         // Arrange
         var releaseDate = new DateTime(2025, 6, 15, 10, 30, 0, DateTimeKind.Utc);
 
         // Act
-        var vi = new VersionInfo
+        var vi = new VersionEntry
         {
             RecordId = 42,
             Name = "update-package-v2.0.0",
@@ -80,10 +80,10 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionInfo_JsonRoundTrip_AllProperties()
+    public void VersionEntry_JsonRoundTrip_AllProperties()
     {
         // Arrange
-        var original = new VersionInfo
+        var original = new VersionEntry
         {
             RecordId = 7,
             Name = "MyPackage",
@@ -105,7 +105,7 @@ public class VersionModelTests
 
         // Act
         var json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<VersionInfo>(json, options);
+        var deserialized = JsonSerializer.Deserialize<VersionEntry>(json, options);
 
         // Assert
         Assert.NotNull(deserialized);
@@ -126,10 +126,10 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionInfo_JsonSerialization_UsesCorrectJsonPropertyNames()
+    public void VersionEntry_JsonSerialization_UsesCorrectJsonPropertyNames()
     {
         // Arrange
-        var vi = new VersionInfo
+        var vi = new VersionEntry
         {
             RecordId = 1,
             Name = "test",
@@ -171,13 +171,13 @@ public class VersionModelTests
 
     #endregion
 
-    #region VersionOss — property defaults
+    #region OssVersionRecord — property defaults
 
     [Fact]
-    public void VersionOss_DefaultInstance_HasDefaultDate()
+    public void OssVersionRecord_DefaultInstance_HasDefaultDate()
     {
         // Arrange & Act
-        var voss = new VersionOss();
+        var voss = new OssVersionRecord();
 
         // Assert
         Assert.Equal(default(DateTime), voss.PubTime);
@@ -188,13 +188,13 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOss_AllProperties_SetCorrectly()
+    public void OssVersionRecord_AllProperties_SetCorrectly()
     {
         // Arrange
         var pubTime = new DateTime(2025, 3, 1);
 
         // Act
-        var voss = new VersionOss
+        var voss = new OssVersionRecord
         {
             PubTime = pubTime,
             PacketName = "update.zip",
@@ -212,10 +212,10 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOss_JsonSerialization_UsesCorrectJsonPropertyNames()
+    public void OssVersionRecord_JsonSerialization_UsesCorrectJsonPropertyNames()
     {
         // Arrange
-        var voss = new VersionOss
+        var voss = new OssVersionRecord
         {
             PubTime = new DateTime(2025, 1, 1),
             PacketName = "pkg.zip",
@@ -236,11 +236,11 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void VersionOss_JsonRoundTrip_PreservesAllValues()
+    public void OssVersionRecord_JsonRoundTrip_PreservesAllValues()
     {
         // Arrange
         var pubTime = new DateTime(2025, 6, 1, 12, 0, 0);
-        var original = new VersionOss
+        var original = new OssVersionRecord
         {
             PubTime = pubTime,
             PacketName = "package-v3.zip",
@@ -252,7 +252,7 @@ public class VersionModelTests
 
         // Act
         var json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<VersionOss>(json, options);
+        var deserialized = JsonSerializer.Deserialize<OssVersionRecord>(json, options);
 
         // Assert
         Assert.NotNull(deserialized);
@@ -302,15 +302,15 @@ public class VersionModelTests
     }
 
     [Fact]
-    public void BaseResponseDTO_VersionInfoList_WrapsCorrectly()
+    public void BaseResponseDTO_VersionEntryList_WrapsCorrectly()
     {
         // Arrange
-        var versions = new List<VersionInfo>
+        var versions = new List<VersionEntry>
         {
             new() { Version = "1.0.0", Hash = "abc" },
             new() { Version = "2.0.0", Hash = "def" }
         };
-        var dto = new BaseResponseDTO<List<VersionInfo>>
+        var dto = new BaseResponseDTO<List<VersionEntry>>
         {
             Code = 200,
             Body = versions,
@@ -367,12 +367,12 @@ public class VersionModelTests
         var dto = new VersionRespDTO
         {
             Code = 200,
-            Body = new List<VersionInfo> { new() { Version = "1.0.0" } },
+            Body = new List<VersionEntry> { new() { Version = "1.0.0" } },
             Message = "OK"
         };
 
         // Assert
-        Assert.IsAssignableFrom<BaseResponseDTO<List<VersionInfo>>>(dto);
+        Assert.IsAssignableFrom<BaseResponseDTO<List<VersionEntry>>>(dto);
         Assert.Equal(200, dto.Code);
         Assert.Single(dto.Body);
         Assert.Equal("1.0.0", dto.Body[0].Version);
