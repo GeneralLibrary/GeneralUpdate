@@ -398,6 +398,14 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Info(
             $"ClientStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
+        // Discover identity metadata from the manifest in InstallPath BEFORE
+        // constructing HttpDownloadSource so the server call sees real values.
+        // UpdateStrategy writes versions back to InstallPath after each update;
+        // using the parameterless Load() would read from BaseDirectory instead
+        // and could pick up a stale manifest when InstallPath is customized.
+        // Only fills empty fields — caller-provided values take precedence.
+        AppMetadataDiscoverer.Discover(_configInfo!);
+
         // Use injected DownloadSource (Hub/HTTP), or default to HttpDownloadSource
         var downloadSource = DownloadSource ?? new Download.Sources.HttpDownloadSource(
             _configInfo.UpdateUrl,
@@ -412,12 +420,6 @@ public class ClientStrategy : IStrategy
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
 
-        // Discover identity metadata from the manifest in InstallPath.
-        // UpdateStrategy writes versions back to InstallPath after each update;
-        // using the parameterless Load() would read from BaseDirectory instead
-        // and could pick up a stale manifest when InstallPath is customized.
-        // Caller's explicit value takes precedence; manifest is a fallback.
-        AppMetadataDiscoverer.Discover(_configInfo!);
         var localClientVersion = _configInfo!.ClientVersion;
         var localUpgradeVersion = _configInfo.UpgradeClientVersion ?? localClientVersion;
 

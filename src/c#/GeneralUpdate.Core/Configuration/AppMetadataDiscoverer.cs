@@ -25,19 +25,20 @@ public static class AppMetadataDiscoverer
 
         if (manifest == null) return;
 
-        if (!string.IsNullOrWhiteSpace(manifest.MainAppName))
+        // Only fill empty fields — caller-provided values take precedence.
+        if (string.IsNullOrWhiteSpace(context.MainAppName) && !string.IsNullOrWhiteSpace(manifest.MainAppName))
             context.MainAppName = manifest.MainAppName;
-        if (!string.IsNullOrWhiteSpace(manifest.UpdateAppName))
+        if (string.IsNullOrWhiteSpace(context.UpdateAppName) && !string.IsNullOrWhiteSpace(manifest.UpdateAppName))
             context.UpdateAppName = manifest.UpdateAppName;
-        if (!string.IsNullOrWhiteSpace(manifest.ClientVersion))
+        if (string.IsNullOrWhiteSpace(context.ClientVersion) && !string.IsNullOrWhiteSpace(manifest.ClientVersion))
             context.ClientVersion = manifest.ClientVersion;
-        if (!string.IsNullOrWhiteSpace(manifest.UpgradeClientVersion))
+        if (string.IsNullOrWhiteSpace(context.UpgradeClientVersion) && !string.IsNullOrWhiteSpace(manifest.UpgradeClientVersion))
             context.UpgradeClientVersion = manifest.UpgradeClientVersion;
-        if (!string.IsNullOrWhiteSpace(manifest.ProductId))
+        if (string.IsNullOrWhiteSpace(context.ProductId) && !string.IsNullOrWhiteSpace(manifest.ProductId))
             context.ProductId = manifest.ProductId;
-        if (!string.IsNullOrWhiteSpace(manifest.UpdatePath))
+        if (string.IsNullOrWhiteSpace(context.UpdatePath) && !string.IsNullOrWhiteSpace(manifest.UpdatePath))
             context.UpdatePath = manifest.UpdatePath;
-        if (!string.IsNullOrWhiteSpace(manifest.AppType)
+        if (context.AppType == null && !string.IsNullOrWhiteSpace(manifest.AppType)
             && Enum.TryParse<AppType>(manifest.AppType, out var at))
             context.AppType = at;
     }
