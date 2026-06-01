@@ -190,8 +190,9 @@ namespace CoreTest.Bootstrap
         }
 
         [Fact]
-        public void Configinfo_Validate_MissingMainAppName_Throws()
+        public void Configinfo_Validate_MissingMainAppName_DoesNotThrow()
         {
+            // MainAppName is optional — filled from manifest by strategies.
             var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
@@ -200,12 +201,14 @@ namespace CoreTest.Bootstrap
                 MainAppName = null!
             };
 
-            Assert.Throws<ArgumentException>(() => config.Validate());
+            var ex = Record.Exception(() => config.Validate());
+            Assert.Null(ex);
         }
 
         [Fact]
-        public void Configinfo_Validate_MissingClientVersion_Throws()
+        public void Configinfo_Validate_MissingClientVersion_DoesNotThrow()
         {
+            // ClientVersion is optional — filled from manifest by strategies.
             var config = new UpdateRequest
             {
                 UpdateUrl = "https://api.example.com",
@@ -214,7 +217,8 @@ namespace CoreTest.Bootstrap
                 ClientVersion = null!
             };
 
-            Assert.Throws<ArgumentException>(() => config.Validate());
+            var ex = Record.Exception(() => config.Validate());
+            Assert.Null(ex);
         }
 
         [Theory]
