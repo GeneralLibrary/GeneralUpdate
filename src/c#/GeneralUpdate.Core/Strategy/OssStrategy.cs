@@ -324,15 +324,6 @@ public class OssStrategy : IStrategy
             if (!File.Exists(jsonPath) && DownloadSource == null)
                 throw new FileNotFoundException($"Version config not found: {jsonPath}");
 
-            // Hooks: allow cancellation before download
-            if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
-            {
-                GeneralTracer.Info("OssStrategy (upgrade): cancelled by hook.");
-                return;
-            }
-
-            await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
-
             // Build download assets from version config or injected source
             List<DownloadAsset> assets;
             if (DownloadSource != null)
@@ -365,9 +356,24 @@ public class OssStrategy : IStrategy
             if (assets.Count == 0)
                 throw new InvalidOperationException("No assets to download.");
 
-            // Update LastVersion so hooks (OnAfterUpdate, etc.) know the target version.
-            _configInfo.LastVersion = assets[assets.Count - 1].Version;
+            // Compute LastVersion deterministically via Version comparison
+            // so hooks see the correct TargetVersion regardless of source ordering.
+            _configInfo.LastVersion = assets
+                .Select(a => new Version(a.Version))
+                .Max()!
+                .ToString();
             ctx = BuildUpdateContext();
+
+            // Hooks: allow cancellation before download. Called after assets are
+            // built and LastVersion is set so OnBeforeUpdateAsync sees the real
+            // TargetVersion for decision-making.
+            if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
+            {
+                GeneralTracer.Info("OssStrategy (upgrade): cancelled by hook.");
+                return;
+            }
+
+            await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
 
             GeneralTracer.Debug($"OssStrategy (upgrade): downloading {assets.Count} asset(s).");
             await DownloadAssetsAsync(assets, installPath).ConfigureAwait(false);
