@@ -44,14 +44,15 @@ static async Task RunOssUpgradeAsync()
     Console.WriteLine($"InstallPath={installPath} (parent, where manifest + versions.json live)");
     Console.WriteLine();
 
+    // Only secrets and InstallPath are supplied in code. Identity fields
+    // (MainAppName, ClientVersion, UpdateAppName) are read from
+    // generalupdate.manifest.json by OssStrategy via
+    // AppMetadataDiscoverer.Discover() — same as the standard OSS client flow.
     await new GeneralUpdateBootstrap()
-        .SetConfig(new UpdateRequest
-        {
-            UpdateUrl = "http://localhost:5000/packages/versions.json",
-            InstallPath = installPath,
-            AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
-            // Identity fields from generalupdate.manifest.json via Discover().
-        })
+        .SetSource(
+            "http://localhost:5000/packages/versions.json",
+            "dfeb5833-975e-4afb-88f1-6278ee9aeff6",
+            installPath: installPath)
         .SetOption(Option.AppType, AppType.OssUpgrade)
         .Hooks<UpgradeTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)

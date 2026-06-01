@@ -39,9 +39,10 @@ static async Task RunOssClientAsync()
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
-    // Secrets come from code. Identity fields (MainAppName, ClientVersion,
-    // UpdateAppName, UpdatePath) are read from generalupdate.manifest.json
-    // by OssStrategy via AppMetadataDiscoverer.Discover() — same as standard flow.
+    // Only secrets are supplied in code. Identity fields (MainAppName,
+    // ClientVersion, UpdateAppName, UpdatePath) are read from
+    // generalupdate.manifest.json by OssStrategy via
+    // AppMetadataDiscoverer.Discover() — same as the standard flow.
     var updateUrl = "http://localhost:5000/packages/versions.json";
     var appSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
 
@@ -49,12 +50,7 @@ static async Task RunOssClientAsync()
     Console.WriteLine();
 
     await new GeneralUpdateBootstrap()
-        .SetConfig(new UpdateRequest
-        {
-            UpdateUrl = updateUrl,
-            InstallPath = AppDomain.CurrentDomain.BaseDirectory,
-            AppSecretKey = appSecretKey
-        })
+        .SetSource(updateUrl, appSecretKey)
         .SetOption(Option.AppType, AppType.OssClient)
         .Hooks<ClientTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
