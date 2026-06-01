@@ -7,6 +7,88 @@ using GeneralUpdate.Core.Hooks;
 
 try
 {
+    await RunOssClientAsync();
+    /*var isOssMode = args.Length > 0 && args[0] == "--oss";
+
+    if (isOssMode)
+    {
+        await RunOssClientAsync();
+    }
+    else
+    {
+        await RunStandardClientAsync();
+    }*/
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FATAL: {ex}");
+    Console.WriteLine("Press Enter to exit...");
+    Console.ReadLine();
+    Environment.Exit(1);
+}
+
+Console.WriteLine("Press Enter to exit...");
+Console.ReadLine();
+
+// ═══════════════════════════════════════════════════════════════════
+// OSS Client mode — version JSON download → version compare → launch upgrade
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunOssClientAsync()
+{
+    Console.WriteLine("=== GeneralUpdate OSS Client Test ===");
+    Console.WriteLine($"Started at {DateTime.Now}");
+    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
+
+    var updateUrl = "http://localhost:5000/packages/versions.json";
+
+    // Read current version from marker file (written by UpgradeTest after each successful update).
+    // This prevents infinite update loops when the package doesn't change the client binary.
+    var markerPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".current_version");
+    var clientVersion = "1.0.0";
+    if (File.Exists(markerPath))
+    {
+        clientVersion = File.ReadAllText(markerPath).Trim();
+        Console.WriteLine($"Marker file found: current version = {clientVersion}");
+    }
+
+    Console.WriteLine($"UpdateUrl (versions.json): {updateUrl}");
+    Console.WriteLine($"Current version: {clientVersion}");
+    Console.WriteLine();
+
+    // OssClient flow:
+    // 1. Download versions.json from UpdateUrl to InstallPath
+    // 2. Deserialize as List<OssVersionRecord>, sort by PubTime desc
+    // 3. Compare latest.Version > ClientVersion
+    // 4. If newer: launch UpdateAppName from InstallPath, then exit
+    await new GeneralUpdateBootstrap()
+        .SetConfig(new UpdateRequest
+        {
+            UpdateUrl = updateUrl,
+            InstallPath = AppDomain.CurrentDomain.BaseDirectory,
+            ClientVersion = clientVersion,
+            MainAppName = "ClientTest.exe",
+            UpdateAppName = "UpgradeTest.exe",
+            UpdatePath = "update",
+            AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
+        })
+        .SetOption(Option.AppType, AppType.OssClient)
+        .Hooks<ClientTestHooks>()
+        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
+        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
+        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
+        .AddListenerMultiDownloadError(OnDownloadError)
+        .AddListenerException(OnException)
+        .AddListenerUpdateInfo(OnUpdateInfo)
+        .LaunchAsync();
+
+    Console.WriteLine("OSS Client test completed.");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Standard Client mode — silent poll with IPC handoff to Upgrade
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunStandardClientAsync()
+{
     Console.WriteLine("=== GeneralUpdate Client Test (Silent Mode) ===");
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
@@ -47,14 +129,12 @@ try
     Console.WriteLine();
 
     // Keep the process alive so the background poll loop can work.
-    // When the user presses Ctrl+C or Enter, the process exits and
-    // ProcessExit fires, which triggers the upgrade launch.
     var cts = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) =>
     {
         Console.WriteLine();
         Console.WriteLine("[Shutdown] Ctrl+C pressed. Exiting...");
-        e.Cancel = true; // Prevent immediate kill — let ProcessExit fire
+        e.Cancel = true;
         cts.Cancel();
     };
 
@@ -67,10 +147,6 @@ try
         // Expected on Ctrl+C — graceful shutdown
     }
 
-    // Explicitly launch the upgrade process before exiting.
-    // ProcessExit may not fire reliably in all scenarios (e.g. console Ctrl+C),
-    // so we call TryLaunchUpgrade() directly as the primary launch path.
-    // If ProcessExit also fires later, the _updaterStarted guard prevents a double-launch.
     Console.WriteLine("[Shutdown] Launching upgrade process...");
     if (orchestrator != null && orchestrator.HasPreparedUpdate)
     {
@@ -86,11 +162,10 @@ try
 
     Console.WriteLine("[Shutdown] Client test exiting gracefully.");
 }
-catch (Exception ex)
-{
-    Console.WriteLine($"FATAL: {ex}");
-    Environment.Exit(1);
-}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event handlers (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
 {
@@ -135,6 +210,10 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
         Console.WriteLine("  No updates available.");
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Hooks (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
 
 sealed class ClientTestHooks : IUpdateHooks
 {
