@@ -25,19 +25,26 @@ public static class AppMetadataDiscoverer
 
         if (manifest == null) return;
 
-        // Only fill empty fields — caller-provided values take precedence.
-        if (string.IsNullOrWhiteSpace(context.MainAppName) && !string.IsNullOrWhiteSpace(manifest.MainAppName))
+        // Identity fields whose defaults are mere fallbacks, not explicit
+        // user choices. If the manifest has a value, it MUST take precedence —
+        // otherwise the default blocks the manifest value and causes issues:
+        //   • MainAppName "Client" → can't find the real executable
+        //   • UpdateAppName "Update.exe" → can't launch the upgrade process
+        //   • ClientVersion "1.0.0.0" → endless update loop (version never updates)
+        if (!string.IsNullOrWhiteSpace(manifest.MainAppName))
             context.MainAppName = manifest.MainAppName;
-        if (string.IsNullOrWhiteSpace(context.UpdateAppName) && !string.IsNullOrWhiteSpace(manifest.UpdateAppName))
+        if (!string.IsNullOrWhiteSpace(manifest.UpdateAppName))
             context.UpdateAppName = manifest.UpdateAppName;
-        if (string.IsNullOrWhiteSpace(context.ClientVersion) && !string.IsNullOrWhiteSpace(manifest.ClientVersion))
+        if (!string.IsNullOrWhiteSpace(manifest.UpdatePath))
+            context.UpdatePath = manifest.UpdatePath;
+        if (!string.IsNullOrWhiteSpace(manifest.ClientVersion))
             context.ClientVersion = manifest.ClientVersion;
+
+        // Remaining fields — only fill when empty (caller-provided values win).
         if (string.IsNullOrWhiteSpace(context.UpgradeClientVersion) && !string.IsNullOrWhiteSpace(manifest.UpgradeClientVersion))
             context.UpgradeClientVersion = manifest.UpgradeClientVersion;
         if (string.IsNullOrWhiteSpace(context.ProductId) && !string.IsNullOrWhiteSpace(manifest.ProductId))
             context.ProductId = manifest.ProductId;
-        if (string.IsNullOrWhiteSpace(context.UpdatePath) && !string.IsNullOrWhiteSpace(manifest.UpdatePath))
-            context.UpdatePath = manifest.UpdatePath;
         if (context.AppType == null && !string.IsNullOrWhiteSpace(manifest.AppType)
             && Enum.TryParse<AppType>(manifest.AppType, out var at))
             context.AppType = at;

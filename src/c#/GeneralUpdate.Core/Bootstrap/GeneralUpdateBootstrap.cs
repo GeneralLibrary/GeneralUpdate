@@ -72,6 +72,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private Func<UpdateInfoEventArgs, bool>? _updatePrecheck;
     private CancellationTokenSource? _cts;
     private DiffPipelineBuilder? _diffPipelineBuilder;
+    private Silent.SilentPollOrchestrator? _silentOrchestrator;
+
+    /// <summary>
+    /// When silent mode is active, provides access to the background polling orchestrator.
+    /// Returns <c>null</c> in non-silent modes or before <see cref="LaunchAsync"/> is called.
+    /// </summary>
+    public Silent.SilentPollOrchestrator? SilentOrchestrator => _silentOrchestrator;
 
     public GeneralUpdateBootstrap()
     {
@@ -383,6 +390,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         };
 
         var orchestrator = new Silent.SilentPollOrchestrator(strategy, _configInfo, silentOptions);
+        _silentOrchestrator = orchestrator;
         await orchestrator.StartAsync().ConfigureAwait(false);
         GeneralTracer.Info("GeneralUpdateBootstrap: silent update mode started, returning to caller.");
 
