@@ -53,15 +53,30 @@ namespace GeneralUpdate.Core;
 /// components, network policies, and OS strategy.</para>
 /// </remarks>
 /// <example>
+/// <para><b>Standard flow (Client):</b></para>
 /// <code>
 /// var result = await new GeneralUpdateBootstrap()
-///     .SetConfig(new UpdateRequest {
-///         UpdateUrl = "https://api.example.com",
-///         ClientVersion = "1.0.0",
-///         InstallPath = @"C:\MyApp",
-///         AppSecretKey = "my-key"
-///     })
+///     .SetSource("https://api.example.com", "my-key")
 ///     .SetOption(Option.AppType, AppType.Client)
+///     .Hooks&lt;MyCustomHooks&gt;()
+///     .LaunchAsync();
+/// </code>
+/// <para><b>OSS flow (Object Storage Service):</b></para>
+/// <code>
+/// // OssClient — only secrets in code; identity from generalupdate.manifest.json
+/// var result = await new GeneralUpdateBootstrap()
+///     .SetSource("https://oss.example.com/versions.json", "my-key")
+///     .SetOption(Option.AppType, AppType.OssClient)
+///     .Hooks&lt;MyCustomHooks&gt;()
+///     .LaunchAsync();
+///
+/// // OssUpgrade — running from a subdirectory; pass installPath to locate
+/// // generalupdate.manifest.json in the parent directory
+/// var installPath = Path.GetFullPath(Path.Combine(baseDir, ".."));
+/// var result = await new GeneralUpdateBootstrap()
+///     .SetSource("https://oss.example.com/versions.json", "my-key",
+///         installPath: installPath)
+///     .SetOption(Option.AppType, AppType.OssUpgrade)
 ///     .Hooks&lt;MyCustomHooks&gt;()
 ///     .LaunchAsync();
 /// </code>
@@ -232,15 +247,29 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <summary>
     ///     Zero-config entry-point: supply only secrets. Provides sensible identity defaults
     ///     that pass <see cref="UpdateRequest.Validate"/>; the real identity metadata is
-    ///     discovered later by <see cref="ClientStrategy"/> from <c>generalupdate.manifest.json</c>.
+    ///     discovered later by <see cref="ClientStrategy"/> or <see cref="OssStrategy"/>
+    ///     from <c>generalupdate.manifest.json</c>. Works with all <see cref="AppType"/>
+    ///     modes (<c>Client</c>, <c>Upgrade</c>, <c>OssClient</c>, <c>OssUpgrade</c>).
     /// </summary>
+    /// <param name="updateUrl">The remote endpoint for update validation or version config retrieval.</param>
+    /// <param name="appSecretKey">The application secret key used for authentication.</param>
+    /// <param name="reportUrl">Optional URL for reporting update status back to the server.</param>
+    /// <param name="scheme">Optional URL scheme override (e.g. <c>"https"</c>).</param>
+    /// <param name="token">Optional authentication token for API requests.</param>
+    /// <param name="installPath">
+    /// Optional override for the installation root directory. When <c>null</c>,
+    /// defaults to <see cref="AppDomain.CurrentDomain.BaseDirectory"/>. Set this when
+    /// the current process runs from a subdirectory (e.g. the OSS upgrade process in
+    /// <c>update/</c>) and <c>generalupdate.manifest.json</c> lives in the parent.
+    /// </param>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap SetSource(
         string updateUrl,
         string appSecretKey,
         string? reportUrl = null,
         string? scheme = null,
-        string? token = null)
+        string? token = null,
+        string? installPath = null)
     {
         var config = new UpdateRequest
         {
@@ -250,6 +279,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             Scheme = scheme,
             ReportUrl = reportUrl
         };
+        if (installPath != null)
+            config.InstallPath = installPath;
         return SetConfig(config);
     }
 

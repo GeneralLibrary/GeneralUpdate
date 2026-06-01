@@ -150,7 +150,12 @@ public class OssStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OssStrategy not configured. Call Create() first.");
 
-        // Dispatch by role �?no env-var detection needed.
+        // Fill missing identity fields from generalupdate.manifest.json,
+        // making the manifest the single source of configuration across
+        // all update flows (standard ClientStrategy and OssStrategy).
+        Configuration.AppMetadataDiscoverer.Discover(_configInfo);
+
+        // Dispatch by role — no env-var detection needed.
         if (_role == AppType.OssUpgrade)
         {
             await ExecuteUpgradeAsync();
@@ -189,34 +194,62 @@ public class OssStrategy : IStrategy
         var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.UpdateAppName}_versions.json";
         var versionsFilePath = Path.Combine(installPath, versionFileName);
 
+        GeneralTracer.Info($"[OssClient] InstallPath={installPath}");
+        GeneralTracer.Info($"[OssClient] VersionFileName={versionFileName}");
+        GeneralTracer.Info($"[OssClient] ClientVersion={_configInfo.ClientVersion}");
+        GeneralTracer.Info($"[OssClient] MainAppName={_configInfo.MainAppName}");
+        GeneralTracer.Info($"[OssClient] UpdateAppName={_configInfo.UpdateAppName}");
+
         if (!string.IsNullOrEmpty(_configInfo.UpdateUrl))
         {
+            GeneralTracer.Info($"[OssClient] Downloading from {_configInfo.UpdateUrl} ...");
             await DownloadVersionConfig(_configInfo.UpdateUrl, versionsFilePath).ConfigureAwait(false);
+            GeneralTracer.Info($"[OssClient] Downloaded -> {versionsFilePath}");
         }
 
         if (!File.Exists(versionsFilePath))
         {
-            GeneralTracer.Info("OssStrategy: version config download failed, aborting.");
+            GeneralTracer.Info("[OssClient] FAIL: version config file not found after download!");
             return;
         }
 
-        var versions = JsonSerializer.Deserialize(
-            File.ReadAllText(versionsFilePath),
-            JsonContext.OssVersionRecordJsonContext.Default.ListOssVersionRecord);
+        var jsonText = File.ReadAllText(versionsFilePath);
+        GeneralTracer.Info($"[OssClient] JSON downloaded ({jsonText.Length} chars)");
+
+        List<OssVersionRecord> versions;
+        try
+        {
+            versions = JsonSerializer.Deserialize(
+                jsonText,
+                JsonContext.OssVersionRecordJsonContext.Default.ListOssVersionRecord);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error($"[OssClient] JSON deserialize error: {ex.GetType().Name}: {ex.Message}", ex);
+            throw;
+        }
+
         if (versions == null || versions.Count == 0)
         {
-            GeneralTracer.Info("OssStrategy: no versions found, aborting.");
+            GeneralTracer.Info($"[OssClient] FAIL: no versions found (count={versions?.Count.ToString() ?? "null"})");
             return;
         }
+
+        GeneralTracer.Info($"[OssClient] Deserialized {versions.Count} version(s)");
+        foreach (var v in versions)
+            GeneralTracer.Info($"  - {v.PacketName} v{v.Version} PubTime={v.PubTime:O}");
 
         versions = versions.OrderByDescending(x => x.PubTime).ToList();
         var latest = versions.First();
+        GeneralTracer.Info($"[OssClient] Latest: {latest.Version} (PubTime={latest.PubTime:O})");
 
         if (!IsOssUpgrade(_configInfo.ClientVersion, latest.Version))
         {
-            GeneralTracer.Info("OssStrategy: no upgrade needed.");
+            GeneralTracer.Info($"[OssClient] No upgrade needed: {_configInfo.ClientVersion} >= {latest.Version}");
             return;
         }
+
+        GeneralTracer.Info($"[OssClient] Upgrade needed: {_configInfo.ClientVersion} -> {latest.Version}");
 
         // Resolve upgrade exe: prefer UpdatePath, fall back to InstallPath
         var upgradeDir = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath)
@@ -228,10 +261,28 @@ public class OssStrategy : IStrategy
             ? _configInfo.UpdateAppName
             : "GeneralUpdate.Upgrade.exe";
         var appPath = Path.Combine(upgradeDir, upgradeAppName);
-        if (!File.Exists(appPath))
-            throw new FileNotFoundException($"Upgrade application not found: {appPath}");
+        GeneralTracer.Info($"[OssClient] Resolved upgrade path: {appPath}");
 
+        // List exe files in the directory to help diagnose missing file issues
+        try
+        {
+            var dirFiles = Directory.GetFiles(upgradeDir, "*.exe").Select(f => Path.GetFileName(f));
+            GeneralTracer.Info($"[OssClient] *.exe files in {upgradeDir}: [{string.Join(", ", dirFiles)}]");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"[OssClient] Could not list directory {upgradeDir}: {ex.Message}");
+        }
+
+        if (!File.Exists(appPath))
+        {
+            GeneralTracer.Error($"[OssClient] FAIL: Upgrade app NOT FOUND at {appPath}");
+            throw new FileNotFoundException($"Upgrade application not found: {appPath}");
+        }
+
+        GeneralTracer.Info($"[OssClient] Launching upgrade: {appPath}");
         Process.Start(appPath);
+        GeneralTracer.Info("[OssClient] Upgrade launched, exiting.");
         await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
     }
 
@@ -273,15 +324,6 @@ public class OssStrategy : IStrategy
             if (!File.Exists(jsonPath) && DownloadSource == null)
                 throw new FileNotFoundException($"Version config not found: {jsonPath}");
 
-            // Hooks: allow cancellation before download
-            if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
-            {
-                GeneralTracer.Info("OssStrategy (upgrade): cancelled by hook.");
-                return;
-            }
-
-            await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
-
             // Build download assets from version config or injected source
             List<DownloadAsset> assets;
             if (DownloadSource != null)
@@ -314,12 +356,37 @@ public class OssStrategy : IStrategy
             if (assets.Count == 0)
                 throw new InvalidOperationException("No assets to download.");
 
+            // Compute LastVersion deterministically via Version comparison
+            // so hooks see the correct TargetVersion regardless of source ordering.
+            _configInfo.LastVersion = assets
+                .Select(a => new Version(a.Version))
+                .Max()!
+                .ToString();
+            ctx = BuildUpdateContext();
+
+            // Hooks: allow cancellation before download. Called after assets are
+            // built and LastVersion is set so OnBeforeUpdateAsync sees the real
+            // TargetVersion for decision-making.
+            if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
+            {
+                GeneralTracer.Info("OssStrategy (upgrade): cancelled by hook.");
+                return;
+            }
+
+            await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
+
             GeneralTracer.Debug($"OssStrategy (upgrade): downloading {assets.Count} asset(s).");
             await DownloadAssetsAsync(assets, installPath).ConfigureAwait(false);
 
             GeneralTracer.Debug("OssStrategy (upgrade): decompressing.");
             var encoding = Encoding.GetEncoding(_configInfo?.Encoding?.CodePage ?? Encoding.UTF8.CodePage);
             DecompressAssets(assets, installPath, encoding);
+
+            // Update generalupdate.manifest.json ClientVersion so the client
+            // reads the correct version on next startup, preventing infinite loops.
+            Configuration.ManifestInfo.TryUpdateVersion(
+                installPath,
+                clientVersion: _configInfo.LastVersion);
 
             await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);

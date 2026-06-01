@@ -6,6 +6,70 @@ using GeneralUpdate.Core.Hooks;
 
 try
 {
+    await RunOssUpgradeAsync();
+    /*var isOssMode = args.Length > 0 && args[0] == "--oss";
+
+    if (isOssMode)
+    {
+        await RunOssUpgradeAsync();
+    }
+    else
+    {
+        await RunStandardUpgradeAsync();
+    }*/
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FATAL: {ex}");
+    Environment.Exit(1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OSS Upgrade mode — read versions.json → download packages → decompress → launch main app
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunOssUpgradeAsync()
+{
+    Console.WriteLine("=== GeneralUpdate OSS Upgrade Test ===");
+    Console.WriteLine($"Started at {DateTime.Now}");
+    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
+
+    // OssUpgrade runs from a subdirectory (e.g. update/), but the manifest
+    // and versions.json are in the parent directory (same as OssClient).
+    // InstallPath resolves to the parent so OssStrategy reads the correct
+    // manifest and versions.json.
+    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+    var installPath = Path.GetFullPath(Path.Combine(baseDir, ".."));
+
+    Console.WriteLine($"BaseDir={baseDir}");
+    Console.WriteLine($"InstallPath={installPath} (parent, where manifest + versions.json live)");
+    Console.WriteLine();
+
+    // Only secrets and InstallPath are supplied in code. Identity fields
+    // (MainAppName, ClientVersion, UpdateAppName) are read from
+    // generalupdate.manifest.json by OssStrategy via
+    // AppMetadataDiscoverer.Discover() — same as the standard OSS client flow.
+    await new GeneralUpdateBootstrap()
+        .SetSource(
+            "http://localhost:5000/packages/versions.json",
+            "dfeb5833-975e-4afb-88f1-6278ee9aeff6",
+            installPath: installPath)
+        .SetOption(Option.AppType, AppType.OssUpgrade)
+        .Hooks<UpgradeTestHooks>()
+        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
+        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
+        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
+        .AddListenerMultiDownloadError(OnDownloadError)
+        .AddListenerException(OnException)
+        .LaunchAsync();
+
+    Console.WriteLine("OSS Upgrade test completed.");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Standard Upgrade mode — read IPC config → apply patches → launch main app
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunStandardUpgradeAsync()
+{
     Console.WriteLine("=== GeneralUpdate Upgrade Test ===");
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
@@ -26,11 +90,10 @@ try
 
     Console.WriteLine("Upgrade test completed.");
 }
-catch (Exception ex)
-{
-    Console.WriteLine($"FATAL: {ex}");
-    Environment.Exit(1);
-}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event handlers (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
 {
@@ -62,6 +125,10 @@ static void OnException(object sender, ExceptionEventArgs e)
     Console.WriteLine($"[Error] {e.Exception}");
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Hooks (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
+
 sealed class UpgradeTestHooks : IUpdateHooks
 {
     public async Task<bool> OnBeforeUpdateAsync(HookContext ctx)
@@ -79,6 +146,8 @@ sealed class UpgradeTestHooks : IUpdateHooks
     public async Task OnAfterUpdateAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnAfterUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
+        // Manifest ClientVersion is updated by OssStrategy itself via
+        // ManifestInfo.TryUpdateVersion() after decompression.
         await Task.CompletedTask;
     }
 

@@ -7,6 +7,68 @@ using GeneralUpdate.Core.Hooks;
 
 try
 {
+    await RunOssClientAsync();
+    /*var isOssMode = args.Length > 0 && args[0] == "--oss";
+
+    if (isOssMode)
+    {
+        await RunOssClientAsync();
+    }
+    else
+    {
+        await RunStandardClientAsync();
+    }*/
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FATAL: {ex}");
+    Console.WriteLine("Press Enter to exit...");
+    Console.ReadLine();
+    Environment.Exit(1);
+}
+
+Console.WriteLine("Press Enter to exit...");
+Console.ReadLine();
+
+// ═══════════════════════════════════════════════════════════════════
+// OSS Client mode — version JSON download → version compare → launch upgrade
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunOssClientAsync()
+{
+    Console.WriteLine("=== GeneralUpdate OSS Client Test ===");
+    Console.WriteLine($"Started at {DateTime.Now}");
+    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
+
+    // Only secrets are supplied in code. Identity fields (MainAppName,
+    // ClientVersion, UpdateAppName, UpdatePath) are read from
+    // generalupdate.manifest.json by OssStrategy via
+    // AppMetadataDiscoverer.Discover() — same as the standard flow.
+    var updateUrl = "http://localhost:5000/packages/versions.json";
+    var appSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
+
+    Console.WriteLine($"UpdateUrl: {updateUrl}");
+    Console.WriteLine();
+
+    await new GeneralUpdateBootstrap()
+        .SetSource(updateUrl, appSecretKey)
+        .SetOption(Option.AppType, AppType.OssClient)
+        .Hooks<ClientTestHooks>()
+        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
+        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
+        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
+        .AddListenerMultiDownloadError(OnDownloadError)
+        .AddListenerException(OnException)
+        .AddListenerUpdateInfo(OnUpdateInfo)
+        .LaunchAsync();
+
+    Console.WriteLine("OSS Client test completed.");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Standard Client mode — silent poll with IPC handoff to Upgrade
+// ═══════════════════════════════════════════════════════════════════
+static async Task RunStandardClientAsync()
+{
     Console.WriteLine("=== GeneralUpdate Client Test (Silent Mode) ===");
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
@@ -47,14 +109,12 @@ try
     Console.WriteLine();
 
     // Keep the process alive so the background poll loop can work.
-    // When the user presses Ctrl+C or Enter, the process exits and
-    // ProcessExit fires, which triggers the upgrade launch.
     var cts = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) =>
     {
         Console.WriteLine();
         Console.WriteLine("[Shutdown] Ctrl+C pressed. Exiting...");
-        e.Cancel = true; // Prevent immediate kill — let ProcessExit fire
+        e.Cancel = true;
         cts.Cancel();
     };
 
@@ -67,10 +127,6 @@ try
         // Expected on Ctrl+C — graceful shutdown
     }
 
-    // Explicitly launch the upgrade process before exiting.
-    // ProcessExit may not fire reliably in all scenarios (e.g. console Ctrl+C),
-    // so we call TryLaunchUpgrade() directly as the primary launch path.
-    // If ProcessExit also fires later, the _updaterStarted guard prevents a double-launch.
     Console.WriteLine("[Shutdown] Launching upgrade process...");
     if (orchestrator != null && orchestrator.HasPreparedUpdate)
     {
@@ -86,11 +142,10 @@ try
 
     Console.WriteLine("[Shutdown] Client test exiting gracefully.");
 }
-catch (Exception ex)
-{
-    Console.WriteLine($"FATAL: {ex}");
-    Environment.Exit(1);
-}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event handlers (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
 {
@@ -135,6 +190,10 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
         Console.WriteLine("  No updates available.");
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Hooks (shared across both modes)
+// ═══════════════════════════════════════════════════════════════════
 
 sealed class ClientTestHooks : IUpdateHooks
 {
