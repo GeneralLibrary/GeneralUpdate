@@ -169,6 +169,44 @@ public class SilentPollOrchestrator : IDisposable
     }
 
     /// <summary>
+    /// Explicitly attempts to launch the upgrade process if an update was prepared.
+    /// Call this before process exit as a fallback for environments where
+    /// <see cref="AppDomain.ProcessExit"/> does not fire reliably (e.g. console
+    /// apps terminated via Ctrl+C).
+    /// </summary>
+    /// <returns><c>true</c> if the upgrade process was launched; <c>false</c> otherwise.</returns>
+    public bool TryLaunchUpgrade()
+    {
+        if (Volatile.Read(ref _prepared) != 1 || Interlocked.Exchange(ref _updaterStarted, 1) == 1)
+            return false;
+
+        try
+        {
+            if (!_strategy.HasPreparedClientUpdate)
+            {
+                GeneralTracer.Info("SilentPollOrchestrator: no client packages staged, skipping upgrade launch.");
+                return false;
+            }
+
+            _strategy.LaunchUpgradeProcessSync();
+            GeneralTracer.Info("SilentPollOrchestrator: upgrade process launched via ClientStrategy (explicit).");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("SilentPollOrchestrator: TryLaunchUpgrade failed.", ex);
+            Console.Error.WriteLine($"[SilentPollOrchestrator] Failed to launch upgrade: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether the orchestrator has prepared a client update and is waiting for
+    /// process exit to launch the upgrade process.
+    /// </summary>
+    public bool HasPreparedUpdate => Volatile.Read(ref _prepared) == 1 && _strategy.HasPreparedClientUpdate;
+
+    /// <summary>
     /// Releases all resources used by the <see cref="SilentPollOrchestrator"/>.
     /// </summary>
     public void Dispose()

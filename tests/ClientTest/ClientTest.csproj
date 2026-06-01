@@ -11,4 +11,28 @@
     <ProjectReference Include="..\..\src\c#\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="generalupdate.manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Copy UpgradeTest output as Update.exe into ClientTest output for silent update testing -->
+  <Target Name="CopyUpgradeTest" AfterTargets="Build">
+    <PropertyGroup>
+      <UpgradeTestDir>..\UpgradeTest\bin\$(Configuration)\net10.0</UpgradeTestDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <UpgradeTestFiles Include="$(UpgradeTestDir)\**\*" Exclude="$(UpgradeTestDir)\**\*.pdb;$(UpgradeTestDir)\**\*.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UpgradeTestFiles)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(UpgradeTestDir)')" />
+    <Exec Command="copy /Y &quot;$(OutputPath)UpgradeTest.exe&quot; &quot;$(OutputPath)Update.exe&quot;"
+          Condition="Exists('$(OutputPath)UpgradeTest.exe') AND '$(OS)' == 'Windows_NT'" />
+    <Message Text="[ClientTest] UpgradeTest files copied to output (Update.exe ready)." Importance="high"
+             Condition="Exists('$(OutputPath)Update.exe')" />
+  </Target>
+
 </Project>
