@@ -39,37 +39,21 @@ static async Task RunOssClientAsync()
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
+    // Secrets come from code. Identity fields (MainAppName, ClientVersion,
+    // UpdateAppName, UpdatePath) are read from generalupdate.manifest.json
+    // by OssStrategy via AppMetadataDiscoverer.Discover() — same as standard flow.
     var updateUrl = "http://localhost:5000/packages/versions.json";
+    var appSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
 
-    // Read current version from marker file (written by UpgradeTest after each successful update).
-    // This prevents infinite update loops when the package doesn't change the client binary.
-    var markerPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".current_version");
-    var clientVersion = "1.0.0";
-    if (File.Exists(markerPath))
-    {
-        clientVersion = File.ReadAllText(markerPath).Trim();
-        Console.WriteLine($"Marker file found: current version = {clientVersion}");
-    }
-
-    Console.WriteLine($"UpdateUrl (versions.json): {updateUrl}");
-    Console.WriteLine($"Current version: {clientVersion}");
+    Console.WriteLine($"UpdateUrl: {updateUrl}");
     Console.WriteLine();
 
-    // OssClient flow:
-    // 1. Download versions.json from UpdateUrl to InstallPath
-    // 2. Deserialize as List<OssVersionRecord>, sort by PubTime desc
-    // 3. Compare latest.Version > ClientVersion
-    // 4. If newer: launch UpdateAppName from InstallPath, then exit
     await new GeneralUpdateBootstrap()
         .SetConfig(new UpdateRequest
         {
             UpdateUrl = updateUrl,
             InstallPath = AppDomain.CurrentDomain.BaseDirectory,
-            ClientVersion = clientVersion,
-            MainAppName = "ClientTest.exe",
-            UpdateAppName = "UpgradeTest.exe",
-            UpdatePath = "update",
-            AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
+            AppSecretKey = appSecretKey
         })
         .SetOption(Option.AppType, AppType.OssClient)
         .Hooks<ClientTestHooks>()

@@ -95,8 +95,9 @@ public class ConfiginfoTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_UpgradeAppNameNullOrWhitespace_ThrowsArgumentException(string appName)
+    public void Validate_UpgradeAppNameNullOrWhitespace_NoException(string appName)
     {
+        // UpdateAppName is optional — filled from manifest by strategies.
         var config = new UpdateRequest
         {
             UpdateUrl = "https://api.example.com",
@@ -106,15 +107,17 @@ public class ConfiginfoTests
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
-        Assert.Throws<ArgumentException>(() => config.Validate());
+        var ex = Record.Exception(() => config.Validate());
+        Assert.Null(ex);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_MainAppNameNullOrWhitespace_ThrowsArgumentException(string mainUpgradeAppName)
+    public void Validate_MainAppNameNullOrWhitespace_NoException(string mainUpgradeAppName)
     {
+        // MainAppName is optional — filled from manifest by strategies.
         var config = new UpdateRequest
         {
             UpdateUrl = "https://api.example.com",
@@ -124,7 +127,8 @@ public class ConfiginfoTests
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
-        Assert.Throws<ArgumentException>(() => config.Validate());
+        var ex = Record.Exception(() => config.Validate());
+        Assert.Null(ex);
     }
 
     [Theory]
@@ -149,8 +153,9 @@ public class ConfiginfoTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_ClientVersionNullOrWhitespace_ThrowsArgumentException(string clientVersion)
+    public void Validate_ClientVersionNullOrWhitespace_NoException(string clientVersion)
     {
+        // ClientVersion is optional — filled from manifest by strategies.
         var config = new UpdateRequest
         {
             UpdateUrl = "https://api.example.com",
@@ -160,7 +165,8 @@ public class ConfiginfoTests
             ClientVersion = clientVersion,
             InstallPath = "C:\\app"
         };
-        Assert.Throws<ArgumentException>(() => config.Validate());
+        var ex = Record.Exception(() => config.Validate());
+        Assert.Null(ex);
     }
 
     [Theory]

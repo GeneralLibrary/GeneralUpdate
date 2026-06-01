@@ -150,7 +150,12 @@ public class OssStrategy : IStrategy
         if (_configInfo == null)
             throw new InvalidOperationException("OssStrategy not configured. Call Create() first.");
 
-        // Dispatch by role �?no env-var detection needed.
+        // Fill missing identity fields from generalupdate.manifest.json,
+        // making the manifest the single source of configuration across
+        // all update flows (standard ClientStrategy and OssStrategy).
+        Configuration.AppMetadataDiscoverer.Discover(_configInfo);
+
+        // Dispatch by role — no env-var detection needed.
         if (_role == AppType.OssUpgrade)
         {
             await ExecuteUpgradeAsync();
@@ -370,6 +375,12 @@ public class OssStrategy : IStrategy
             GeneralTracer.Debug("OssStrategy (upgrade): decompressing.");
             var encoding = Encoding.GetEncoding(_configInfo?.Encoding?.CodePage ?? Encoding.UTF8.CodePage);
             DecompressAssets(assets, installPath, encoding);
+
+            // Update generalupdate.manifest.json ClientVersion so the client
+            // reads the correct version on next startup, preventing infinite loops.
+            Configuration.ManifestInfo.TryUpdateVersion(
+                installPath,
+                clientVersion: _configInfo.LastVersion);
 
             await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);

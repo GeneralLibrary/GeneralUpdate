@@ -33,39 +33,24 @@ static async Task RunOssUpgradeAsync()
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
-    // OssUpgrade flow:
-    // 1. Read {MainAppName}_versions.json from InstallPath (downloaded by OssClient)
-    // 2. Filter versions > ClientVersion, sorted by PubTime asc
-    // 3. Download each asset's ZIP from the URL in the version record
-    // 4. Decompress all ZIPs to InstallPath, delete archives
-    // 5. Launch MainAppName, then exit
-    //
-    // NOTE: Unlike the standard Upgrade path (which reads config from IPC),
-    // OssUpgrade requires explicit SetConfig() so it knows where to find
-    // the version JSON and which version to compare against.
-    //
-    // InstallPath must point to the SAME directory as the OssClient's InstallPath,
-    // because the versions.json was downloaded there. When the upgrade runs from
-    // a subdirectory (e.g. update/), we resolve up to the parent.
-
+    // OssUpgrade runs from a subdirectory (e.g. update/), but the manifest
+    // and versions.json are in the parent directory (same as OssClient).
+    // InstallPath resolves to the parent so OssStrategy reads the correct
+    // manifest and versions.json.
     var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-    // baseDir ends with '\' (e.g. "...\update\"), so Path.Combine with ".." goes up one level.
     var installPath = Path.GetFullPath(Path.Combine(baseDir, ".."));
 
-    Console.WriteLine($"[OssUpgrade] BaseDir={baseDir}");
-    Console.WriteLine($"[OssUpgrade] InstallPath={installPath}");
-    GeneralUpdate.Core.GeneralTracer.Info($"[OssUpgrade] BaseDir={baseDir}");
-    GeneralUpdate.Core.GeneralTracer.Info($"[OssUpgrade] InstallPath={installPath}");
+    Console.WriteLine($"BaseDir={baseDir}");
+    Console.WriteLine($"InstallPath={installPath} (parent, where manifest + versions.json live)");
+    Console.WriteLine();
 
     await new GeneralUpdateBootstrap()
         .SetConfig(new UpdateRequest
         {
             UpdateUrl = "http://localhost:5000/packages/versions.json",
             InstallPath = installPath,
-            ClientVersion = "1.0.0",
-            MainAppName = "ClientTest.exe",
-            UpdateAppName = "UpgradeTest.exe",
             AppSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6"
+            // Identity fields from generalupdate.manifest.json via Discover().
         })
         .SetOption(Option.AppType, AppType.OssUpgrade)
         .Hooks<UpgradeTestHooks>()
@@ -160,16 +145,8 @@ sealed class UpgradeTestHooks : IUpdateHooks
     public async Task OnAfterUpdateAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnAfterUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
-
-        // Write version marker to prevent infinite update loops.
-        // The OssClient reads this file on startup to know its current version.
-        if (!string.IsNullOrWhiteSpace(ctx.TargetVersion) && !string.IsNullOrWhiteSpace(ctx.InstallPath))
-        {
-            var markerPath = Path.Combine(ctx.InstallPath, ".current_version");
-            File.WriteAllText(markerPath, ctx.TargetVersion);
-            Console.WriteLine($"[Hook] Version marker written: {markerPath} = {ctx.TargetVersion}");
-        }
-
+        // Manifest ClientVersion is updated by OssStrategy itself via
+        // ManifestInfo.TryUpdateVersion() after decompression.
         await Task.CompletedTask;
     }
 
