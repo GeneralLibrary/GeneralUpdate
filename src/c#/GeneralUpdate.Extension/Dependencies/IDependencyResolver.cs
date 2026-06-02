@@ -27,4 +27,13 @@ public interface IDependencyResolver
     /// <param name="extension">Extension metadata</param>
     /// <returns>List of missing dependency IDs</returns>
     List<string> GetMissingDependencies(ExtensionMetadata extension);
+
+    /// <summary>
+    /// Resolves transitive dependencies from a raw list of dependency IDs.
+    /// Handles both installed extensions (full transitive resolution) and
+    /// uninstalled ones (simple ID pass-through).
+    /// </summary>
+    /// <param name="dependencyIds">List of dependency extension IDs</param>
+    /// <returns>Dependency IDs in topological installation order</returns>
+    List<string> GetTransitiveDependencies(List<string> dependencyIds);
 }

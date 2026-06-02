@@ -373,31 +373,4 @@ public class WindowsGeneralDrivelution : BaseDriverUpdater
             GeneralTracer.Debug($"Could not parse INF file: {infPath} - {ex.Message}");
         }
     }
-
-    // ─── Nested type ──────────────────────────────────────────────────
-
-    /// <summary>
-    /// A lightweight pipeline step backed by delegates.
-    /// </summary>
-    private sealed class DelegateStep : IPipelineStep
-    {
-        private readonly Func<PipelineContext, CancellationToken, Task<PipelineResult>> _execute;
-
-        public string StepName { get; }
-
-        public DelegateStep(
-            string stepName,
-            Func<PipelineContext, CancellationToken, Task<PipelineResult>> execute)
-        {
-            StepName = stepName;
-            _execute = execute;
-        }
-
-        public bool ShouldExecute(PipelineContext context) => true;
-
-        public Task<PipelineResult> ExecuteAsync(
-            PipelineContext context,
-            CancellationToken cancellationToken)
-            => _execute(context, cancellationToken);
-    }
 }

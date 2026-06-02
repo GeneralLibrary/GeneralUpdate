@@ -8,6 +8,7 @@ using GeneralUpdate.Drivelution.Abstractions.Models;
 using GeneralUpdate.Drivelution.Core.Execution;
 using GeneralUpdate.Drivelution.Core.Pipeline;
 using GeneralUpdate.Drivelution.Core.Utilities;
+using GeneralUpdate.Drivelution.MacOS.Helpers;
 
 namespace GeneralUpdate.Drivelution.MacOS.Implementation;
 
@@ -205,7 +206,15 @@ public class MacOsGeneralDrivelution : BaseDriverUpdater
             execute: (context, ct) =>
             {
                 context.Result.StepLogs.Add($"[{DateTime.Now:HH:mm:ss}] Checking macOS root privileges");
-                return Task.FromResult(PipelineResult.Ok());
+                try
+                {
+                    MacOSPermissionHelper.EnsureRoot();
+                    return Task.FromResult(PipelineResult.Ok());
+                }
+                catch (DriverPermissionException ex)
+                {
+                    return Task.FromResult(PipelineResult.Fail(ex.Message));
+                }
             });
     }
 
@@ -401,29 +410,6 @@ public class MacOsGeneralDrivelution : BaseDriverUpdater
         }
     }
 
-    // ─── Nested type ──────────────────────────────────────────────────
-
-    private sealed class DelegateStep : IPipelineStep
-    {
-        private readonly Func<PipelineContext, CancellationToken, Task<PipelineResult>> _execute;
-
-        public string StepName { get; }
-
-        public DelegateStep(
-            string stepName,
-            Func<PipelineContext, CancellationToken, Task<PipelineResult>> execute)
-        {
-            StepName = stepName;
-            _execute = execute;
-        }
-
-        public bool ShouldExecute(PipelineContext context) => true;
-
-        public Task<PipelineResult> ExecuteAsync(
-            PipelineContext context,
-            CancellationToken cancellationToken)
-            => _execute(context, cancellationToken);
-    }
 }
 
 /// <summary>

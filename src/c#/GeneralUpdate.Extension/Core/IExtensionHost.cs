@@ -80,6 +80,28 @@ public interface IExtensionHost
     void SetGlobalAutoUpdate(bool enabled);
 
     /// <summary>
+    /// Uninstall an extension by ID.
+    /// </summary>
+    /// <param name="extensionId">Extension ID to uninstall</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if uninstallation succeeded</returns>
+    Task<bool> UninstallExtensionAsync(string extensionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Activate (load) an installed extension.
+    /// </summary>
+    /// <param name="extensionId">Extension ID to activate</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ActivateExtensionAsync(string extensionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deactivate (unload) a running extension.
+    /// </summary>
+    /// <param name="extensionId">Extension ID to deactivate</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task DeactivateExtensionAsync(string extensionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Event fired when extension update status changes
     /// </summary>
     event EventHandler<ExtensionUpdateEventArgs>? ExtensionUpdateStatusChanged;

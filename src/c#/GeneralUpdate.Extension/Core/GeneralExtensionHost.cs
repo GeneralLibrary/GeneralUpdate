@@ -78,13 +78,17 @@ public class GeneralExtensionHost : IExtensionHost
         ExtensionCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _compatibilityChecker = compatibilityChecker ?? throw new ArgumentNullException(nameof(compatibilityChecker));
         _downloadQueue = downloadQueue ?? throw new ArgumentNullException(nameof(downloadQueue));
-        _dependencyResolver = dependencyResolver;// ?? throw new ArgumentNullException(nameof(dependencyResolver));
+        _dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
         _platformMatcher = platformMatcher ?? throw new ArgumentNullException(nameof(platformMatcher));
         _lifecycleHooks = lifecycleHooks;
         _metadataMapper = metadataMapper;
 
         // Wire up events
         _downloadQueue.DownloadStatusChanged += OnDownloadStatusChanged;
+
+        // Wire download handler so the queue can perform actual downloads
+        _downloadQueue.DownloadHandler = (id, path, progress, ct) =>
+            _httpClient.DownloadExtensionAsync(id, path, progress, ct);
 
         // Ensure directories exist
         Directory.CreateDirectory(_extensionsDirectory);
@@ -227,18 +231,22 @@ public class GeneralExtensionHost : IExtensionHost
                 throw new InvalidOperationException($"Extension {extensionId} does not support current platform");
             }
 
-            // Resolve and download dependencies
+            // Resolve and download dependencies using the dependency resolver
             var dependencyList = metadata.DependencyList;
             if (dependencyList.Count > 0)
             {
                 GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: resolving {dependencyList.Count} dependency/ies for ExtensionId={extensionId}");
-                foreach (var dep in dependencyList)
+
+                var sortedDeps = _dependencyResolver.GetTransitiveDependencies(dependencyList.ToList());
+
+                var missingDeps = sortedDeps.Where(d => ExtensionCatalog.GetInstalledExtensionById(d) == null).ToList();
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: {missingDeps.Count} dependencies need installation (total sorted: {sortedDeps.Count})");
+
+                foreach (var dep in sortedDeps)
                 {
-                    var installedDep = ExtensionCatalog.GetInstalledExtensionById(dep);
-                    if (installedDep == null)
+                    if (missingDeps.Contains(dep))
                     {
-                        GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: dependency not installed, installing dep={dep}");
-                        // Download and install dependency
+                        GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: installing missing dependency dep={dep}");
                         await UpdateExtensionAsync(dep);
                     }
                     else
@@ -521,6 +529,73 @@ public class GeneralExtensionHost : IExtensionHost
     public void SetGlobalAutoUpdate(bool enabled)
     {
         _globalAutoUpdate = enabled;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> UninstallExtensionAsync(
+        string extensionId,
+        CancellationToken cancellationToken = default)
+    {
+        GeneralTracer.Info($"Uninstalling extension: {extensionId}");
+        var extension = ExtensionCatalog.GetInstalledExtensionById(extensionId);
+        if (extension == null)
+        {
+            GeneralTracer.Warn($"Extension not found for uninstall: {extensionId}");
+            return false;
+        }
+
+        if (_lifecycleHooks != null)
+        {
+            var canProceed = await _lifecycleHooks.OnBeforeUninstallAsync(extension, cancellationToken);
+            if (!canProceed)
+            {
+                GeneralTracer.Info($"Uninstall cancelled by lifecycle hook for: {extensionId}");
+                return false;
+            }
+        }
+
+        ExtensionCatalog.RemoveInstalledExtension(extensionId);
+
+        if (_lifecycleHooks != null)
+            await _lifecycleHooks.OnAfterUninstallAsync(extensionId, cancellationToken);
+
+        GeneralTracer.Info($"Extension uninstalled: {extensionId}");
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task ActivateExtensionAsync(
+        string extensionId,
+        CancellationToken cancellationToken = default)
+    {
+        GeneralTracer.Info($"Activating extension: {extensionId}");
+
+        if (_lifecycleHooks != null)
+            await _lifecycleHooks.OnBeforeActivateAsync(extensionId, cancellationToken);
+
+        // Extension activation is host-specific (e.g., Assembly.LoadFrom).
+        // The lifecycle hooks provide the extension points for host implementations.
+        GeneralTracer.Info($"Activation completed for extension: {extensionId}");
+
+        if (_lifecycleHooks != null)
+            await _lifecycleHooks.OnAfterActivateAsync(extensionId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeactivateExtensionAsync(
+        string extensionId,
+        CancellationToken cancellationToken = default)
+    {
+        GeneralTracer.Info($"Deactivating extension: {extensionId}");
+
+        if (_lifecycleHooks != null)
+            await _lifecycleHooks.OnBeforeDeactivateAsync(extensionId, cancellationToken);
+
+        // Extension deactivation is host-specific.
+        GeneralTracer.Info($"Deactivation completed for extension: {extensionId}");
+
+        if (_lifecycleHooks != null)
+            await _lifecycleHooks.OnAfterDeactivateAsync(extensionId, cancellationToken);
     }
 
     /// <summary>

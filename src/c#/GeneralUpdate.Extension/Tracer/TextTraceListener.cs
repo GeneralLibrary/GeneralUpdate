@@ -4,6 +4,8 @@ using System.IO;
 using System.Collections.Concurrent;
 using System.Threading;
 
+namespace GeneralUpdate.Extension;
+
 public class TextTraceListener : TraceListener, IDisposable
 {
     private readonly string _filePath;

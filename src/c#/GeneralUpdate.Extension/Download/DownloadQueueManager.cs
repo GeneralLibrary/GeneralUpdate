@@ -35,6 +35,9 @@ public class DownloadQueueManager : IDownloadQueueManager
     /// <inheritdoc/>
     public event EventHandler<DownloadTaskEventArgs>? DownloadStatusChanged;
 
+    /// <inheritdoc/>
+    public Func<string, string, IProgress<int>, CancellationToken, Task<bool>>? DownloadHandler { get; set; }
+
     /// <summary>
     /// Initialize download queue manager
     /// </summary>
@@ -129,9 +132,30 @@ public class DownloadQueueManager : IDownloadQueueManager
             task.Progress = 0;
             OnDownloadStatusChanged(task);
 
-            // Actual download logic would be injected via callback
-            // This is a placeholder for the download process
-            await Task.Delay(100, task.CancellationTokenSource.Token);
+            if (DownloadHandler != null)
+            {
+                var progress = new Progress<int>(p =>
+                {
+                    task.Progress = p;
+                    OnDownloadStatusChanged(task);
+                });
+
+                var success = await DownloadHandler(
+                    task.Extension.Id,
+                    task.SavePath,
+                    progress,
+                    task.CancellationTokenSource.Token);
+
+                if (!success)
+                {
+                    throw new InvalidOperationException($"Download failed for extension {task.Extension.Id}");
+                }
+            }
+            else
+            {
+                // Fallback placeholder — no download handler configured
+                await Task.Delay(100, task.CancellationTokenSource.Token);
+            }
 
             task.Status = ExtensionUpdateStatus.UpdateSuccessful;
             task.Progress = 100;

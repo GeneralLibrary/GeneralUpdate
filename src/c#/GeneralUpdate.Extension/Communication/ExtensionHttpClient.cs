@@ -22,6 +22,12 @@ public class ExtensionHttpClient : IExtensionHttpClient, IDisposable
     private readonly bool _ownsHttpClient;
 
     /// <summary>
+    /// Controls whether <see cref="QueryExtensionsAsync"/> uses POST (default: false, backward-compatible).
+    /// Set to true for servers that support [HttpPost]; false preserves the legacy [HttpGet] with [FromBody] behavior.
+    /// </summary>
+    public bool UsePostForQuery { get; set; } = false;
+
+    /// <summary>
     /// Initialize extension HTTP client (convenience constructor — creates its own HttpClient).
     /// Prefer the <see cref="ExtensionHttpClient(string,string,string,HttpClient)"/> overload
     /// that accepts an externally managed <see cref="HttpClient"/> for better connection pooling.
@@ -66,16 +72,15 @@ public class ExtensionHttpClient : IExtensionHttpClient, IDisposable
             var json = JsonConvert.SerializeObject(query);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // IMPORTANT: The server API specification explicitly requires [HttpGet] with [FromBody]
-            // This is non-standard HTTP practice, but we must follow the server API contract.
-            // Most modern HTTP clients (including HttpClient) support this, though some proxies may not.
-            // If compatibility issues arise, coordinate with the server team to change to POST or query parameters.
-            var request = new HttpRequestMessage(HttpMethod.Get, url)
+            // Defaults to GET (backward-compatible). Set UsePostForQuery = true to use POST
+            // for servers that have migrated away from [HttpGet] with [FromBody].
+            var httpMethod = UsePostForQuery ? HttpMethod.Post : HttpMethod.Get;
+            var request = new HttpRequestMessage(httpMethod, url)
             {
                 Content = content
             };
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request, cancellationToken);
             var responseJson = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
