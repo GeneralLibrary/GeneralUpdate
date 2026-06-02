@@ -32,7 +32,14 @@ public static class HttpClientProvider
         var handler = new HttpClientHandler();
         handler.ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
             _sslPolicy.ValidateCertificate(cert, chain, errors);
-        _shared = new HttpClient(handler, disposeHandler: false);
+        _shared = new HttpClient(handler, disposeHandler: false)
+        {
+            // Let per-request CancellationTokenSource.CancelAfter (set by
+            // HttpDownloadExecutor & VersionService) control timeout — the
+            // global HttpClient.Timeout (default ~100s) would otherwise cap
+            // requests before a caller-configured longer DownloadTimeout.
+            Timeout = System.Threading.Timeout.InfiniteTimeSpan
+        };
     }
 
     /// <summary>
