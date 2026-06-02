@@ -1,9 +1,6 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text.Json;
 using GeneralUpdate.Bowl;
-using GeneralUpdate.Bowl.Strategys;
 
 namespace BowlTest.Integration
 {
@@ -37,118 +34,95 @@ namespace BowlTest.Integration
         }
 
         /// <summary>
-        /// Tests Normal mode vs Upgrade mode behavior difference.
+        /// Tests Normal mode vs Upgrade mode behavior difference via BowlContext.
         /// </summary>
         [Fact]
         public void WorkModel_DifferentiatesBetweenNormalAndUpgradeMode()
         {
-            // Arrange
-            var normalParameter = new MonitorParameter
-            {
-                WorkModel = "Normal"
-            };
+            var normalCtx = new BowlContext { WorkModel = "Normal" };
+            var upgradeCtx = new BowlContext { WorkModel = "Upgrade" };
 
-            var upgradeParameter = new MonitorParameter
-            {
-                WorkModel = "Upgrade"
-            };
-
-            // Assert
-            Assert.Equal("Normal", normalParameter.WorkModel);
-            Assert.Equal("Upgrade", upgradeParameter.WorkModel);
-            Assert.NotEqual(normalParameter.WorkModel, upgradeParameter.WorkModel);
+            Assert.Equal("Normal", normalCtx.WorkModel);
+            Assert.Equal("Upgrade", upgradeCtx.WorkModel);
+            Assert.NotEqual(normalCtx.WorkModel, upgradeCtx.WorkModel);
         }
 
         /// <summary>
-        /// Tests that parameter paths are correctly constructed from ProcessContract.
+        /// Tests that fail and backup directory paths are constructed correctly from install path and version.
         /// </summary>
         [Fact]
-        public void ParameterConstruction_FromProcessContract_CreatesCorrectPaths()
+        public void BowlContext_PathConstruction_CreatesCorrectPaths()
         {
-            // Arrange
             var installPath = "/path/to/install";
             var version = "3.2.1";
 
-            // Expected paths based on CreateParameter logic in Bowl.cs
             var expectedFailDir = Path.Combine(installPath, "fail", version);
             var expectedBackupDir = Path.Combine(installPath, version);
             var expectedDumpFile = $"{version}_fail.dmp";
             var expectedFailFile = $"{version}_fail.json";
 
-            // Act - Create parameter manually with same logic
-            var parameter = new MonitorParameter
+            var ctx = new BowlContext
             {
                 TargetPath = installPath,
                 FailDirectory = expectedFailDir,
                 BackupDirectory = expectedBackupDir,
                 DumpFileName = expectedDumpFile,
                 FailFileName = expectedFailFile,
-                ExtendedField = version
+                ExtendedField = version,
             };
 
-            // Assert
-            Assert.Equal(expectedFailDir, parameter.FailDirectory);
-            Assert.Equal(expectedBackupDir, parameter.BackupDirectory);
-            Assert.Equal(expectedDumpFile, parameter.DumpFileName);
-            Assert.Equal(expectedFailFile, parameter.FailFileName);
-            Assert.Equal(version, parameter.ExtendedField);
-            Assert.Contains(version, parameter.FailDirectory);
-            Assert.Contains(version, parameter.BackupDirectory);
+            Assert.Equal(expectedFailDir, ctx.FailDirectory);
+            Assert.Equal(expectedBackupDir, ctx.BackupDirectory);
+            Assert.Equal(expectedDumpFile, ctx.DumpFileName);
+            Assert.Equal(expectedFailFile, ctx.FailFileName);
+            Assert.Equal(version, ctx.ExtendedField);
+            Assert.Contains(version, ctx.FailDirectory);
+            Assert.Contains(version, ctx.BackupDirectory);
         }
 
         /// <summary>
-        /// Tests that extended field can store version information.
+        /// Tests that ExtendedField can store version information.
         /// </summary>
         [Fact]
-        public void ExtendedField_StoresVersionEntryrmation()
+        public void ExtendedField_StoresVersionInformation()
         {
-            // Arrange
             var versions = new[] { "1.0.0", "2.1.3", "10.5.2-beta" };
 
             foreach (var version in versions)
             {
-                // Act
-                var parameter = new MonitorParameter
-                {
-                    ExtendedField = version
-                };
-
-                // Assert
-                Assert.Equal(version, parameter.ExtendedField);
+                var ctx = new BowlContext { ExtendedField = version };
+                Assert.Equal(version, ctx.ExtendedField);
             }
         }
 
         /// <summary>
-        /// Tests that ProcessContract JSON with all required fields parses correctly.
+        /// Tests Normalize applies expected defaults.
         /// </summary>
         [Fact]
-        public void ProcessContractJson_WithAllFields_ParsesCorrectly()
+        public void Normalize_AppliesDefaults_WorkModelTimeoutAndDumpType()
         {
-            // Arrange
-            var json = @"{
-                ""AppName"": ""MyApp.exe"",
-                ""InstallPath"": ""/path/to/app"",
-                ""LastVersion"": ""1.2.3""
-            }";
+            var ctx = new BowlContext { ProcessNameOrId = "test.exe" };
+            var normalized = ctx.Normalize();
 
-            // Act
-            var processInfo = JsonSerializer.Deserialize<ProcessContractDto>(json);
-
-            // Assert
-            Assert.NotNull(processInfo);
-            Assert.Equal("MyApp.exe", processInfo.AppName);
-            Assert.Equal("/path/to/app", processInfo.InstallPath);
-            Assert.Equal("1.2.3", processInfo.LastVersion);
+            Assert.Equal("Upgrade", normalized.WorkModel);
+            Assert.Equal(30_000, normalized.TimeoutMs);
+            Assert.Equal(DumpType.Full, normalized.DumpType);
         }
 
         /// <summary>
-        /// Helper class for ProcessContract JSON deserialization testing.
+        /// Tests that explicit WorkModel "Normal" is preserved after Normalize.
         /// </summary>
-        private class ProcessContractDto
+        [Fact]
+        public void Normalize_PreservesExplicitNormalWorkModel()
         {
-            public string? AppName { get; set; }
-            public string? InstallPath { get; set; }
-            public string? LastVersion { get; set; }
+            var ctx = new BowlContext
+            {
+                ProcessNameOrId = "test.exe",
+                WorkModel = "Normal",
+            };
+            var normalized = ctx.Normalize();
+
+            Assert.Equal("Normal", normalized.WorkModel);
         }
     }
 }

@@ -21,9 +21,6 @@ internal static class StrategyFactory
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return new LinuxBowlStrategy();
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return new MacBowlStrategy();
-
         throw new PlatformNotSupportedException(
             $"Bowl does not support the current platform: {RuntimeInformation.OSDescription}");
     }

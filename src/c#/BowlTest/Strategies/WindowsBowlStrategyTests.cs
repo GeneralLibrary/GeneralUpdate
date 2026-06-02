@@ -173,7 +173,7 @@ public class WindowsBowlStrategyTests
         var startInfo = strategy.Prepare(ctx);
 
         Assert.NotNull(startInfo);
-        Assert.Contains(" -e ", startInfo!.Arguments);
+        Assert.StartsWith("-e ", startInfo!.Arguments);
     }
 
     [Fact]

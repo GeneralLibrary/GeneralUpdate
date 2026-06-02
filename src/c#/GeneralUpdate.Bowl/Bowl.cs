@@ -1,14 +1,10 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl.Strategies;
-using GeneralUpdate.Bowl.Strategys;
 using GeneralUpdate.Bowl.FileSystem;
-using GeneralUpdate.Bowl.Configuration;
-using GeneralUpdate.Bowl.Ipc;
 
 namespace GeneralUpdate.Bowl;
 
@@ -23,7 +19,6 @@ public sealed class Bowl
     private readonly IBowlStrategy _strategy;
     private readonly ICrashReporter _crashReporter;
     private readonly ISystemInfoProvider _systemInfoProvider;
-    private readonly IEnvironmentProvider _env;
 
     // ---- Constructors ----
 
@@ -34,8 +29,7 @@ public sealed class Bowl
         : this(
             StrategyFactory.Create(),
             new CrashReporter(),
-            SystemInfoProviderFactory.Create(),
-            new EnvironmentProvider())
+            SystemInfoProviderFactory.Create())
     { }
 
     /// <summary>
@@ -44,13 +38,11 @@ public sealed class Bowl
     internal Bowl(
         IBowlStrategy strategy,
         ICrashReporter crashReporter,
-        ISystemInfoProvider systemInfoProvider,
-        IEnvironmentProvider env)
+        ISystemInfoProvider systemInfoProvider)
     {
         _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
         _crashReporter = crashReporter ?? throw new ArgumentNullException(nameof(crashReporter));
         _systemInfoProvider = systemInfoProvider ?? throw new ArgumentNullException(nameof(systemInfoProvider));
-        _env = env ?? throw new ArgumentNullException(nameof(env));
     }
 
     // ---- Public Async API ----
@@ -175,25 +167,7 @@ public sealed class Bowl
             }
         }
 
-        // 4. Mark failed version to prevent re-upgrading to it
-        if (context.WorkModel == "Upgrade")
-        {
-            try
-            {
-                _env.SetVariable("UpgradeFail", context.ExtendedField);
-                GeneralTracer.Warn($"Bowl.HandleCrashAsync: UpgradeFail set to '{context.ExtendedField}'.");
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                GeneralTracer.Error("Bowl.HandleCrashAsync: failed to set UpgradeFail env var.", ex);
-            }
-        }
-
-        // 5. Platform-specific post-processing
+        // 4. Platform-specific post-processing
         try
         {
             await _strategy.PostProcessAsync(context, exitResult, ct);
@@ -207,30 +181,15 @@ public sealed class Bowl
             GeneralTracer.Error("Bowl.HandleCrashAsync: post-process failed.", ex);
         }
 
-        // 6. Invoke crash callback
+        // 5. Invoke crash callback
         if (context.OnCrash != null)
         {
             try
             {
-                // Only invoke callback if we have something to report
-                if (crashReportPath == null)
-                {
-                    GeneralTracer.Warn("Bowl.HandleCrashAsync: skipping OnCrash callback — no crash report generated.");
-                    return new BowlResult
-                    {
-                        Success = false,
-                        ExitCode = exitResult.ExitCode,
-                        DumpCaptured = true,
-                        DumpFilePath = dumpPath,
-                        CrashReportPath = null,
-                        Restored = restored,
-                    };
-                }
-
                 var crashInfo = new CrashInfo
                 {
                     DumpFilePath = dumpPath,
-                    CrashReportPath = crashReportPath!,
+                    CrashReportPath = crashReportPath ?? string.Empty,
                     Version = context.ExtendedField,
                     ExitCode = exitResult.ExitCode,
                 };
@@ -254,68 +213,6 @@ public sealed class Bowl
             DumpFilePath = dumpPath,
             CrashReportPath = crashReportPath,
             Restored = restored,
-        };
-    }
-
-    // ---- Backward Compatibility ----
-
-    /// <summary>
-    /// Converts legacy <see cref="MonitorParameter"/> to the new <see cref="BowlContext"/>.
-    /// </summary>
-    public static BowlContext MapToContext(MonitorParameter p)
-    {
-        return new BowlContext
-        {
-            ProcessNameOrId = p.ProcessNameOrId,
-            DumpFileName = p.DumpFileName,
-            FailFileName = p.FailFileName,
-            TargetPath = p.TargetPath,
-            FailDirectory = p.FailDirectory,
-            BackupDirectory = p.BackupDirectory,
-            WorkModel = p.WorkModel,
-            ExtendedField = p.ExtendedField,
-            TimeoutMs = 30_000,
-            DumpType = DumpType.Full,
-            AutoRestore = true,
-        };
-    }
-
-    /// <summary>
-    /// Reads <c>ProcessInfo</c> environment variable and builds a legacy <see cref="MonitorParameter"/>.
-    /// Shared with the legacy static API for backward compatibility.
-    /// </summary>
-    internal static MonitorParameter CreateParameter()
-    {
-        GeneralTracer.Info("Bowl.CreateParameter: reading ProcessInfo from environment variable.");
-
-        var json = Environments.GetEnvironmentVariable("ProcessInfo");
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            GeneralTracer.Fatal("Bowl.CreateParameter: ProcessInfo environment variable is not set.");
-            throw new ArgumentNullException(
-                "ProcessInfo environment variable not set.");
-        }
-
-        var processInfo = JsonSerializer.Deserialize<ProcessContract>(json);
-        if (processInfo == null)
-        {
-            GeneralTracer.Fatal("Bowl.CreateParameter: failed to deserialize ProcessInfo JSON.");
-            throw new ArgumentNullException(
-                "ProcessInfo JSON deserialization failed.");
-        }
-
-        GeneralTracer.Info(
-            $"Bowl.CreateParameter: AppName={processInfo.AppName}, Version={processInfo.LastVersion}");
-
-        return new MonitorParameter
-        {
-            ProcessNameOrId = processInfo.AppName,
-            DumpFileName = $"{processInfo.LastVersion}_fail.dmp",
-            FailFileName = $"{processInfo.LastVersion}_fail.json",
-            TargetPath = processInfo.InstallPath,
-            FailDirectory = Path.Combine(processInfo.InstallPath, "fail", processInfo.LastVersion),
-            BackupDirectory = Path.Combine(processInfo.InstallPath, processInfo.LastVersion),
-            ExtendedField = processInfo.LastVersion,
         };
     }
 

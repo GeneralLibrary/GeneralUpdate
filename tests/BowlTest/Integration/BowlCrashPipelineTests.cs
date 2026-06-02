@@ -38,7 +38,7 @@ namespace BowlTest.Integration
         }
 
         /// <summary>
-        /// Simulates a full crash â†?dump â†?report â†?callback pipeline.
+        /// Simulates a full crash ï¿½?dump ï¿½?report ï¿½?callback pipeline.
         /// Produces real files that can be inspected on disk.
         /// </summary>
         [Fact]
@@ -206,7 +206,7 @@ namespace BowlTest.Integration
             var bowl = CreateBowl(mockStrategy);
             var result = await bowl.LaunchAsync(context);
 
-            _output.WriteLine($"Normal mode â€?Restored: {result.Restored}, DumpCaptured: {result.DumpCaptured}");
+            _output.WriteLine($"Normal mode ï¿½?Restored: {result.Restored}, DumpCaptured: {result.DumpCaptured}");
 
             Assert.True(result.DumpCaptured);
             Assert.False(result.Restored, "Normal mode should NOT restore backup");
@@ -242,7 +242,7 @@ namespace BowlTest.Integration
             var bowl = CreateBowl(mockStrategy);
             var result = await bowl.LaunchAsync(context);
 
-            _output.WriteLine($"Healthy â€?Success: {result.Success}, DumpCaptured: {result.DumpCaptured}");
+            _output.WriteLine($"Healthy ï¿½?Success: {result.Success}, DumpCaptured: {result.DumpCaptured}");
 
             Assert.False(result.DumpCaptured, "No dump should be captured for healthy process");
             Assert.Equal(0, result.ExitCode);
@@ -253,7 +253,7 @@ namespace BowlTest.Integration
         private static Bowl CreateBowl(IBowlStrategy strategy)
         {
             return new Bowl(strategy, new CrashReporter(),
-                new NoOpInfoProvider(), new MockEnvironmentProvider());
+                new NoOpInfoProvider());
         }
 
         /// <summary>
@@ -325,15 +325,5 @@ namespace BowlTest.Integration
                 => Task.CompletedTask;
         }
 
-        private sealed class MockEnvironmentProvider : IEnvironmentProvider
-        {
-            private readonly Dictionary<string, string> _vars = new();
-
-            public string? GetVariable(string name)
-                => _vars.TryGetValue(name, out var v) ? v : null;
-
-            public void SetVariable(string name, string value)
-                => _vars[name] = value;
-        }
     }
 }

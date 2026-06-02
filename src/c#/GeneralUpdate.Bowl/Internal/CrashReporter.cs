@@ -4,13 +4,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Bowl.FileSystem;
-using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Internal;
 
 /// <summary>
 /// Default crash reporter that serializes a <see cref="Crash"/> record to JSON.
-/// Replaces the inline <c>CreateCrash()</c> method in the old WindowStrategy.
 /// </summary>
 internal sealed class CrashReporter : ICrashReporter
 {
@@ -23,17 +21,14 @@ internal sealed class CrashReporter : ICrashReporter
 
         var crash = new Crash
         {
-            Parameter = new Strategys.MonitorParameter
-            {
-                TargetPath = context.TargetPath,
-                FailDirectory = context.FailDirectory,
-                BackupDirectory = context.BackupDirectory,
-                ProcessNameOrId = context.ProcessNameOrId,
-                DumpFileName = context.DumpFileName,
-                FailFileName = context.FailFileName,
-                WorkModel = context.WorkModel,
-                ExtendedField = context.ExtendedField,
-            },
+            TargetPath = context.TargetPath,
+            FailDirectory = context.FailDirectory,
+            BackupDirectory = context.BackupDirectory,
+            ProcessNameOrId = context.ProcessNameOrId,
+            DumpFileName = context.DumpFileName,
+            FailFileName = context.FailFileName,
+            WorkModel = context.WorkModel,
+            ExtendedField = context.ExtendedField,
             ProcdumpOutPutLines = new List<string>(outputLines),
         };
 

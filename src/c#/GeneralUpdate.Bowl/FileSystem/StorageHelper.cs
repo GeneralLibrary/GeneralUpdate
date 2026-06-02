@@ -7,7 +7,7 @@ namespace GeneralUpdate.Bowl.FileSystem;
 /// <summary>
 /// Minimal file system utilities for Bowl (backup restore, directory cleanup, JSON serialization).
 /// </summary>
-public static class StorageHelper
+internal static class StorageHelper
 {
     public static void Restore(string backupPath, string sourcePath)
     {
