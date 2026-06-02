@@ -44,6 +44,14 @@ public interface IDownloadQueueManager : IDisposable
     /// </summary>
     /// <returns>List of active tasks</returns>
     List<DownloadTask> GetActiveTasks();
+
+    /// <summary>
+    /// Optional delegate for performing the actual download.
+    /// Set this to wire the queue to real download logic.
+    /// Signature: (extensionId, savePath, progress, cancellationToken) -> success.
+    /// When not set, the queue operates in placeholder mode (no-op).
+    /// </summary>
+    Func<string, string, IProgress<int>, CancellationToken, Task<bool>>? DownloadHandler { get; set; }
 }
 
 /// <summary>

@@ -130,30 +130,30 @@ internal static class DefaultPipelineSteps
             return PipelineResult.Ok();
         });
     }
+}
 
-    /// <summary>
-    /// Lightweight step implementation using delegates.
-    /// </summary>
-    private sealed class DelegateStep : IPipelineStep
+/// <summary>
+/// Lightweight step implementation using delegates.
+/// </summary>
+internal sealed class DelegateStep : IPipelineStep
+{
+    private readonly Func<PipelineContext, CancellationToken, Task<PipelineResult>> _execute;
+    private readonly Func<PipelineContext, bool> _shouldExecute;
+
+    public string StepName { get; }
+
+    public DelegateStep(
+        string stepName,
+        Func<PipelineContext, CancellationToken, Task<PipelineResult>> execute,
+        Func<PipelineContext, bool>? shouldExecute = null)
     {
-        private readonly Func<PipelineContext, CancellationToken, Task<PipelineResult>> _execute;
-        private readonly Func<PipelineContext, bool> _shouldExecute;
-
-        public string StepName { get; }
-
-        public DelegateStep(
-            string stepName,
-            Func<PipelineContext, CancellationToken, Task<PipelineResult>> execute,
-            Func<PipelineContext, bool>? shouldExecute = null)
-        {
-            StepName = stepName;
-            _execute = execute;
-            _shouldExecute = shouldExecute ?? (_ => true);
-        }
-
-        public bool ShouldExecute(PipelineContext context) => _shouldExecute(context);
-
-        public Task<PipelineResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
-            => _execute(context, cancellationToken);
+        StepName = stepName;
+        _execute = execute;
+        _shouldExecute = shouldExecute ?? (_ => true);
     }
+
+    public bool ShouldExecute(PipelineContext context) => _shouldExecute(context);
+
+    public Task<PipelineResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
+        => _execute(context, cancellationToken);
 }

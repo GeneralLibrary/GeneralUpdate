@@ -52,6 +52,35 @@ public class DependencyResolver : IDependencyResolver
         return missing;
     }
 
+    /// <inheritdoc/>
+    public List<string> GetTransitiveDependencies(List<string> dependencyIds)
+    {
+        var resolved = new List<string>();
+        var visiting = new HashSet<string>();
+        var visited = new HashSet<string>();
+
+        foreach (var depId in dependencyIds)
+        {
+            var extension = _catalog.GetInstalledExtensionById(depId);
+            if (extension != null && extension.DependencyList.Count > 0)
+            {
+                // Full transitive resolution via catalog
+                ResolveDependenciesRecursive(depId, resolved, visiting, visited);
+            }
+            else
+            {
+                // Not installed or no sub-dependencies — add the ID directly
+                if (!visited.Contains(depId))
+                {
+                    visited.Add(depId);
+                    resolved.Add(depId);
+                }
+            }
+        }
+
+        return resolved;
+    }
+
     private void ResolveDependenciesRecursive(
         string extensionId,
         List<string> resolved,

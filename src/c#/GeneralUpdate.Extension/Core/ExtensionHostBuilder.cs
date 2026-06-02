@@ -23,6 +23,7 @@ public class ExtensionHostBuilder
 {
     private readonly IServiceCollection _services;
     private ExtensionHostOptions? _options;
+    private readonly IExtensionServiceFactory? _serviceFactory;
 
     /// <summary>
     /// Initialize extension host builder
@@ -30,6 +31,16 @@ public class ExtensionHostBuilder
     public ExtensionHostBuilder()
     {
         _services = new ServiceCollection();
+    }
+
+    /// <summary>
+    /// Initialize extension host builder with an optional service factory.
+    /// When provided, the factory is used as a fallback for creating default service instances.
+    /// </summary>
+    /// <param name="serviceFactory">Optional service factory for creating default service instances</param>
+    public ExtensionHostBuilder(IExtensionServiceFactory? serviceFactory) : this()
+    {
+        _serviceFactory = serviceFactory;
     }
 
     /// <summary>
@@ -86,13 +97,28 @@ public class ExtensionHostBuilder
                 new ExtensionHttpClient(_options.ServerUrl, _options.Scheme, _options.Token));
 
         if (!_services.Any(sd => sd.ServiceType == typeof(IVersionCompatibilityChecker)))
-            _services.AddSingleton<IVersionCompatibilityChecker, VersionCompatibilityChecker>();
+        {
+            if (_serviceFactory != null)
+                _services.AddSingleton(_serviceFactory.CreateCompatibilityChecker());
+            else
+                _services.AddSingleton<IVersionCompatibilityChecker, VersionCompatibilityChecker>();
+        }
 
         if (!_services.Any(sd => sd.ServiceType == typeof(IDownloadQueueManager)))
-            _services.AddSingleton<IDownloadQueueManager, DownloadQueueManager>();
+        {
+            if (_serviceFactory != null)
+                _services.AddSingleton(_serviceFactory.CreateDownloadQueueManager());
+            else
+                _services.AddSingleton<IDownloadQueueManager, DownloadQueueManager>();
+        }
 
         if (!_services.Any(sd => sd.ServiceType == typeof(IPlatformMatcher)))
-            _services.AddSingleton<IPlatformMatcher, PlatformMatcher>();
+        {
+            if (_serviceFactory != null)
+                _services.AddSingleton(_serviceFactory.CreatePlatformMatcher());
+            else
+                _services.AddSingleton<IPlatformMatcher, PlatformMatcher>();
+        }
 
         // Platform detection and metadata mapping (overridable for testing)
         if (!_services.Any(sd => sd.ServiceType == typeof(IPlatformServices)))
@@ -106,8 +132,14 @@ public class ExtensionHostBuilder
             _services.AddSingleton<IExtensionCatalog>(sp => new ExtensionCatalog(catalogPath));
         
         if (!_services.Any(sd => sd.ServiceType == typeof(IDependencyResolver)))
-            _services.AddSingleton<IDependencyResolver>(sp => 
-                new DependencyResolver(sp.GetRequiredService<IExtensionCatalog>()));
+        {
+            if (_serviceFactory != null)
+                _services.AddSingleton(sp =>
+                    _serviceFactory.CreateDependencyResolver(sp.GetRequiredService<IExtensionCatalog>()));
+            else
+                _services.AddSingleton<IDependencyResolver>(sp =>
+                    new DependencyResolver(sp.GetRequiredService<IExtensionCatalog>()));
+        }
 
         // Lifecycle hooks (default: no-op, user can override via ConfigureServices)
         if (!_services.Any(sd => sd.ServiceType == typeof(IExtensionLifecycleHooks)))
