@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -462,8 +461,7 @@ public class OssStrategy : IStrategy
             File.SetAttributes(path, FileAttributes.Normal);
             File.Delete(path);
         }
-        using var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
-        var bytes = await httpClient.GetByteArrayAsync(url).ConfigureAwait(false);
+        var bytes = await Network.HttpClientProvider.Shared.GetByteArrayAsync(url).ConfigureAwait(false);
         File.WriteAllBytes(path, bytes);
     }
 
@@ -506,11 +504,13 @@ public class OssStrategy : IStrategy
         }
         else
         {
-            using var httpClient = new HttpClient
+            var options = new DownloadOrchestratorOptions
             {
-                Timeout = TimeSpan.FromSeconds(_configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut)
+                DownloadTimeout = TimeSpan.FromSeconds(
+                    _configInfo?.DownloadTimeOut > 0 ? _configInfo!.DownloadTimeOut : DefaultTimeOut)
             };
-            var orchestrator = new DefaultDownloadOrchestrator(httpClient);
+            var orchestrator = new DefaultDownloadOrchestrator(
+                Network.HttpClientProvider.Shared, options);
             await orchestrator.ExecuteAsync(plan, targetPath).ConfigureAwait(false);
         }
     }

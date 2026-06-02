@@ -153,7 +153,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             // ── Network-level extensions (global, applied before any HTTP call) ──
             var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
-            if (sslPolicy != null) Network.VersionService.SetSslValidationPolicy(sslPolicy);
+            if (sslPolicy != null)
+            {
+                Network.VersionService.SetSslValidationPolicy(sslPolicy);
+                Network.HttpClientProvider.SetSslValidationPolicy(sslPolicy);
+            }
             var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
             if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
@@ -403,7 +407,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         // Network-level extensions (global, applied before any HTTP call)
         var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
-        if (sslPolicy != null) Network.VersionService.SetSslValidationPolicy(sslPolicy);
+        if (sslPolicy != null)
+        {
+            Network.VersionService.SetSslValidationPolicy(sslPolicy);
+            Network.HttpClientProvider.SetSslValidationPolicy(sslPolicy);
+        }
         var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
         if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
