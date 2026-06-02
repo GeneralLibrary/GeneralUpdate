@@ -2,7 +2,6 @@ using System.Diagnostics;
 using GeneralUpdate.Bowl;
 using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl.Strategies;
-using GeneralUpdate.Bowl.Strategys;
 using BowlTest.Utilities;
 
 /// <summary>
@@ -16,27 +15,22 @@ using BowlTest.Utilities;
 /// - HandleCrashAsync: skip restore when conditions not met
 /// - HandleCrashAsync: OnCrash callback with valid path -> invoked
 /// - HandleCrashAsync: OnCrash callback throws -> swallowed
-/// - MapToContext: all fields mapped correctly
-/// - CreateParameter: env var not set/empty/whitespace/invalid -> ArgumentNullException
-/// - CreateParameter: valid JSON -> correct MonitorParameter
 /// </summary>
 public class BowlTests
 {
     private readonly FakeBowlStrategy _strategy;
     private readonly FakeCrashReporter _reporter;
     private readonly FakeSystemInfoProvider _sysInfo;
-    private readonly FakeEnvironmentProvider _env;
 
     public BowlTests()
     {
         _strategy = new FakeBowlStrategy();
         _reporter = new FakeCrashReporter();
         _sysInfo = new FakeSystemInfoProvider();
-        _env = new FakeEnvironmentProvider();
     }
 
     private Bowl CreateBowl() =>
-        new Bowl(_strategy, _reporter, _sysInfo, _env);
+        new Bowl(_strategy, _reporter, _sysInfo);
 
     private static BowlContext CreateValidContext(
         string processName = "test.exe",
@@ -70,7 +64,7 @@ public class BowlTests
     public void Constructor_StrategyNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(null!, _reporter, _sysInfo, _env));
+            new Bowl(null!, _reporter, _sysInfo));
         Assert.Equal("strategy", ex.ParamName);
     }
 
@@ -78,7 +72,7 @@ public class BowlTests
     public void Constructor_CrashReporterNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(_strategy, null!, _sysInfo, _env));
+            new Bowl(_strategy, null!, _sysInfo));
         Assert.Equal("crashReporter", ex.ParamName);
     }
 
@@ -86,16 +80,8 @@ public class BowlTests
     public void Constructor_SystemInfoProviderNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(_strategy, _reporter, null!, _env));
+            new Bowl(_strategy, _reporter, null!));
         Assert.Equal("systemInfoProvider", ex.ParamName);
-    }
-
-    [Fact]
-    public void Constructor_EnvNull_ThrowsArgumentNullException()
-    {
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(_strategy, _reporter, _sysInfo, null!));
-        Assert.Equal("env", ex.ParamName);
     }
 
     // ---- LaunchAsync: Strategy returns null ----
@@ -145,7 +131,6 @@ public class BowlTests
     [Fact]
     public async Task LaunchAsync_ProcessTimeout_ReturnsFailedResult()
     {
-        // Use a short timeout to trigger timeout
         _strategy.PrepareResult = new ProcessStartInfo
         {
             FileName = "cmd.exe",
@@ -261,155 +246,6 @@ public class BowlTests
         finally
         {
             try { Directory.Delete(tempRoot, recursive: true); } catch { }
-        }
-    }
-
-    // ---- MapToContext ----
-
-    [Fact]
-    public void MapToContext_ConvertsAllFields_CorrectValues()
-    {
-        var param = new MonitorParameter
-        {
-            ProcessNameOrId = "myapp.exe",
-            DumpFileName = "v2_fail.dmp",
-            FailFileName = "v2_fail.json",
-            TargetPath = "C:\\app",
-            FailDirectory = "C:\\app\\fail\\v2",
-            BackupDirectory = "C:\\app\\v2",
-            WorkModel = "Normal",
-            ExtendedField = "2.0.0",
-        };
-
-        var ctx = Bowl.MapToContext(param);
-
-        Assert.Equal("myapp.exe", ctx.ProcessNameOrId);
-        Assert.Equal("v2_fail.dmp", ctx.DumpFileName);
-        Assert.Equal("v2_fail.json", ctx.FailFileName);
-        Assert.Equal("C:\\app", ctx.TargetPath);
-        Assert.Equal("C:\\app\\fail\\v2", ctx.FailDirectory);
-        Assert.Equal("C:\\app\\v2", ctx.BackupDirectory);
-        Assert.Equal("Normal", ctx.WorkModel);
-        Assert.Equal("2.0.0", ctx.ExtendedField);
-        Assert.Equal(30_000, ctx.TimeoutMs);
-        Assert.Equal(DumpType.Full, ctx.DumpType);
-        Assert.True(ctx.AutoRestore);
-    }
-
-    [Fact]
-    public void MapToContext_TimeoutMsFixedAt30000()
-    {
-        var param = new MonitorParameter { ProcessNameOrId = "test" };
-        var ctx = Bowl.MapToContext(param);
-        Assert.Equal(30_000, ctx.TimeoutMs);
-    }
-
-    [Fact]
-    public void MapToContext_DumpTypeFixedAtFull()
-    {
-        var param = new MonitorParameter { ProcessNameOrId = "test" };
-        var ctx = Bowl.MapToContext(param);
-        Assert.Equal(DumpType.Full, ctx.DumpType);
-    }
-
-    [Fact]
-    public void MapToContext_AutoRestoreFixedAtTrue()
-    {
-        var param = new MonitorParameter { ProcessNameOrId = "test" };
-        var ctx = Bowl.MapToContext(param);
-        Assert.True(ctx.AutoRestore);
-    }
-
-    // ---- CreateParameter: Env var not set ----
-
-    [Fact]
-    public void CreateParameter_EnvVarNotSet_ThrowsArgumentNullException()
-    {
-        var oldValue = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.Process);
-        try
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", null, EnvironmentVariableTarget.Process);
-            var ex = Assert.Throws<ArgumentNullException>(() => Bowl.CreateParameter());
-            Assert.Contains("ProcessInfo", ex.Message);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", oldValue, EnvironmentVariableTarget.Process);
-        }
-    }
-
-    [Fact]
-    public void CreateParameter_EnvVarEmpty_ThrowsArgumentNullException()
-    {
-        var oldValue = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.Process);
-        try
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", string.Empty, EnvironmentVariableTarget.Process);
-            var ex = Assert.Throws<ArgumentNullException>(() => Bowl.CreateParameter());
-            Assert.Contains("ProcessInfo", ex.Message);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", oldValue, EnvironmentVariableTarget.Process);
-        }
-    }
-
-    [Fact]
-    public void CreateParameter_EnvVarWhitespace_ThrowsArgumentNullException()
-    {
-        var oldValue = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.Process);
-        try
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", "   ", EnvironmentVariableTarget.Process);
-            var ex = Assert.Throws<ArgumentNullException>(() => Bowl.CreateParameter());
-            Assert.Contains("ProcessInfo", ex.Message);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", oldValue, EnvironmentVariableTarget.Process);
-        }
-    }
-
-    [Fact]
-    public void CreateParameter_InvalidJson_ThrowsArgumentNullException()
-    {
-        var oldValue = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.Process);
-        try
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", "not valid json", EnvironmentVariableTarget.Process);
-            var ex = Assert.Throws<ArgumentNullException>(() => Bowl.CreateParameter());
-            Assert.Contains("ProcessInfo", ex.Message);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", oldValue, EnvironmentVariableTarget.Process);
-        }
-    }
-
-    [Fact]
-    public void CreateParameter_ValidJson_ReturnsCorrectMonitorParameter()
-    {
-        var oldValue = Environment.GetEnvironmentVariable("ProcessInfo", EnvironmentVariableTarget.Process);
-        var tempDir = Path.Combine(Path.GetTempPath(), $"BowlTest_App_{Guid.NewGuid():N}");
-        try
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo",
-                $"{{\"AppName\":\"myapp.exe\",\"LastVersion\":\"2.5.0\",\"InstallPath\":\"{tempDir.Replace("\\", "\\\\")}\"}}",
-                EnvironmentVariableTarget.Process);
-
-            var param = Bowl.CreateParameter();
-
-            Assert.Equal("myapp.exe", param.ProcessNameOrId);
-            Assert.Equal("2.5.0_fail.dmp", param.DumpFileName);
-            Assert.Equal("2.5.0_fail.json", param.FailFileName);
-            Assert.Equal(tempDir, param.TargetPath);
-            Assert.Equal("2.5.0", param.ExtendedField);
-            Assert.Equal(Path.Combine(tempDir, "fail", "2.5.0"), param.FailDirectory);
-            Assert.Equal(Path.Combine(tempDir, "2.5.0"), param.BackupDirectory);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ProcessInfo", oldValue, EnvironmentVariableTarget.Process);
         }
     }
 
@@ -566,11 +402,8 @@ public class BowlTests
             var result = await bowl.LaunchAsync(ctx);
 
             Assert.True(result.DumpCaptured);
-            // For Normal mode, UpgradeFail should NOT be set
-            if (workModel != "Upgrade")
-            {
-                Assert.False(_env.SetVariableCalled);
-            }
+            // Restore should NOT happen for Normal mode or Upgrade with AutoRestore=false
+            Assert.False(result.Restored);
         }
         finally
         {

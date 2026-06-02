@@ -12,7 +12,7 @@ internal static class SystemInfoProviderFactory
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return new WindowsSystemInfoProvider();
 
-        // Linux and macOS: no-op for now (could export journalctl / syslog in future)
+        // Linux: no-op for now (could export journalctl / syslog in future)
         return new NoOpSystemInfoProvider();
     }
 

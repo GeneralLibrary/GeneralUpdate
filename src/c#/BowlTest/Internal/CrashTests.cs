@@ -1,75 +1,69 @@
 using GeneralUpdate.Bowl.Internal;
-using GeneralUpdate.Bowl.Strategys;
 
-/// <summary>
-/// 分支覆盖点：
-/// Crash 类：
-///   - 默认构造：Parameter 和 ProcdumpOutPutLines 为 null
-///   - 设置 Parameter 为非 null MonitorParameter
-///   - 设置 ProcdumpOutPutLines 为 List&lt;string&gt;（空列表）
-///   - 设置 ProcdumpOutPutLines 为 List&lt;string&gt;（含数据）
-///   - ProcdumpOutPutLines 为 null（未捕获输出）
-/// </summary>
 public class CrashTests
 {
     [Fact]
-    public void 默认构造_Parameter为null()
+    public void DefaultConstructor_FieldsAreNullOrDefault()
     {
         var crash = new Crash();
-        Assert.Null(crash.Parameter);
-    }
-
-    [Fact]
-    public void 默认构造_ProcdumpOutPutLines为null()
-    {
-        var crash = new Crash();
-        Assert.Null(crash.ProcdumpOutPutLines);
-    }
-
-    [Fact]
-    public void 设置Parameter_读取正确()
-    {
-        var param = new MonitorParameter
-        {
-            ProcessNameOrId = "test.exe",
-            DumpFileName = "fail.dmp",
-        };
-        var crash = new Crash { Parameter = param };
-        Assert.NotNull(crash.Parameter);
-        Assert.Equal("test.exe", crash.Parameter.ProcessNameOrId);
-        Assert.Equal("fail.dmp", crash.Parameter.DumpFileName);
-    }
-
-    [Fact]
-    public void 设置ProcdumpOutPutLines_空列表_读取正确()
-    {
-        var crash = new Crash { ProcdumpOutPutLines = new List<string>() };
-        Assert.NotNull(crash.ProcdumpOutPutLines);
+        Assert.Null(crash.ProcessNameOrId);
+        Assert.Null(crash.TargetPath);
+        Assert.NotNull(crash.ProcdumpOutPutLines); // initialized to empty list
         Assert.Empty(crash.ProcdumpOutPutLines);
     }
 
     [Fact]
-    public void 设置ProcdumpOutPutLines_含数据_读取正确()
+    public void SetProcessNameOrId_ReadsCorrectly()
     {
-        var lines = new List<string> { "[10:00:00] ProcDump started.", "[10:00:01] Process exited." };
-        var crash = new Crash { ProcdumpOutPutLines = lines };
-        Assert.NotNull(crash.ProcdumpOutPutLines);
-        Assert.Equal(2, crash.ProcdumpOutPutLines.Count);
-        Assert.Contains("[10:00:00] ProcDump started.", crash.ProcdumpOutPutLines);
-        Assert.Contains("[10:00:01] Process exited.", crash.ProcdumpOutPutLines);
+        var crash = new Crash { ProcessNameOrId = "test.exe" };
+        Assert.Equal("test.exe", crash.ProcessNameOrId);
     }
 
     [Fact]
-    public void 设置Parameter和ProcdumpOutPutLines_同时存在()
+    public void SetTargetPath_ReadsCorrectly()
     {
-        var param = new MonitorParameter { ProcessNameOrId = "myapp" };
-        var lines = new List<string> { "line1", "line2" };
+        var crash = new Crash { TargetPath = @"C:\app" };
+        Assert.Equal(@"C:\app", crash.TargetPath);
+    }
+
+    [Fact]
+    public void SetWorkModel_ReadsCorrectly()
+    {
+        var crash = new Crash { WorkModel = "Upgrade" };
+        Assert.Equal("Upgrade", crash.WorkModel);
+    }
+
+    [Fact]
+    public void SetExtendedField_ReadsCorrectly()
+    {
+        var crash = new Crash { ExtendedField = "2.0.0" };
+        Assert.Equal("2.0.0", crash.ExtendedField);
+    }
+
+    [Fact]
+    public void SetAllFields_ReadsCorrectly()
+    {
         var crash = new Crash
         {
-            Parameter = param,
-            ProcdumpOutPutLines = lines,
+            TargetPath = @"C:\app",
+            FailDirectory = @"C:\app\fail\1.0",
+            BackupDirectory = @"C:\app\1.0",
+            ProcessNameOrId = "myapp.exe",
+            DumpFileName = "crash.dmp",
+            FailFileName = "crash.json",
+            WorkModel = "Upgrade",
+            ExtendedField = "1.0.0",
+            ProcdumpOutPutLines = new List<string> { "line1", "line2" },
         };
-        Assert.NotNull(crash.Parameter);
-        Assert.NotNull(crash.ProcdumpOutPutLines);
+
+        Assert.Equal(@"C:\app", crash.TargetPath);
+        Assert.Equal(@"C:\app\fail\1.0", crash.FailDirectory);
+        Assert.Equal(@"C:\app\1.0", crash.BackupDirectory);
+        Assert.Equal("myapp.exe", crash.ProcessNameOrId);
+        Assert.Equal("crash.dmp", crash.DumpFileName);
+        Assert.Equal("crash.json", crash.FailFileName);
+        Assert.Equal("Upgrade", crash.WorkModel);
+        Assert.Equal("1.0.0", crash.ExtendedField);
+        Assert.Equal(2, crash.ProcdumpOutPutLines.Count);
     }
 }

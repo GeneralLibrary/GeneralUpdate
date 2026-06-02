@@ -4,7 +4,9 @@ using System.IO;
 using System.Collections.Concurrent;
 using System.Threading;
 
-public class TextTraceListener : TraceListener, IDisposable
+namespace GeneralUpdate.Bowl;
+
+internal class TextTraceListener : TraceListener, IDisposable
 {
     private readonly string _filePath;
     private readonly BlockingCollection<string> _messageQueue;

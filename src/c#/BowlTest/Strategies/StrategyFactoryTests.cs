@@ -2,22 +2,18 @@ using System.Runtime.InteropServices;
 using GeneralUpdate.Bowl.Strategies;
 
 /// <summary>
-/// 分支覆盖点：
-/// StrategyFactory.Create()：
-///   - Windows 平台 → 返回 WindowsBowlStrategy
-///   - Linux 平台 → 返回 LinuxBowlStrategy
-///   - macOS 平台 → 返回 MacBowlStrategy
-///   - 其他平台 → 抛出 PlatformNotSupportedException
+/// Branch coverage points for StrategyFactory.Create():
+/// - Windows platform → returns WindowsBowlStrategy
+/// - Linux platform → returns LinuxBowlStrategy
+/// - Unsupported platform → throws PlatformNotSupportedException
 /// </summary>
 public class StrategyFactoryTests
 {
     [Fact]
-    public void Create_返回非null_IBowlStrategy()
+    public void Create_ReturnsNonNull_IBowlStrategy()
     {
-        // On any supported platform (Win/Lin/Mac), Create should not return null
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             var strategy = StrategyFactory.Create();
             Assert.NotNull(strategy);
@@ -26,7 +22,7 @@ public class StrategyFactoryTests
     }
 
     [Fact]
-    public void Create_在Windows上返回WindowsBowlStrategy()
+    public void Create_OnWindows_ReturnsWindowsBowlStrategy()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -36,7 +32,7 @@ public class StrategyFactoryTests
     }
 
     [Fact]
-    public void Create_在Linux上返回LinuxBowlStrategy()
+    public void Create_OnLinux_ReturnsLinuxBowlStrategy()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
@@ -46,21 +42,10 @@ public class StrategyFactoryTests
     }
 
     [Fact]
-    public void Create_在macOS上返回MacBowlStrategy()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            var strategy = StrategyFactory.Create();
-            Assert.IsType<MacBowlStrategy>(strategy);
-        }
-    }
-
-    [Fact]
-    public void Create_支持平台_不抛出异常()
+    public void Create_SupportedPlatform_DoesNotThrow()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             var exception = Record.Exception(() => StrategyFactory.Create());
             Assert.Null(exception);
@@ -68,11 +53,10 @@ public class StrategyFactoryTests
     }
 
     [Fact]
-    public void Create_多次调用_返回不同实例()
+    public void Create_MultipleCalls_ReturnDifferentInstances()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             var s1 = StrategyFactory.Create();
             var s2 = StrategyFactory.Create();

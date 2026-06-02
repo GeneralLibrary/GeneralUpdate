@@ -61,29 +61,3 @@ internal class FakeSystemInfoProvider : ISystemInfoProvider
         return Task.CompletedTask;
     }
 }
-
-internal class FakeEnvironmentProvider : IEnvironmentProvider
-{
-    private readonly Dictionary<string, string?> _variables = new();
-    public bool SetVariableCalled { get; private set; }
-    public string? LastSetName { get; private set; }
-    public string? LastSetValue { get; private set; }
-    public Exception? SetVariableException { get; set; }
-
-    public string? GetVariable(string name)
-        => _variables.TryGetValue(name, out var val) ? val : null;
-
-    public void SetVariable(string name, string value)
-    {
-        SetVariableCalled = true;
-        LastSetName = name;
-        LastSetValue = value;
-        if (SetVariableException != null) throw SetVariableException;
-        _variables[name] = value;
-    }
-
-    public void PreSetVariable(string name, string? value)
-    {
-        _variables[name] = value;
-    }
-}

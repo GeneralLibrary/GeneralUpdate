@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace GeneralUpdate.Bowl;
 
-public class WindowsOutputDebugListener : TraceListener
+internal class WindowsOutputDebugListener : TraceListener
 {
     /// <summary>
     /// Does not affect .NET AOT compilation and runtime on the Windows platform, provided that the following conditions are met:

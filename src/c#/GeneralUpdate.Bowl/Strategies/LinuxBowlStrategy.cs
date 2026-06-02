@@ -4,15 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Bowl.Internal;
 using GeneralUpdate.Bowl;
 
 namespace GeneralUpdate.Bowl.Strategies;
 
 /// <summary>
 /// Linux crash surveillance strategy using procdump.
-/// Fixes the dead-code issue in the legacy <c>LinuxStrategy</c> — the strategy factory
-/// now correctly creates this strategy on Linux platforms.
 /// </summary>
 internal sealed class LinuxBowlStrategy : IBowlStrategy
 {
@@ -27,39 +24,37 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
         ["clearos"] = "procdump-3.3.0-0.cm2.x86_64.rpm",
     };
 
-    private bool _procdumpInstalled;
+    private bool _probed;
+    private bool _procdumpAvailable;
+    private string? _lastFailReason;
 
     public ProcessStartInfo? Prepare(in BowlContext context)
     {
-        // Lazy install procdump if not already done
-        if (!_procdumpInstalled)
+        if (!_probed)
         {
-            var installed = TryInstallProcdump();
-            if (!installed)
-            {
-                GeneralTracer.Warn(
-                    "LinuxBowlStrategy.Prepare: procdump installation failed on this system.");
-                _procdumpInstalled = false;
-                // Don't throw; return null signals "tool unavailable" to Bowl (graceful degradation)
-            }
-            else
-            {
-                _procdumpInstalled = true;
-            }
+            _procdumpAvailable = ProbeProcdump(context.FailDirectory);
+            _probed = true;
         }
 
-        if (!_procdumpInstalled)
+        if (!_procdumpAvailable)
             return null;
 
         var dumpFullPath = Path.Combine(context.FailDirectory, context.DumpFileName);
         EnsureDirectory(context.FailDirectory);
 
-        GeneralTracer.Info($"LinuxBowlStrategy.Prepare: target={context.ProcessNameOrId}, dump={dumpFullPath}");
+        // Detect whether the target is a PID (all digits) or a process name.
+        // Linux procdump uses -p for PID and -w for process name.
+        var isPid = long.TryParse(context.ProcessNameOrId, out _);
+        var flag = isPid ? "-p" : "-w";
+
+        GeneralTracer.Info(
+            $"LinuxBowlStrategy.Prepare: target='{context.ProcessNameOrId}' ({(isPid ? "PID" : "name")}), " +
+            $"flag={flag}, dump={dumpFullPath}");
 
         return new ProcessStartInfo
         {
             FileName = "procdump",
-            Arguments = $"-p {context.ProcessNameOrId} -o \"{dumpFullPath}\"",
+            Arguments = $"{flag} {context.ProcessNameOrId} -o \"{dumpFullPath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -70,19 +65,46 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
     public Task PostProcessAsync(in BowlContext context,
         ProcessExitResult exitResult, CancellationToken ct)
     {
-        // No additional Linux-specific post-processing at this time.
         return Task.CompletedTask;
     }
 
-    private static bool TryInstallProcdump()
+    // ---- Probe: check if procdump is available, install if not ----
+
+    /// <summary>
+    /// Returns true if procdump can be used.
+    /// Writes a diagnostic file when the environment is unsupported.
+    /// </summary>
+    private bool ProbeProcdump(string failDirectory)
     {
-        var distro = DetectDistro();
-        if (!DistroPackageMap.TryGetValue(distro, out var package))
+        // 1. Already in PATH?
+        if (IsProcdumpInPath())
         {
-            GeneralTracer.Warn($"LinuxBowlStrategy: unsupported distro '{distro}', cannot install procdump.");
+            GeneralTracer.Info("LinuxBowlStrategy: procdump found in PATH, skipping install.");
+            return true;
+        }
+
+        // 2. Detect distro
+        var distro = DetectDistro();
+        if (string.IsNullOrEmpty(distro))
+        {
+            _lastFailReason = "Cannot detect Linux distribution: /etc/os-release not found.";
+            WriteUnsupportedHint(failDirectory, _lastFailReason);
+            GeneralTracer.Warn($"LinuxBowlStrategy: {_lastFailReason}");
             return false;
         }
 
+        // 3. Check if we have a matching package
+        if (!DistroPackageMap.TryGetValue(distro, out var package))
+        {
+            _lastFailReason =
+                $"Unsupported Linux distribution: '{distro}'. " +
+                $"Supported distributions: {string.Join(", ", DistroPackageMap.Keys)}.";
+            WriteUnsupportedHint(failDirectory, _lastFailReason);
+            GeneralTracer.Warn($"LinuxBowlStrategy: {_lastFailReason}");
+            return false;
+        }
+
+        // 4. Locate bundled package and install script
         var appDir = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "Applications", "Linux");
         var scriptPath = Path.Combine(appDir, "install.sh");
@@ -90,18 +112,94 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
 
         if (!File.Exists(scriptPath))
         {
-            GeneralTracer.Error($"LinuxBowlStrategy: install.sh not found at {scriptPath}.");
+            _lastFailReason = $"install.sh not found at {scriptPath}.";
+            WriteUnsupportedHint(failDirectory, _lastFailReason);
+            GeneralTracer.Error($"LinuxBowlStrategy: {_lastFailReason}");
             return false;
         }
 
         if (!File.Exists(packagePath))
         {
-            GeneralTracer.Error($"LinuxBowlStrategy: package not found at {packagePath}.");
+            _lastFailReason = $"procdump package not found at {packagePath}.";
+            WriteUnsupportedHint(failDirectory, _lastFailReason);
+            GeneralTracer.Error($"LinuxBowlStrategy: {_lastFailReason}");
             return false;
         }
 
-        GeneralTracer.Info($"LinuxBowlStrategy: installing {package} via install.sh.");
-        return RunInstallScript(scriptPath, packagePath);
+        // 5. Run install script
+        GeneralTracer.Info($"LinuxBowlStrategy: installing {package} via install.sh for distro '{distro}'.");
+        var installed = RunInstallScript(scriptPath, packagePath);
+        if (!installed)
+        {
+            _lastFailReason =
+                $"Failed to install procdump package '{package}' for distribution '{distro}'. " +
+                "Check that sudo is available without an interactive password prompt.";
+            WriteUnsupportedHint(failDirectory, _lastFailReason);
+            GeneralTracer.Error($"LinuxBowlStrategy: {_lastFailReason}");
+            return false;
+        }
+
+        GeneralTracer.Info("LinuxBowlStrategy: procdump installed successfully.");
+        return true;
+    }
+
+    // ---- Helpers ----
+
+    private static bool IsProcdumpInPath()
+    {
+        try
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/which",
+                    Arguments = "procdump",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+            process.Start();
+            var exited = process.WaitForExit(5000);
+            if (!exited)
+            {
+                process.Kill();
+                return false;
+            }
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void WriteUnsupportedHint(string failDirectory, string reason)
+    {
+        try
+        {
+            Directory.CreateDirectory(failDirectory);
+            var hintPath = Path.Combine(failDirectory, "bowl_linux_unsupported.txt");
+            var content =
+                $"Bowl Linux Strategy — Unsupported Environment\n" +
+                $"================================================\n" +
+                $"Reason: {reason}\n" +
+                $"Timestamp: {DateTime.UtcNow:O}\n" +
+                $"\n" +
+                $"Supported distributions: {string.Join(", ", DistroPackageMap.Keys)}\n" +
+                $"\n" +
+                $"To use Bowl on this system, install procdump manually and ensure it is\n" +
+                $"available in PATH. Bowl will skip the automatic install if procdump\n" +
+                $"is already present.\n";
+            File.WriteAllText(hintPath, content);
+            GeneralTracer.Info($"LinuxBowlStrategy: unsupported hint written to {hintPath}.");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Error("LinuxBowlStrategy: failed to write unsupported hint.", ex);
+        }
     }
 
     private static bool RunInstallScript(string script, string package)

@@ -6,7 +6,6 @@ namespace GeneralUpdate.Bowl;
 
 /// <summary>
 /// Immutable execution context for Bowl surveillance.
-/// Replaces the mutable <see cref="Strategys.MonitorParameter"/>.
 /// </summary>
 public readonly record struct BowlContext
 {
