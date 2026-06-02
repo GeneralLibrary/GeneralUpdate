@@ -22,10 +22,10 @@ public class ExtensionHttpClient : IExtensionHttpClient, IDisposable
     private readonly bool _ownsHttpClient;
 
     /// <summary>
-    /// Controls whether <see cref="QueryExtensionsAsync"/> uses POST (default: true, recommended).
-    /// Set to false for servers that use the legacy [HttpGet] with [FromBody] contract.
+    /// Controls whether <see cref="QueryExtensionsAsync"/> uses POST (default: false, backward-compatible).
+    /// Set to true for servers that support [HttpPost]; false preserves the legacy [HttpGet] with [FromBody] behavior.
     /// </summary>
-    public bool UsePostForQuery { get; set; } = true;
+    public bool UsePostForQuery { get; set; } = false;
 
     /// <summary>
     /// Initialize extension HTTP client (convenience constructor — creates its own HttpClient).
@@ -72,16 +72,15 @@ public class ExtensionHttpClient : IExtensionHttpClient, IDisposable
             var json = JsonConvert.SerializeObject(query);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Default uses POST (REST best practice). The legacy GET-with-body approach is
-            // supported via UsePostForQuery = false for backward compatibility with servers
-            // that use [HttpGet] with [FromBody].
+            // Defaults to GET (backward-compatible). Set UsePostForQuery = true to use POST
+            // for servers that have migrated away from [HttpGet] with [FromBody].
             var httpMethod = UsePostForQuery ? HttpMethod.Post : HttpMethod.Get;
             var request = new HttpRequestMessage(httpMethod, url)
             {
                 Content = content
             };
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request, cancellationToken);
             var responseJson = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)

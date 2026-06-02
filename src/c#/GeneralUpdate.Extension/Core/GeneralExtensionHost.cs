@@ -237,14 +237,14 @@ public class GeneralExtensionHost : IExtensionHost
             {
                 GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: resolving {dependencyList.Count} dependency/ies for ExtensionId={extensionId}");
 
-                var missingDeps = _dependencyResolver.GetMissingDependencies(metadata);
                 var sortedDeps = _dependencyResolver.GetTransitiveDependencies(dependencyList.ToList());
 
-                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: {missingDeps.Count} dependencies need installation (sorted: {sortedDeps.Count})");
+                var missingDeps = sortedDeps.Where(d => ExtensionCatalog.GetInstalledExtensionById(d) == null).ToList();
+                GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: {missingDeps.Count} dependencies need installation (total sorted: {sortedDeps.Count})");
 
                 foreach (var dep in sortedDeps)
                 {
-                    if (ExtensionCatalog.GetInstalledExtensionById(dep) == null)
+                    if (missingDeps.Contains(dep))
                     {
                         GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: installing missing dependency dep={dep}");
                         await UpdateExtensionAsync(dep);

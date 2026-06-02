@@ -213,8 +213,7 @@ public class MacOsGeneralDrivelution : BaseDriverUpdater
                 }
                 catch (DriverPermissionException ex)
                 {
-                    return Task.FromResult(PipelineResult.Fail(
-                        $"Root privileges are required for driver updates on macOS. {ex.Message}"));
+                    return Task.FromResult(PipelineResult.Fail(ex.Message));
                 }
             });
     }
