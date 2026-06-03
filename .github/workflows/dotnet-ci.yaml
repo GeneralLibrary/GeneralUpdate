@@ -48,11 +48,68 @@ jobs:
           }
         shell: pwsh
 
+      - name: 生成更新日志
+        shell: pwsh
+        run: |
+          $previousTag = git describe --tags --abbrev=0 --always 2>$null
+          if ($LASTEXITCODE -ne 0 -or -not $previousTag) {
+            $log = git log --oneline --no-decorate -100
+          } else {
+            $log = git log "${previousTag}..HEAD" --oneline --no-decorate
+          }
+
+          $features = @()
+          $fixes = @()
+          $refactors = @()
+          $tests = @()
+          $docs = @()
+          $chores = @()
+          $others = @()
+
+          foreach ($line in ($log -split "`n")) {
+            $line = $line.Trim()
+            if (-not $line) { continue }
+            # Remove leading commit hash
+            $msg = $line -replace '^[a-f0-9]+\s+', ''
+            if ($msg -match '^(feat|feature)')     { $features  += "- $msg" }
+            elseif ($msg -match '^fix')             { $fixes     += "- $msg" }
+            elseif ($msg -match '^refactor')        { $refactors += "- $msg" }
+            elseif ($msg -match '^test')            { $tests     += "- $msg" }
+            elseif ($msg -match '^docs')            { $docs      += "- $msg" }
+            elseif ($msg -match '^(chore|cleanup|ci|build)') { $chores += "- $msg" }
+            else                                    { $others    += "- $msg" }
+          }
+
+          $body = ""
+
+          function append-section($title, $items) {
+            if ($items.Count -gt 0) {
+              $script:body += "## $title`n`n$($items -join "`n")`n`n"
+            }
+          }
+
+          append-section "🚀 Features"        $features
+          append-section "🐛 Bug Fixes"        $fixes
+          append-section "♻️ Refactoring"      $refactors
+          append-section "✅ Tests"            $tests
+          append-section "📝 Documentation"    $docs
+          append-section "🔧 Chores"           $chores
+          append-section "📦 Other Changes"    $others
+
+          if (-not $body) {
+            $body = "_No changes detected between tags._"
+          }
+
+          $body | Out-File -FilePath changelog.md -Encoding UTF8
+          Write-Host "=== 生成的更新日志 ==="
+          Write-Host $body
+
       - name: 创建GitHub Release并上传NuGet包
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Release v${{ github.event.inputs.version }}
+          body_path: changelog.md
           files: ./nupkgs/*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
