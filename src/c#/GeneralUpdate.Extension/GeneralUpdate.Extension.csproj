@@ -5,14 +5,15 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <!-- NuGet Package Metadata -->
-    <Version>10.2.1</Version>
+    <Version>10.5.0-beta.2</Version>
     <Authors>JusterZhu</Authors>
     <Company>juster.zhu</Company>
     <Title>GeneralUpdate.Extension</Title>
     <Description>A VS Code-inspired extension system for .NET applications with comprehensive extension management, update, download, installation, rollback, and compatibility checking capabilities. Supports multi-platform extension deployment with dependency resolution.</Description>
     <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
     <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate.png</PackageIcon>
     <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
@@ -43,6 +44,10 @@
       <Pack>True</Pack>
       <Link>%(Filename)%(Extension)</Link>
       <PackagePath>./</PackagePath>
+    </None>
+    <None Include="../../../README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 

@@ -2,18 +2,19 @@
     <PropertyGroup>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
-        <Description>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</Description>
+        <Description>Post-upgrade crash monitor and automatic rollback guardian. Detects startup failures after an update and restores the previous version from backup.</Description>
         <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Title>GeneralUpdate.Bowl</Title>
         <Authors>JusterZhu</Authors>
         <RepositoryType>public</RepositoryType>
-        <PackageTags>upgrade,update</PackageTags>
-        <PackageReleaseNotes>Bowl is used to monitor whether the main program can start normally after an upgrade. If it detects that the main program crashes on startup, it will restore the backup.</PackageReleaseNotes>
-        <Version>10.0.0-preview.1</Version>
+        <PackageTags>upgrade,update,crash,recovery,rollback,monitor,backup</PackageTags>
+        <PackageReleaseNotes>10.5.0-beta.1: Refactored to instance-based async design with DI support. Removed IPC dependency and macOS platform support.</PackageReleaseNotes>
+        <Version>10.5.0-beta.2</Version>
         <PackageIcon>bowl.jpeg</PackageIcon>
         <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>
@@ -39,6 +40,10 @@
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>
             <PackagePath>./</PackagePath>
+        </None>
+        <None Include="../../../README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
         </None>
     </ItemGroup>
 </Project>

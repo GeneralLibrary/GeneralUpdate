@@ -4,13 +4,16 @@
         <Nullable>enable</Nullable>
         <Title>GeneralUpdate.Core</Title>
         <Authors>JusterZhu</Authors>
-        <Description>GeneralUpdate unified core — client and upgrade bootstrap, download, pipeline, strategies, utilities.</Description>
-        <Copyright>Copyright 2020-2026 JusterZhu</Copyright>
+        <Description>GeneralUpdate unified core — auto-update bootstrap, download orchestrator, plugin pipeline, update strategies, and configuration utilities. The primary package for integrating GeneralUpdate into client applications.</Description>
+        <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
         <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <PackageIcon>GeneralUpdate.png</PackageIcon>
-        <PackageTags>upgrade,update,client</PackageTags>
-        <Version>10.0.0-preview</Version>
+        <PackageTags>upgrade,update,auto-update,client,bootstrap,pipeline,download,oss,silent,hooks</PackageTags>
+        <PackageReleaseNotes>10.5.0-beta.1: Zero-config SetSource() API, manifest.json auto-discovery, IUpdateHooks extension points, appsettings.json LoadFromConfiguration() support, SSL/HttpClient lifecycle fixes, and OSS update flow improvements.</PackageReleaseNotes>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Version>10.5.0-beta.2</Version>
         <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
         <IsAotCompatible Condition="'$(TargetFramework)' != 'netstandard2.0'">true</IsAotCompatible>
         <EnableTrimAnalyzer Condition="'$(TargetFramework)' != 'netstandard2.0'">true</EnableTrimAnalyzer>
@@ -38,6 +41,23 @@
         <!-- IsExternalInit is built-in for net8.0+ (C# 9 records) -->
         <Compile Remove="Configuration\IsExternalInit.cs" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
 
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../../imgs/GeneralUpdate.ico">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
+        <None Include="../../../imgs/GeneralUpdate.png">
+            <Pack>True</Pack>
+            <Link>%(Filename)%(Extension)</Link>
+            <PackagePath>./</PackagePath>
+        </None>
+        <None Include="../../../README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
     </ItemGroup>
 
     <ItemGroup>

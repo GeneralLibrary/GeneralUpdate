@@ -3,18 +3,19 @@
     <ApplicationIcon>GeneralUpdate.ico</ApplicationIcon>
     <PackageIcon>GeneralUpdate.png</PackageIcon>
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
-    <Description>The binary differential update function is provided, but the configuration file update function is reserved.</Description>
+    <Description>Binary diff/patch algorithms (BSDIFF, HDiffPatch) with Brotli compression for generating and applying incremental updates. Includes parallel file processing with progress reporting and cancellation support.</Description>
     <Authors>JusterZhu</Authors>
-    <Version>9.5.10</Version>
+    <Version>10.5.0-beta.2</Version>
     <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
     <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
     <LangVersion>default</LangVersion>
     <Nullable>enable</Nullable>
     <Title>GeneralUpdate.Differential</Title>
-    <PackageLicenseUrl>https://github.com/GeneralLibrary/GeneralUpdate?tab=Apache-2.0-1-ov-file#readme</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>public</RepositoryType>
-    <PackageTags>upgrade,update</PackageTags>
-    <PackageReleaseNotes>The binary differential update function is provided, but the configuration file update function is reserved.</PackageReleaseNotes>
+    <PackageTags>upgrade,update,diff,patch,binary,delta,bsdiff,hdiff,brotli</PackageTags>
+    <PackageReleaseNotes>10.5.0-beta.1: StreamingHdiffDiffer with Brotli compression, DiffPipeline with parallel processing, thread-safe BsdiffDiffer, and pluggable matcher architecture.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <TargetFrameworks>netstandard2.0;</TargetFrameworks>
   </PropertyGroup>
@@ -28,6 +29,10 @@
       <Pack>True</Pack>
       <Link>%(Filename)%(Extension)</Link>
       <PackagePath>./</PackagePath>
+    </None>
+    <None Include="../../../README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 </Project>
