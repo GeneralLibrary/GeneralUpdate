@@ -119,7 +119,7 @@ public class SilentPollOrchestrator : IDisposable
                 if (_strategy.HasPreparedClientUpdate)
                 {
                     Interlocked.Exchange(ref _prepared, 1);
-                    GeneralTracer.Info("SilentPollOrchestrator: client update prepared, waiting for process exit.");
+                    GeneralTracer.Info("SilentPollOrchestrator: update packages prepared. Upgrade will launch on process exit.");
                 }
             }
             catch (Exception ex)
