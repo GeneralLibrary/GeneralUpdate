@@ -261,7 +261,6 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
-        /// <summary>
         /// Registers an HTTP authentication provider for attaching authentication credentials
         /// to download requests.
         /// </summary>
@@ -270,15 +269,25 @@ namespace GeneralUpdate.Core.Configuration
         /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
         /// <remarks>
         /// Can be used to support servers that require token authentication (Bearer Token),
-        /// basic authentication (Basic Auth), or custom authentication headers. This extension
+        /// basic authentication (Basic Auth), API key authentication, HMAC-SHA256 signature
+        /// authentication, or custom authentication headers. This extension
         /// point is read by <c>HttpClientProvider</c> and injected into request headers when
         /// creating HTTP download requests.
         /// </remarks>
-        public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
+        public TBootstrap HttpAuth<T>() where T : Security.IHttpAuthProvider, new()
         {
             _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T);
             return (TBootstrap)this;
         }
+
+        /// <summary>
+        /// [Obsolete] Use <see cref="HttpAuth{T}"/> instead.
+        /// </summary>
+        /// <typeparam name="T">The authentication provider implementation type.</typeparam>
+        /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
+        [Obsolete("Use HttpAuth<T>() instead.")]
+        public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
+            => HttpAuth<T>();
 
         /// <summary>
         /// Registers a custom download orchestrator for end-to-end handling of batch

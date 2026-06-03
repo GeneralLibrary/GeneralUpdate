@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Ipc;
+using GeneralUpdate.Core.Security;
 using Xunit;
 
 namespace CoreTest.Ipc;
@@ -34,6 +35,9 @@ public class ProcessContractProviderTests
                 bowl: "",
                 scheme: "",
                 token: "",
+                authScheme: AuthScheme.Hmac,
+                basicUsername: "",
+                basicPassword: "",
                 driverDirectory: "",
                 tempPath: "",
                 blackFileFormats: new List<string> { ".pdb" },

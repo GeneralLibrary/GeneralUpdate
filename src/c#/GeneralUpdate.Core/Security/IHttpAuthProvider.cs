@@ -9,6 +9,34 @@ using System.Threading.Tasks;
 namespace GeneralUpdate.Core.Security;
 
 /// <summary>
+/// Explicitly selects the HTTP authentication method for update requests.
+/// </summary>
+/// <remarks>
+/// Use this enum to tell the framework which authentication scheme to use,
+/// then supply the corresponding credentials:
+/// <list type="bullet">
+///   <item><description><see cref="Hmac"/> — uses <c>AppSecretKey</c> (default).</description></item>
+///   <item><description><see cref="Bearer"/> — uses <c>Token</c>.</description></item>
+///   <item><description><see cref="ApiKey"/> — uses <c>Token</c>.</description></item>
+///   <item><description><see cref="Basic"/> — uses <c>BasicUsername</c> + <c>BasicPassword</c>.</description></item>
+/// </list>
+/// </remarks>
+public enum AuthScheme
+{
+    /// <summary>HMAC-SHA256 signature authentication (default). Requires <c>AppSecretKey</c>.</summary>
+    Hmac,
+
+    /// <summary>Bearer Token authentication. Requires <c>Token</c>.</summary>
+    Bearer,
+
+    /// <summary>API Key authentication via custom header. Requires <c>Token</c>.</summary>
+    ApiKey,
+
+    /// <summary>HTTP Basic Authentication (RFC 7617). Requires <c>BasicUsername</c> + <c>BasicPassword</c>.</summary>
+    Basic
+}
+
+/// <summary>
 /// Defines a strategy for applying HTTP authentication to outgoing requests.
 /// </summary>
 /// <remarks>
@@ -25,6 +53,7 @@ namespace GeneralUpdate.Core.Security;
 ///   <item><description><see cref="BearerTokenAuthProvider"/> — sets the <c>Authorization: Bearer</c> header.</description></item>
 ///   <item><description><see cref="ApiKeyAuthProvider"/> — sets a custom header with the API key value.</description></item>
 ///   <item><description><see cref="HmacAuthProvider"/> — computes an HMAC-SHA256 signature over the request body and timestamp.</description></item>
+///   <item><description><see cref="BasicAuthProvider"/> — sets the <c>Authorization: Basic</c> header with a Base64-encoded credential.</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -214,16 +243,84 @@ public sealed class HmacAuthProvider : IHttpAuthProvider
 }
 
 /// <summary>
+/// An authentication provider that uses the HTTP Basic Authentication scheme
+/// (<c>Authorization: Basic &lt;credential&gt;</c>).
+/// </summary>
+/// <remarks>
+/// <para>
+/// This provider sets the <c>Authorization</c> header to <c>Basic &lt;credential&gt;</c>
+/// where <c>credential</c> is the Base64-encoded string of <c>username:password</c>.
+/// Use <see cref="EncodeCredential"/> to generate the encoded value from a username and password pair.
+/// </para>
+/// <para>
+/// This scheme is defined in RFC 7617 and is widely used by enterprise artifact
+/// repositories (Nexus, JFrog Artifactory), internal file servers, and simple API gateways.
+/// </para>
+/// </remarks>
+public sealed class BasicAuthProvider : IHttpAuthProvider
+{
+    private readonly string _credential;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BasicAuthProvider"/> class.
+    /// </summary>
+    /// <param name="base64Credential">
+    /// The Base64-encoded credential string (i.e., the result of Base64-encoding <c>username:password</c>).
+    /// Must not be null. Use <see cref="EncodeCredential"/> to generate this value safely.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="base64Credential"/> is null.</exception>
+    public BasicAuthProvider(string base64Credential)
+        => _credential = base64Credential ?? throw new ArgumentNullException(nameof(base64Credential));
+
+    /// <summary>
+    /// Encodes a username and password pair into a Base64 credential string suitable for
+    /// use with the HTTP Basic Authentication scheme.
+    /// </summary>
+    /// <param name="username">The username. Must not be null or empty.</param>
+    /// <param name="password">The password. Must not be null or empty.</param>
+    /// <returns>The Base64-encoded credential string for use with <c>Authorization: Basic</c>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="username"/> or <paramref name="password"/> is null, empty, or whitespace.</exception>
+    public static string EncodeCredential(string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("Username must not be null or empty.", nameof(username));
+        if (string.IsNullOrWhiteSpace(password))
+            throw new ArgumentException("Password must not be null or empty.", nameof(password));
+
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+    }
+
+    /// <summary>
+    /// Applies the Basic authentication by setting the <c>Authorization</c> header.
+    /// </summary>
+    /// <param name="request">The HTTP request message to authenticate.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> (ignored by this implementation).</param>
+    /// <returns>A completed task after setting the header.</returns>
+    public Task ApplyAuthAsync(HttpRequestMessage request, CancellationToken token = default)
+    {
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", _credential);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Factory class for creating <see cref="IHttpAuthProvider"/> instances based on a scheme string and token.
 /// </summary>
 /// <remarks>
 /// <para>
 /// This factory encapsulates the logic for selecting the appropriate authentication provider
-/// based on the authentication scheme name:
+/// based on the authentication scheme name. Explicit scheme+credentials take priority:
 /// <list type="bullet">
-///   <item><description>If <paramref name="secretKey"/> is provided, creates an <see cref="HmacAuthProvider"/>.</description></item>
-///   <item><description>If <paramref name="scheme"/> is <c>"apikey"</c>, creates an <see cref="ApiKeyAuthProvider"/>.</description></item>
-///   <item><description>If <paramref name="token"/> is provided (any other scheme), creates a <see cref="BearerTokenAuthProvider"/>.</description></item>
+///   <item><description>If <paramref name="scheme"/> is <c>"basic"</c> with <paramref name="basicUsername"/>/<paramref name="basicPassword"/>,
+///   creates a <see cref="BasicAuthProvider"/> (auto-encodes credentials).</description></item>
+///   <item><description>If <paramref name="scheme"/> is <c>"basic"</c> with <paramref name="token"/>,
+///   creates a <see cref="BasicAuthProvider"/> (pre-encoded credential).</description></item>
+///   <item><description>If <paramref name="scheme"/> is <c>"apikey"</c> with <paramref name="token"/>,
+///   creates an <see cref="ApiKeyAuthProvider"/>.</description></item>
+///   <item><description>If <paramref name="token"/> is provided with any other scheme,
+///   creates a <see cref="BearerTokenAuthProvider"/>.</description></item>
+///   <item><description>If only <paramref name="secretKey"/> is provided (no explicit scheme),
+///   creates an <see cref="HmacAuthProvider"/> as the default.</description></item>
 ///   <item><description>Otherwise, returns a <see cref="NoOpAuthProvider"/>.</description></item>
 /// </list>
 /// </para>
@@ -237,20 +334,55 @@ public static class HttpAuthProviderFactory
     /// <summary>
     /// Creates an <see cref="IHttpAuthProvider"/> based on the provided scheme, token, and secret key.
     /// </summary>
-    /// <param name="scheme">The authentication scheme name (e.g., "bearer", "apikey", "hmac"). Case-insensitive.</param>
+    /// <param name="scheme">Legacy string-based scheme. Prefer using <paramref name="authScheme"/> instead.</param>
     /// <param name="token">The authentication token or API key value.</param>
-    /// <param name="secretKey">The HMAC secret key. If provided, HMAC authentication takes precedence over other schemes.</param>
+    /// <param name="secretKey">The HMAC secret key. Used as the default authentication when no explicit scheme is specified.</param>
+    /// <param name="authScheme">Explicitly selects the HTTP authentication method. Defaults to <see cref="AuthScheme.Hmac"/>.</param>
+    /// <param name="basicUsername">The username for HTTP Basic Authentication. Used together with <paramref name="basicPassword"/> when <paramref name="scheme"/> is "basic".</param>
+    /// <param name="basicPassword">The password for HTTP Basic Authentication. Used together with <paramref name="basicUsername"/> when <paramref name="scheme"/> is "basic".</param>
     /// <returns>An <see cref="IHttpAuthProvider"/> instance matching the specified parameters,
     /// or <see cref="NoOpAuthProvider"/> if no matching scheme is found.</returns>
-    public static IHttpAuthProvider Create(string? scheme, string? token, string? secretKey)
+    public static IHttpAuthProvider Create(string? scheme, string? token, string? secretKey, AuthScheme authScheme = AuthScheme.Hmac, string? basicUsername = null, string? basicPassword = null)
     {
-        if (!string.IsNullOrEmpty(secretKey)) return new HmacAuthProvider(secretKey);
-        if (!string.IsNullOrEmpty(token))
-            return (scheme ?? "").ToLowerInvariant() switch
-            {
-                "apikey" => new ApiKeyAuthProvider(token),
-                _ => new BearerTokenAuthProvider(token)
-            };
+        // ── Explicit enum selection (preferred) ──
+        switch (authScheme)
+        {
+            case AuthScheme.Basic:
+                if (!string.IsNullOrWhiteSpace(basicUsername) && !string.IsNullOrWhiteSpace(basicPassword))
+                    return new BasicAuthProvider(BasicAuthProvider.EncodeCredential(basicUsername, basicPassword));
+                if (!string.IsNullOrEmpty(token))
+                    return new BasicAuthProvider(token);
+                break;
+
+            case AuthScheme.ApiKey:
+                if (!string.IsNullOrEmpty(token))
+                    return new ApiKeyAuthProvider(token);
+                break;
+
+            case AuthScheme.Bearer:
+                if (!string.IsNullOrEmpty(token))
+                    return new BearerTokenAuthProvider(token);
+                break;
+
+            case AuthScheme.Hmac:
+            default:
+                // Default: HMAC when secretKey is provided
+                if (!string.IsNullOrEmpty(secretKey))
+                    return new HmacAuthProvider(secretKey);
+                break;
+        }
+
+        // ── Legacy fallback: string-based scheme ──
+        var s = (scheme ?? "").ToLowerInvariant();
+        if (s == "basic" && !string.IsNullOrWhiteSpace(basicUsername) && !string.IsNullOrWhiteSpace(basicPassword))
+            return new BasicAuthProvider(BasicAuthProvider.EncodeCredential(basicUsername, basicPassword));
+        if (s == "basic" && !string.IsNullOrEmpty(token))
+            return new BasicAuthProvider(token);
+        if (s == "apikey" && !string.IsNullOrEmpty(token))
+            return new ApiKeyAuthProvider(token);
+        if (!string.IsNullOrEmpty(token) && s != "basic" && s != "apikey")
+            return new BearerTokenAuthProvider(token);
+
         return new NoOpAuthProvider();
     }
 }

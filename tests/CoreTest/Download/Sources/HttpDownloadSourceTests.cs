@@ -1,6 +1,7 @@
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Sources;
+using GeneralUpdate.Core.Security;
 
 namespace CoreTest.Download.Sources;
 
@@ -21,7 +22,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, null, AppSecretKey,
-            PlatformType.Windows, null, null, null);
+            PlatformType.Windows, null, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.NotNull(source);
     }
@@ -31,7 +33,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, "2.0.0", AppSecretKey,
-            PlatformType.Linux, "product-1", "Bearer", "token-abc");
+            PlatformType.Linux, "product-1", "Bearer", "token-abc",
+            AuthScheme.Bearer, null, null);
 
         Assert.NotNull(source);
     }
@@ -41,7 +44,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, "1.5.0", AppSecretKey,
-            PlatformType.Windows, null, null, null);
+            PlatformType.Windows, null, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.NotNull(source);
     }
@@ -51,7 +55,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, null, AppSecretKey,
-            PlatformType.MacOS, null, null, null);
+            PlatformType.MacOS, null, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.NotNull(source);
     }
@@ -65,7 +70,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, string.Empty, null, AppSecretKey,
-            PlatformType.Windows, null, null, null);
+            PlatformType.Windows, null, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.NotNull(source);
     }
@@ -75,7 +81,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, null, AppSecretKey,
-            PlatformType.Windows, string.Empty, null, null);
+            PlatformType.Windows, string.Empty, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.NotNull(source);
     }
@@ -89,7 +96,8 @@ public class HttpDownloadSourceTests
     {
         var source = new HttpDownloadSource(
             ValidUrl, ClientVersion, null, AppSecretKey,
-            PlatformType.Windows, null, null, null);
+            PlatformType.Windows, null, null, null,
+            AuthScheme.Hmac, null, null);
 
         Assert.IsAssignableFrom<IDownloadSource>(source);
     }

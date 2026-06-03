@@ -175,14 +175,17 @@ namespace GeneralUpdate.Core.Network
         /// <param name="productId">The product identifier.</param>
         /// <param name="scheme">The authentication scheme (e.g., "bearer", "apikey", "hmac"), used to create the auth provider. Ignored when a global auth provider is set.</param>
         /// <param name="token">The authentication token or key, used together with <paramref name="scheme"/>.</param>
+        /// <param name="authScheme">Explicitly selects the HTTP authentication method. Defaults to <see cref="Security.AuthScheme.Hmac"/>.</param>
+        /// <param name="basicUsername">The username for HTTP Basic Authentication. Used when <see cref="Security.AuthScheme.Basic"/> is selected.</param>
+        /// <param name="basicPassword">The password for HTTP Basic Authentication. Used when <see cref="Security.AuthScheme.Basic"/> is selected.</param>
         /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result
         /// (e.g., whether an update exists, download URL, etc.).</returns>
         public static Task<VersionRespDTO> Validate(string url, string version,
             AppType appType, string appKey, PlatformType platform, string productId,
-            string scheme = null, string token = null, CancellationToken ct = default)
+            string scheme = null, string token = null, Security.AuthScheme authScheme = Security.AuthScheme.Hmac, string basicUsername = null, string basicPassword = null, CancellationToken ct = default)
         {
-            var auth = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey);
+            var auth = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey, authScheme, basicUsername, basicPassword);
             return new VersionService(auth).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
         }
 
@@ -205,12 +208,15 @@ namespace GeneralUpdate.Core.Network
         /// <param name="productId">The product identifier.</param>
         /// <param name="scheme">The authentication scheme.</param>
         /// <param name="token">The authentication token or key.</param>
+        /// <param name="authScheme">Explicitly selects the HTTP authentication method.</param>
+        /// <param name="basicUsername">The username for HTTP Basic Authentication.</param>
+        /// <param name="basicPassword">The password for HTTP Basic Authentication.</param>
         /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result.</returns>
         public static Task<VersionRespDTO> Validate(string url, string version,
             int appType, string appKey, int platform, string productId,
-            string scheme = null, string token = null, CancellationToken ct = default)
-            => Validate(url, version, (AppType)appType, appKey, (PlatformType)platform, productId, scheme, token, ct);
+            string scheme = null, string token = null, Security.AuthScheme authScheme = Security.AuthScheme.Hmac, string basicUsername = null, string basicPassword = null, CancellationToken ct = default)
+            => Validate(url, version, (AppType)appType, appKey, (PlatformType)platform, productId, scheme, token, authScheme, basicUsername, basicPassword, ct);
 
         /// <summary>
         /// Asynchronously validates the version by querying the server for available updates.

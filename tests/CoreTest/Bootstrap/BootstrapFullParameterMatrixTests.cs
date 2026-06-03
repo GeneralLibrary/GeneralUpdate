@@ -169,7 +169,7 @@ namespace CoreTest.Bootstrap
                 .DownloadPipeline<StubDownloadPipeline>()
                 .DownloadOrchestrator<StubDownloadOrchestrator>()
                 .SslPolicy<StubSslPolicy>()
-                .UpdateAuth<StubUpdateAuth>()
+                .HttpAuth<StubUpdateAuth>()
                 .Strategy<StubStrategy>();
             Assert.NotNull(b);
         }

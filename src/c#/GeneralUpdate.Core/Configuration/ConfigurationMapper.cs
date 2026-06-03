@@ -94,6 +94,9 @@ namespace GeneralUpdate.Core.Configuration
             target.Bowl = source.Bowl;
             target.Scheme = source.Scheme;
             target.Token = source.Token;
+            target.AuthScheme = source.AuthScheme;
+            target.BasicUsername = source.BasicUsername;
+            target.BasicPassword = source.BasicPassword;
             target.DriverDirectory = source.DriverDirectory;
             target.AppType = source.AppType;
             target.UpdatePath = source.UpdatePath;
@@ -192,6 +195,9 @@ namespace GeneralUpdate.Core.Configuration
                 bowl: source.Bowl,
                 scheme: source.Scheme,
                 token: source.Token,
+                authScheme: source.AuthScheme,
+                basicUsername: source.BasicUsername,
+                basicPassword: source.BasicPassword,
                 driverDirectory: source.DriverDirectory,         // 驱动更新所需的目录
                 tempPath: source.TempPath,                       // 客户端的下载临时路径，供升级进程定位包文件
                 blackFileFormats: blackFileFormats,              // 来自 BlackListManager

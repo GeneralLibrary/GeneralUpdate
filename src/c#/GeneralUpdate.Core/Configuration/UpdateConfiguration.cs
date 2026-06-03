@@ -173,10 +173,28 @@ namespace GeneralUpdate.Core.Configuration
         public string Scheme { get; set; }
 
         /// <summary>
+        ///     Explicitly selects the HTTP authentication method.
+        ///     When set, this determines which credentials are used to authenticate update requests.
+        /// </summary>
+        public Security.AuthScheme AuthScheme { get; set; } = Security.AuthScheme.Hmac;
+
+        /// <summary>
         ///     The authentication token used for API requests.
         ///     This token is included in HTTP request headers when communicating with the update server.
         /// </summary>
         public string Token { get; set; }
+
+        /// <summary>
+        ///     The username for HTTP Basic Authentication.
+        ///     Used together with <see cref="BasicPassword"/> when <see cref="Security.AuthScheme.Basic"/> is selected.
+        /// </summary>
+        public string BasicUsername { get; set; }
+
+        /// <summary>
+        ///     The password for HTTP Basic Authentication.
+        ///     Used together with <see cref="BasicUsername"/> when <see cref="Security.AuthScheme.Basic"/> is selected.
+        /// </summary>
+        public string BasicPassword { get; set; }
 
         /// <summary>
         ///     The directory path containing driver files, used for driver-based update functionality.

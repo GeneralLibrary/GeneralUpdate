@@ -135,6 +135,9 @@ namespace GeneralUpdate.Core.Configuration
         /// <param name="bowl">The process name to terminate before the update.</param>
         /// <param name="scheme">The URL scheme for update requests.</param>
         /// <param name="token">The authentication token.</param>
+        /// <param name="authScheme">Explicitly selects the HTTP authentication method.</param>
+        /// <param name="basicUsername">The username for HTTP Basic Authentication.</param>
+        /// <param name="basicPassword">The password for HTTP Basic Authentication.</param>
         /// <param name="driverDirectory">The directory path containing driver files.</param>
         /// <param name="tempPath">The temporary directory path where the client downloaded the update package.</param>
         /// <param name="blackFileFormats">The list of file format extensions to skip.</param>
@@ -168,6 +171,9 @@ namespace GeneralUpdate.Core.Configuration
             , string bowl
             , string scheme
             , string token
+            , Security.AuthScheme authScheme
+            , string basicUsername
+            , string basicPassword
             , string driverDirectory
             , string tempPath
             , List<string> blackFileFormats
@@ -206,6 +212,9 @@ namespace GeneralUpdate.Core.Configuration
             Bowl = bowl;
             Scheme = scheme;
             Token = token;
+            AuthScheme = authScheme;
+            BasicUsername = basicUsername;
+            BasicPassword = basicPassword;
             DriverDirectory = driverDirectory;
             TempPath = tempPath;
 
@@ -326,6 +335,24 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("Token")]
         public string Token { get; set; }
+
+        /// <summary>
+        ///     Explicitly selects the HTTP authentication method.
+        /// </summary>
+        [JsonPropertyName("AuthScheme")]
+        public Security.AuthScheme AuthScheme { get; set; } = Security.AuthScheme.Hmac;
+
+        /// <summary>
+        ///     The username for HTTP Basic Authentication.
+        /// </summary>
+        [JsonPropertyName("BasicUsername")]
+        public string BasicUsername { get; set; }
+
+        /// <summary>
+        ///     The password for HTTP Basic Authentication.
+        /// </summary>
+        [JsonPropertyName("BasicPassword")]
+        public string BasicPassword { get; set; }
 
         /// <summary>
         ///     The list of file format extensions to exclude from the update.

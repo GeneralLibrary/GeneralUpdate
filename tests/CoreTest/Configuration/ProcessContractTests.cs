@@ -1,5 +1,6 @@
 using System.Text;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Security;
 
 namespace CoreTest.Configuration;
 
@@ -14,7 +15,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new ProcessContract(null, ExistingDir, "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("appName", ex.Message);
     }
 
@@ -24,7 +25,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentException>(() =>
             new ProcessContract("app", "C:\\nonexistent_path_xyz", "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("path does not exist", ex.Message);
     }
 
@@ -34,7 +35,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new ProcessContract("app", ExistingDir, null, "2.0", null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("currentVersion", ex.Message);
     }
 
@@ -44,7 +45,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new ProcessContract("app", ExistingDir, "1.0", null, null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("lastVersion", ex.Message);
     }
 
@@ -54,7 +55,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentException>(() =>
             new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", -1, "key",
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("greater than 0", ex.Message);
     }
 
@@ -63,7 +64,7 @@ public class ProcessContractTests
     {
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 0, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
         Assert.Equal(0, info.DownloadTimeOut);
     }
 
@@ -73,7 +74,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", 30, null,
-                SingleVersion, "url", "backup", null, null, null, null, null, null, null, null));
+                SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("appSecretKey", ex.Message);
     }
 
@@ -86,7 +87,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentException>(() =>
             new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                versions, "url", "backup", null, null, null, null, null, null, null, null));
+                versions, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("Collection", ex.Message);
     }
 
@@ -96,7 +97,7 @@ public class ProcessContractTests
         // ReportUrl is now optional — when not specified, no status reporting is performed.
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
-            SingleVersion, null, "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, null, "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
         Assert.Null(info.ReportUrl);
     }
 
@@ -106,7 +107,7 @@ public class ProcessContractTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
                 Encoding.UTF8, "ZIP", 30, "key",
-                SingleVersion, "url", null, null, null, null, null, null, null, null, null));
+                SingleVersion, "url", null, null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null));
         Assert.Contains("backupDirectory", ex.Message);
     }
 
@@ -117,7 +118,7 @@ public class ProcessContractTests
             "MyApp", ExistingDir, "1.0.0", "2.0.0", "https://log.example.com",
             Encoding.UTF8, ".zip", 60, "secret-key",
             SingleVersion, "https://report.example.com", "C:\\backup",
-            "BowlProcess", "https", "token-abc", "C:\\drivers", "",
+            "BowlProcess", "https", "token-abc", AuthScheme.Bearer, null, null, "C:\\drivers", "",
             new List<string> { ".tmp" }, new List<string> { "skip.dll" }, new List<string> { "logs" });
 
         Assert.Equal("MyApp", info.AppName);
@@ -147,7 +148,7 @@ public class ProcessContractTests
         // Arrange & Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.Equal("utf-8", info.CompressEncoding);
@@ -159,7 +160,7 @@ public class ProcessContractTests
         // Arrange & Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.ASCII, "ZIP", 30, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.Equal("us-ascii", info.CompressEncoding);
@@ -171,7 +172,7 @@ public class ProcessContractTests
         // Arrange & Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.Unicode, "ZIP", 30, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.Equal("utf-16", info.CompressEncoding);
@@ -184,12 +185,15 @@ public class ProcessContractTests
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
             SingleVersion, "url", "backup",
-            null, null, null, null, null, null, null, null);
+            null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.Null(info.Bowl);
         Assert.Null(info.Scheme);
         Assert.Null(info.Token);
+        Assert.Equal(AuthScheme.Hmac, info.AuthScheme);
+        Assert.Null(info.BasicUsername);
+        Assert.Null(info.BasicPassword);
         Assert.Null(info.DriverDirectory);
         Assert.Null(info.Formats);
         Assert.Null(info.Files);
@@ -224,7 +228,7 @@ public class ProcessContractTests
         // Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
-            versions, "url", "backup", null, null, null, null, null, null, null, null);
+            versions, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert
         Assert.Equal(3, info.UpdateVersions.Count);
@@ -239,7 +243,7 @@ public class ProcessContractTests
         // Arrange & Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null, null, null, null);
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null, null, null, null, null);
 
         // Assert — UpdateLogUrl is explicitly allowed to be null
         Assert.Null(info.UpdateLogUrl);
@@ -256,7 +260,7 @@ public class ProcessContractTests
         // Act
         var info = new ProcessContract("app", ExistingDir, "1.0", "2.0", null,
             Encoding.UTF8, "ZIP", 30, "key",
-            SingleVersion, "url", "backup", null, null, null, null, null,
+            SingleVersion, "url", "backup", null, null, null, AuthScheme.Hmac, null, null, null, null,
             formats, files, dirs);
 
         // Assert
