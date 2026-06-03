@@ -177,7 +177,7 @@ namespace GeneralUpdate.Core.Network
         /// <param name="token">The authentication token or key, used together with <paramref name="scheme"/>.</param>
         /// <param name="authScheme">Explicitly selects the HTTP authentication method. Defaults to <see cref="Security.AuthScheme.Hmac"/>.</param>
         /// <param name="basicUsername">The username for HTTP Basic Authentication. Used when <see cref="Security.AuthScheme.Basic"/> is selected.</param>
-        /// <param name="basicPassword">The password for HTTP Basic Authentication. Used when <paramref name="scheme"/> is "basic".</param>
+        /// <param name="basicPassword">The password for HTTP Basic Authentication. Used when <see cref="Security.AuthScheme.Basic"/> is selected.</param>
         /// <param name="ct">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result
         /// (e.g., whether an update exists, download URL, etc.).</returns>

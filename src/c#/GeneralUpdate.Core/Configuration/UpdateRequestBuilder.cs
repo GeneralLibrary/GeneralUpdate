@@ -267,9 +267,9 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         /// <param name="scheme">The authentication scheme to use. Defaults to <see cref="Security.AuthScheme.Hmac"/>.</param>
         /// <returns>The current <see cref="UpdateRequestBuilder" /> instance for chaining.</returns>
-        public UpdateRequestBuilder SetAuthScheme(Security.AuthScheme scheme)
+        public UpdateRequestBuilder SetAuthScheme(Security.AuthScheme authScheme)
         {
-            _authScheme = scheme;
+            _authScheme = authScheme;
             return this;
         }
 

@@ -279,8 +279,7 @@ public sealed class BasicAuthProvider : IHttpAuthProvider
     /// <param name="username">The username. Must not be null or empty.</param>
     /// <param name="password">The password. Must not be null or empty.</param>
     /// <returns>The Base64-encoded credential string for use with <c>Authorization: Basic</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="username"/> or <paramref name="password"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="username"/> or <paramref name="password"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="username"/> or <paramref name="password"/> is null, empty, or whitespace.</exception>
     public static string EncodeCredential(string username, string password)
     {
         if (string.IsNullOrWhiteSpace(username))
@@ -335,9 +334,10 @@ public static class HttpAuthProviderFactory
     /// <summary>
     /// Creates an <see cref="IHttpAuthProvider"/> based on the provided scheme, token, and secret key.
     /// </summary>
-    /// <param name="scheme">[Obsolete] Legacy string-based scheme. Prefer using <paramref name="authScheme"/> instead.</param>
+    /// <param name="scheme">Legacy string-based scheme. Prefer using <paramref name="authScheme"/> instead.</param>
     /// <param name="token">The authentication token or API key value.</param>
     /// <param name="secretKey">The HMAC secret key. Used as the default authentication when no explicit scheme is specified.</param>
+    /// <param name="authScheme">Explicitly selects the HTTP authentication method. Defaults to <see cref="AuthScheme.Hmac"/>.</param>
     /// <param name="basicUsername">The username for HTTP Basic Authentication. Used together with <paramref name="basicPassword"/> when <paramref name="scheme"/> is "basic".</param>
     /// <param name="basicPassword">The password for HTTP Basic Authentication. Used together with <paramref name="basicUsername"/> when <paramref name="scheme"/> is "basic".</param>
     /// <returns>An <see cref="IHttpAuthProvider"/> instance matching the specified parameters,

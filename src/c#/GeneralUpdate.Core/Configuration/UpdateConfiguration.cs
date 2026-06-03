@@ -186,13 +186,13 @@ namespace GeneralUpdate.Core.Configuration
 
         /// <summary>
         ///     The username for HTTP Basic Authentication.
-        ///     Used together with <see cref="BasicPassword"/> when the authentication scheme is "basic".
+        ///     Used together with <see cref="BasicPassword"/> when <see cref="Security.AuthScheme.Basic"/> is selected.
         /// </summary>
         public string BasicUsername { get; set; }
 
         /// <summary>
         ///     The password for HTTP Basic Authentication.
-        ///     Used together with <see cref="BasicUsername"/> when the authentication scheme is "basic".
+        ///     Used together with <see cref="BasicUsername"/> when <see cref="Security.AuthScheme.Basic"/> is selected.
         /// </summary>
         public string BasicPassword { get; set; }
 
