@@ -415,7 +415,10 @@ public class ClientStrategy : IStrategy
             GetPlatform(),
             _configInfo.ProductId,
             _configInfo.Scheme,
-            _configInfo.Token);
+            _configInfo.Token,
+            _configInfo.AuthScheme,
+            _configInfo.BasicUsername,
+            _configInfo.BasicPassword);
 
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);

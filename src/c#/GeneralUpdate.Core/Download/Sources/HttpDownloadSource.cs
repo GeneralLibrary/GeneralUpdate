@@ -45,6 +45,9 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     private readonly string? _productId;
     private readonly string? _scheme;
     private readonly string? _token;
+    private readonly Security.AuthScheme _authScheme;
+    private readonly string? _basicUsername;
+    private readonly string? _basicPassword;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpDownloadSource"/> class
@@ -61,6 +64,9 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     /// <param name="productId">An optional product identifier.</param>
     /// <param name="scheme">An optional authentication scheme.</param>
     /// <param name="token">An optional authentication token.</param>
+    /// <param name="authScheme">Explicitly selects the HTTP authentication method.</param>
+    /// <param name="basicUsername">An optional username for HTTP Basic Authentication.</param>
+    /// <param name="basicPassword">An optional password for HTTP Basic Authentication.</param>
     public HttpDownloadSource(
         string updateUrl,
         string clientVersion,
@@ -69,7 +75,10 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         PlatformType platform,
         string? productId,
         string? scheme,
-        string? token)
+        string? token,
+        Security.AuthScheme authScheme,
+        string? basicUsername,
+        string? basicPassword)
     {
         _updateUrl = updateUrl;
         _clientVersion = clientVersion;
@@ -79,6 +88,9 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         _productId = productId;
         _scheme = scheme;
         _token = token;
+        _authScheme = authScheme;
+        _basicUsername = basicUsername;
+        _basicPassword = basicPassword;
     }
 
     /// <summary>
@@ -111,12 +123,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         var mainResp = await VersionService.Validate(
             _updateUrl, _clientVersion, AppType.Client,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, token);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token);
 
         var upgradeResp = await VersionService.Validate(
             _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, token);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token);
 
         // Check that returned VersionEntry items' AppType matches the requested type,
         // rather than just checking Count > 0. The server may return items whose

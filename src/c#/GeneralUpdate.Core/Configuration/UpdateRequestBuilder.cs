@@ -46,6 +46,9 @@ namespace GeneralUpdate.Core.Configuration
         private string _updateUrl;
         private string _token;
         private string _scheme;
+        private Security.AuthScheme _authScheme = Security.AuthScheme.Hmac;
+        private string _basicUsername;
+        private string _basicPassword;
         private string _appName = "Update.exe";
         private string _mainAppName;
         private string _clientVersion;
@@ -155,6 +158,11 @@ namespace GeneralUpdate.Core.Configuration
                     builder.SetToken(config.Token);
                 if (!string.IsNullOrWhiteSpace(config.Scheme))
                     builder.SetScheme(config.Scheme);
+                builder.SetAuthScheme(config.AuthScheme);
+                if (!string.IsNullOrWhiteSpace(config.BasicUsername))
+                    builder.SetBasicUsername(config.BasicUsername);
+                if (!string.IsNullOrWhiteSpace(config.BasicPassword))
+                    builder.SetBasicPassword(config.BasicPassword);
                 if (!string.IsNullOrWhiteSpace(config.UpdateAppName))
                     builder.SetUpgradeAppName(config.UpdateAppName);
                 if (!string.IsNullOrWhiteSpace(config.MainAppName))
@@ -251,6 +259,39 @@ namespace GeneralUpdate.Core.Configuration
                 throw new ArgumentException("scheme cannot be null or empty.", nameof(scheme));
 
             _scheme = scheme;
+            return this;
+        }
+
+        /// <summary>
+        ///     Explicitly selects the HTTP authentication method.
+        /// </summary>
+        /// <param name="scheme">The authentication scheme to use. Defaults to <see cref="Security.AuthScheme.Hmac"/>.</param>
+        /// <returns>The current <see cref="UpdateRequestBuilder" /> instance for chaining.</returns>
+        public UpdateRequestBuilder SetAuthScheme(Security.AuthScheme scheme)
+        {
+            _authScheme = scheme;
+            return this;
+        }
+
+        /// <summary>
+        ///     Sets the username for HTTP Basic Authentication.
+        /// </summary>
+        /// <param name="username">The username for Basic Authentication.</param>
+        /// <returns>The current <see cref="UpdateRequestBuilder" /> instance for chaining.</returns>
+        public UpdateRequestBuilder SetBasicUsername(string username)
+        {
+            _basicUsername = username;
+            return this;
+        }
+
+        /// <summary>
+        ///     Sets the password for HTTP Basic Authentication.
+        /// </summary>
+        /// <param name="password">The password for Basic Authentication.</param>
+        /// <returns>The current <see cref="UpdateRequestBuilder" /> instance for chaining.</returns>
+        public UpdateRequestBuilder SetBasicPassword(string password)
+        {
+            _basicPassword = password;
             return this;
         }
 
@@ -474,6 +515,9 @@ namespace GeneralUpdate.Core.Configuration
                 UpdateUrl = _updateUrl,
                 Token = _token,
                 Scheme = _scheme,
+                AuthScheme = _authScheme,
+                BasicUsername = _basicUsername,
+                BasicPassword = _basicPassword,
                 UpdateAppName = _appName,
                 MainAppName = _mainAppName,
                 ClientVersion = _clientVersion,

@@ -260,6 +260,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <param name="reportUrl">Optional URL for reporting update status back to the server.</param>
     /// <param name="scheme">Optional URL scheme override (e.g. <c>"https"</c>).</param>
     /// <param name="token">Optional authentication token for API requests.</param>
+    /// <param name="authScheme">Explicitly selects the HTTP authentication method. Defaults to <see cref="Security.AuthScheme.Hmac"/>.</param>
+    /// <param name="basicUsername">Optional username for HTTP Basic Authentication.</param>
+    /// <param name="basicPassword">Optional password for HTTP Basic Authentication.</param>
     /// <param name="installPath">
     /// Optional override for the installation root directory. When <c>null</c>,
     /// defaults to <see cref="AppDomain.CurrentDomain.BaseDirectory"/>. Set this when
@@ -273,6 +276,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         string? reportUrl = null,
         string? scheme = null,
         string? token = null,
+        Security.AuthScheme authScheme = Security.AuthScheme.Hmac,
+        string? basicUsername = null,
+        string? basicPassword = null,
         string? installPath = null)
     {
         var config = new UpdateRequest
@@ -281,6 +287,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             AppSecretKey = appSecretKey,
             Token = token,
             Scheme = scheme,
+            AuthScheme = authScheme,
+            BasicUsername = basicUsername,
+            BasicPassword = basicPassword,
             ReportUrl = reportUrl
         };
         if (installPath != null)
@@ -353,6 +362,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             BackupDirectory = processInfo.BackupDirectory,
             Scheme = processInfo.Scheme,
             Token = processInfo.Token,
+            AuthScheme = processInfo.AuthScheme,
+            BasicUsername = processInfo.BasicUsername,
+            BasicPassword = processInfo.BasicPassword,
             DriverDirectory = processInfo.DriverDirectory,
             UpdatePath = processInfo.UpdatePath,
             LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,

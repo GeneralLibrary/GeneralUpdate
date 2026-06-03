@@ -270,11 +270,12 @@ namespace GeneralUpdate.Core.Configuration
         /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
         /// <remarks>
         /// Can be used to support servers that require token authentication (Bearer Token),
-        /// basic authentication (Basic Auth), or custom authentication headers. This extension
+        /// basic authentication (Basic Auth), API key authentication, HMAC-SHA256 signature
+        /// authentication, or custom authentication headers. This extension
         /// point is read by <c>HttpClientProvider</c> and injected into request headers when
         /// creating HTTP download requests.
         /// </remarks>
-        public TBootstrap UpdateAuth<T>() where T : Security.IHttpAuthProvider, new()
+        public TBootstrap HttpAuth<T>() where T : Security.IHttpAuthProvider, new()
         {
             _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T);
             return (TBootstrap)this;
