@@ -44,7 +44,9 @@ public static class IpcEncryption
             {
                 using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read,
                     FileShare.ReadWrite | FileShare.Delete);
-                cipher = new byte[fs.Length];
+                // Guard against files > 2 GB — IPC payloads should never be that large.
+                if (fs.Length > int.MaxValue) return null;
+                cipher = new byte[(int)fs.Length];
                 int offset = 0, remaining = cipher.Length;
                 while (remaining > 0)
                 {

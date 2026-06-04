@@ -347,10 +347,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         {
             processInfo = new EncryptedFileProcessContractProvider().Receive();
         }
-        catch
+        catch (Exception ex)
         {
             // Corrupted / unreadable IPC file (e.g. leftover from a crashed
             // previous run, or parallel test execution) — treat as "no IPC data".
+            GeneralTracer.Warn($"Failed to read IPC process contract: {ex.Message}");
             return;
         }
 
@@ -393,10 +394,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
         }
-        catch
+        catch (Exception ex)
         {
             // Corrupted / incompatible IPC data (e.g. from a mismatched version
             // of the sender, or stale test data) — treat as "no IPC data".
+            GeneralTracer.Warn($"Failed to map IPC process contract: {ex.Message}");
         }
     }
 
