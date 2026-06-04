@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Security;
+using Xunit;
 
 namespace CoreTest.Ipc;
 
@@ -70,8 +74,24 @@ public class IpcEncryptionTests
     }
 }
 
-public class EncryptedFileProcessContractProviderTests
+[Collection("IpcTests")]
+public class EncryptedFileProcessContractProviderTests : IDisposable
 {
+    private static readonly string IpcFilePath =
+        EncryptedFileProcessContractProvider.GetDefaultFilePath();
+
+    public EncryptedFileProcessContractProviderTests()
+    {
+        // Clean up any leftover IPC file from a previous (possibly parallel) test run
+        // to ensure deterministic test behaviour.
+        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+    }
+
+    public void Dispose()
+    {
+        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+    }
+
     [Fact]
     public void SendAndReceive_RoundTrip_ProcessContractPreserved()
     {
