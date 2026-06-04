@@ -342,39 +342,62 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         // The Upgrade process is only ever launched by the Client — no IPC means
         // there is nothing to do. The Client's manifest.json flows through IPC,
         // so the Upgrade never needs to load one directly.
-        var processInfo = new EncryptedFileProcessContractProvider().Receive();
+        ProcessContract? processInfo;
+        try
+        {
+            processInfo = new EncryptedFileProcessContractProvider().Receive();
+        }
+        catch
+        {
+            // Corrupted / unreadable IPC file (e.g. leftover from a crashed
+            // previous run, or parallel test execution) — treat as "no IPC data".
+            return;
+        }
+
         if (processInfo == null) return;
 
-        _configInfo = new UpdateContext
+        try
         {
-            MainAppName = processInfo.AppName,
-            InstallPath = processInfo.InstallPath,
-            ClientVersion = processInfo.CurrentVersion,
-            LastVersion = processInfo.LastVersion,
-            UpdateLogUrl = processInfo.UpdateLogUrl,
-            Encoding = Encoding.GetEncoding(processInfo.CompressEncoding),
-            Format = ParseFormat(processInfo.CompressFormat),
-            DownloadTimeOut = processInfo.DownloadTimeOut,
-            AppSecretKey = processInfo.AppSecretKey,
-            UpdateVersions = processInfo.UpdateVersions,
-            TempPath = processInfo.TempPath,
-            ReportUrl = processInfo.ReportUrl,
-            BackupDirectory = processInfo.BackupDirectory,
-            Scheme = processInfo.Scheme,
-            Token = processInfo.Token,
-            AuthScheme = processInfo.AuthScheme,
-            BasicUsername = processInfo.BasicUsername,
-            BasicPassword = processInfo.BasicPassword,
-            DriverDirectory = processInfo.DriverDirectory,
-            UpdatePath = processInfo.UpdatePath,
-            LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
-            ReportType = processInfo.ReportType,
-            Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
-            Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
-            Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
-        };
+            var encoding = !string.IsNullOrEmpty(processInfo.CompressEncoding)
+                ? Encoding.GetEncoding(processInfo.CompressEncoding)
+                : Encoding.UTF8;
 
-        StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
+            _configInfo = new UpdateContext
+            {
+                MainAppName = processInfo.AppName,
+                InstallPath = processInfo.InstallPath,
+                ClientVersion = processInfo.CurrentVersion,
+                LastVersion = processInfo.LastVersion,
+                UpdateLogUrl = processInfo.UpdateLogUrl,
+                Encoding = encoding,
+                Format = ParseFormat(processInfo.CompressFormat),
+                DownloadTimeOut = processInfo.DownloadTimeOut,
+                AppSecretKey = processInfo.AppSecretKey,
+                UpdateVersions = processInfo.UpdateVersions,
+                TempPath = processInfo.TempPath,
+                ReportUrl = processInfo.ReportUrl,
+                BackupDirectory = processInfo.BackupDirectory,
+                Scheme = processInfo.Scheme,
+                Token = processInfo.Token,
+                AuthScheme = processInfo.AuthScheme,
+                BasicUsername = processInfo.BasicUsername,
+                BasicPassword = processInfo.BasicPassword,
+                DriverDirectory = processInfo.DriverDirectory,
+                UpdatePath = processInfo.UpdatePath,
+                LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
+                ReportType = processInfo.ReportType,
+                Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
+                Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
+                Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
+            };
+
+            StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
+        }
+        catch
+        {
+            // Corrupted / incompatible IPC data (e.g. from a mismatched version
+            // of the sender, or stale test data) — treat as "no IPC data".
+        }
     }
 
     /// <summary>
