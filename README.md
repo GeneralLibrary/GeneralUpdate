@@ -48,12 +48,6 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 
 
-## 🚀 Official Website
-
-Visit our official website for comprehensive documentation, quick start guides, and more: [https://www.justerzhu.cn/](https://www.justerzhu.cn/)
-
-
-
 ## ❤️ Open Source Ecosystem
 
 ![](./imgs/ui.png)
