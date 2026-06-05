@@ -83,9 +83,10 @@ Special thanks to the authors of the following open source projects for contribu
 ## 🙏 Thanks
 
 <div align="center">
-  <img width="751" height="303" src="./imgs/jetbrains-b.png"/>
+  <img width="260" height="60" src="./imgs/jetbrains-b.png"/>
   <p>Thank JetBrains for providing free Rider IDE license.</p>
 </div>
+
 
 
 
