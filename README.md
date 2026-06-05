@@ -48,6 +48,14 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 
 
+## 🎏 Code Platforms
+
+| Github                 | Gitee                 | GitCode                 |
+| ---------------------- | --------------------- | ----------------------- |
+| ![](./imgs/github.png) | ![](./imgs/gitee.png) | ![](./imgs/gitcode.jpg) |
+
+
+
 ## ❤️ Open Source Ecosystem
 
 ![](./imgs/ui.png)
@@ -62,13 +70,22 @@ Special thanks to the authors of the following open source projects for contribu
 | LayUI         | WPF                    | Control Library | [View](https://github.com/Layui-WPF-Team/Layui-WPF)       |
 | AntdUI        | Winforms               | Control Library | [View](https://github.com/AntdUI/AntdUI)                  |
 
+<div>
+    <div align="left">
+      <h1>RoutinAI</h1>
+       <img width="154" height="151" src="./imgs/RoutinAI.png"/>
+    </div>
+[RoutinAI](https://routin.ai/) is an enterprise-grade unified LLM API gateway that provides a single, type-safe interface to access over 100 leading large language models from the GPT, Claude, and Gemini families, including models such as gpt-5.4, claude-opus-4-6, and gemini-3.1-pro-preview. It eliminates the complexity of managing multiple AI vendors by providing zero-latency edge routing, seamless model switching without code modifications, unified billing, and centralized governance with spending caps and access policies.
+</div>
 
 
-## 🎏 Code Platforms
 
-| Github                 | Gitee                 | GitCode                 |
-| ---------------------- | --------------------- | ----------------------- |
-| ![](./imgs/github.png) | ![](./imgs/gitee.png) | ![](./imgs/gitcode.jpg) |
+## 🙏 Thanks
+
+<div align="center">
+  <img width="751" height="303" src="./imgs/jetbrains-b.png"/>
+  <p>Thank JetBrains for providing free Rider IDE license.</p>
+</div>
 
 
 
