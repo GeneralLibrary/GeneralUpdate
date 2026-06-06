@@ -243,7 +243,7 @@ namespace GeneralUpdate.Core.Network
         private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, string appKey, int pf, string pid,
             CancellationToken t = default)
         {
-            var p = new Dictionary<string, object> { ["version"] = v, ["appType"] = at, ["appKey"] = appKey, ["platform"] = pf, ["productId"] = pid, ["upgradeMode"] = 1 };
+            var p = new Dictionary<string, object> { ["version"] = v, ["appType"] = at, ["appKey"] = appKey, ["platform"] = pf, ["productId"] = pid };
             return await PostAsync<VersionRespDTO>(url, p, VersionRespJsonContext.Default.VersionRespDTO, t);
         }
 

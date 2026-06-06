@@ -133,6 +133,34 @@ public static class DownloadPlanBuilder
 
         if (candidates.Count == 0) return DownloadPlan.Empty;
 
+        // ── CVP-first selection ──
+        // If a matching cross-version package (CVP) exists whose FromVersion
+        // equals the client's current version, prefer it over chain packages.
+        // This gives the client a single-package shortcut from old → latest.
+        var matchingCvp = candidates
+            .Where(a => a.IsCrossVersion)
+            .FirstOrDefault(a =>
+            {
+                var fromVer = ParseVersion(a.FromVersion);
+                return fromVer != null && fromVer == parsedClient;
+            });
+
+        if (matchingCvp != null)
+        {
+            // CVP covers one AppType in a single hop. Still need chain packages
+            // for other AppTypes, and for the same AppType beyond the CVP's target.
+            var cvpAppType = matchingCvp.AppType;
+            var cvpVersion = ParseVersion(matchingCvp.Version);
+            var planAssets = new List<DownloadAsset> { matchingCvp };
+            planAssets.AddRange(candidates
+                .Where(a => !a.IsCrossVersion)
+                .Where(a => a.AppType != cvpAppType
+                            || (cvpVersion != null && ParseVersion(a.Version) > cvpVersion))
+                .OrderBy(a => ParseVersion(a.Version)));
+            return new DownloadPlan(planAssets, isForcibly);
+        }
+
+        // No matching CVP: return all chain packages sorted by version (ascending)
         return new DownloadPlan(candidates, isForcibly);
     }
 
