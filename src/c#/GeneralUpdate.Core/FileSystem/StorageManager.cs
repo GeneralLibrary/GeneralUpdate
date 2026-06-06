@@ -38,12 +38,26 @@ namespace GeneralUpdate.Core.FileSystem
         private long _fileCount = 0;
 
         /// <summary>
-        /// The default prefix name for backup directories.
+        /// The default prefix for backup directory names (e.g. "backup-20260606235200").
         /// </summary>
-        /// <remarks>
-        /// Backup directories are named in the format "app-{version}". This constant defines the prefix portion.
-        /// </remarks>
-        public const string DirectoryName = "app-";
+        public const string DirectoryName = "backup-";
+
+        /// <summary>
+        /// Legacy backup directory prefix used by older versions (e.g. "app-1.0.0").
+        /// Retained for backward compatibility in discovery and cleanup.
+        /// </summary>
+        public const string LegacyDirectoryPrefix = "app-";
+
+        /// <summary>
+        /// The subdirectory under the install path where new-format backups are stored.
+        /// </summary>
+        public const string BackupRootDirectory = ".backups";
+
+        /// <summary>
+        /// Backup directory name prefixes used for enumeration (both new and legacy formats).
+        /// Derived from <see cref="DirectoryName"/> and <see cref="LegacyDirectoryPrefix"/>.
+        /// </summary>
+        private static readonly string[] BackupNamePrefixes = { DirectoryName, LegacyDirectoryPrefix };
 
         /// <summary>
         /// Gets or sets the optional path/file blacklist matcher.
@@ -195,6 +209,64 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
+        /// Generates a timestamp-based backup directory name in the format "backup-{yyyyMMddHHmmss}".
+        /// </summary>
+        /// <returns>A backup directory name string, e.g. "backup-20260606235200".</returns>
+        /// <remarks>
+        /// Timestamp naming ensures each backup is unique and naturally sortable by creation time.
+        /// Used by <see cref="Backup"/> to create version-independent backup directory names.
+        /// </remarks>
+        public static string GetBackupDirectoryName() => $"{DirectoryName}{DateTime.Now:yyyyMMddHHmmss}";
+
+        /// <summary>
+        /// Finds the most recent backup directory by scanning for backup directories
+        /// matching patterns derived from <see cref="BlackDefaults.DefaultDirectories"/>.
+        /// </summary>
+        /// <param name="installPath">The application installation root directory.</param>
+        /// <returns>The full path of the most recent backup directory, or <c>null</c> if none exists.</returns>
+        /// <remarks>
+        /// Directories are sorted by name in descending order. Since both "backup-{yyyyMMddHHmmss}"
+        /// and "app-{version}" formats are lexicographically sortable, this works for both.
+        /// Search patterns are derived from <see cref="BlackDefaults.DefaultDirectories"/> by
+        /// appending "*" to each entry — e.g. "backup-" becomes "backup-*".
+        /// </remarks>
+        public static string? GetLatestBackup(string installPath)
+        {
+            if (!Directory.Exists(installPath)) return null;
+
+            var allBackups = new List<string>();
+
+            // Scan BackupRootDirectory subdirectory (new-format backup container)
+            var backupRoot = Path.Combine(installPath, BackupRootDirectory);
+            if (Directory.Exists(backupRoot))
+            {
+                allBackups.AddRange(Directory.GetDirectories(backupRoot, "*", SearchOption.TopDirectoryOnly));
+            }
+
+            // Scan installPath directly for backup dirs matching patterns from defaults
+            allBackups.AddRange(GetBackupDirectories(installPath));
+
+            return allBackups
+                .OrderByDescending(d => d)
+                .FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Enumerates all backup directories in the given path using patterns derived
+        /// from <see cref="BackupNamePrefixes"/> (both new and legacy formats).
+        /// </summary>
+        private static IEnumerable<string> GetBackupDirectories(string path)
+        {
+            foreach (var prefix in BackupNamePrefixes)
+            {
+                foreach (var dir in Directory.GetDirectories(path, prefix + "*", SearchOption.TopDirectoryOnly))
+                {
+                    yield return dir;
+                }
+            }
+        }
+
+        /// <summary>
         /// Recursively deletes the specified directory and all of its subdirectories and files.
         /// </summary>
         /// <param name="targetDir">The path to the target directory to delete.</param>
@@ -328,19 +400,26 @@ namespace GeneralUpdate.Core.FileSystem
         /// </remarks>
         public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames)
         {
+            // Merge default backup-exclusion prefixes with user-configured directories.
+            // This ensures backup/legacy directories are ALWAYS skipped, preventing
+            // infinite recursion even when the user passes an empty skip list.
+            var effectiveDirectories = new List<string>(directoryNames);
+            effectiveDirectories.AddRange(BlackDefaults.DefaultDirectories);
+
             if (Directory.Exists(backupPath))
             {
                 DeleteDirectory(backupPath);
             }
             Directory.CreateDirectory(backupPath);
-            CopyDirectory(sourcePath, backupPath, directoryNames);
+            CopyDirectory(sourcePath, backupPath, effectiveDirectories);
         }
 
         private static void CopyDirectory(string sourceDir, string targetDir, IReadOnlyList<string> directoryNames)
         {
             foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
             {
-                if (!directoryNames.Any(name => Path.GetFileName(dirPath).Contains(name)))
+                var dirName = Path.GetFileName(dirPath);
+                if (!directoryNames.Any(name => dirName.Contains(name)))
                 {
                     string newTargetDir = Path.Combine(targetDir, Path.GetFileName(dirPath));
                     Directory.CreateDirectory(newTargetDir);
@@ -518,23 +597,49 @@ namespace GeneralUpdate.Core.FileSystem
         /// <param name="installPath">The application installation root directory path.</param>
         /// <param name="keepVersions">The number of most recent backup versions to retain. Default is 3.</param>
         /// <remarks>
-        /// Backup directories are located under <c>{installPath}/__backups</c>, with each subdirectory named by version.
-        /// This method sorts directories by version in descending order, retains the top N versions, and deletes all others.
-        /// If a version cannot be parsed, it is treated as version <c>0.0</c> (and will be deleted first).
-        /// If the <c>__backups</c> directory does not exist, no operation is performed.
+        /// Scans for backup directories in two locations:
+        /// 1. <c>{installPath}\{BackupRootDirectory}\</c> — new-format container for backup-{timestamp} dirs
+        /// 2. <c>{installPath}\</c> directly — backup dirs matching patterns from <see cref="BlackDefaults.DefaultDirectories"/>
+        /// Directories are sorted by name in descending order (both timestamp and version
+        /// strings are lexicographically sortable), retaining the top N and deleting the rest.
         /// </remarks>
         public static void CleanBackup(string installPath, int keepVersions = 3)
         {
-            var backupRoot = Path.Combine(installPath, "__backups");
-            if (!Directory.Exists(backupRoot)) return;
+            // Scan BackupRootDirectory subdirectory (new-format backup container)
+            var backupRoot = Path.Combine(installPath, BackupRootDirectory);
+            if (Directory.Exists(backupRoot))
+            {
+                CleanDirectories(backupRoot, keepVersions);
+            }
 
-            var dirs = Directory.GetDirectories(backupRoot)
+            // Scan installPath directly for backup dirs matching patterns from defaults
+            foreach (var pattern in GetBackupSearchPatterns())
+            {
+                CleanDirectories(installPath, keepVersions, pattern);
+            }
+        }
+
+        /// <summary>
+        /// Derives search patterns from <see cref="BackupNamePrefixes"/>
+        /// by appending "*" to each entry (e.g. "backup-" → "backup-*").
+        /// </summary>
+        private static IEnumerable<string> GetBackupSearchPatterns()
+        {
+            foreach (var prefix in BackupNamePrefixes)
+            {
+                yield return prefix + "*";
+            }
+        }
+
+        /// <summary>
+        /// Cleans directories matching the specified pattern in the given root path,
+        /// retaining only the most recent N directories.
+        /// </summary>
+        private static void CleanDirectories(string rootPath, int keepVersions, string searchPattern = "*")
+        {
+            var dirs = Directory.GetDirectories(rootPath, searchPattern, SearchOption.TopDirectoryOnly)
                 .Select(d => new DirectoryInfo(d))
-                .OrderByDescending(d =>
-                {
-                    var name = d.Name;
-                    return Version.TryParse(name, out var v) ? v : new Version(0, 0);
-                })
+                .OrderByDescending(d => d.Name)
                 .Skip(keepVersions);
 
             foreach (var dir in dirs)
@@ -547,20 +652,37 @@ namespace GeneralUpdate.Core.FileSystem
         /// <param name="installPath">The application installation root directory path.</param>
         /// <returns>A read-only collection of <see cref="BackupInfo"/> for all backup versions.</returns>
         /// <remarks>
-        /// Each backup entry contains the version name, full path, creation time, and total size in bytes.
-        /// If the <c>__backups</c> directory does not exist, an empty collection is returned.
+        /// Scans both <c>{installPath}\{BackupRootDirectory}</c> (new format) and <c>{installPath}</c> directly
+        /// (backup dirs matching patterns from <see cref="BlackDefaults.DefaultDirectories"/>).
+        /// Each backup entry contains the directory name, full path, creation time, and total size in bytes.
         /// </remarks>
         public static IReadOnlyList<BackupInfo> ListBackups(string installPath)
         {
-            var backupRoot = Path.Combine(installPath, "__backups");
-            if (!Directory.Exists(backupRoot)) return Array.Empty<BackupInfo>();
+            var result = new List<BackupInfo>();
 
-            return Directory.GetDirectories(backupRoot)
+            // Scan BackupRootDirectory subdirectory (new-format backup container)
+            var backupRoot = Path.Combine(installPath, BackupRootDirectory);
+            if (Directory.Exists(backupRoot))
+            {
+                result.AddRange(ToBackupInfos(backupRoot, "*"));
+            }
+
+            // Scan installPath directly for backup dirs matching patterns from defaults
+            foreach (var pattern in GetBackupSearchPatterns())
+            {
+                result.AddRange(ToBackupInfos(installPath, pattern));
+            }
+
+            return result;
+        }
+
+        private static IEnumerable<BackupInfo> ToBackupInfos(string rootPath, string searchPattern)
+        {
+            return Directory.GetDirectories(rootPath, searchPattern, SearchOption.TopDirectoryOnly)
                 .Select(d => new DirectoryInfo(d))
                 .Select(d => new BackupInfo(
                     d.Name, d.FullName, d.CreationTime,
-                    d.GetFiles("*", SearchOption.AllDirectories).Sum(f => f.Length)))
-                .ToList();
+                    d.GetFiles("*", SearchOption.AllDirectories).Sum(f => f.Length)));
         }
 
         #endregion
