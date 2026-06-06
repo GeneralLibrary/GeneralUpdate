@@ -482,7 +482,7 @@ public class ClientStrategy : IStrategy
         // Store original assets and CVP flag for chain fallback.
         // If the CVP download/apply fails, we rebuild the plan from cached chain
         // packages without a second server request.
-        var isCvpAttempt = downloadPlan.Assets is { Count: 1 } && downloadPlan.Assets[0].IsCrossVersion;
+        var isCvpAttempt = downloadPlan.Assets.Any(a => a.IsCrossVersion);
         var originalAssets = sourceResult.Assets.ToList();
 
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
@@ -594,7 +594,7 @@ public class ClientStrategy : IStrategy
         async Task DownloadAndApplyAsync(Download.Models.DownloadPlan plan, UpdateScenario sc)
         {
             GeneralTracer.Info($"ClientStrategy: downloading {plan.Assets.Count} asset(s).");
-            await ExecuteDownloadAsync(plan);
+            await ExecuteDownloadAsync(plan).ConfigureAwait(false);
 
             await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
             await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
@@ -656,9 +656,9 @@ public class ClientStrategy : IStrategy
 
         try
         {
-            await DownloadAndApplyAsync(downloadPlan, scenario);
+            await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
         }
-        catch (Exception ex) when (isCvpAttempt)
+        catch (Exception ex) when (isCvpAttempt && ex is not OperationCanceledException)
         {
             GeneralTracer.Warn($"ClientStrategy: CVP attempt failed, falling back to chain packages. {ex.Message}");
             var fallback = BuildChainFallback(originalAssets, localClientVersion, resolvedUpgradeVersion);
@@ -669,7 +669,7 @@ public class ClientStrategy : IStrategy
             (downloadPlan, scenario) = fallback.Value;
             UpdateRecordIdsFromPlan(downloadPlan);
             GeneralTracer.Info($"ClientStrategy: retrying with {downloadPlan.Assets.Count} chain asset(s), Scenario={scenario}");
-            await DownloadAndApplyAsync(downloadPlan, scenario);
+            await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
         }
     }
 

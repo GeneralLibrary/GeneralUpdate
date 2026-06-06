@@ -137,13 +137,20 @@ public static class DownloadPlanBuilder
         // If a matching cross-version package (CVP) exists whose FromVersion
         // equals the client's current version, prefer it over chain packages.
         // This gives the client a single-package shortcut from old → latest.
+        // Prefer the CVP with the highest target version when multiple CVPs match.
         var matchingCvp = candidates
             .Where(a => a.IsCrossVersion)
-            .FirstOrDefault(a =>
+            .Where(a =>
             {
                 var fromVer = ParseVersion(a.FromVersion);
-                return fromVer != null && fromVer == parsedClient;
-            });
+                if (fromVer == null) return false;
+                var localVersion = (a.AppType == (int)AppType.Upgrade)
+                    ? parsedUpgrade
+                    : parsedClient;
+                return fromVer == localVersion;
+            })
+            .OrderByDescending(a => ParseVersion(a.Version))
+            .FirstOrDefault();
 
         if (matchingCvp != null)
         {

@@ -226,7 +226,7 @@ namespace GeneralUpdate.Core.Network
         /// Execution flow:
         /// <list type="number">
         ///   <item><description>Constructs a parameter dictionary with the version, app type, app key,
-        ///   platform, product ID, and upgrade mode.</description></item>
+        ///   platform, and product ID.</description></item>
         ///   <item><description>Sends the parameters via a POST request using <see cref="PostAsync{T}"/>.</description></item>
         ///   <item><description>Deserializes the response into a <see cref="VersionRespDTO"/>.</description></item>
         /// </list>
