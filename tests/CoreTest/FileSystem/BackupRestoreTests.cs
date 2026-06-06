@@ -71,9 +71,10 @@ public class BackupRestoreTests
             Assert.Contains("backup-20260606000004", names[1]);
             Assert.Contains("backup-20260606000005", names[2]);
 
-            // Legacy app-* should also be cleaned (keeps top 3, but there's only 1 legacy,
-            // and since we're using CleanBackup with keepVersions=3, the one legacy dir
-            // at installPath level would be kept unless there are 3+ newer app-* dirs)
+            // Legacy app-* — single directory is retained (only 1 total, keepVersions=3)
+            var legacyRemaining = Directory.GetDirectories(installPath, "app-*");
+            Assert.Single(legacyRemaining);
+            Assert.Equal("app-0.0.1", Path.GetFileName(legacyRemaining[0]));
         }
         finally
         {
