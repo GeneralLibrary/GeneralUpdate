@@ -225,41 +225,44 @@ namespace GeneralUpdate.Core.FileSystem
         /// <param name="installPath">The application installation root directory.</param>
         /// <returns>The full path of the most recent backup directory, or <c>null</c> if none exists.</returns>
         /// <remarks>
-        /// Directories are sorted by name in descending order. Since both "backup-{yyyyMMddHHmmss}"
-        /// and "app-{version}" formats are lexicographically sortable, this works for both.
-        /// Search patterns are derived from <see cref="BlackDefaults.DefaultDirectories"/> by
-        /// appending "*" to each entry — e.g. "backup-" becomes "backup-*".
+        /// Sorts candidates by directory creation time descending (most recent first), with
+        /// a name-based tie-breaker for deterministic results. Unlike lexicographic name
+        /// sorting, this correctly handles mixed paths (e.g. .backups/ vs installPath/)
+        /// and legacy version-format names ("app-10.0.0" vs "app-2.0.0").
         /// </remarks>
         public static string? GetLatestBackup(string installPath)
         {
             if (!Directory.Exists(installPath)) return null;
 
-            var allBackups = new List<string>();
+            var allBackups = new List<DirectoryInfo>();
 
             // Scan BackupRootDirectory subdirectory (new-format backup container)
             var backupRoot = Path.Combine(installPath, BackupRootDirectory);
             if (Directory.Exists(backupRoot))
             {
-                allBackups.AddRange(Directory.GetDirectories(backupRoot, "*", SearchOption.TopDirectoryOnly));
+                allBackups.AddRange(new DirectoryInfo(backupRoot)
+                    .GetDirectories("*", SearchOption.TopDirectoryOnly));
             }
 
             // Scan installPath directly for backup dirs matching patterns from defaults
-            allBackups.AddRange(GetBackupDirectories(installPath));
+            allBackups.AddRange(GetBackupDirectoryInfos(installPath));
 
             return allBackups
-                .OrderByDescending(d => d)
-                .FirstOrDefault();
+                .OrderByDescending(d => d.CreationTime)
+                .ThenByDescending(d => d.Name)
+                .FirstOrDefault()?.FullName;
         }
 
         /// <summary>
         /// Enumerates all backup directories in the given path using patterns derived
         /// from <see cref="BackupNamePrefixes"/> (both new and legacy formats).
         /// </summary>
-        private static IEnumerable<string> GetBackupDirectories(string path)
+        private static IEnumerable<DirectoryInfo> GetBackupDirectoryInfos(string path)
         {
+            var dirInfo = new DirectoryInfo(path);
             foreach (var prefix in BackupNamePrefixes)
             {
-                foreach (var dir in Directory.GetDirectories(path, prefix + "*", SearchOption.TopDirectoryOnly))
+                foreach (var dir in dirInfo.GetDirectories(prefix + "*", SearchOption.TopDirectoryOnly))
                 {
                     yield return dir;
                 }
@@ -637,9 +640,10 @@ namespace GeneralUpdate.Core.FileSystem
         /// </summary>
         private static void CleanDirectories(string rootPath, int keepVersions, string searchPattern = "*")
         {
-            var dirs = Directory.GetDirectories(rootPath, searchPattern, SearchOption.TopDirectoryOnly)
-                .Select(d => new DirectoryInfo(d))
-                .OrderByDescending(d => d.Name)
+            var dirs = new DirectoryInfo(rootPath)
+                .GetDirectories(searchPattern, SearchOption.TopDirectoryOnly)
+                .OrderByDescending(d => d.CreationTime)
+                .ThenByDescending(d => d.Name)
                 .Skip(keepVersions);
 
             foreach (var dir in dirs)

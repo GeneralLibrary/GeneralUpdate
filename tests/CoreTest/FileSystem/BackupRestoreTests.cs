@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using GeneralUpdate.Core.FileSystem;
 using Xunit;
 
@@ -71,9 +72,10 @@ public class BackupRestoreTests
             Assert.Contains("backup-20260606000004", names[1]);
             Assert.Contains("backup-20260606000005", names[2]);
 
-            // Legacy app-* should also be cleaned (keeps top 3, but there's only 1 legacy,
-            // and since we're using CleanBackup with keepVersions=3, the one legacy dir
-            // at installPath level would be kept unless there are 3+ newer app-* dirs)
+            // Legacy app-* — single directory is retained (only 1 total, keepVersions=3)
+            var legacyRemaining = Directory.GetDirectories(installPath, "app-*");
+            Assert.Single(legacyRemaining);
+            Assert.Equal("app-0.0.1", Path.GetFileName(legacyRemaining[0]));
         }
         finally
         {
@@ -148,17 +150,19 @@ public class BackupRestoreTests
         {
             Directory.CreateDirectory(installPath);
 
-            // Create backup dirs with different timestamps
+            // Create backup dirs in creation-time order: oldest first, newest last
             var dir1 = Path.Combine(installPath, "backup-20260601000000");
-            var dir2 = Path.Combine(installPath, "backup-20260606235200"); // This is the latest
-            var dir3 = Path.Combine(installPath, "backup-20260603000000");
+            var dir2 = Path.Combine(installPath, "backup-20260603000000");
+            var dir3 = Path.Combine(installPath, "backup-20260606235200"); // Created last = most recent
             Directory.CreateDirectory(dir1);
+            Thread.Sleep(10); // Ensure distinct creation time on fast filesystems
             Directory.CreateDirectory(dir2);
+            Thread.Sleep(10);
             Directory.CreateDirectory(dir3);
 
             var latest = StorageManager.GetLatestBackup(installPath);
             Assert.NotNull(latest);
-            Assert.Equal(dir2, latest); // backup-20260606235200 is alphabetically last
+            Assert.Equal(dir3, latest); // Most recently created
         }
         finally
         {

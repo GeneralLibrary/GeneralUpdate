@@ -854,7 +854,7 @@ public class ClientStrategy : IStrategy
     /// </summary>
     /// <remarks>
     /// The backup operation is performed via <c>StorageManager.Backup</c>, excluding directories configured in the blacklist.
-    /// The backup directory path format is: {InstallPath}/__backups/backup_{yyyyMMddHHmmss}.
+    /// The backup directory path format is: {InstallPath}/.backups/backup-{yyyyMMddHHmmss}.
     /// This step can be skipped by setting <c>UpdateContext.BackupEnabled</c> to <c>false</c>.
     /// After a successful backup, old backups are cleaned up, retaining only the most recent 3.
     /// </remarks>
