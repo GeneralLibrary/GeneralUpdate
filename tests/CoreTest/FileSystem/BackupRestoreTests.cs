@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using GeneralUpdate.Core.FileSystem;
 using Xunit;
 
@@ -149,17 +150,19 @@ public class BackupRestoreTests
         {
             Directory.CreateDirectory(installPath);
 
-            // Create backup dirs with different timestamps
+            // Create backup dirs in creation-time order: oldest first, newest last
             var dir1 = Path.Combine(installPath, "backup-20260601000000");
-            var dir2 = Path.Combine(installPath, "backup-20260606235200"); // This is the latest
-            var dir3 = Path.Combine(installPath, "backup-20260603000000");
+            var dir2 = Path.Combine(installPath, "backup-20260603000000");
+            var dir3 = Path.Combine(installPath, "backup-20260606235200"); // Created last = most recent
             Directory.CreateDirectory(dir1);
+            Thread.Sleep(10); // Ensure distinct creation time on fast filesystems
             Directory.CreateDirectory(dir2);
+            Thread.Sleep(10);
             Directory.CreateDirectory(dir3);
 
             var latest = StorageManager.GetLatestBackup(installPath);
             Assert.NotNull(latest);
-            Assert.Equal(dir2, latest); // backup-20260606235200 is alphabetically last
+            Assert.Equal(dir3, latest); // Most recently created
         }
         finally
         {
