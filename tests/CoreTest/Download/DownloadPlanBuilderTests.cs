@@ -82,8 +82,10 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
-    public void Build_CrossVersionIncluded_ReturnsAllMatchingAssets()
+    public void Build_CrossVersionIncluded_CvpFirst_ReturnsCvpOnly()
     {
+        // When a matching CVP exists, the plan selects the CVP and drops
+        // same-AppType chain packages (CVP covers the full range).
         var assets = new[]
         {
             Asset("cross", "5.0.0", isCrossVersion: true, fromVersion: "1.0.0"),
@@ -91,10 +93,29 @@ public class DownloadPlanBuilderTests
         };
         var result = DownloadPlanBuilder.Build(assets, "1.0.0");
         Assert.True(result.HasAssets);
+        Assert.Single(result.Assets);
+        Assert.True(result.Assets[0].IsCrossVersion);
+        Assert.Equal("5.0.0", result.Assets[0].Version);
+    }
+
+    [Fact]
+    public void Build_CvpWithMixedAppTypes_KeepsChainForOtherTypes()
+    {
+        // CVP covers Client (AppType=1). Upgrade chain packages (AppType=2)
+        // should still be included since the CVP doesn't cover that AppType.
+        var assets = new[]
+        {
+            AssetWithType("cvp", "5.0.0", appType: 1, isCrossVersion: true, fromVersion: "1.0.0"),
+            AssetWithType("upgrade1", "2.0.0", appType: 2),
+            AssetWithType("upgrade2", "3.0.0", appType: 2),
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
+        Assert.True(result.HasAssets);
         Assert.Equal(3, result.Assets.Count);
-        Assert.Equal("2.0.0", result.Assets[0].Version);
-        Assert.Equal("3.0.0", result.Assets[1].Version);
-        Assert.Equal("5.0.0", result.Assets[2].Version);
+        Assert.Equal("5.0.0", result.Assets[0].Version); // CVP first
+        Assert.True(result.Assets[0].IsCrossVersion);
+        Assert.Equal("2.0.0", result.Assets[1].Version); // chain for other AppType
+        Assert.Equal("3.0.0", result.Assets[2].Version);
     }
 
     [Fact]
