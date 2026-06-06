@@ -48,18 +48,20 @@ public class BlackDefaultsTests
     }
 
     [Fact]
-    public void DefaultDirectories_ContainsAppPrefixAndFail()
+    public void DefaultDirectories_ContainsBackupPrefixAndFail()
     {
         var dirs = BlackDefaults.DefaultDirectories;
 
+        Assert.Contains(".backups", dirs);
+        Assert.Contains("backup-", dirs);
         Assert.Contains("app-", dirs);
         Assert.Contains("fail", dirs);
     }
 
     [Fact]
-    public void DefaultDirectories_HasTwoEntries()
+    public void DefaultDirectories_HasFourEntries()
     {
-        Assert.Equal(2, BlackDefaults.DefaultDirectories.Count);
+        Assert.Equal(4, BlackDefaults.DefaultDirectories.Count);
     }
 
     [Fact]

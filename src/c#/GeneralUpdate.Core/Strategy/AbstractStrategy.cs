@@ -387,18 +387,31 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>
         /// Attempts to restore from backup when a pipeline execution fails.
-        /// Only restores if a backup directory exists for the current version.
+        /// Tries the specific backup directory for this update first;
+        /// falls back to the most recent backup if the specific one is unavailable.
         /// </summary>
         private void TryRollback()
         {
             try
             {
                 var backupDir = _configinfo.BackupDirectory;
+                // If the specific backup for this update doesn't exist,
+                // fall back to the most recent backup by timestamp.
+                if (string.IsNullOrWhiteSpace(backupDir) || !Directory.Exists(backupDir))
+                {
+                    GeneralTracer.Info($"AbstractStrategy.TryRollback: specific backup not found ({backupDir}), searching for latest.");
+                    backupDir = StorageManager.GetLatestBackup(_configinfo.InstallPath);
+                }
+
                 if (!string.IsNullOrWhiteSpace(backupDir) && Directory.Exists(backupDir))
                 {
                     GeneralTracer.Warn($"AbstractStrategy.TryRollback: restoring from backup {backupDir} -> {_configinfo.InstallPath}");
                     StorageManager.Restore(backupDir, _configinfo.InstallPath);
                     GeneralTracer.Info("AbstractStrategy.TryRollback: restore completed.");
+                }
+                else
+                {
+                    GeneralTracer.Warn("AbstractStrategy.TryRollback: no backup found, rollback skipped.");
                 }
             }
             catch (Exception ex)

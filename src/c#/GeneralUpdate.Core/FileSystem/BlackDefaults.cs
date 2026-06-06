@@ -22,5 +22,10 @@ public static class BlackDefaults
 
     /// <summary>Default skipped directory prefixes.</summary>
     public static readonly List<string> DefaultDirectories = new()
-        { "app-", "fail" };
+    {
+        StorageManager.BackupRootDirectory,
+        StorageManager.DirectoryName,
+        StorageManager.LegacyDirectoryPrefix,
+        "fail"
+    };
 }

@@ -544,8 +544,8 @@ public class ClientStrategy : IStrategy
 
         InitBlackPolicy();
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
-        _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath,
-            $"{StorageManager.DirectoryName}{_configInfo.ClientVersion}");
+        _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, StorageManager.BackupRootDirectory,
+            StorageManager.GetBackupDirectoryName());
 
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
@@ -854,8 +854,9 @@ public class ClientStrategy : IStrategy
     /// </summary>
     /// <remarks>
     /// The backup operation is performed via <c>StorageManager.Backup</c>, excluding directories configured in the blacklist.
-    /// The backup directory path format is: {InstallPath}/backup_{ClientVersion}.
+    /// The backup directory path format is: {InstallPath}/__backups/backup_{yyyyMMddHHmmss}.
     /// This step can be skipped by setting <c>UpdateContext.BackupEnabled</c> to <c>false</c>.
+    /// After a successful backup, old backups are cleaned up, retaining only the most recent 3.
     /// </remarks>
     private void Backup()
     {
@@ -863,6 +864,8 @@ public class ClientStrategy : IStrategy
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
             _configInfo.Directories ?? BlackDefaults.DefaultDirectories);
+        // Retain only the most recent 3 backups to prevent disk accumulation
+        StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
     }
 
     /// <summary>
