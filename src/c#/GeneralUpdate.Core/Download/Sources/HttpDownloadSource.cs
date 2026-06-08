@@ -182,7 +182,9 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             AppType: v.AppType,
             IsCrossVersion: v.IsCrossVersion == true,
             FromVersion: v.FromVersion,
-            TargetArchiveHash: v.Hash,
+            MinClientVersion: v.MinClientVersion,
+            SourceArchiveHash: v.SourceArchiveHash,
+            TargetArchiveHash: v.TargetArchiveHash,
             AuthScheme: v.AuthScheme,
             AuthToken: v.AuthToken
         );
