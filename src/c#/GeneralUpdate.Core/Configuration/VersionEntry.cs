@@ -31,7 +31,7 @@ namespace GeneralUpdate.Core.Configuration;
 ///             <item>
 ///                 <description>
 ///                     Differential update phase: Uses <see cref="Hash" /> for file verification, and
-///                     <see cref="FromVersion" /> and <see cref="ToVersion" /> to determine the scope of the
+///                     <see cref="FromVersion" /> to determine the scope of the
 ///                     differential patch.
 ///                 </description>
 ///             </item>
@@ -196,21 +196,9 @@ public class VersionEntry : VersionIdentity
     /// </summary>
     /// <remarks>
     ///     Only valid when <see cref="IsCrossVersion" /> is <c>true</c>.
-    ///     Together with <see cref="ToVersion" />, defines the version scope of the differential patch.
     /// </remarks>
     [JsonPropertyName("fromVersion")]
     public string? FromVersion { get; set; }
-
-    /// <summary>
-    ///     The target version number for cross-version upgrade packages.
-    ///     Indicates the target version that will be reached after applying this differential patch.
-    /// </summary>
-    /// <remarks>
-    ///     Only valid when <see cref="IsCrossVersion" /> is <c>true</c>.
-    ///     Together with <see cref="FromVersion" />, defines the version scope of the differential patch.
-    /// </remarks>
-    [JsonPropertyName("toVersion")]
-    public string? ToVersion { get; set; }
 
     /// <summary>
     ///     Whether this version package is frozen (archived and not used for active updates).
@@ -218,4 +206,25 @@ public class VersionEntry : VersionIdentity
     /// </summary>
     [JsonPropertyName("isFreeze")]
     public bool? IsFreeze { get; set; }
+
+    /// <summary>
+    ///     The minimum client version required for this package.
+    ///     If the current client version is below this, the package is not applicable.
+    /// </summary>
+    [JsonPropertyName("minClientVersion")]
+    public string? MinClientVersion { get; set; }
+
+    /// <summary>
+    ///     The hash of the source full-version archive used to build this cross-version package.
+    ///     Only valid when <see cref="IsCrossVersion"/> is <c>true</c>.
+    /// </summary>
+    [JsonPropertyName("sourceArchiveHash")]
+    public string? SourceArchiveHash { get; set; }
+
+    /// <summary>
+    ///     The hash of the target full-version archive used to build this cross-version package.
+    ///     Only valid when <see cref="IsCrossVersion"/> is <c>true</c>.
+    /// </summary>
+    [JsonPropertyName("targetArchiveHash")]
+    public string? TargetArchiveHash { get; set; }
 }
