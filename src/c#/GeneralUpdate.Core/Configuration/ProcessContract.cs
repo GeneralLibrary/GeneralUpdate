@@ -184,8 +184,8 @@ namespace GeneralUpdate.Core.Configuration
         {
             // Validate required string parameters
             AppName = appName ?? throw new ArgumentNullException(nameof(appName));
-            if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
             InstallPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
+            if (!Directory.Exists(installPath)) throw new ArgumentException($"{nameof(installPath)} path does not exist ! {installPath}.");
             CurrentVersion = currentVersion ?? throw new ArgumentNullException(nameof(currentVersion));
             LastVersion = lastVersion ?? throw new ArgumentNullException(nameof(lastVersion));
             UpdateLogUrl = updateLogUrl;

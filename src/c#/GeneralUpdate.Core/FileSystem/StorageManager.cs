@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using GeneralUpdate.Core.HashAlgorithms;
+using GeneralUpdate.Core;
 
 namespace GeneralUpdate.Core.FileSystem
 {
@@ -329,8 +330,9 @@ namespace GeneralUpdate.Core.FileSystem
 
                 return files;
             }
-            catch
+            catch (Exception ex)
             {
+                GeneralTracer.Warn($"StorageManager.GetAllFiles failed for path '{path}': {ex.Message}");
                 return new List<FileInfo>();
             }
         }
@@ -358,8 +360,9 @@ namespace GeneralUpdate.Core.FileSystem
 
                 return files;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                GeneralTracer.Warn($"StorageManager.GetAllfiles failed for path '{path}': {ex.Message}");
                 return new List<FileInfo>();
             }
         }

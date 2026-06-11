@@ -97,6 +97,7 @@ namespace GeneralUpdate.Core.Strategy
         /// </remarks>
         public override async Task StartAppAsync()
         {
+            var appLaunched = false;
             try
             {
                 var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
@@ -106,6 +107,7 @@ namespace GeneralUpdate.Core.Strategy
 
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
                 Process.Start(appPath);
+                appLaunched = true;
                 GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully.");
 
                 if (LaunchBowl)
@@ -122,8 +124,14 @@ namespace GeneralUpdate.Core.Strategy
             {
                 GeneralTracer.Error("The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+
+                // If the main app was already launched, still need to exit the updater.
+                if (!appLaunched) return;
             }
-            finally
+
+            // Only terminate the updater when the main app was launched.
+            // On error before launch, stay alive so callers can attempt recovery.
+            if (appLaunched)
             {
                 GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: releasing tracer and terminating updater process.");
                 GeneralTracer.Dispose();

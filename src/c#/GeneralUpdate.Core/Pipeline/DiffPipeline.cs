@@ -445,7 +445,7 @@ public class DiffPipeline
     /// deletion failures caused by read-only attributes.
     /// </para>
     /// </remarks>
-    private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, IEnumerable<FileInfo> oldFiles)
+    private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, List<FileInfo> oldFiles)
     {
         var json = patchFiles.FirstOrDefault(i => i.Name.Equals(DeleteListFileName, StringComparison.OrdinalIgnoreCase));
         if (json == null) return;
@@ -453,16 +453,34 @@ public class DiffPipeline
         var deleteFiles = StorageManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
         if (deleteFiles == null) return;
 
-        var hashAlgorithm = new Sha256HashAlgorithm();
-        var toDelete = oldFiles
-            .Where(old => deleteFiles.Any(del => del.Hash.SequenceEqual(hashAlgorithm.ComputeHash(old.FullName))))
-            .ToList();
+        // Build a HashSet of delete-manifest hashes (hex strings from FileNode.Hash)
+        // so each oldFile is checked in O(1) instead of O(n × m).
+        var deleteHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var del in deleteFiles)
+        {
+            if (!string.IsNullOrEmpty(del.Hash))
+                deleteHashes.Add(del.Hash);
+        }
+        if (deleteHashes.Count == 0) return;
 
-        foreach (var file in toDelete)
+        // Exclude .patch files from oldFiles — they are patch input, not app files.
+        var appFiles = oldFiles
+            .Where(f => !Path.GetExtension(f.FullName)
+                .Equals(PatchExtension, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (appFiles.Count == 0) return;
+
+        var hashAlgorithm = new Sha256HashAlgorithm();
+        foreach (var file in appFiles)
         {
             if (!File.Exists(file.FullName)) continue;
-            File.SetAttributes(file.FullName, FileAttributes.Normal);
-            File.Delete(file.FullName);
+
+            var fileHash = hashAlgorithm.ComputeHash(file.FullName);
+            if (fileHash != null && deleteHashes.Contains(fileHash))
+            {
+                File.SetAttributes(file.FullName, FileAttributes.Normal);
+                File.Delete(file.FullName);
+            }
         }
     }
 
@@ -501,15 +519,21 @@ public class DiffPipeline
                 var extensionName = Path.GetExtension(file.FullName);
                 if (BlackDefaults.DefaultFormats.Contains(extensionName)) continue;
 
-                var targetFileName = file.FullName.Replace(patchPath, "").TrimStart(Path.DirectorySeparatorChar);
-                var targetPath = Path.Combine(appPath, targetFileName);
+                // Compute the relative path by stripping the patch directory prefix.
+                // Using StartsWith + Substring instead of string.Replace to avoid
+                // incorrect replacements when appPath is a substring of patchPath.
+                var patchPrefix = patchPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var relativePart = file.FullName.StartsWith(patchPrefix, StringComparison.Ordinal)
+                    ? file.FullName.Substring(patchPrefix.Length)
+                    : file.FullName;
+                var targetPath = Path.Combine(appPath, relativePart);
                 var parentFolder = Directory.GetParent(targetPath);
                 if (parentFolder?.Exists == false)
                     parentFolder.Create();
 
                 // Atomic replace via temp file, same strategy as ApplyPatch.
                 // Avoids file-in-use errors when the process just exited.
-                var safeName = targetFileName.Replace(Path.DirectorySeparatorChar, '_');
+                var safeName = relativePart.Replace(Path.DirectorySeparatorChar, '_');
                 var tempPath = Path.Combine(appPath, $"{Path.GetRandomFileName()}_{safeName}");
                 File.Copy(file.FullName, tempPath, true);
 

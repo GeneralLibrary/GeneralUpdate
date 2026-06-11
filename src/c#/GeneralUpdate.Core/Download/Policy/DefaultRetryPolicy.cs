@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Download.Abstractions;
@@ -131,11 +132,18 @@ public class DefaultRetryPolicy : IDownloadPolicy
         if (ex is IOException) return true;
         if (ex is HttpRequestException hre)
         {
+#if NET5_0_OR_GREATER
+            var statusCode = hre.StatusCode;
+            if (statusCode.HasValue)
+                return statusCode.Value == System.Net.HttpStatusCode.InternalServerError
+                    || statusCode.Value == System.Net.HttpStatusCode.BadGateway
+                    || statusCode.Value == System.Net.HttpStatusCode.ServiceUnavailable
+                    || statusCode.Value == System.Net.HttpStatusCode.GatewayTimeout;
+#endif
             var s = hre.Message ?? "";
             return s.Contains("timeout", StringComparison.OrdinalIgnoreCase)
                 || s.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-                || s.Contains("500") || s.Contains("502")
-                || s.Contains("503") || s.Contains("504");
+                || Regex.IsMatch(s, @"\b(500|502|503|504)\b");
         }
         return false;
     }

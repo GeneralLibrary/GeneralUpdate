@@ -36,8 +36,6 @@ public class DefaultDirtyMatcher : IDirtyMatcher
         var findFile = patchFiles.FirstOrDefault(f =>
         {
             var name = Path.GetFileNameWithoutExtension(f.Name);
-            if (name.EndsWith(PatchFormat, System.StringComparison.OrdinalIgnoreCase))
-                name = name.Substring(0, name.Length - PatchFormat.Length);
             return name.Equals(oldFile.Name, System.StringComparison.OrdinalIgnoreCase);
         });
 

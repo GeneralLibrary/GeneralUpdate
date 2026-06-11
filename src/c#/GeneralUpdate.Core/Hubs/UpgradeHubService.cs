@@ -18,6 +18,7 @@ public class UpgradeHubService : IUpgradeHubService
     private const string Onlineflag = "Online";
     private const string ReceiveMessageflag = "ReceiveMessage";
     private HubConnection? _connection;
+    private bool _disposed;
 
     public UpgradeHubService(string url, string? token = null, string? appkey = null)
         => _connection = BuildHubConnection(url, token, appkey);
@@ -47,24 +48,40 @@ public class UpgradeHubService : IUpgradeHubService
         => _connection?.On(Onlineflag, onlineMessageCallback);
 
     public void AddListenerReconnected(Func<string?, Task>? reconnectedCallback)
-        => _connection!.Reconnected += reconnectedCallback;
+    {
+        if (_disposed || _connection == null) return;
+        _connection.Reconnected += reconnectedCallback;
+    }
 
     public void AddListenerClosed(Func<Exception?, Task> closeCallback)
-        => _connection!.Closed += closeCallback;
+    {
+        if (_disposed || _connection == null) return;
+        _connection.Closed += closeCallback;
+    }
 
     public async Task StartAsync()
     {
+        if (_disposed || _connection == null)
+        {
+            GeneralTracer.Warn("UpgradeHubService.StartAsync: service is disposed or not connected.");
+            return;
+        }
         GeneralTracer.Info($"UpgradeHubService.StartAsync: connecting to SignalR hub. State={_connection?.State}");
-        await _connection!.StartAsync();
+        await _connection.StartAsync();
         GeneralTracer.Info($"UpgradeHubService.StartAsync: SignalR hub connection established. State={_connection?.State}");
     }
 
     public async Task StopAsync()
     {
+        if (_disposed || _connection == null)
+        {
+            GeneralTracer.Warn("UpgradeHubService.StopAsync: service is disposed or not connected.");
+            return;
+        }
         try
         {
             GeneralTracer.Info($"UpgradeHubService.StopAsync: stopping SignalR hub connection. State={_connection?.State}");
-            await _connection!.StopAsync();
+            await _connection.StopAsync();
             GeneralTracer.Info("UpgradeHubService.StopAsync: SignalR hub connection stopped.");
         }
         catch (Exception e)
@@ -75,11 +92,17 @@ public class UpgradeHubService : IUpgradeHubService
 
     public async Task DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
         try
         {
-            GeneralTracer.Info("UpgradeHubService.DisposeAsync: disposing SignalR hub connection and releasing resources.");
-            await _connection!.DisposeAsync();
-            GeneralTracer.Info("UpgradeHubService.DisposeAsync: SignalR hub connection disposed.");
+            if (_connection != null)
+            {
+                GeneralTracer.Info("UpgradeHubService.DisposeAsync: disposing SignalR hub connection and releasing resources.");
+                await _connection.DisposeAsync();
+                _connection = null;
+                GeneralTracer.Info("UpgradeHubService.DisposeAsync: SignalR hub connection disposed.");
+            }
         }
         catch (Exception e)
         {

@@ -433,8 +433,19 @@ namespace GeneralUpdate.Differential.Differ
             if (string.IsNullOrWhiteSpace(patchPath)) throw new ArgumentNullException(nameof(patchPath));
         }
 
+        /// <summary>
+        /// Reads up to <paramref name="maxBytes"/> from the file at <paramref name="path"/>.
+        /// Throws <see cref="InvalidOperationException"/> when the file is larger than <paramref name="maxBytes"/>
+        /// so callers never silently operate on truncated data.
+        /// </summary>
         private static byte[] ReadFileWithBudget(string path, int maxBytes)
         {
+            var fileLength = new FileInfo(path).Length;
+            if (fileLength > maxBytes)
+                throw new InvalidOperationException(
+                    $"File '{path}' is {fileLength} bytes, which exceeds the maximum window size of {maxBytes} bytes. " +
+                    $"Increase MaxWindowSize or reduce the file size.");
+
             byte[] buffer = new byte[maxBytes];
             int totalRead = 0;
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -446,8 +457,7 @@ namespace GeneralUpdate.Differential.Differ
                     totalRead += read;
                 }
             }
-            // Trim to actual bytes read so callers using .Length see the real data,
-            // not zero-initialized tail bytes that would corrupt patch computation.
+            // Trim buffer to actual bytes read.
             if (totalRead < maxBytes)
                 Array.Resize(ref buffer, totalRead);
             return buffer;
@@ -455,7 +465,9 @@ namespace GeneralUpdate.Differential.Differ
 
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            long magnitude = value < 0 ? -value : value;
+            // Compute absolute value safely: -long.MinValue would overflow,
+            // so clamp to long.MaxValue — the sign bit is stored separately.
+            long magnitude = value == long.MinValue ? long.MaxValue : (value < 0 ? -value : value);
             buf[offset + 0] = (byte)(magnitude & 0xFF);
             buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
             buf[offset + 2] = (byte)((magnitude >> 16) & 0xFF);

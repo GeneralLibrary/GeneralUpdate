@@ -11,22 +11,33 @@ public static class GeneralTracer
     private static bool _isTracingEnabled;
     private static string _currentLogDate;
     private static TextTraceListener _fileListener;
-  
+    // Track listeners added by GeneralTracer so Dispose() only removes our own,
+    // preserving listeners registered by other libraries in the process.
+    private static readonly List<TraceListener> _ownedListeners = new();
+
     static GeneralTracer()
     {
         Trace.Listeners.Clear();
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            Trace.Listeners.Add(new WindowsOutputDebugListener());
+            var debugListener = new WindowsOutputDebugListener();
+            Trace.Listeners.Add(debugListener);
+            _ownedListeners.Add(debugListener);
         }
 
-        Trace.Listeners.Add(new TextWriterTraceListener(Console.Out) { Name = "ConsoleListener" });
-        
+        var consoleListener = new TextWriterTraceListener(Console.Out) { Name = "ConsoleListener" };
+        Trace.Listeners.Add(consoleListener);
+        _ownedListeners.Add(consoleListener);
+
         InitializeFileListener();
 
         if (Debugger.IsAttached)
-            Trace.Listeners.Add(new DefaultTraceListener());
+        {
+            var defaultListener = new DefaultTraceListener();
+            Trace.Listeners.Add(defaultListener);
+            _ownedListeners.Add(defaultListener);
+        }
 
         Trace.AutoFlush = true;
         _isTracingEnabled = true;
@@ -44,6 +55,7 @@ public static class GeneralTracer
             if (_fileListener != null)
             {
                 Trace.Listeners.Remove(_fileListener);
+                _ownedListeners.Remove(_fileListener);
                 _fileListener.Flush();
                 _fileListener.Close();
                 _fileListener.Dispose();
@@ -56,6 +68,7 @@ public static class GeneralTracer
             _fileListener = new TextTraceListener(logFileName);
 
             Trace.Listeners.Add(_fileListener);
+            _ownedListeners.Add(_fileListener);
             _currentLogDate = today;
         }
     }
@@ -155,7 +168,11 @@ public static class GeneralTracer
                     _fileListener = null;
                 }
 
-                Trace.Listeners.Clear();
+                // Remove only the listeners that GeneralTracer added, preserving
+                // listeners registered by other libraries in the same process.
+                foreach (var listener in _ownedListeners)
+                    Trace.Listeners.Remove(listener);
+                _ownedListeners.Clear();
             }
         }
         catch

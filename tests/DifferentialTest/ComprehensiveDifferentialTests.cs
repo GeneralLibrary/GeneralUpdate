@@ -828,6 +828,66 @@ public class ComprehensiveDifferentialTests : IDisposable
     }
 
     // =========================================================================
+    // Section 5: Patch-requested regression tests (R3 / R5)
+    // =========================================================================
+
+    /// <summary>
+    /// Verifies that CopyUnknownFiles correctly handles a subdirectory structure under patch
+    /// — files in patch/sub/ should land in app/sub/.
+    /// </summary>
+    [Fact]
+    public async Task DirtyAsync_CopyUnknownFiles_SubdirectoryPreserved()
+    {
+        var app = Path.Combine(_testDir, "rf_sub_app");
+        var patch = Path.Combine(_testDir, "rf_sub_patch");
+        var src = Path.Combine(_testDir, "rf_sub_src");
+        var tgt = Path.Combine(_testDir, "rf_sub_tgt");
+        Directory.CreateDirectory(app);
+        Directory.CreateDirectory(patch);
+        Directory.CreateDirectory(src);
+        Directory.CreateDirectory(tgt);
+
+        // Target has files in a subdirectory
+        var tgtSub = Path.Combine(tgt, "plugins");
+        Directory.CreateDirectory(tgtSub);
+        File.WriteAllBytes(Path.Combine(tgtSub, "plug.dll"), [9, 8, 7]);
+
+        var pipeline = new DiffPipelineBuilder().WithParallelism(1).Build();
+        await pipeline.CleanAsync(src, tgt, patch);
+        await pipeline.DirtyAsync(app, patch);
+
+        // Assert: plug.dll is at app / plugins / plug.dll
+        Assert.True(File.Exists(Path.Combine(app, "plugins", "plug.dll")));
+    }
+
+    /// <summary>
+    /// Verifies that CopyUnknownFiles correctly places files when the patch dir path
+    /// is unrelated to the app dir (the normal case after R3 fix).
+    /// </summary>
+    [Fact]
+    public async Task DirtyAsync_CopyUnknownFiles_IndependentPaths()
+    {
+        var app = Path.Combine(_testDir, "cu_indep_app");
+        var patch = Path.Combine(_testDir, "cu_indep_patch");
+        var src = Path.Combine(_testDir, "cu_indep_src");
+        var tgt = Path.Combine(_testDir, "cu_indep_tgt");
+        Directory.CreateDirectory(app);
+        Directory.CreateDirectory(patch);
+        Directory.CreateDirectory(src);
+        Directory.CreateDirectory(tgt);
+
+        // One new file in target (no old files)
+        File.WriteAllBytes(Path.Combine(tgt, "new.dll"), [1, 2, 3]);
+
+        var pipeline = new DiffPipelineBuilder().WithParallelism(1).Build();
+        await pipeline.CleanAsync(src, tgt, patch);
+        await pipeline.DirtyAsync(app, patch);
+
+        Assert.True(File.Exists(Path.Combine(app, "new.dll")));
+        Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(app, "new.dll")));
+    }
+
+    // =========================================================================
     // Helpers
     // =========================================================================
 
