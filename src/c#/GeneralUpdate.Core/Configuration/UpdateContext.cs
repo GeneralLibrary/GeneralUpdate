@@ -120,7 +120,7 @@ public class UpdateContext : UpdateConfiguration
 
     /// <summary>
     ///     Whether to back up the current version before applying an update.
-    ///     Computed from <see cref="Option.BackupEnabled" />, defaults to <c>true</c>.
+    ///     Computed from <see cref="Option.BackupEnabled" />, defaults to <c>false</c>.
     /// </summary>
     public bool? BackupEnabled { get; set; }
 
