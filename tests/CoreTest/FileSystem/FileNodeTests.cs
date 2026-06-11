@@ -160,10 +160,10 @@ public class FileNodeTests
     }
 
     [Fact]
-    public void Equals_NonFileNodeType_ThrowsArgumentException()
+    public void Equals_NonFileNodeType_ReturnsFalse()
     {
         var node = new FileNode(1) { Name = "test", Hash = "abc" };
-        Assert.Throws<ArgumentException>(() => node.Equals("not a node"));
+        Assert.False(node.Equals("not a node"));
     }
 
     [Fact]

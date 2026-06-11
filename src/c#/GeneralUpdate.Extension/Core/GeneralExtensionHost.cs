@@ -345,27 +345,27 @@ public class GeneralExtensionHost : IExtensionHost
                 throw new InvalidOperationException("Extension file must be a .zip file");
             }
 
+            // Extract extension name from file name (e.g., "demo-extension_1.0.0.zip" -> "demo-extension")
+            var fileName = Path.GetFileNameWithoutExtension(extensionPath);
+            var extensionName = fileName;
+
+            // Try to parse extension name if it follows pattern "name_version"
+            var underscoreIndex = fileName.LastIndexOf('_');
+            if (underscoreIndex > 0)
+            {
+                extensionName = fileName.Substring(0, underscoreIndex);
+            }
+
             // Invoke lifecycle hook: before install
             if (_lifecycleHooks != null)
             {
-                var tempMeta = new ExtensionMetadata { Id = extensionPath, Name = Path.GetFileNameWithoutExtension(extensionPath) };
+                var tempMeta = new ExtensionMetadata { Id = extensionName, Name = extensionName };
                 var canInstall = await _lifecycleHooks.OnBeforeInstallAsync(tempMeta, extensionPath);
                 if (!canInstall)
                 {
                     GeneralTracer.Info($"GeneralExtensionHost.InstallExtensionAsync: installation cancelled by lifecycle hook. Path={extensionPath}");
                     return false;
                 }
-            }
-
-            // Extract extension name from file name (e.g., "demo-extension_1.0.0.zip" -> "demo-extension")
-            var fileName = Path.GetFileNameWithoutExtension(extensionPath);
-            var extensionName = fileName;
-            
-            // Try to parse extension name if it follows pattern "name_version"
-            var underscoreIndex = fileName.LastIndexOf('_');
-            if (underscoreIndex > 0)
-            {
-                extensionName = fileName.Substring(0, underscoreIndex);
             }
 
             // Determine target installation directory for this extension
@@ -419,7 +419,7 @@ public class GeneralExtensionHost : IExtensionHost
             // Invoke lifecycle hook: after install
             if (_lifecycleHooks != null)
             {
-                var installedMeta = new ExtensionMetadata { Id = extensionPath, Name = extensionName };
+                var installedMeta = new ExtensionMetadata { Id = extensionName, Name = extensionName };
                 await _lifecycleHooks.OnAfterInstallAsync(installedMeta);
             }
 

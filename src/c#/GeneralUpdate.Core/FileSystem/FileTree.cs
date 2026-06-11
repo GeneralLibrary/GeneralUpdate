@@ -209,23 +209,23 @@ namespace GeneralUpdate.Core.FileSystem;
             if (node != null && node.Left != null)
             {
                 if (!node.Equals(node0) && node0 != null) nodes.Add(node0);
-                Compare(node.Left, node0.Left, ref nodes);
+                Compare(node.Left, node0?.Left, ref nodes);
             }
             else if (node0 != null && node0.Left != null)
             {
                 nodes.Add(node0);
-                Compare(node.Left, node0.Left, ref nodes);
+                Compare(node?.Left, node0.Left, ref nodes);
             }
 
             if (node != null && node.Right != null)
             {
                 if (!node.Equals(node0) && node0 != null) nodes.Add(node0);
-                Compare(node.Right, node0 == null ? null : node0.Right, ref nodes);
+                Compare(node.Right, node0?.Right, ref nodes);
             }
             else if (node0 != null && node0.Right != null)
             {
                 nodes.Add(node0);
-                Compare(node == null ? null : node.Right, node0.Right, ref nodes);
+                Compare(node?.Right, node0.Right, ref nodes);
             }
             else if (node0 != null)
             {

@@ -436,9 +436,9 @@ namespace GeneralUpdate.Differential.Differ
         private static byte[] ReadFileWithBudget(string path, int maxBytes)
         {
             byte[] buffer = new byte[maxBytes];
+            int totalRead = 0;
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                int totalRead = 0;
                 while (totalRead < maxBytes)
                 {
                     int read = fs.Read(buffer, totalRead, maxBytes - totalRead);
@@ -446,6 +446,10 @@ namespace GeneralUpdate.Differential.Differ
                     totalRead += read;
                 }
             }
+            // Trim to actual bytes read so callers using .Length see the real data,
+            // not zero-initialized tail bytes that would corrupt patch computation.
+            if (totalRead < maxBytes)
+                Array.Resize(ref buffer, totalRead);
             return buffer;
         }
 

@@ -63,8 +63,10 @@ internal sealed class WindowsBowlStrategy : IBowlStrategy
 
     private static void EnsureDirectory(string path)
     {
-        if (Directory.Exists(path))
-            StorageHelper.DeleteDirectory(path);
-        Directory.CreateDirectory(path);
+        // Create the fail directory if it does not yet exist.
+        // Do NOT delete an existing directory — that would destroy
+        // crash diagnostics from previous surveillance sessions.
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
     }
 }

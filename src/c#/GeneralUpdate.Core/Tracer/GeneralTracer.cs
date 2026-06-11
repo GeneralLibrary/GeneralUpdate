@@ -34,27 +34,30 @@ public static class GeneralTracer
     
     private static void InitializeFileListener()
     {
-        //Ensure that log files are rotated on a daily basis
-        var today = DateTime.Now.ToString("yyyy-MM-dd");
-        if (today == _currentLogDate && _fileListener != null)
-            return;
-
-        if (_fileListener != null)
+        lock (_lockObj)
         {
-            Trace.Listeners.Remove(_fileListener);
-            _fileListener.Flush();
-            _fileListener.Close();
-            _fileListener.Dispose();
+            // Ensure that log files are rotated on a daily basis
+            var today = DateTime.Now.ToString("yyyy-MM-dd");
+            if (today == _currentLogDate && _fileListener != null)
+                return;
+
+            if (_fileListener != null)
+            {
+                Trace.Listeners.Remove(_fileListener);
+                _fileListener.Flush();
+                _fileListener.Close();
+                _fileListener.Dispose();
+            }
+
+            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+            Directory.CreateDirectory(logDir);
+
+            var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
+            _fileListener = new TextTraceListener(logFileName);
+
+            Trace.Listeners.Add(_fileListener);
+            _currentLogDate = today;
         }
-
-        var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-        Directory.CreateDirectory(logDir);
-
-        var logFileName = Path.Combine(logDir, $"generalupdate-trace {today}.log");
-        _fileListener = new TextTraceListener(logFileName);
-            
-        Trace.Listeners.Add(_fileListener);
-        _currentLogDate = today;
     }
 
     public static void Debug(string message) => WriteTraceMessage(TraceLevel.Verbose, message);
