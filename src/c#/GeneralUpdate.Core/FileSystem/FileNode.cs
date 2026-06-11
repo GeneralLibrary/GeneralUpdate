@@ -232,8 +232,7 @@ public class FileNode
     public override bool Equals(object obj)
     {
         if (obj == null) return false;
-        var tempNode = obj as FileNode;
-        if (tempNode == null) throw new ArgumentException(nameof(tempNode));
+        if (obj is not FileNode tempNode) return false;
         return string.Equals(Hash, tempNode.Hash, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(Name, tempNode.Name, StringComparison.OrdinalIgnoreCase);
     }

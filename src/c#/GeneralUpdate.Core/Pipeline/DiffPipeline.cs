@@ -222,7 +222,7 @@ public class DiffPipeline
         }
 
         int completed = 0;
-        var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
+        using var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
         var tasks = differentFiles.Select(file => Task.Run(async () =>
         {
@@ -342,7 +342,7 @@ public class DiffPipeline
         }
 
         int completed = 0;
-        var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
+        using var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
         var matchedPairs = new List<(FileInfo OldFile, FileInfo PatchFile)>();
         foreach (var oldFile in oldFiles)

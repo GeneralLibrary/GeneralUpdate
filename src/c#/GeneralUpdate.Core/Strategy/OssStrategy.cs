@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -258,15 +259,18 @@ public class OssStrategy : IStrategy
             : installPath;
         var upgradeAppName = !string.IsNullOrWhiteSpace(_configInfo.UpdateAppName)
             ? _configInfo.UpdateAppName
-            : "GeneralUpdate.Upgrade.exe";
+            : RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? "GeneralUpdate.Upgrade.exe"
+                : "GeneralUpdate.Upgrade";
         var appPath = Path.Combine(upgradeDir, upgradeAppName);
         GeneralTracer.Info($"[OssClient] Resolved upgrade path: {appPath}");
 
-        // List exe files in the directory to help diagnose missing file issues
+        // List executables in the directory to help diagnose missing file issues
         try
         {
-            var dirFiles = Directory.GetFiles(upgradeDir, "*.exe").Select(f => Path.GetFileName(f));
-            GeneralTracer.Info($"[OssClient] *.exe files in {upgradeDir}: [{string.Join(", ", dirFiles)}]");
+            var searchPattern = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "*.exe" : "*";
+            var dirFiles = Directory.GetFiles(upgradeDir, searchPattern).Select(f => Path.GetFileName(f));
+            GeneralTracer.Info($"[OssClient] Files in {upgradeDir}: [{string.Join(", ", dirFiles)}]");
         }
         catch (Exception ex)
         {

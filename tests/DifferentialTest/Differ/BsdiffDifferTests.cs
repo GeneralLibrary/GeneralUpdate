@@ -557,5 +557,127 @@ namespace DifferentialTest.Binary
         }
 
         #endregion
+
+        #region Edge Case Tests
+
+        /// <summary>
+        /// Tests round-trip with single-byte files — exercises the suffix-array sentinel path
+        /// where Split() may write I[k] = -1 for singleton buckets.
+        /// </summary>
+        [Fact]
+        public async Task CleanAndDirty_SingleByteFiles_RoundTrip()
+        {
+            var handler = new BsdiffDiffer();
+            var oldPath = Path.Combine(_testDirectory, "old.bin");
+            var newPath = Path.Combine(_testDirectory, "new.bin");
+            var patchPath = Path.Combine(_testDirectory, "patch.bin");
+            var resultPath = Path.Combine(_testDirectory, "result.bin");
+
+            File.WriteAllBytes(oldPath, new byte[] { 0x42 });
+            File.WriteAllBytes(newPath, new byte[] { 0x43 });
+
+            await handler.Clean(oldPath, newPath, patchPath);
+            Assert.True(new FileInfo(patchPath).Length > 0);
+            await handler.Dirty(oldPath, resultPath, patchPath);
+            Assert.Equal(new byte[] { 0x43 }, File.ReadAllBytes(resultPath));
+        }
+
+        /// <summary>
+        /// Tests round-trip with two-byte files where the suffix array creates
+        /// single-element buckets with sentinel -1 entries.
+        /// </summary>
+        [Fact]
+        public async Task CleanAndDirty_TwoByteFiles_RoundTrip()
+        {
+            var handler = new BsdiffDiffer();
+            var oldPath = Path.Combine(_testDirectory, "old.bin");
+            var newPath = Path.Combine(_testDirectory, "new.bin");
+            var patchPath = Path.Combine(_testDirectory, "patch.bin");
+            var resultPath = Path.Combine(_testDirectory, "result.bin");
+
+            File.WriteAllBytes(oldPath, new byte[] { 0x00, 0xFF });
+            File.WriteAllBytes(newPath, new byte[] { 0x00, 0xFE });
+
+            await handler.Clean(oldPath, newPath, patchPath);
+            await handler.Dirty(oldPath, resultPath, patchPath);
+            Assert.Equal(new byte[] { 0x00, 0xFE }, File.ReadAllBytes(resultPath));
+        }
+
+        /// <summary>
+        /// Tests round-trip where old has one byte and new has many bytes.
+        /// </summary>
+        [Fact]
+        public async Task CleanAndDirty_TinyOldToLargeNew_RoundTrip()
+        {
+            var handler = new BsdiffDiffer();
+            var oldPath = Path.Combine(_testDirectory, "old.bin");
+            var newPath = Path.Combine(_testDirectory, "new.bin");
+            var patchPath = Path.Combine(_testDirectory, "patch.bin");
+            var resultPath = Path.Combine(_testDirectory, "result.bin");
+
+            File.WriteAllBytes(oldPath, new byte[] { 0x00 });
+            File.WriteAllBytes(newPath, new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 });
+
+            await handler.Clean(oldPath, newPath, patchPath);
+            await handler.Dirty(oldPath, resultPath, patchPath);
+            Assert.Equal(new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 }, File.ReadAllBytes(resultPath));
+        }
+
+        /// <summary>
+        /// Tests round-trip with repeating byte patterns which stress the
+        /// block-hash index and suffix-array matching logic.
+        /// </summary>
+        [Fact]
+        public async Task CleanAndDirty_RepeatingPattern_RoundTrip()
+        {
+            var handler = new BsdiffDiffer();
+            var oldPath = Path.Combine(_testDirectory, "old.bin");
+            var newPath = Path.Combine(_testDirectory, "new.bin");
+            var patchPath = Path.Combine(_testDirectory, "patch.bin");
+            var resultPath = Path.Combine(_testDirectory, "result.bin");
+
+            var oldPattern = new byte[256];
+            var newPattern = new byte[256];
+            for (int i = 0; i < 256; i++)
+            {
+                oldPattern[i] = (byte)(i % 16);
+                newPattern[i] = (byte)((i % 16) == 15 ? 0xFF : (i % 16));
+            }
+
+            File.WriteAllBytes(oldPath, oldPattern);
+            File.WriteAllBytes(newPath, newPattern);
+
+            await handler.Clean(oldPath, newPath, patchPath);
+            await handler.Dirty(oldPath, resultPath, patchPath);
+            Assert.Equal(newPattern, File.ReadAllBytes(resultPath));
+        }
+
+        /// <summary>
+        /// Tests round-trip where a single byte changes in the middle of a large buffer.
+        /// </summary>
+        [Fact]
+        public async Task CleanAndDirty_SingleByteChange_RoundTrip()
+        {
+            var handler = new BsdiffDiffer();
+            var oldPath = Path.Combine(_testDirectory, "old.bin");
+            var newPath = Path.Combine(_testDirectory, "new.bin");
+            var patchPath = Path.Combine(_testDirectory, "patch.bin");
+            var resultPath = Path.Combine(_testDirectory, "result.bin");
+
+            var oldData = new byte[4096];
+            var newData = new byte[4096];
+            new Random(42).NextBytes(oldData);
+            Buffer.BlockCopy(oldData, 0, newData, 0, 4096);
+            newData[2048] ^= 0xFF; // flip one byte in the middle
+
+            File.WriteAllBytes(oldPath, oldData);
+            File.WriteAllBytes(newPath, newData);
+
+            await handler.Clean(oldPath, newPath, patchPath);
+            await handler.Dirty(oldPath, resultPath, patchPath);
+            Assert.Equal(newData, File.ReadAllBytes(resultPath));
+        }
+
+        #endregion
     }
 }

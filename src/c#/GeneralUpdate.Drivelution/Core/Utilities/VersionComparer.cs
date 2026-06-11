@@ -105,9 +105,9 @@ public static class VersionComparer
 
         return new SemVerInfo
         {
-            Major = int.Parse(match.Groups["major"].Value),
-            Minor = int.Parse(match.Groups["minor"].Value),
-            Patch = int.Parse(match.Groups["patch"].Value),
+            Major = long.Parse(match.Groups["major"].Value),
+            Minor = long.Parse(match.Groups["minor"].Value),
+            Patch = long.Parse(match.Groups["patch"].Value),
             Prerelease = match.Groups["prerelease"].Value,
             BuildMetadata = match.Groups["buildmetadata"].Value
         };
@@ -122,8 +122,8 @@ public static class VersionComparer
 
         for (int i = 0; i < minLength; i++)
         {
-            var isNum1 = int.TryParse(parts1[i], out int num1);
-            var isNum2 = int.TryParse(parts2[i], out int num2);
+            var isNum1 = long.TryParse(parts1[i], out long num1);
+            var isNum2 = long.TryParse(parts2[i], out long num2);
 
             if (isNum1 && isNum2)
             {
@@ -152,9 +152,9 @@ public static class VersionComparer
 
     private class SemVerInfo
     {
-        public int Major { get; set; }
-        public int Minor { get; set; }
-        public int Patch { get; set; }
+        public long Major { get; set; }
+        public long Minor { get; set; }
+        public long Patch { get; set; }
         public string Prerelease { get; set; } = string.Empty;
         public string BuildMetadata { get; set; } = string.Empty;
     }

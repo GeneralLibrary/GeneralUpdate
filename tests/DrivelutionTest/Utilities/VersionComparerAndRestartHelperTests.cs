@@ -182,6 +182,9 @@ public class VersionComparerTests
     [InlineData("1.0.0+20130313144700")]
     [InlineData("1.0.0-beta+exp.sha.5114f85")]
     [InlineData("10.20.30")]
+    [InlineData("999999999999.0.0")]
+    [InlineData("0.999999999999.0")]
+    [InlineData("0.0.999999999999")]
     public void IsValidSemVer_WithValidVersions_ReturnsTrue(string version)
     {
         // Act
@@ -189,6 +192,35 @@ public class VersionComparerTests
 
         // Assert
         Assert.True(result);
+    }
+
+    /// <summary>
+    /// Tests that very large version numbers are compared correctly (overflow guard).
+    /// </summary>
+    [Fact]
+    public void Compare_VeryLargeNumbers_DoesNotOverflow()
+    {
+        // Act & Assert — these values exceed int.MaxValue (2147483647)
+        var result1 = VersionComparer.Compare("999999999999.0.0", "999999999998.0.0");
+        Assert.True(result1 > 0);
+
+        var result2 = VersionComparer.Compare("999999999999.0.0", "999999999999.0.0");
+        Assert.Equal(0, result2);
+
+        // Cross-boundary: large major vs large minor
+        var result3 = VersionComparer.Compare("999999999999.0.0", "0.999999999999.0");
+        Assert.True(result3 > 0);
+    }
+
+    /// <summary>
+    /// Tests prerelease comparison with large numeric prerelease identifiers.
+    /// </summary>
+    [Fact]
+    public void Compare_PrereleaseWithLargeNumbers_DoesNotOverflow()
+    {
+        // long.MaxValue ~9.2e18 approaching overflow in int
+        var result = VersionComparer.Compare("1.0.0-999999999999", "1.0.0-0");
+        Assert.True(result > 0);
     }
 
     /// <summary>

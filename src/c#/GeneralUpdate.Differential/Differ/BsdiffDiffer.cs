@@ -308,7 +308,11 @@ namespace GeneralUpdate.Differential.Differ
                             byte[] formatByte = ReadExactly(patchStream, 1);
                             byte candidate = formatByte[0];
 
-                            if (candidate == BZip2FormatVersion || candidate == DeflateFormatVersion)
+                            if (candidate == BZip2FormatVersion || candidate == DeflateFormatVersion
+#if NET6_0_OR_GREATER
+                                || candidate == BrotliFormatVersion
+#endif
+                               )
                             {
                                 formatVersion = candidate;
                                 actualHeaderSize = ExtendedHeaderSize;
@@ -333,6 +337,9 @@ namespace GeneralUpdate.Differential.Differ
                     {
                         BZip2FormatVersion => new BZip2CompressionProvider(),
                         DeflateFormatVersion => new DeflateCompressionProvider(),
+#if NET6_0_OR_GREATER
+                        BrotliFormatVersion => new BrotliCompressionProvider(),
+#endif
                         _ => throw new InvalidOperationException(
                             $"Unsupported patch compression format version: 0x{formatVersion:X2}")
                     };
@@ -437,6 +444,9 @@ namespace GeneralUpdate.Differential.Differ
 
         private const byte BZip2FormatVersion = 0x00;
         private const byte DeflateFormatVersion = 0x01;
+#if NET6_0_OR_GREATER
+        private const byte BrotliFormatVersion = 0x02;
+#endif
 
         private static FileStream OpenPatchStream(string patchPath)
         {
@@ -477,17 +487,19 @@ namespace GeneralUpdate.Differential.Differ
         {
             if (end - start < 2)
             {
-                int x = MatchLength(oldData, I[start], newData, newOffset);
-                int y = MatchLength(oldData, I[end], newData, newOffset);
+                // Guard against sentinel -1 values that Split() writes for singleton buckets.
+                // MatchLength with a negative index would throw IndexOutOfRangeException.
+                int x = I[start] >= 0 ? MatchLength(oldData, I[start], newData, newOffset) : 0;
+                int y = I[end]   >= 0 ? MatchLength(oldData, I[end],   newData, newOffset) : 0;
 
                 if (x > y)
                 {
-                    pos = I[start];
+                    pos = I[start] >= 0 ? I[start] : 0;
                     return x;
                 }
                 else
                 {
-                    pos = I[end];
+                    pos = I[end] >= 0 ? I[end] : 0;
                     return y;
                 }
             }

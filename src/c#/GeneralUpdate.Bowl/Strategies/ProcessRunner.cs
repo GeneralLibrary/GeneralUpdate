@@ -28,6 +28,7 @@ internal static class ProcessRunner
         var outputLines = new List<string>();
 
         using var process = new Process { StartInfo = startInfo };
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         process.OutputDataReceived += (_, e) =>
@@ -61,14 +62,17 @@ internal static class ProcessRunner
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        // Wait for exit or timeout/cancellation
-        var completedTask = await Task.WhenAny(
-            tcs.Task,
-            Task.Delay(timeoutMs, ct)
-        );
+        // Wait for exit or timeout/cancellation.
+        // Cancel the delay when the process exits first to avoid a timer leak.
+        var delayTask = Task.Delay(timeoutMs, timeoutCts.Token);
+        var completedTask = await Task.WhenAny(tcs.Task, delayTask);
+
+        // Cancel the opposing task so timers/resources are reclaimed promptly.
+        timeoutCts.Cancel();
 
         if (completedTask == tcs.Task)
         {
+            try { await delayTask; } catch (OperationCanceledException) { /* cancelled — expected */ }
             var exitCode = await tcs.Task;
             GeneralTracer.Info($"ProcessRunner.RunAsync: process exited, ExitCode={exitCode}");
             // Snapshot output under lock to avoid race with in-flight handlers

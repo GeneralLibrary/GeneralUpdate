@@ -903,7 +903,10 @@ public class ClientStrategy : IStrategy
         var fail = Environments.GetEnvironmentVariable("UpgradeFail");
         if (string.IsNullOrEmpty(fail) || string.IsNullOrEmpty(version))
             return false;
-        return new Version(fail) >= new Version(version);
+        if (!Version.TryParse(fail, out var failVersion) ||
+            !Version.TryParse(version, out var versionParsed))
+            return false;
+        return failVersion >= versionParsed;
     }
 
     /// <summary>

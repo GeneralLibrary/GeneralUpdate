@@ -119,9 +119,15 @@ namespace GeneralUpdate.Core.Event
             var type = typeof(Action<object, TEventArgs>);
             if (_dicDelegates.TryGetValue(type, out var existingDelegate))
             {
+                // Snapshot the delegate invocation list to avoid a race with
+                // concurrent AddListener / RemoveListener mutating the delegate
+                // while we enumerate it. The ConcurrentDictionary protects the
+                // dictionary structure but not the Delegate value itself.
+                var invocationList = existingDelegate.GetInvocationList();
+
                 // Invoke each handler individually so one handler's exception
                 // doesn't prevent others from being called.
-                foreach (var handler in existingDelegate.GetInvocationList())
+                foreach (var handler in invocationList)
                 {
                     try
                     {
