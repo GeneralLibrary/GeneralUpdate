@@ -23,7 +23,7 @@
       <UpgradeTestDir>..\UpgradeTest\bin\$(Configuration)\net10.0</UpgradeTestDir>
     </PropertyGroup>
     <ItemGroup>
-      <UpgradeTestFiles Include="$(UpgradeTestDir)\**\*" Exclude="$(UpgradeTestDir)\**\*.pdb;$(UpgradeTestDir)\**\*.json" />
+      <UpgradeTestFiles Include="$(UpgradeTestDir)\**\*" Exclude="$(UpgradeTestDir)\**\*.pdb" />
     </ItemGroup>
     <Copy SourceFiles="@(UpgradeTestFiles)"
           DestinationFolder="$(OutputPath)"

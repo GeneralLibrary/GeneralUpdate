@@ -7,17 +7,7 @@ using GeneralUpdate.Core.Hooks;
 
 try
 {
-    await RunOssClientAsync();
-    /*var isOssMode = args.Length > 0 && args[0] == "--oss";
-
-    if (isOssMode)
-    {
-        await RunOssClientAsync();
-    }
-    else
-    {
-        await RunStandardClientAsync();
-    }*/
+    await RunUpdateTestAsync();
 }
 catch (Exception ex)
 {
@@ -27,67 +17,58 @@ catch (Exception ex)
     Environment.Exit(1);
 }
 
+// NOTE: In the success path where a MainApp update is applied and the Upgrade
+// process is launched, the Client process exits inside the bootstrap —
+// WindowsStrategy.StartAppAsync() calls GracefulExit.CurrentProcessAsync().
+// The code below is only reached when no update is needed, or when only
+// Upgrade packages were applied (no MainApp IPC/launch).
 Console.WriteLine("Press Enter to exit...");
 Console.ReadLine();
 
 // ═══════════════════════════════════════════════════════════════════
-// OSS Client mode — version JSON download → version compare → launch upgrade
+// Core update test — runs the full non-silent immediate update flow.
+//
+// The update mode (chain vs. cross-version) is determined entirely by
+// GeneralUpdate.Core's DownloadPlanBuilder, which inspects the server
+// response and prefers CVP when its FromVersion matches the local
+// client version. The test itself is mode-agnostic — configure the
+// GeneralSpacestation server's data to exercise either path.
 // ═══════════════════════════════════════════════════════════════════
-static async Task RunOssClientAsync()
+static async Task RunUpdateTestAsync()
 {
-    Console.WriteLine("=== GeneralUpdate OSS Client Test ===");
+    Console.WriteLine("=== GeneralUpdate Client Test ===");
     Console.WriteLine($"Started at {DateTime.Now}");
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
-    // Only secrets are supplied in code. Identity fields (MainAppName,
-    // ClientVersion, UpdateAppName, UpdatePath) are read from
-    // generalupdate.manifest.json by OssStrategy via
-    // AppMetadataDiscoverer.Discover() — same as the standard flow.
-    var updateUrl = "http://localhost:5000/packages/versions.json";
-    var appSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
+    var updateUrl = "http://localhost:7391/Upgrade/Verification";
+    var reportUrl = "http://localhost:7391/Upgrade/Report";
+    var appSecretKey =
+        Environment.GetEnvironmentVariable("APP_SECRET_KEY")
+        ?? "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
 
     Console.WriteLine($"UpdateUrl: {updateUrl}");
     Console.WriteLine();
+    Console.WriteLine("NOTE: Configure the GeneralSpacestation server with");
+    Console.WriteLine("      the desired test data before running.");
+    Console.WriteLine("      - Chain data:      TbPackets (IsCrossVersion=false)");
+    Console.WriteLine("      - Cross-version:   additionally TbVersionArchives +");
+    Console.WriteLine("                         TbPacket (IsCrossVersion=true,");
+    Console.WriteLine("                         FromVersion=currentVersion)");
+    Console.WriteLine();
 
+    // Non-silent immediate update flow:
+    // 1. Version validation against server (HttpDownloadSource.ListAsync)
+    // 2. Event dispatch (UpdateInfoEventArgs — shows available versions)
+    // 3. Pre-check, hooks, backup
+    // 4. Download all packages via DefaultDownloadOrchestrator
+    // 5. Scenario dispatch:
+    //    - UpgradeOnly: apply upgrade packages in-place, client continues
+    //    - MainOnly:   send MainApp versions via IPC → launch Upgrade process → exit
+    //    - Both:       apply upgrade packages → IPC → launch Upgrade process → exit
+    //    - None:       no-op
     await new GeneralUpdateBootstrap()
-        .SetSource(updateUrl, appSecretKey)
-        .SetOption(Option.AppType, AppType.OssClient)
-        .Hooks<ClientTestHooks>()
-        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
-        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
-        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
-        .AddListenerMultiDownloadError(OnDownloadError)
-        .AddListenerException(OnException)
-        .AddListenerUpdateInfo(OnUpdateInfo)
-        .LaunchAsync();
-
-    Console.WriteLine("OSS Client test completed.");
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Standard Client mode — silent poll with IPC handoff to Upgrade
-// ═══════════════════════════════════════════════════════════════════
-static async Task RunStandardClientAsync()
-{
-    Console.WriteLine("=== GeneralUpdate Client Test (Silent Mode) ===");
-    Console.WriteLine($"Started at {DateTime.Now}");
-    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
-
-    // Secrets come from code — never from files.
-    var updateUrl = "http://localhost:5000/Upgrade/Verification";
-    var reportUrl = "http://localhost:5000/Upgrade/Report";
-    var appSecretKey = Environment.GetEnvironmentVariable("APP_SECRET_KEY") ?? "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
-
-    Console.WriteLine($"UpdateUrl: {updateUrl}");
-    Console.WriteLine($"Silent mode: ENABLED (poll every 1 minute)");
-    Console.WriteLine();
-
-    // Silent mode: polls server in background, prepares update, launches Upgrade on exit.
-    var bootstrap = await new GeneralUpdateBootstrap()
         .SetSource(updateUrl, appSecretKey, reportUrl)
         .SetOption(Option.AppType, AppType.Client)
-        .SetOption(Option.Silent, true)
-        .SetOption(Option.SilentPollIntervalMinutes, 1)
         .Hooks<ClientTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
         .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
@@ -97,54 +78,11 @@ static async Task RunStandardClientAsync()
         .AddListenerUpdateInfo(OnUpdateInfo)
         .LaunchAsync();
 
-    var orchestrator = bootstrap.SilentOrchestrator;
-
-    Console.WriteLine();
-    Console.WriteLine("╔════════════════════════════════════════════╗");
-    Console.WriteLine("║  Silent poll running in background.        ║");
-    Console.WriteLine("║  Press Ctrl+C or Enter to exit.            ║");
-    Console.WriteLine("║  On exit, Upgrade process will be launched ║");
-    Console.WriteLine("║  if an update has been prepared.           ║");
-    Console.WriteLine("╚════════════════════════════════════════════╝");
-    Console.WriteLine();
-
-    // Keep the process alive so the background poll loop can work.
-    var cts = new CancellationTokenSource();
-    Console.CancelKeyPress += (_, e) =>
-    {
-        Console.WriteLine();
-        Console.WriteLine("[Shutdown] Ctrl+C pressed. Exiting...");
-        e.Cancel = true;
-        cts.Cancel();
-    };
-
-    try
-    {
-        await Task.Delay(Timeout.Infinite, cts.Token);
-    }
-    catch (OperationCanceledException)
-    {
-        // Expected on Ctrl+C — graceful shutdown
-    }
-
-    Console.WriteLine("[Shutdown] Launching upgrade process...");
-    if (orchestrator != null && orchestrator.HasPreparedUpdate)
-    {
-        var launched = orchestrator.TryLaunchUpgrade();
-        Console.WriteLine(launched
-            ? "[Shutdown] Upgrade process launched successfully."
-            : "[Shutdown] No update prepared or upgrade already launched.");
-    }
-    else
-    {
-        Console.WriteLine("[Shutdown] No orchestrator or no update prepared.");
-    }
-
-    Console.WriteLine("[Shutdown] Client test exiting gracefully.");
+    Console.WriteLine("Update test completed.");
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Event handlers (shared across both modes)
+// Event handlers
 // ═══════════════════════════════════════════════════════════════════
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
@@ -183,7 +121,13 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
     if (e.Info?.Body is { Count: > 0 })
     {
         foreach (var vi in e.Info.Body)
-            Console.WriteLine($"  - {vi.Version} ({vi.Name}) [{vi.Size} bytes] {(vi.IsForcibly == true ? "(forced)" : "")}");
+        {
+            var mode = vi.IsCrossVersion == true ? "CVP" : "Chain";
+            Console.WriteLine($"  - [{mode}] {vi.Version} ({vi.Name}) [{vi.Size} bytes] " +
+                              $"AppType={(vi.AppType == 1 ? "Client" : "Upgrade")} " +
+                              $"{(vi.IsForcibly == true ? "(forced)" : "")}" +
+                              $"{(!string.IsNullOrEmpty(vi.FromVersion) ? $" from={vi.FromVersion}" : "")}");
+        }
     }
     else
     {
@@ -192,7 +136,7 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Hooks (shared across both modes)
+// Hooks
 // ═══════════════════════════════════════════════════════════════════
 
 sealed class ClientTestHooks : IUpdateHooks
