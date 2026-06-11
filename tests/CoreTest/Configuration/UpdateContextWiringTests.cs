@@ -205,8 +205,8 @@ public class UpdateContextWiringTests
         => Assert.True(Option.VerifyChecksum.DefaultValue);
 
     [Fact]
-    public void Options_BackupEnabled_DefaultIsTrue()
-        => Assert.True(Option.BackupEnabled.DefaultValue);
+    public void Options_BackupEnabled_DefaultIsFalse()
+        => Assert.False(Option.BackupEnabled.DefaultValue);
 
     [Fact]
     public void Options_PatchEnabled_DefaultIsTrue()

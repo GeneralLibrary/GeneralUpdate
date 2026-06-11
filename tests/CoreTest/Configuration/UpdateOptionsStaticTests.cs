@@ -49,7 +49,7 @@ public class OptionStaticTests
     [Fact]
     public void BackupEnabled_HasCorrectDefault()
     {
-        Assert.True(Option.BackupEnabled.DefaultValue);
+        Assert.False(Option.BackupEnabled.DefaultValue);
     }
 
     [Fact]
