@@ -124,7 +124,7 @@ namespace GeneralUpdate.Core.Configuration
 
         public static Option<bool?> PatchEnabled { get; } = ValueOf<bool?>("PATCH", true);
 
-        public static Option<bool?> BackupEnabled { get; } = ValueOf<bool?>("BACKUP", true);
+        public static Option<bool?> BackupEnabled { get; } = ValueOf<bool?>("BACKUP", false);
 
         public static Option<bool> Silent { get; } = ValueOf<bool>("ENABLESILENTUPDATE", false);
 

@@ -727,9 +727,9 @@ namespace GeneralUpdate.Core.FileSystem
         public List<string> Directories { get; set; } = new();
 
         /// <summary>
-        /// Whether the backup feature is enabled. Default is <c>true</c>.
+        /// Whether the backup feature is enabled. Default is <c>false</c>.
         /// </summary>
-        public bool Enabled { get; set; } = true;
+        public bool Enabled { get; set; } = false;
     }
 
     /// <summary>
