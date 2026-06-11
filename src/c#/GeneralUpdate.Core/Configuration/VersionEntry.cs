@@ -165,24 +165,6 @@ public class VersionEntry : VersionIdentity
     public DateTime? UrlExpireTimeUtc { get; set; }
 
     /// <summary>
-    ///     The upgrade mode: 1 = VersionChain (sequential version upgrades), 2 = CrossVersion (cross-version upgrade).
-    /// </summary>
-    /// <remarks>
-    ///     <para>
-    ///         <list type="bullet">
-    ///             <item>
-    ///                 <description><c>1 (VersionChain)</c>: Upgrades through versions sequentially, without skipping intermediate versions.</description>
-    ///             </item>
-    ///             <item>
-    ///                 <description><c>2 (CrossVersion)</c>: Directly upgrades from an old version to any newer version.</description>
-    ///             </item>
-    ///         </list>
-    ///     </para>
-    /// </remarks>
-    [JsonPropertyName("upgradeMode")]
-    public int? UpgradeMode { get; set; }
-
-    /// <summary>
     ///     Whether this is a cross-version upgrade package.
     ///     <c>true</c> indicates this package is used to upgrade directly from an old version to a new version,
     ///     rather than through sequential chain upgrades.

@@ -178,7 +178,6 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             IsForcibly: v.IsForcibly == true,
             IsFreeze: v.IsFreeze == true,
             RecordId: v.RecordId,
-            UpgradeMode: v.UpgradeMode,
             AppType: v.AppType,
             IsCrossVersion: v.IsCrossVersion == true,
             FromVersion: v.FromVersion,
