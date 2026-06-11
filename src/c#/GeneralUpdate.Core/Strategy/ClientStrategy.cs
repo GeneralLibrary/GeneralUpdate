@@ -497,7 +497,6 @@ public class ClientStrategy : IStrategy
             IsForcibly = a.IsForcibly,
             IsFreeze = a.IsFreeze,
             AppType = a.AppType,
-            UpgradeMode = a.UpgradeMode,
             IsCrossVersion = a.IsCrossVersion,
             FromVersion = a.FromVersion
         }).ToList();

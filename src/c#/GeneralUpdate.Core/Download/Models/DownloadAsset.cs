@@ -18,7 +18,6 @@ public record DownloadAsset(
     bool IsForcibly = false,
     bool IsFreeze = false,
     int RecordId = 0,
-    int? UpgradeMode = null,
     int? AppType = null,
     string? AuthScheme = null,
     string? AuthToken = null
