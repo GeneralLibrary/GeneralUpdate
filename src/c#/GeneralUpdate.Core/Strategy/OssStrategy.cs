@@ -269,8 +269,15 @@ public class OssStrategy : IStrategy
         try
         {
             var searchPattern = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "*.exe" : "*";
-            var dirFiles = Directory.GetFiles(upgradeDir, searchPattern).Select(f => Path.GetFileName(f));
-            GeneralTracer.Info($"[OssClient] Files in {upgradeDir}: [{string.Join(", ", dirFiles)}]");
+            const int maxDisplay = 20;
+            var dirFiles = Directory.EnumerateFiles(upgradeDir, searchPattern)
+                .Take(maxDisplay + 1)
+                .Select(f => Path.GetFileName(f))
+                .ToList();
+            var summary = dirFiles.Count > maxDisplay
+                ? $"[{string.Join(", ", dirFiles.Take(maxDisplay))}, ... and {dirFiles.Count - maxDisplay} more]"
+                : $"[{string.Join(", ", dirFiles)}]";
+            GeneralTracer.Info($"[OssClient] Files in {upgradeDir}: {summary}");
         }
         catch (Exception ex)
         {

@@ -103,14 +103,33 @@ public static class VersionComparer
             throw new FormatException($"Version '{version}' does not follow SemVer 2.0 format");
         }
 
+        if (!TryParseNumeric(match.Groups["major"].Value, out var major))
+            throw new FormatException($"Version '{version}' has a 'major' component that exceeds the supported range.");
+        if (!TryParseNumeric(match.Groups["minor"].Value, out var minor))
+            throw new FormatException($"Version '{version}' has a 'minor' component that exceeds the supported range.");
+        if (!TryParseNumeric(match.Groups["patch"].Value, out var patch))
+            throw new FormatException($"Version '{version}' has a 'patch' component that exceeds the supported range.");
+
         return new SemVerInfo
         {
-            Major = long.Parse(match.Groups["major"].Value),
-            Minor = long.Parse(match.Groups["minor"].Value),
-            Patch = long.Parse(match.Groups["patch"].Value),
+            Major = major,
+            Minor = minor,
+            Patch = patch,
             Prerelease = match.Groups["prerelease"].Value,
             BuildMetadata = match.Groups["buildmetadata"].Value
         };
+    }
+
+    private static bool TryParseNumeric(string value, out long result)
+    {
+        // SemVer numeric components are non-negative integers per spec.
+        // long.MaxValue (≈9.2e18) is the largest we support.
+        if (value.Length > 19) // any value > long.MaxValue has at least 19 digits
+        {
+            result = 0;
+            return false;
+        }
+        return long.TryParse(value, out result);
     }
 
     private static int ComparePrerelease(string pre1, string pre2)
@@ -122,13 +141,26 @@ public static class VersionComparer
 
         for (int i = 0; i < minLength; i++)
         {
-            var isNum1 = long.TryParse(parts1[i], out long num1);
-            var isNum2 = long.TryParse(parts2[i], out long num2);
+            // Test numeric identifiers — if both parse, compare numerically.
+            // Per SemVer 2.0 §11, numeric prerelease identifiers are compared
+            // as integers.  If an identifier exceeds long.MaxValue, fall back
+            // to a digit-length + ordinal comparison so the ordering remains
+            // integer-like even when the platform type can't hold the value.
+            bool isNum1 = TryParseNumeric(parts1[i], out long num1);
+            bool isNum2 = TryParseNumeric(parts2[i], out long num2);
 
             if (isNum1 && isNum2)
             {
                 if (num1 != num2)
                     return num1.CompareTo(num2);
+            }
+            else if (IsNumericString(parts1[i]) && IsNumericString(parts2[i]))
+            {
+                // Both are purely numeric but exceed long.MaxValue.
+                // Compare by digit length first, then ordinal.
+                int cmp = parts1[i].Length.CompareTo(parts2[i].Length);
+                if (cmp != 0) return cmp;
+                return string.CompareOrdinal(parts1[i], parts2[i]);
             }
             else if (isNum1)
             {
@@ -148,6 +180,19 @@ public static class VersionComparer
 
         // Longer prerelease is greater
         return parts1.Length.CompareTo(parts2.Length);
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="s"/> is non-empty and every character
+    /// is an ASCII digit — without attempting to parse into a numeric type.
+    /// </summary>
+    private static bool IsNumericString(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return false;
+        foreach (char c in s)
+            if (c < '0' || c > '9')
+                return false;
+        return true;
     }
 
     private class SemVerInfo

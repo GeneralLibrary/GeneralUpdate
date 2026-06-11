@@ -309,9 +309,7 @@ namespace GeneralUpdate.Differential.Differ
                             byte candidate = formatByte[0];
 
                             if (candidate == BZip2FormatVersion || candidate == DeflateFormatVersion
-#if NET6_0_OR_GREATER
                                 || candidate == BrotliFormatVersion
-#endif
                                )
                             {
                                 formatVersion = candidate;
@@ -444,9 +442,7 @@ namespace GeneralUpdate.Differential.Differ
 
         private const byte BZip2FormatVersion = 0x00;
         private const byte DeflateFormatVersion = 0x01;
-#if NET6_0_OR_GREATER
         private const byte BrotliFormatVersion = 0x02;
-#endif
 
         private static FileStream OpenPatchStream(string patchPath)
         {

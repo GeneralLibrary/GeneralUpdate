@@ -218,7 +218,8 @@ public class VersionComparerTests
     [Fact]
     public void Compare_PrereleaseWithLargeNumbers_DoesNotOverflow()
     {
-        // long.MaxValue ~9.2e18 approaching overflow in int
+        // Values up to ~1e12 exceed int.MaxValue (~2.1e9) so this verifies
+        // the long-based numeric overflow guard in ComparePrerelease.
         var result = VersionComparer.Compare("1.0.0-999999999999", "1.0.0-0");
         Assert.True(result > 0);
     }
