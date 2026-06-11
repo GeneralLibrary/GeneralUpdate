@@ -33,8 +33,10 @@ static async Task RunStandardUpgradeAsync()
     //
     // When no IPC file exists (first run, no update pending), the bootstrap
     // treats it as a no-op and returns gracefully — no error, no crash.
+    var ipcPath = System.IO.Path.Combine(
+        System.IO.Path.GetTempPath(), "GeneralUpdate", "ipc", "process_info.enc");
     Console.WriteLine("Reading IPC process contract (written by Client process)...");
-    Console.WriteLine("IPC file: %TEMP%/GeneralUpdate/ipc/process_info.enc");
+    Console.WriteLine($"IPC file: {ipcPath}");
     Console.WriteLine();
 
     await new GeneralUpdateBootstrap()
@@ -48,7 +50,7 @@ static async Task RunStandardUpgradeAsync()
         .LaunchAsync();
 
     // NOTE: After the update pipeline completes and the main app is launched,
-    // WindowsStrategy.StartAppAsync() calls GracefulExit.CurrentProcessAsync(),
+    // the OS strategy's StartAppAsync() calls GracefulExit.CurrentProcessAsync(),
     // which terminates the Upgrade process. This line is only reached when no
     // updates were found (no IPC data) or when update application fails.
     Console.WriteLine("Upgrade test completed.");

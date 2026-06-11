@@ -19,7 +19,7 @@ catch (Exception ex)
 
 // NOTE: In the success path where a MainApp update is applied and the Upgrade
 // process is launched, the Client process exits inside the bootstrap —
-// WindowsStrategy.StartAppAsync() calls GracefulExit.CurrentProcessAsync().
+// the OS strategy's StartAppAsync() calls GracefulExit.CurrentProcessAsync().
 // The code below is only reached when no update is needed, or when only
 // Upgrade packages were applied (no MainApp IPC/launch).
 Console.WriteLine("Press Enter to exit...");
@@ -123,8 +123,14 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
         foreach (var vi in e.Info.Body)
         {
             var mode = vi.IsCrossVersion == true ? "CVP" : "Chain";
+            var appType = vi.AppType switch
+            {
+                1 => "Client",
+                2 => "Upgrade",
+                _ => $"Unknown({vi.AppType})"
+            };
             Console.WriteLine($"  - [{mode}] {vi.Version} ({vi.Name}) [{vi.Size} bytes] " +
-                              $"AppType={(vi.AppType == 1 ? "Client" : "Upgrade")} " +
+                              $"AppType={appType} " +
                               $"{(vi.IsForcibly == true ? "(forced)" : "")}" +
                               $"{(!string.IsNullOrEmpty(vi.FromVersion) ? $" from={vi.FromVersion}" : "")}");
         }
