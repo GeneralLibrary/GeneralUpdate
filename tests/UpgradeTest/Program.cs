@@ -6,17 +6,7 @@ using GeneralUpdate.Core.Hooks;
 
 try
 {
-    await RunOssUpgradeAsync();
-    /*var isOssMode = args.Length > 0 && args[0] == "--oss";
-
-    if (isOssMode)
-    {
-        await RunOssUpgradeAsync();
-    }
-    else
-    {
-        await RunStandardUpgradeAsync();
-    }*/
+    await RunStandardUpgradeAsync();
 }
 catch (Exception ex)
 {
@@ -24,46 +14,8 @@ catch (Exception ex)
     Environment.Exit(1);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// OSS Upgrade mode — read versions.json → download packages → decompress → launch main app
-// ═══════════════════════════════════════════════════════════════════
-static async Task RunOssUpgradeAsync()
-{
-    Console.WriteLine("=== GeneralUpdate OSS Upgrade Test ===");
-    Console.WriteLine($"Started at {DateTime.Now}");
-    Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
-
-    // OssUpgrade runs from a subdirectory (e.g. update/), but the manifest
-    // and versions.json are in the parent directory (same as OssClient).
-    // InstallPath resolves to the parent so OssStrategy reads the correct
-    // manifest and versions.json.
-    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-    var installPath = Path.GetFullPath(Path.Combine(baseDir, ".."));
-
-    Console.WriteLine($"BaseDir={baseDir}");
-    Console.WriteLine($"InstallPath={installPath} (parent, where manifest + versions.json live)");
-    Console.WriteLine();
-
-    // Only secrets and InstallPath are supplied in code. Identity fields
-    // (MainAppName, ClientVersion, UpdateAppName) are read from
-    // generalupdate.manifest.json by OssStrategy via
-    // AppMetadataDiscoverer.Discover() — same as the standard OSS client flow.
-    await new GeneralUpdateBootstrap()
-        .SetSource(
-            "http://localhost:5000/packages/versions.json",
-            "dfeb5833-975e-4afb-88f1-6278ee9aeff6",
-            installPath: installPath)
-        .SetOption(Option.AppType, AppType.OssUpgrade)
-        .Hooks<UpgradeTestHooks>()
-        .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
-        .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
-        .AddListenerMultiAllDownloadCompleted(OnAllDownloadCompleted)
-        .AddListenerMultiDownloadError(OnDownloadError)
-        .AddListenerException(OnException)
-        .LaunchAsync();
-
-    Console.WriteLine("OSS Upgrade test completed.");
-}
+Console.WriteLine("Press Enter to exit...");
+Console.ReadLine();
 
 // ═══════════════════════════════════════════════════════════════════
 // Standard Upgrade mode — read IPC config → apply patches → launch main app
@@ -75,8 +27,17 @@ static async Task RunStandardUpgradeAsync()
     Console.WriteLine($"Running from: {AppDomain.CurrentDomain.BaseDirectory}");
 
     // Config comes from the encrypted IPC file written by the Client process.
-    // The Client's generalupdate.manifest.json + SetSource flows through IPC,
-    // so the Upgrade never needs to load a manifest directly.
+    // The generalupdate.manifest.json lives in the Client's directory; the Upgrade
+    // process receives all necessary identity fields and update versions through
+    // the ProcessContract via EncryptedFileProcessContractProvider.Receive().
+    //
+    // When no IPC file exists (first run, no update pending), the bootstrap
+    // treats it as a no-op and returns gracefully — no error, no crash.
+    var ipcPath = System.IO.Path.Combine(
+        System.IO.Path.GetTempPath(), "GeneralUpdate", "ipc", "process_info.enc");
+    Console.WriteLine("Reading IPC process contract (written by Client process)...");
+    Console.WriteLine($"IPC file: {ipcPath}");
+    Console.WriteLine();
 
     await new GeneralUpdateBootstrap()
         .SetOption(Option.AppType, AppType.Upgrade)
@@ -88,11 +49,15 @@ static async Task RunStandardUpgradeAsync()
         .AddListenerException(OnException)
         .LaunchAsync();
 
+    // NOTE: After the update pipeline completes and the main app is launched,
+    // the OS strategy's StartAppAsync() calls GracefulExit.CurrentProcessAsync(),
+    // which terminates the Upgrade process. This line is only reached when no
+    // updates were found (no IPC data) or when update application fails.
     Console.WriteLine("Upgrade test completed.");
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Event handlers (shared across both modes)
+// Event handlers
 // ═══════════════════════════════════════════════════════════════════
 
 static void OnDownloadStatistics(object sender, MultiDownloadStatisticsEventArgs e)
@@ -126,7 +91,7 @@ static void OnException(object sender, ExceptionEventArgs e)
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Hooks (shared across both modes)
+// Hooks
 // ═══════════════════════════════════════════════════════════════════
 
 sealed class UpgradeTestHooks : IUpdateHooks
@@ -146,8 +111,8 @@ sealed class UpgradeTestHooks : IUpdateHooks
     public async Task OnAfterUpdateAsync(HookContext ctx)
     {
         Console.WriteLine($"[Hook] OnAfterUpdate: {ctx.CurrentVersion} -> {ctx.TargetVersion}");
-        // Manifest ClientVersion is updated by OssStrategy itself via
-        // ManifestInfo.TryUpdateVersion() after decompression.
+        // Manifest ClientVersion is updated by UpdateStrategy itself via
+        // ManifestInfo.TryUpdateVersion() after successful apply.
         await Task.CompletedTask;
     }
 
