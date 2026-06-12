@@ -111,6 +111,7 @@ public class UpdateStrategy : IStrategy
             _osStrategy!.Create(_configInfo);
 
             // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
+            var pipelineSucceeded = true;
             if (_configInfo.UpdateVersions?.Count > 0)
             {
                 GeneralTracer.Info("UpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
@@ -121,12 +122,34 @@ public class UpdateStrategy : IStrategy
                 // successfully. AbstractStrategy catches per-package failures and
                 // continues the loop, so ExecuteAsync() completing is not a
                 // reliable success signal on its own.
-                if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+                // For custom IStrategy implementations that don't expose
+                // AllPackagesSucceeded, assume success (coalesce to true)
+                // since no failure was signalled via an exception.
+                pipelineSucceeded = (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
+                if (pipelineSucceeded)
+                {
                     WriteBackClientVersion();
+                }
+                else
+                {
+                    GeneralTracer.Warn("UpdateStrategy: one or more MainApp packages failed, " +
+                                       "skipping manifest write and app launch.");
+                }
             }
             else
             {
                 GeneralTracer.Info("UpdateStrategy: no updates to apply, starting application directly.");
+            }
+
+            // When main app updates failed, do NOT launch the client — doing so would
+            // restart it with old files, causing it to re-detect the update and loop.
+            if (!pipelineSucceeded)
+            {
+                var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
+                await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
+                return;
             }
 
             // Hooks: after all updates applied
