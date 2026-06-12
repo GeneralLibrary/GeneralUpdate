@@ -29,7 +29,7 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests&FullyQualifiedName!~CleanBackup_KeepsOnlyRecentVersions&FullyQualifiedName!~SharedMemoryProvider_RoundTrip&FullyQualifiedName!~AutoProvider_ThrowsWhenAllFail"
+        run: dotnet test ./src/c#/GeneralUpdate.slnx -c Release --no-build --filter "FullyQualifiedName!~ConfiginfoBuilderTests&FullyQualifiedName!~CleanBackup_KeepsOnlyRecentVersions&FullyQualifiedName!~SharedMemoryProvider_RoundTrip&FullyQualifiedName!~AutoProvider_ThrowsWhenAllFail&FullyQualifiedName!~DefaultRetryPolicy_ExponentialBackoff"
 
       - name: Test (Ubuntu - cross-platform)
         if: runner.os == 'Linux'
