@@ -144,11 +144,16 @@ namespace GeneralUpdate.Core.Strategy
             {
                 AllPackagesSucceeded = true;
                 var status = ReportType.None;
-                var patchPath = StorageManager.GetTempDirectory(Patchs);
+                var patchRoot = StorageManager.GetTempDirectory(Patchs);
                 foreach (var version in _configinfo.UpdateVersions)
                 {
                     try
                     {
+                        // Use a version-specific subdirectory under patchRoot so that
+                        // chain packages do not overwrite each other's extracted patches.
+                        // patchRoot is cleaned as a whole after the loop.
+                        var versionName = Path.GetFileNameWithoutExtension(version.Name) ?? version.Name;
+                        var patchPath = Path.Combine(patchRoot, versionName);
                         var context = CreatePipelineContext(version, patchPath);
                         var pipelineBuilder = BuildPipeline(context);
                         await pipelineBuilder.Build();
@@ -171,7 +176,7 @@ namespace GeneralUpdate.Core.Strategy
                     }
                 }
 
-                Clear(patchPath);
+                Clear(patchRoot);
                 TryCleanTempPath();
                 await OnExecuteCompleteAsync();
             }

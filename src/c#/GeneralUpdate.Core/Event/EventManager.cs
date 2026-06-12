@@ -33,7 +33,7 @@ namespace GeneralUpdate.Core.Event
     /// </remarks>
     public class EventManager : IDisposable
     {
-        private static readonly Lazy<EventManager> _lazy = new(() => new EventManager());
+        private static volatile Lazy<EventManager> _lazy = new(() => new EventManager());
         private ConcurrentDictionary<Type, Delegate> _dicDelegates = new();
         private bool _disposed;
 
@@ -47,6 +47,15 @@ namespace GeneralUpdate.Core.Event
         /// Uses <see cref="Lazy{T}"/> for thread-safe lazy initialization.
         /// </remarks>
         public static EventManager Instance => _lazy.Value;
+
+        /// <summary>
+        /// Creates a fresh singleton instance, discarding all previously registered listeners.
+        /// Called when the update lifecycle ends and a clean slate is needed.
+        /// </summary>
+        public static void Reset()
+        {
+            _lazy = new Lazy<EventManager>(() => new EventManager());
+        }
 
         /// <summary>
         /// Registers a listener for a specified event type.

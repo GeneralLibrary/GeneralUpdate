@@ -98,6 +98,7 @@ public class LinuxStrategy : AbstractStrategy
     /// </remarks>
     public override async Task StartAppAsync()
     {
+        var appLaunched = false;
         try
         {
             var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
@@ -107,6 +108,7 @@ public class LinuxStrategy : AbstractStrategy
 
             GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: launching app={appPath}");
             Process.Start(appPath);
+            appLaunched = true;
             GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: app launched successfully.");
         }
         catch (Exception e)
@@ -114,8 +116,14 @@ public class LinuxStrategy : AbstractStrategy
             GeneralTracer.Error(
                 "The StartApp method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+
+            // If the main app was already launched, still need to exit the updater.
+            if (!appLaunched) return;
         }
-        finally
+
+        // Only terminate the updater when the main app was launched.
+        // On error before launch, stay alive so callers can attempt recovery.
+        if (appLaunched)
         {
             GeneralTracer.Info("GeneralUpdate.Core.LinuxStrategy.StartApp: releasing tracer and terminating updater process.");
             GeneralTracer.Dispose();

@@ -772,8 +772,11 @@ public class ClientStrategy : IStrategy
         // Run the pre-launch lifecycle hook (e.g. UnixPermissionHooks for chmod +x).
         // In the standard flow this runs inside ExecuteStandardWorkflowAsync; in
         // silent mode it was deferred and must run now, before the process starts.
+        //
+        // Use Task.Run to offload from the current SynchronizationContext and avoid
+        // deadlock when called from AppDomain.ProcessExit (a synchronous event).
         var ctx = BuildUpdateContext();
-        SafeOnBeforeStartAppAsync(ctx).GetAwaiter().GetResult();
+        Task.Run(() => SafeOnBeforeStartAppAsync(ctx)).GetAwaiter().GetResult();
 
         if (_osStrategy is AbstractStrategy abs)
         {

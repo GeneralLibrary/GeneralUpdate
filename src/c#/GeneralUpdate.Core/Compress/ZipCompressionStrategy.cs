@@ -47,8 +47,12 @@ public class ZipCompressionStrategy : ICompressionStrategy
                         var toDelArchives = new List<ZipArchiveEntry>();
                         foreach (var zipArchiveEntry in archive.Entries)
                         {
+                            // Exact match to avoid ambiguity (e.g. "foo.dll" should not match "foobar.dll").
+                            // For directory entries, also match "subdir/" prefix so nested files are replaced.
                             if (toZipedFileName != null &&
-                                (zipArchiveEntry.FullName.StartsWith(toZipedFileName) || toZipedFileName.StartsWith(zipArchiveEntry.FullName)))
+                                (zipArchiveEntry.FullName == toZipedFileName ||
+                                 zipArchiveEntry.FullName.StartsWith(toZipedFileName + "/", StringComparison.Ordinal) ||
+                                 toZipedFileName.StartsWith(zipArchiveEntry.FullName, StringComparison.Ordinal)))
                             {
                                 toDelArchives.Add(zipArchiveEntry);
                             }
@@ -83,7 +87,9 @@ public class ZipCompressionStrategy : ICompressionStrategy
                         foreach (var zipArchiveEntry in archive.Entries)
                         {
                             if (toZipedFileName != null
-                                && (zipArchiveEntry.FullName.StartsWith(toZipedFileName) || toZipedFileName.StartsWith(zipArchiveEntry.FullName)))
+                                && (zipArchiveEntry.FullName == toZipedFileName ||
+                                    zipArchiveEntry.FullName.StartsWith(toZipedFileName + "/", StringComparison.Ordinal) ||
+                                    toZipedFileName.StartsWith(zipArchiveEntry.FullName, StringComparison.Ordinal)))
                             {
                                 toDelArchives.Add(zipArchiveEntry);
                             }
@@ -131,6 +137,8 @@ public class ZipCompressionStrategy : ICompressionStrategy
                 return;
             }
 
+            var extractionRoot = Path.GetFullPath(unZipDir);
+
             using var zipToOpen = new FileStream(zipFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             using var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read, false, encoding);
             for (int i = 0; i < archive.Entries.Count; i++)
@@ -144,20 +152,29 @@ public class ZipCompressionStrategy : ICompressionStrategy
                     continue;
                 }
 
-                var filePath = directoryInfo + entryFilePath;
-                var greatFolder = Directory.GetParent(filePath);
+                // Guard against path-traversal entries (e.g. "../../evil.exe")
+                var filePath = Path.Combine(unZipDir, entryFilePath);
+                var fullTargetPath = Path.GetFullPath(filePath);
+                var rootWithSep = extractionRoot.EndsWith(dirSeparatorChar)
+                    ? extractionRoot
+                    : extractionRoot + dirSeparatorChar;
+                if (!fullTargetPath.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException(
+                        $"Zip entry path traversal detected: {entries.FullName} resolves outside extraction directory.");
+
+                var greatFolder = Directory.GetParent(fullTargetPath);
                 if (greatFolder is not null && !greatFolder.Exists)
                 {
                     greatFolder.Create();
                 }
 
-                if (File.Exists(filePath))
+                if (File.Exists(fullTargetPath))
                 {
-                    File.SetAttributes(filePath, FileAttributes.Normal);
-                    File.Delete(filePath);
+                    File.SetAttributes(fullTargetPath, FileAttributes.Normal);
+                    File.Delete(fullTargetPath);
                 }
 
-                entries.ExtractToFile(filePath);
+                entries.ExtractToFile(fullTargetPath);
             }
         }
         catch (Exception exception)

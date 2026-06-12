@@ -30,6 +30,7 @@ namespace CoreTest.Bootstrap
         {
             _testDir = Path.Combine(Path.GetTempPath(), $"GU_ParamMatrix_{Guid.NewGuid()}");
             Directory.CreateDirectory(_testDir);
+            EventManager.Reset();
         }
 
         public void Dispose()

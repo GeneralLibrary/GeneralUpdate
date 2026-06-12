@@ -65,7 +65,7 @@ namespace GeneralUpdate.Core.Network
     public class VersionService
     {
         private static readonly HttpClient _sharedClient;
-        private static ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
+        private static volatile ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
         private static IHttpAuthProvider? _globalAuthProvider;
 
         private readonly IHttpAuthProvider _auth;

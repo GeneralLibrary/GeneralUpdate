@@ -66,6 +66,7 @@ public class MacStrategy : AbstractStrategy
     /// </remarks>
     public override async Task StartAppAsync()
     {
+        var launchedOrCompleted = false;
         try
         {
             var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
@@ -76,18 +77,27 @@ public class MacStrategy : AbstractStrategy
                 GeneralTracer.Info($"MacStrategy.StartApp: launching app={mainApp}");
                 System.Diagnostics.Process.Start(mainApp);
             }
+            else
+            {
+                GeneralTracer.Info("MacStrategy.StartApp: no app to launch (app path not found or empty).");
+            }
+
+            launchedOrCompleted = true;
         }
         catch (Exception e)
         {
             GeneralTracer.Error("The StartApp method in MacStrategy threw an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+
+            // If the main app was already launched, still need to exit the updater.
+            if (!launchedOrCompleted) return;
         }
-        finally
-        {
-            GeneralTracer.Info("MacStrategy.StartApp: releasing tracer and terminating updater process.");
-            GeneralTracer.Dispose();
-            await GracefulExit.CurrentProcessAsync();
-        }
+
+        // Terminate the updater when the main app was launched OR when there was
+        // no app to launch at all (both are normal terminal states for the updater).
+        GeneralTracer.Info("MacStrategy.StartApp: releasing tracer and terminating updater process.");
+        GeneralTracer.Dispose();
+        await GracefulExit.CurrentProcessAsync();
     }
 
     /// <summary>

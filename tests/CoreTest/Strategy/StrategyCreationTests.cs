@@ -1,5 +1,6 @@
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Strategy;
+using GeneralUpdate.Core.Pipeline;
 
 namespace CoreTest.Strategy;
 
@@ -185,6 +186,71 @@ public class AbstractStrategyCheckPathTests
             return string.Empty;
         var tempPath = Path.Combine(path, name);
         return File.Exists(tempPath) ? tempPath : string.Empty;
+    }
+}
+
+/// <summary>
+/// Tests that AbstractStrategy.ExecuteAsync creates per-version subdirectories
+/// for patch paths (regression for R4 — chain packages sharing PatchPath).
+/// </summary>
+public class AbstractStrategyPatchPathTests
+{
+    private sealed class RecordingStrategy : AbstractStrategy
+    {
+        public List<string> RecordedPatchPaths { get; } = new();
+
+        protected override PipelineBuilder BuildPipeline(PipelineContext context)
+        {
+            // Capture what CreatePipelineContext stored as PatchPath
+            RecordedPatchPaths.Add(context.Get<string>("PatchPath"));
+            return new PipelineBuilder(context);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChainVersions_HaveDistinctPatchPaths()
+    {
+        var strategy = new RecordingStrategy();
+        var tempDir = Path.Combine(Path.GetTempPath(), $"R4Test_{Guid.NewGuid():N}");
+        var tempPath = Path.Combine(tempDir, "tmp");
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(tempPath);
+            var config = new UpdateContext
+            {
+                ClientVersion = "1.0.0",
+                InstallPath = tempDir,
+                TempPath = tempPath,
+                Format = Format.Zip,
+                AppSecretKey = "k",
+                UpdateAppName = "Update.exe",
+                MainAppName = "App.exe",
+                PatchEnabled = true,
+                UpdateVersions = new List<VersionEntry>
+                {
+                    new() { Name = "v1.0_to_v1.1", Version = "1.1.0" },
+                    new() { Name = "v1.1_to_v1.2", Version = "1.2.0" },
+                }
+            };
+            strategy.Create(config);
+            await strategy.ExecuteAsync();
+
+            // Each version should have been served a distinct PatchPath subdirectory
+            Assert.Equal(2, strategy.RecordedPatchPaths.Count);
+            Assert.NotEqual(strategy.RecordedPatchPaths[0], strategy.RecordedPatchPaths[1]);
+            // Verify they are siblings under the same root
+            var root1 = Path.GetDirectoryName(strategy.RecordedPatchPaths[0]);
+            var root2 = Path.GetDirectoryName(strategy.RecordedPatchPaths[1]);
+            Assert.NotNull(root1);
+            Assert.NotNull(root2);
+            Assert.Equal(root1, root2);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
     }
 }
 

@@ -72,13 +72,12 @@ namespace GeneralUpdate.Core.Configuration
         /// </returns>
         public static UpdateContext MapToUpdateContext(UpdateRequest source, UpdateContext target = null)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source), "UpdateRequest source cannot be null — configuration would be empty.");
+
             // 如果 source 和 target 均未提供，则创建新实例
             if (target == null)
                 target = new UpdateContext();
-
-            // 如果 source 为 null，则直接返回空的 target
-            if (source == null)
-                return target;
 
             // 映射基类公共字段
             target.UpdateAppName = source.UpdateAppName;

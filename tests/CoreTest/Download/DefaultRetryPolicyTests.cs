@@ -47,10 +47,9 @@ public class DefaultRetryPolicyTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_TaskCanceledException_IsNotRetryable()
+    public async Task ExecuteAsync_TaskCanceledException_IsRetryable()
     {
-        // TaskCanceledException inherits from OperationCanceledException,
-        // so IsRetryable returns false (not retryable)
+        // TaskCanceledException (e.g. HttpClient timeout) should be retried
         var policy = new DefaultRetryPolicy(3, TimeSpan.FromMilliseconds(10));
         var attempts = 0;
         await Assert.ThrowsAsync<TaskCanceledException>(() =>
@@ -59,7 +58,7 @@ public class DefaultRetryPolicyTests
                 attempts++;
                 throw new TaskCanceledException("timeout");
             }));
-        Assert.Equal(1, attempts); // Not retried
+        Assert.Equal(3, attempts); // Retried up to maxRetries
     }
 
     [Fact]

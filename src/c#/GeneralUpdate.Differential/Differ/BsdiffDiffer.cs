@@ -379,6 +379,9 @@ namespace GeneralUpdate.Differential.Differ
                                 // Sanity-check
                                 if (newPosition + control[0] > newSize)
                                     throw new InvalidOperationException("Corrupt patch: diff data exceeds new file size.");
+                                if (control[0] > int.MaxValue)
+                                    throw new InvalidDataException(
+                                        $"Corrupt patch: diff block length {control[0]} exceeds maximum supported size ({int.MaxValue}).");
 
                                 // Seek old file to the position that the new data is diffed against
                                 input.Position = oldPosition;
@@ -392,8 +395,9 @@ namespace GeneralUpdate.Differential.Differ
                                     ReadExactly(diffStream, newData, 0, actualBytesToCopy);
 
                                     // Add old data to diff string
+                                    var remainingInput = input.Length - input.Position;
                                     int availableInputBytes = Math.Min(actualBytesToCopy,
-                                        (int)(input.Length - input.Position));
+                                        remainingInput > int.MaxValue ? int.MaxValue : (int)remainingInput);
                                     ReadExactly(input, oldData, 0, availableInputBytes);
 
                                     for (int index = 0; index < availableInputBytes; index++)
@@ -410,6 +414,9 @@ namespace GeneralUpdate.Differential.Differ
                                 // Sanity-check
                                 if (newPosition + control[1] > newSize)
                                     throw new InvalidOperationException("Corrupt patch: extra data exceeds new file size.");
+                                if (control[1] > int.MaxValue)
+                                    throw new InvalidDataException(
+                                        $"Corrupt patch: extra block length {control[1]} exceeds maximum supported size ({int.MaxValue}).");
 
                                 // Read extra string
                                 bytesToCopy = (int)control[1];
@@ -424,8 +431,12 @@ namespace GeneralUpdate.Differential.Differ
                                     bytesToCopy -= actualBytesToCopy;
                                 }
 
-                                // Adjust position in old file
-                                oldPosition = (int)(oldPosition + control[2]);
+                                // Adjust position in old file (clamp to int range)
+                                var newOldPosition = oldPosition + control[2];
+                                if (newOldPosition > int.MaxValue || newOldPosition < 0)
+                                    throw new InvalidDataException(
+                                        $"Corrupt patch: seek offset overflows int: {newOldPosition}.");
+                                oldPosition = (int)newOldPosition;
                             }
                         }
                     }
@@ -685,9 +696,15 @@ namespace GeneralUpdate.Differential.Differ
         /// Writes a 64-bit signed integer in BSDIFF sign-magnitude encoding.
         /// Bytes 0-6: magnitude bits 0-55. Byte 7 lower 7 bits: magnitude bits 56-62.
         /// Byte 7 upper bit: sign flag (1 = negative).
+        /// Throws <see cref="ArgumentOutOfRangeException"/> when <paramref name="value"/>
+        /// is <see cref="long.MinValue"/> because BSDIFF sign-magnitude encoding cannot
+        /// represent -2^63 (requires a 64th magnitude bit).
         /// </summary>
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
+            if (value == long.MinValue)
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    $"{nameof(WriteInt64)} cannot encode long.MinValue ({long.MinValue}) in BSDIFF sign-magnitude format.");
             long magnitude = value < 0 ? -value : value;
             buf[offset + 0] = (byte)(magnitude & 0xFF);
             buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
