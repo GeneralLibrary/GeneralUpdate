@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -17,7 +18,9 @@ public static class GeneralTracer
 
     static GeneralTracer()
     {
-        Trace.Listeners.Clear();
+        // Do NOT call Trace.Listeners.Clear() here — other libraries in the
+        // process may have registered their own TraceListeners. GeneralTracer
+        // only manages the listeners it adds itself via _ownedListeners.
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

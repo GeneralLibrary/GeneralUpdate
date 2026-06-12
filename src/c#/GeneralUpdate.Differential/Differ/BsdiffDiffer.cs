@@ -696,12 +696,16 @@ namespace GeneralUpdate.Differential.Differ
         /// Writes a 64-bit signed integer in BSDIFF sign-magnitude encoding.
         /// Bytes 0-6: magnitude bits 0-55. Byte 7 lower 7 bits: magnitude bits 56-62.
         /// Byte 7 upper bit: sign flag (1 = negative).
+        /// Throws <see cref="ArgumentOutOfRangeException"/> when <paramref name="value"/>
+        /// is <see cref="long.MinValue"/> because BSDIFF sign-magnitude encoding cannot
+        /// represent -2^63 (requires a 64th magnitude bit).
         /// </summary>
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            // Compute absolute value safely: -long.MinValue would overflow,
-            // so clamp to long.MaxValue — the sign bit is stored separately.
-            long magnitude = value == long.MinValue ? long.MaxValue : (value < 0 ? -value : value);
+            if (value == long.MinValue)
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    $"{nameof(WriteInt64)} cannot encode long.MinValue ({long.MinValue}) in BSDIFF sign-magnitude format.");
+            long magnitude = value < 0 ? -value : value;
             buf[offset + 0] = (byte)(magnitude & 0xFF);
             buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
             buf[offset + 2] = (byte)((magnitude >> 16) & 0xFF);

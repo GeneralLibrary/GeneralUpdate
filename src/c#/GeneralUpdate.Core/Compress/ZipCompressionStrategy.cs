@@ -153,9 +153,12 @@ public class ZipCompressionStrategy : ICompressionStrategy
                 }
 
                 // Guard against path-traversal entries (e.g. "../../evil.exe")
-                var filePath = directoryInfo + entryFilePath;
+                var filePath = Path.Combine(unZipDir, entryFilePath);
                 var fullTargetPath = Path.GetFullPath(filePath);
-                if (!fullTargetPath.StartsWith(extractionRoot, StringComparison.OrdinalIgnoreCase))
+                var rootWithSep = extractionRoot.EndsWith(dirSeparatorChar)
+                    ? extractionRoot
+                    : extractionRoot + dirSeparatorChar;
+                if (!fullTargetPath.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException(
                         $"Zip entry path traversal detected: {entries.FullName} resolves outside extraction directory.");
 

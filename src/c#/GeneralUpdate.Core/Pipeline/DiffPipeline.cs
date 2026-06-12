@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Differential;
@@ -523,7 +524,10 @@ public class DiffPipeline
                 // Using StartsWith + Substring instead of string.Replace to avoid
                 // incorrect replacements when appPath is a substring of patchPath.
                 var patchPrefix = patchPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                var relativePart = file.FullName.StartsWith(patchPrefix, StringComparison.Ordinal)
+                var comparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? StringComparison.OrdinalIgnoreCase
+                    : StringComparison.Ordinal;
+                var relativePart = file.FullName.StartsWith(patchPrefix, comparison)
                     ? file.FullName.Substring(patchPrefix.Length)
                     : file.FullName;
                 var targetPath = Path.Combine(appPath, relativePart);

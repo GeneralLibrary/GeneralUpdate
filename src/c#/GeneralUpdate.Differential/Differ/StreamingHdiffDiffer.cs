@@ -465,9 +465,11 @@ namespace GeneralUpdate.Differential.Differ
 
         private static void WriteInt64(long value, byte[] buf, int offset)
         {
-            // Compute absolute value safely: -long.MinValue would overflow,
-            // so clamp to long.MaxValue — the sign bit is stored separately.
-            long magnitude = value == long.MinValue ? long.MaxValue : (value < 0 ? -value : value);
+            // BSDIFF sign-magnitude encoding cannot represent -2^63.
+            if (value == long.MinValue)
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    $"{nameof(WriteInt64)} cannot encode long.MinValue ({long.MinValue}) in BSDIFF sign-magnitude format.");
+            long magnitude = value < 0 ? -value : value;
             buf[offset + 0] = (byte)(magnitude & 0xFF);
             buf[offset + 1] = (byte)((magnitude >> 8) & 0xFF);
             buf[offset + 2] = (byte)((magnitude >> 16) & 0xFF);

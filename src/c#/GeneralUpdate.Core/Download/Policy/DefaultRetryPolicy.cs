@@ -127,8 +127,10 @@ public class DefaultRetryPolicy : IDownloadPolicy
     /// </remarks>
     private static bool IsRetryable(Exception ex)
     {
-        if (ex is OperationCanceledException) return false;
+        // TaskCanceledException derives from OperationCanceledException,
+        // so check it first — timeouts should be retryable.
         if (ex is TaskCanceledException or TimeoutException) return true;
+        if (ex is OperationCanceledException) return false;
         if (ex is IOException) return true;
         if (ex is HttpRequestException hre)
         {
@@ -143,7 +145,7 @@ public class DefaultRetryPolicy : IDownloadPolicy
             var s = hre.Message ?? "";
             return s.Contains("timeout", StringComparison.OrdinalIgnoreCase)
                 || s.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-                || Regex.IsMatch(s, @"\b(500|502|503|504)\b");
+                || Regex.IsMatch(s, @"\b(500|502|503|504)\b(?![\d./])");
         }
         return false;
     }
