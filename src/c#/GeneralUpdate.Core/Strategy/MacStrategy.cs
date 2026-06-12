@@ -75,7 +75,10 @@ public class MacStrategy : AbstractStrategy
             if (!string.IsNullOrEmpty(mainApp) && File.Exists(mainApp))
             {
                 GeneralTracer.Info($"MacStrategy.StartApp: launching app={mainApp}");
-                System.Diagnostics.Process.Start(mainApp);
+                using var process = System.Diagnostics.Process.Start(mainApp);
+                if (process == null || process.HasExited)
+                    throw new InvalidOperationException($"Failed to start application: {mainApp}");
+                GeneralTracer.Info($"MacStrategy.StartApp: app launched successfully (PID: {process.Id}).");
             }
             else
             {

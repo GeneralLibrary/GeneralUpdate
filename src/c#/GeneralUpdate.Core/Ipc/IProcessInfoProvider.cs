@@ -79,8 +79,8 @@ public class EncryptedFileProcessContractProvider : IProcessContractProvider
         var plain = IpcEncryption.DecryptFromFile(_filePath, Key, IV);
         if (plain == null) return null;
 
-        try { File.Delete(_filePath); }
-        catch { /* best-effort cleanup */ }
+        // Note: IpcEncryption.DecryptFromFile deletes the file in its finally block,
+        // so no additional cleanup is needed here.
 
         var json = Encoding.UTF8.GetString(plain);
         return JsonSerializer.Deserialize(json, ProcessContractJsonContext.Default.ProcessContract);

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Strategy;
 
 namespace GeneralUpdate.Core.Silent;
@@ -84,7 +85,13 @@ public class SilentPollOrchestrator : IDisposable
         _pollingTask.ContinueWith(task =>
         {
             if (task.Exception != null)
+            {
                 GeneralTracer.Error("SilentPollOrchestrator: polling exception.", task.Exception);
+                // Dispatch to registered event listeners so callers can observe
+                // background polling failures (e.g. for telemetry or alerting).
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(task.Exception, "Silent polling failed"));
+            }
         }, TaskContinuationOptions.OnlyOnFaulted);
 
         return Task.CompletedTask;
@@ -125,6 +132,8 @@ public class SilentPollOrchestrator : IDisposable
             catch (Exception ex)
             {
                 GeneralTracer.Error("SilentPollOrchestrator: poll cycle failed.", ex);
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(ex, "Silent poll cycle failed"));
             }
 
             if (Volatile.Read(ref _prepared) == 1) break;
