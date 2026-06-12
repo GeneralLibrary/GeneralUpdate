@@ -122,7 +122,10 @@ public class UpdateStrategy : IStrategy
                 // successfully. AbstractStrategy catches per-package failures and
                 // continues the loop, so ExecuteAsync() completing is not a
                 // reliable success signal on its own.
-                pipelineSucceeded = (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true;
+                // For custom IStrategy implementations that don't expose
+                // AllPackagesSucceeded, assume success (coalesce to true)
+                // since no failure was signalled via an exception.
+                pipelineSucceeded = (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
                 if (pipelineSucceeded)
                 {
                     WriteBackClientVersion();
@@ -142,12 +145,10 @@ public class UpdateStrategy : IStrategy
             // restart it with old files, causing it to re-detect the update and loop.
             if (!pipelineSucceeded)
             {
-                await SafeOnUpdateErrorAsync(ctx,
-                    new InvalidOperationException("MainApp pipeline did not complete successfully."))
-                    .ConfigureAwait(false);
-                await SafeReportUpdateFailedAsync(ctx,
-                    new InvalidOperationException("MainApp pipeline did not complete successfully."))
-                    .ConfigureAwait(false);
+                var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
+                await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                 return;
             }
 

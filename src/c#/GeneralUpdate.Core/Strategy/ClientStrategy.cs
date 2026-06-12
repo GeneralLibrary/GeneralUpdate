@@ -601,13 +601,13 @@ public class ClientStrategy : IStrategy
                     downloadReport.Results.Where(r => !r.Success)
                         .Select(r => $"{r.Asset.Name}: {r.ErrorMessage}"));
                 GeneralTracer.Error($"ClientStrategy: {downloadReport.FailedCount} download(s) failed: {failDetails}");
-                EventManager.Instance.Dispatch(this,
-                    new ExceptionEventArgs(new InvalidOperationException(
-                        $"{downloadReport.FailedCount} download(s) failed. Aborting apply phase."),
-                        "Download failures detected."));
-                // Throw so CVP fallback can retry with chain packages.
-                throw new InvalidOperationException(
+                // Single exception instance for both event dispatch and throw — no
+                // allocations, consistent correlation in logs and event subscribers.
+                var ex = new InvalidOperationException(
                     $"{downloadReport.FailedCount} download(s) failed. Aborting apply phase.");
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Download failures detected."));
+                // Throw so CVP fallback can retry with chain packages.
+                throw ex;
             }
 
             await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
@@ -635,7 +635,7 @@ public class ClientStrategy : IStrategy
             {
                 case UpdateScenario.UpgradeOnly:
                     await ApplyUpgradePackagesAsync(uVersions).ConfigureAwait(false);
-                    if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+                    if (UpgradePackagesSucceeded())
                     {
                         await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                         await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
@@ -643,8 +643,10 @@ public class ClientStrategy : IStrategy
                     }
                     else
                     {
-                        await SafeReportUpdateFailedAsync(hooksCtx,
-                            new InvalidOperationException("Upgrade packages failed to apply.")).ConfigureAwait(false);
+                        var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
+                        await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error("ClientStrategy: Upgrade-only update failed, client continues running.");
                     }
                     break;
@@ -667,12 +669,14 @@ public class ClientStrategy : IStrategy
                     // may be in an inconsistent state. Do NOT proceed to send IPC or
                     // launch the upgrade process — doing so would silently fail or
                     // cause undefined behavior in the upgrade process.
-                    if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded != true)
+                    if (!UpgradePackagesSucceeded())
                     {
+                        var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
+                        await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error(
                             "ClientStrategy: upgrade packages failed to apply, aborting MainApp update and upgrade launch.");
-                        await SafeReportUpdateFailedAsync(hooksCtx,
-                            new InvalidOperationException("Upgrade packages failed to apply.")).ConfigureAwait(false);
                         break;
                     }
 
@@ -1236,6 +1240,17 @@ public class ClientStrategy : IStrategy
         };
 
         return (plan, sc);
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when the OS strategy reports that all upgrade packages
+    /// were applied successfully. For custom <see cref="IStrategy"/> implementations
+    /// that do not expose <see cref="AbstractStrategy.AllPackagesSucceeded"/>,
+    /// returns <c>true</c> (assume success since no failure was signalled).
+    /// </summary>
+    private bool UpgradePackagesSucceeded()
+    {
+        return (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
     }
 
     /// <summary>
