@@ -199,7 +199,7 @@ namespace GeneralUpdate.Core.FileSystem
         /// </remarks>
         public static string GetTempDirectory(string name)
         {
-            var path = $"generalupdate_{DateTime.Now:yyyy-MM-dd-HHmmss-fff}_{System.Diagnostics.Process.GetCurrentProcess().Id}_{name}";
+            var path = $"generalupdate_{DateTime.UtcNow:yyyy-MM-dd-HHmmss-fff}_{System.Diagnostics.Process.GetCurrentProcess().Id}_{name}";
             var tempDir = Path.Combine(Path.GetTempPath(), path);
             if (!Directory.Exists(tempDir))
             {
@@ -217,7 +217,7 @@ namespace GeneralUpdate.Core.FileSystem
         /// Timestamp naming ensures each backup is unique and naturally sortable by creation time.
         /// Used by <see cref="Backup"/> to create version-independent backup directory names.
         /// </remarks>
-        public static string GetBackupDirectoryName() => $"{DirectoryName}{DateTime.Now:yyyyMMddHHmmss}";
+        public static string GetBackupDirectoryName() => $"{DirectoryName}{DateTime.UtcNow:yyyyMMddHHmmss}";
 
         /// <summary>
         /// Finds the most recent backup directory by scanning for backup directories
@@ -317,7 +317,11 @@ namespace GeneralUpdate.Core.FileSystem
                     bool shouldSkip = false;
                     foreach (var notBackup in skipDirectorys)
                     {
-                        if (dic.FullName.Contains(notBackup))
+                        // Use prefix matching instead of substring Contains to avoid
+                        // false-positive skips (e.g. a directory named "myapp-backup-config"
+                        // should not be skipped just because "backup-" appears in its name).
+                        var dirName = dic.Name;
+                        if (dirName.StartsWith(notBackup, StringComparison.OrdinalIgnoreCase))
                         {
                             shouldSkip = true;
                             break;
@@ -425,7 +429,7 @@ namespace GeneralUpdate.Core.FileSystem
             foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
             {
                 var dirName = Path.GetFileName(dirPath);
-                if (!directoryNames.Any(name => dirName.Contains(name)))
+                if (!directoryNames.Any(name => dirName.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
                 {
                     string newTargetDir = Path.Combine(targetDir, Path.GetFileName(dirPath));
                     Directory.CreateDirectory(newTargetDir);

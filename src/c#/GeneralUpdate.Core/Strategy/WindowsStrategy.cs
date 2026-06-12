@@ -106,9 +106,11 @@ namespace GeneralUpdate.Core.Strategy
                     throw new Exception($"Can't find the app {appName}!");
 
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
-                Process.Start(appPath);
+                using var appProcess = Process.Start(appPath);
+                if (appProcess == null || appProcess.HasExited)
+                    throw new InvalidOperationException($"Failed to start application: {appPath}");
                 appLaunched = true;
-                GeneralTracer.Info("GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully.");
+                GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 
                 if (LaunchBowl)
                 {
@@ -116,7 +118,9 @@ namespace GeneralUpdate.Core.Strategy
                     if (!string.IsNullOrEmpty(bowlAppPath))
                     {
                         GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching Bowl process={bowlAppPath}");
-                        Process.Start(bowlAppPath);
+                        using var bowlProcess = Process.Start(bowlAppPath);
+                        if (bowlProcess != null)
+                            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: Bowl process started (PID: {bowlProcess.Id}).");
                     }
                 }
             }

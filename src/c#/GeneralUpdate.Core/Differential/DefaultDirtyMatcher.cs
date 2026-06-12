@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,6 +34,9 @@ public class DefaultDirtyMatcher : IDirtyMatcher
     /// <inheritdoc/>
     public FileInfo? Match(FileInfo oldFile, IEnumerable<FileInfo> patchFiles)
     {
+        if (oldFile is null) throw new ArgumentNullException(nameof(oldFile));
+        if (patchFiles is null) throw new ArgumentNullException(nameof(patchFiles));
+
         var findFile = patchFiles.FirstOrDefault(f =>
         {
             var name = Path.GetFileNameWithoutExtension(f.Name);

@@ -239,6 +239,7 @@ public class DiffPipeline
                 {
                     if (!StorageManager.HashEquals(oldFile.FullName, file.FullName))
                     {
+                        ValidateFileSize(oldFile.FullName, file.FullName);
                         var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PatchExtension}");
                         await _binaryDiffer.CleanAsync(oldFile.FullName, file.FullName, tempPatchPath, cancellationToken);
                     }
@@ -522,14 +523,20 @@ public class DiffPipeline
 
                 // Compute the relative path by stripping the patch directory prefix.
                 // Using StartsWith + Substring instead of string.Replace to avoid
-                // incorrect replacements when appPath is a substring of patchPath.
+                // incorrect replacements when the prefix appears as a substring of
+                // another path component (e.g. "C:\target" vs "C:\target-extra").
                 var patchPrefix = patchPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 var comparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     ? StringComparison.OrdinalIgnoreCase
                     : StringComparison.Ordinal;
                 var relativePart = file.FullName.StartsWith(patchPrefix, comparison)
                     ? file.FullName.Substring(patchPrefix.Length)
-                    : file.FullName;
+                    : null;
+                if (relativePart == null)
+                {
+                    GeneralTracer.Warn($"CopyUnknownFiles: file {file.FullName} is outside patch directory {patchPath}, skipping.");
+                    continue;
+                }
                 var targetPath = Path.Combine(appPath, relativePart);
                 var parentFolder = Directory.GetParent(targetPath);
                 if (parentFolder?.Exists == false)
@@ -572,10 +579,18 @@ public class DiffPipeline
     /// </remarks>
     private static string GetTempDirectory(FileNode file, string targetPath, string patchPath)
     {
-        var tempPath = file.FullName
-            .Replace(targetPath, "")
-            .Replace(Path.GetFileName(file.FullName), "")
-            .Trim(Path.DirectorySeparatorChar);
+        // Use StartsWith + Substring instead of string.Replace to avoid incorrect
+        // replacements when targetPath is a substring of another path component.
+        // Same approach as CopyUnknownFiles which documents this rationale.
+        var prefix = targetPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var comparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var tempPath = file.FullName.StartsWith(prefix, comparison)
+            ? file.FullName.Substring(prefix.Length)
+            : string.Empty;
+        if (!string.IsNullOrEmpty(tempPath))
+            tempPath = tempPath.Replace(Path.GetFileName(file.FullName), "").Trim(Path.DirectorySeparatorChar);
         var tempDir = string.IsNullOrEmpty(tempPath) ? patchPath : Path.Combine(patchPath, tempPath);
         Directory.CreateDirectory(tempDir);
         return tempDir;
@@ -603,5 +618,27 @@ public class DiffPipeline
             throw new DirectoryNotFoundException($"Source directory not found: {sourcePath}");
         if (!Directory.Exists(targetPath))
             throw new DirectoryNotFoundException($"Target directory not found: {targetPath}");
+    }
+
+    /// <summary>
+    /// Validates that both source and target files do not exceed the configured <see cref="DiffPipelineOptions.MaxInputFileSize"/>.
+    /// The BSDIFF algorithm loads entire files into memory, so this guard prevents <see cref="OutOfMemoryException"/>
+    /// when processing oversized files.
+    /// </summary>
+    private void ValidateFileSize(string oldFilePath, string newFilePath)
+    {
+        if (_options.MaxInputFileSize <= 0) return;
+
+        var oldInfo = new FileInfo(oldFilePath);
+        if (oldInfo.Length > _options.MaxInputFileSize)
+            throw new InvalidOperationException(
+                $"File too large for binary differ: {oldFilePath} ({oldInfo.Length} bytes > {_options.MaxInputFileSize} bytes limit). " +
+                $"Increase {nameof(DiffPipelineOptions.MaxInputFileSize)} or switch to a streaming differ.");
+
+        var newInfo = new FileInfo(newFilePath);
+        if (newInfo.Length > _options.MaxInputFileSize)
+            throw new InvalidOperationException(
+                $"File too large for binary differ: {newFilePath} ({newInfo.Length} bytes > {_options.MaxInputFileSize} bytes limit). " +
+                $"Increase {nameof(DiffPipelineOptions.MaxInputFileSize)} or switch to a streaming differ.");
     }
 }

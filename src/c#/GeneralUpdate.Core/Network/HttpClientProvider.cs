@@ -34,11 +34,13 @@ public static class HttpClientProvider
             _sslPolicy.ValidateCertificate(cert, chain, errors);
         _shared = new HttpClient(handler, disposeHandler: false)
         {
-            // Let per-request CancellationTokenSource.CancelAfter (set by
-            // HttpDownloadExecutor & VersionService) control timeout — the
-            // global HttpClient.Timeout (default ~100s) would otherwise cap
-            // requests before a caller-configured longer DownloadTimeout.
-            Timeout = System.Threading.Timeout.InfiniteTimeSpan
+            // Default 5-minute hard upper bound as a safety net. Per-request
+            // CancellationTokenSource.CancelAfter (set by HttpDownloadExecutor
+            // and VersionService) provides the primary timeout — this value
+            // only catches leaked requests where no per-request timeout was set.
+            // Callers requiring transfers longer than 5 minutes must increase
+            // this timeout or pass a larger value via e.g. UpdateRequest.
+            Timeout = TimeSpan.FromMinutes(5)
         };
     }
 

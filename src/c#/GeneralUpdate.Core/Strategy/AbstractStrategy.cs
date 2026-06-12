@@ -140,11 +140,12 @@ namespace GeneralUpdate.Core.Strategy
         /// </remarks>
         public virtual async Task ExecuteAsync()
         {
+            var patchRoot = string.Empty;
             try
             {
                 AllPackagesSucceeded = true;
                 var status = ReportType.None;
-                var patchRoot = StorageManager.GetTempDirectory(Patchs);
+                patchRoot = StorageManager.GetTempDirectory(Patchs);
                 foreach (var version in _configinfo.UpdateVersions)
                 {
                     try
@@ -152,7 +153,16 @@ namespace GeneralUpdate.Core.Strategy
                         // Use a version-specific subdirectory under patchRoot so that
                         // chain packages do not overwrite each other's extracted patches.
                         // patchRoot is cleaned as a whole after the loop.
-                        var versionName = Path.GetFileNameWithoutExtension(version.Name) ?? version.Name;
+                        // Sanitize: version.Name may be null or empty, and may contain
+                        // path separators or "."/".." entries that could cause collisions
+                        // or path traversal. Derive a safe key from the version string.
+                        var rawName = version.Name ?? "unknown";
+                        var safeDir = rawName
+                            .Replace(Path.DirectorySeparatorChar, '_')
+                            .Replace(Path.AltDirectorySeparatorChar, '_');
+                        var versionName = string.IsNullOrWhiteSpace(safeDir) || safeDir is "." or ".."
+                            ? $"version_{(version.Version ?? rawName).GetHashCode():X8}"
+                            : safeDir;
                         var patchPath = Path.Combine(patchRoot, versionName);
                         var context = CreatePipelineContext(version, patchPath);
                         var pipelineBuilder = BuildPipeline(context);
@@ -176,7 +186,6 @@ namespace GeneralUpdate.Core.Strategy
                     }
                 }
 
-                Clear(patchRoot);
                 TryCleanTempPath();
                 await OnExecuteCompleteAsync();
             }
@@ -184,6 +193,11 @@ namespace GeneralUpdate.Core.Strategy
             {
                 AllPackagesSucceeded = false;
                 HandleExecuteException(e);
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(patchRoot))
+                    Clear(patchRoot);
             }
         }
 
@@ -342,7 +356,10 @@ namespace GeneralUpdate.Core.Strategy
             if (string.IsNullOrEmpty(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: launching {appPath}");
-            Process.Start(appPath);
+            using var process = Process.Start(appPath);
+            if (process == null)
+                throw new InvalidOperationException($"Failed to start process: {appPath}");
+            GeneralTracer.Info($"AbstractStrategy.StartProcess: process started (PID: {process.Id}).");
         }
 
         /// <summary>

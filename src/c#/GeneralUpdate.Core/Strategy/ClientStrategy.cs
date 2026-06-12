@@ -799,7 +799,10 @@ public class ClientStrategy : IStrategy
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Upgrade application not found: {appPath}");
         GeneralTracer.Info($"ClientStrategy: launching upgrade process {appPath}");
-        Process.Start(appPath);
+        using var process = Process.Start(appPath);
+        if (process == null)
+            throw new InvalidOperationException($"Failed to start upgrade process: {appPath}");
+        GeneralTracer.Info($"ClientStrategy: upgrade process launched (PID: {process.Id}).");
     }
 
     #endregion
@@ -1008,10 +1011,12 @@ public class ClientStrategy : IStrategy
     }
 
     /// <summary>
-    /// Safely invokes the pre-update hook. If the hook throws an exception, logs a warning and returns <c>true</c> (allows the update to continue).
+    /// Safely invokes the pre-update hook. If the hook throws an exception, logs a warning
+    /// and returns <c>false</c> (aborts the update) so that a faulty hook does not silently
+    /// allow the update to proceed when the caller intended to cancel it.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    /// <returns>The value returned by the hook; returns <c>true</c> if the hook throws an exception.</returns>
+    /// <returns>The value returned by the hook; returns <c>false</c> if the hook throws an exception.</returns>
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.HookContext ctx)
     {
         try
@@ -1021,7 +1026,7 @@ public class ClientStrategy : IStrategy
         catch (Exception ex)
         {
             GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}");
-            return true;
+            return false;
         }
     }
 

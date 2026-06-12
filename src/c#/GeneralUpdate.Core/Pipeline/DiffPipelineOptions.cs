@@ -14,6 +14,7 @@ namespace GeneralUpdate.Core.Pipeline;
 /// <list type="bullet">
 ///   <item><description><see cref="MaxDegreeOfParallelism"/> = 2 — Processes 2 files concurrently.</description></item>
 ///   <item><description><see cref="StopOnFirstError"/> = <c>false</c> — Continues processing other files on error.</description></item>
+///   <item><description><see cref="MaxInputFileSize"/> = 0 — No limit (backward compatible).</description></item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -63,4 +64,27 @@ public sealed class DiffPipelineOptions
     /// </para>
     /// </remarks>
     public bool StopOnFirstError { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the maximum allowed file size (in bytes) for files processed by the binary differ.
+    /// Files larger than this threshold cause an error rather than being loaded entirely into memory.
+    /// </summary>
+    /// <value>
+    /// The maximum file size in bytes. The default value is 0, meaning no limit (backward compatible).
+    /// Set to a positive value to reject oversized files before the differ allocates memory.
+    /// Example: 512MB = 512 * 1024 * 1024.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    /// The BSDIFF algorithm reads entire files into memory (old + new + up to 3x new file size in
+    /// working buffers). For large files this can cause <see cref="OutOfMemoryException"/>.
+    /// When <see cref="MaxInputFileSize"/> is set, the pipeline checks both old and new file sizes
+    /// before invoking the differ and reports a clear error for oversized files.
+    /// </para>
+    /// <para>
+    /// For incremental updates of very large files, consider splitting the file into smaller chunks
+    /// or using an alternative differ with streaming support.
+    /// </para>
+    /// </remarks>
+    public long MaxInputFileSize { get; set; } = 0;
 }

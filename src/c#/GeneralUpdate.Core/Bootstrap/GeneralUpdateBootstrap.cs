@@ -577,7 +577,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private async Task CallSmallBowlHomeAsync(string processName)
     {
-        if (string.IsNullOrWhiteSpace(processName)) return;
+        if (string.IsNullOrWhiteSpace(processName))
+        {
+            GeneralTracer.Warn("CallSmallBowlHomeAsync: Bowl process name is empty or whitespace, skipping shutdown.");
+            return;
+        }
         try
         {
             var processes = Process.GetProcessesByName(processName);
