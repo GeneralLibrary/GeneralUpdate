@@ -42,8 +42,8 @@ jobs:
             dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
               -o ./nupkgs `
-              -p:Version=${{ github.event.inputs.version }} `
-              -p:PackageVersion=${{ github.event.inputs.version }} `
+              -p:Version='${{ github.event.inputs.version }}' `
+              -p:PackageVersion='${{ github.event.inputs.version }}' `
               --no-build  # 避免重复构建，使用已生成的文件
           }
         shell: pwsh
