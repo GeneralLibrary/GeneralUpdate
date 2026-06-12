@@ -573,11 +573,11 @@ public class ClientStrategy : IStrategy
         // ════════════════════════════════════════════════════════════════════
         var orchOptions = Download.Models.DownloadOrchestratorOptions.From(_configInfo);
 
-        async Task ExecuteDownloadAsync(Download.Models.DownloadPlan plan)
+        async Task<Download.Abstractions.DownloadReport> ExecuteDownloadAsync(Download.Models.DownloadPlan plan)
         {
             if (_orchestrator != null)
             {
-                await _orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
+                return await _orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
             }
             else
             {
@@ -585,7 +585,7 @@ public class ClientStrategy : IStrategy
                 var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
                     httpClient, orchOptions, _customDownloadPolicy,
                     _customDownloadExecutor, _customDownloadPipelineFactory);
-                await orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
+                return await orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
             }
         }
 
@@ -593,7 +593,22 @@ public class ClientStrategy : IStrategy
         async Task DownloadAndApplyAsync(Download.Models.DownloadPlan plan, UpdateScenario sc)
         {
             GeneralTracer.Info($"ClientStrategy: downloading {plan.Assets.Count} asset(s).");
-            await ExecuteDownloadAsync(plan).ConfigureAwait(false);
+            var downloadReport = await ExecuteDownloadAsync(plan).ConfigureAwait(false);
+
+            if (downloadReport.FailedCount > 0)
+            {
+                var failDetails = string.Join(", ",
+                    downloadReport.Results.Where(r => !r.Success)
+                        .Select(r => $"{r.Asset.Name}: {r.ErrorMessage}"));
+                GeneralTracer.Error($"ClientStrategy: {downloadReport.FailedCount} download(s) failed: {failDetails}");
+                EventManager.Instance.Dispatch(this,
+                    new ExceptionEventArgs(new InvalidOperationException(
+                        $"{downloadReport.FailedCount} download(s) failed. Aborting apply phase."),
+                        "Download failures detected."));
+                // Throw so CVP fallback can retry with chain packages.
+                throw new InvalidOperationException(
+                    $"{downloadReport.FailedCount} download(s) failed. Aborting apply phase.");
+            }
 
             await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
             await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
@@ -620,9 +635,18 @@ public class ClientStrategy : IStrategy
             {
                 case UpdateScenario.UpgradeOnly:
                     await ApplyUpgradePackagesAsync(uVersions).ConfigureAwait(false);
-                    await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                    await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
-                    GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
+                    if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+                    {
+                        await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+                        await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
+                        GeneralTracer.Info("ClientStrategy: Upgrade-only update applied, client continues running.");
+                    }
+                    else
+                    {
+                        await SafeReportUpdateFailedAsync(hooksCtx,
+                            new InvalidOperationException("Upgrade packages failed to apply.")).ConfigureAwait(false);
+                        GeneralTracer.Error("ClientStrategy: Upgrade-only update failed, client continues running.");
+                    }
                     break;
 
                 case UpdateScenario.MainOnly:
@@ -638,6 +662,20 @@ public class ClientStrategy : IStrategy
 
                 case UpdateScenario.Both:
                     await ApplyUpgradePackagesAsync(uVersions).ConfigureAwait(false);
+
+                    // If upgrade packages failed to apply, the upgrade process binary
+                    // may be in an inconsistent state. Do NOT proceed to send IPC or
+                    // launch the upgrade process — doing so would silently fail or
+                    // cause undefined behavior in the upgrade process.
+                    if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded != true)
+                    {
+                        GeneralTracer.Error(
+                            "ClientStrategy: upgrade packages failed to apply, aborting MainApp update and upgrade launch.");
+                        await SafeReportUpdateFailedAsync(hooksCtx,
+                            new InvalidOperationException("Upgrade packages failed to apply.")).ConfigureAwait(false);
+                        break;
+                    }
+
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                     await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
                     SendProcessIpc(cVersions);
