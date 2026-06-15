@@ -1,6 +1,6 @@
 <div align="center">
 
-![](./imgs/GeneralUpdate_h2.png)
+![](./imgs/LOGO白1.png)
 
 # GeneralUpdate #
 
