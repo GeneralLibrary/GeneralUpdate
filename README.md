@@ -31,6 +31,7 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 [![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)](https://github.com/GeneralLibrary/GeneralUpdate/stargazers)
 [![](https://img.shields.io/github/forks/GeneralLibrary/GeneralUpdate)](https://github.com/GeneralLibrary/GeneralUpdate/network/members)
+[![star](https://gitcode.com/GeneralLibrary/GeneralUpdate/star/badge.svg)](https://gitcode.com/GeneralLibrary/GeneralUpdate)
 
 **Share GeneralUpdate Repository**
 
@@ -78,6 +79,18 @@ Special thanks to the authors of the following open source projects for contribu
 [RoutinAI](https://routin.ai/) is an enterprise-grade unified LLM API gateway that provides a single, type-safe interface to access over 100 leading large language models from the GPT, Claude, and Gemini families, including models such as gpt-5.4, claude-opus-4-6, and gemini-3.1-pro-preview. It eliminates the complexity of managing multiple AI vendors by providing zero-latency edge routing, seamless model switching without code modifications, unified billing, and centralized governance with spending caps and access policies.
 </div>
 
+
+## 🤖 Claude Code Skill Suite
+
+[**GeneralUpdate Skill CodeGen**](https://github.com/GeneralLibrary/generalupdate-skill-codegen) is a Claude Code skill suite that helps .NET developers integrate the GeneralUpdate auto-update system into any .NET application in under 5 minutes. It covers 50+ known issues from real GitHub/Gitee feedback, providing production-ready code generation and deep troubleshooting.
+
+| Skill | Command | Purpose |
+|-------|---------|---------|
+| 🚀 `generalupdate-init` | `/generalupdate-init` | Dual-project scaffold + Bootstrap config |
+| 🎨 `generalupdate-ui` | `/generalupdate-ui` | Auto-detect UI framework, generate full-state update window |
+| ⚙️ `generalupdate-strategy` | `/generalupdate-strategy` | 6-strategy decision tree with platform matrix |
+| 🔧 `generalupdate-advanced` | `/generalupdate-advanced` | 10+ extension points, IPC, Bowl, AOT |
+| 🩺 `generalupdate-troubleshoot` | `/generalupdate-troubleshoot` | 50+ known issues diagnosis |
 
 
 ## 🙏 Thanks
