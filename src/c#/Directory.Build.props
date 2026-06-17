@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <!-- Source Link -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Embedded PDBs -->
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+
+    <!-- Deterministic / Reproducible builds -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+  </PropertyGroup>
+
+  <!-- Source Link package (auto-detects GitHub) -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+  </ItemGroup>
+</Project>
