@@ -27,7 +27,8 @@ A one-click startup example helps you quickly understand how to integrate automa
 [![](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-success.svg)](https://github.com/GeneralLibrary/GeneralUpdate)
 [![](https://img.shields.io/badge/documentation-ready-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate/wiki)
 [![](https://img.shields.io/badge/sustainability-yes-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate)
-[![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate#contributing) </br>
+[![](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://github.com/GeneralLibrary/GeneralUpdate#contributing)
+[![Discord](https://img.shields.io/badge/Discord-justerzhu-5865F2?logo=discord&logoColor=white)](https://discord.com/users/justerzhu) </br>
 
 [![](https://img.shields.io/github/stars/GeneralLibrary/GeneralUpdate?style=social)](https://github.com/GeneralLibrary/GeneralUpdate/stargazers)
 [![](https://img.shields.io/github/forks/GeneralLibrary/GeneralUpdate)](https://github.com/GeneralLibrary/GeneralUpdate/network/members)
