@@ -82,7 +82,7 @@ namespace GeneralUpdate.Core.Configuration
         ///                 "Token": "mytoken",
         ///                 "Scheme": "https",
         ///                 "MainAppName": "MyApp",
-        ///                 "ClientVersion": "1.0.0.0"
+        ///                 "ClientVersion": "1.0.0"
         ///             }
         ///         </code>
         ///     </para>

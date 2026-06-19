@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Models;
+using GeneralUpdate.Core.Utilities;
 
 namespace GeneralUpdate.Core.Download;
 
@@ -66,6 +67,7 @@ public static class DownloadPlanBuilder
             .Where(a => (a.AppType ?? (int)AppType.Client) == (int)appType)
             .Select(a => ParseVersion(a.Version))
             .Where(v => v != null)
+            .Select(v => v!.Value)
             .ToList();
 
         if (serverVersions.Count == 0)
@@ -74,11 +76,11 @@ public static class DownloadPlanBuilder
         // If the local version cannot be read or parsed, we can't prove we're
         // up to date — err on the side of updating rather than silently skipping.
         if (string.IsNullOrWhiteSpace(localVersion)
-            || !Version.TryParse(localVersion, out var local))
+            || !Semver.TryParse(localVersion, out var local))
             return true;
 
         // Compare: max server version > local version?
-        return serverVersions.Max()! > local;
+        return serverVersions.Max() > local;
     }
 
     /// <summary>
@@ -100,8 +102,10 @@ public static class DownloadPlanBuilder
         if (assets == null) return DownloadPlan.Empty;
         var parsedClient = ParseVersion(clientVersion);
         if (parsedClient == null) return DownloadPlan.Empty;
+        var cv = parsedClient.Value;
 
         var parsedUpgrade = ParseVersion(upgradeClientVersion) ?? parsedClient;
+        var uv = parsedUpgrade.Value;
 
         // 1. Filter out frozen packages
         var active = assets
@@ -118,17 +122,16 @@ public static class DownloadPlanBuilder
         var candidates = active
             .Where(a =>
             {
-                var pv = ParseVersion(a.Version);
-                if (pv == null) return false;
+                if (!Semver.TryParse(a.Version, out var pv)) return false;
 
                 var localVersion = (a.AppType == (int)AppType.Upgrade)
-                    ? parsedUpgrade
-                    : parsedClient;
+                    ? uv
+                    : cv;
 
                 return pv > localVersion;
             })
             .Where(a => IsCompatible(a.MinClientVersion, clientVersion))
-            .OrderBy(a => ParseVersion(a.Version))
+            .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; })
             .ToList();
 
         if (candidates.Count == 0) return DownloadPlan.Empty;
@@ -142,14 +145,13 @@ public static class DownloadPlanBuilder
             .Where(a => a.IsCrossVersion)
             .Where(a =>
             {
-                var fromVer = ParseVersion(a.FromVersion);
-                if (fromVer == null) return false;
+                if (!Semver.TryParse(a.FromVersion, out var fromVer)) return false;
                 var localVersion = (a.AppType == (int)AppType.Upgrade)
-                    ? parsedUpgrade
-                    : parsedClient;
+                    ? uv
+                    : cv;
                 return fromVer == localVersion;
             })
-            .OrderByDescending(a => ParseVersion(a.Version))
+            .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
             .FirstOrDefault();
 
         if (matchingCvp != null)
@@ -157,13 +159,13 @@ public static class DownloadPlanBuilder
             // CVP covers one AppType in a single hop. Still need chain packages
             // for other AppTypes, and for the same AppType beyond the CVP's target.
             var cvpAppType = matchingCvp.AppType;
-            var cvpVersion = ParseVersion(matchingCvp.Version);
+            Semver.TryParse(matchingCvp.Version, out var cvpVersion);
             var planAssets = new List<DownloadAsset> { matchingCvp };
             planAssets.AddRange(candidates
                 .Where(a => !a.IsCrossVersion)
                 .Where(a => a.AppType != cvpAppType
-                            || (cvpVersion != null && ParseVersion(a.Version) > cvpVersion))
-                .OrderBy(a => ParseVersion(a.Version)));
+                            || (Semver.TryParse(a.Version, out var av) && av > cvpVersion))
+                .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; }));
             return new DownloadPlan(planAssets, isForcibly);
         }
 
@@ -197,15 +199,15 @@ public static class DownloadPlanBuilder
         var min = ParseVersion(minClientVersion);
         var cur = ParseVersion(currentVersion);
         if (min == null || cur == null) return true;
-        return cur >= min;
+        return cur.Value >= min.Value;
     }
 
     /// <summary>Parses a version string and returns null if the string cannot be parsed.</summary>
     /// <param name="version">The version string to parse.</param>
-    /// <returns>A parsed <see cref="Version"/> object, or null if parsing fails.</returns>
-    internal static Version? ParseVersion(string? version)
+    /// <returns>A parsed <see cref="SemVersion"/> value, or null if parsing fails.</returns>
+    internal static SemVersion? ParseVersion(string? version)
     {
         if (string.IsNullOrWhiteSpace(version)) return null;
-        return Version.TryParse(version, out var v) ? v : null;
+        return Semver.TryParse(version, out var v) ? v : null;
     }
 }

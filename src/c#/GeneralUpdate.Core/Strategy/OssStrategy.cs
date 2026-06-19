@@ -12,6 +12,7 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Orchestrators;
+using GeneralUpdate.Core.Utilities;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -350,7 +351,12 @@ public class OssStrategy : IStrategy
                     throw new InvalidOperationException("No versions found in Oss configuration.");
 
                 assets = versions.OrderBy(v => v.PubTime)
-                    .Where(v => new Version(v.Version ?? "0.0.0") > new Version(_configInfo.ClientVersion))
+                    .Where(v =>
+                    {
+                        var sv = ParseSemVer(v.Version);
+                        var cv = ParseSemVer(_configInfo.ClientVersion);
+                        return sv != null && cv != null && sv.Value > cv.Value;
+                    })
                     .Select(v =>
                     {
                         if (string.IsNullOrWhiteSpace(v.Url))
@@ -366,12 +372,17 @@ public class OssStrategy : IStrategy
             if (assets.Count == 0)
                 throw new InvalidOperationException("No assets to download.");
 
-            // Compute LastVersion deterministically via Version comparison
+            // Compute LastVersion deterministically via SemVer comparison
             // so hooks see the correct TargetVersion regardless of source ordering.
-            _configInfo.LastVersion = assets
-                .Select(a => new Version(a.Version))
-                .Max()!
-                .ToString();
+            // Guard: if ALL versions are unparseable, fall back to "0.0.0".
+            var parsedVersions = assets
+                .Select(a => Semver.TryParse(a.Version, out var sv) ? (SemVersion?)sv : null)
+                .Where(sv => sv != null)
+                .Select(sv => sv!.Value)
+                .ToList();
+            _configInfo.LastVersion = parsedVersions.Count > 0
+                ? parsedVersions.Max().ToString()
+                : "0.0.0";
             ctx = BuildUpdateContext();
 
             // Hooks: allow cancellation before download. Called after assets are
@@ -483,15 +494,15 @@ public class OssStrategy : IStrategy
     /// <param name="serverVersion">The latest server version string.</param>
     /// <returns>Returns true if the server version is higher than the client version; otherwise false.</returns>
     /// <remarks>
-    /// This method attempts to parse both version strings as <c>Version</c> types for comparison.
+    /// This method attempts to parse both version strings as SemVer 2.0 for comparison.
     /// If either version string is null, empty, or cannot be parsed, returns false indicating no upgrade is needed.
     /// </remarks>
     private static bool IsOssUpgrade(string clientVersion, string serverVersion)
     {
         if (string.IsNullOrWhiteSpace(clientVersion) || string.IsNullOrWhiteSpace(serverVersion))
             return false;
-        return Version.TryParse(clientVersion, out var cv)
-            && Version.TryParse(serverVersion, out var sv)
+        return Semver.TryParse(clientVersion, out var cv)
+            && Semver.TryParse(serverVersion, out var sv)
             && cv < sv;
     }
 
@@ -653,6 +664,14 @@ public class OssStrategy : IStrategy
             await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Lightweight SemVer parse guard that returns null (not an exception) for unparseable strings.
+    /// </summary>
+    private static SemVersion? ParseSemVer(string? version)
+    {
+        return Semver.TryParse(version, out var sv) ? sv : null;
     }
 
     #endregion

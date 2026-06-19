@@ -108,7 +108,7 @@ namespace GeneralUpdate.Core.Configuration
         ///     Comparing <c>ClientVersion</c> against the latest version from the server determines whether the
         ///     main application needs updating (<see cref="UpdateContext.IsMainUpdate" />).
         /// </remarks>
-        public string ClientVersion { get; set; } = "1.0.0.0";
+        public string ClientVersion { get; set; } = "1.0.0";
 
         /// <summary>
         ///     A list of specific files to exclude from the update process.

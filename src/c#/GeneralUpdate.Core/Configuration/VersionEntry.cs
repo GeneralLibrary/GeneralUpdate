@@ -84,7 +84,7 @@ public class VersionEntry : VersionIdentity
     public override string? Url { get; set; }
 
     /// <summary>
-    ///     The version number string of this version information (e.g., "1.0.0.1").
+    ///     The version number string of this version information (e.g., "1.0.0").
     /// </summary>
     [JsonPropertyName("version")]
     public override string? Version { get; set; }

@@ -22,7 +22,7 @@ public abstract class VersionIdentity
     /// <summary>Download URL of the update package.</summary>
     public virtual string? Url { get; set; }
 
-    /// <summary>Version number string (e.g., "1.0.0.1").</summary>
+    /// <summary>Version number string (e.g., "1.0.0").</summary>
     public virtual string? Version { get; set; }
 
     /// <summary>Application type identifier.</summary>

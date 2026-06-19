@@ -26,7 +26,7 @@ public class ExtensionExample
             ServerUrl = "http://127.0.0.1:7391/Extension",
             //Scheme = "Bearer",
             //Token = "your-token-here",
-            HostVersion = "1.0.0.0",
+            HostVersion = "1.0.0",
             ExtensionsDirectory = "./extensions"
         };
 

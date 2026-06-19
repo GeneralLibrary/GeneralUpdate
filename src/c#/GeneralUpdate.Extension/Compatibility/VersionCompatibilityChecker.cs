@@ -5,6 +5,7 @@ using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Dependencies;
 using GeneralUpdate.Extension.Communication;
 using GeneralUpdate.Extension.Common.Models;
+using GeneralUpdate.Extension.Utilities;
 
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ using System.IO;
 namespace GeneralUpdate.Extension.Compatibility;
 
 /// <summary>
-/// Version compatibility checker
+/// Version compatibility checker — uses SemVer 2.0 for all comparisons.
 /// </summary>
 public class VersionCompatibilityChecker : IVersionCompatibilityChecker
 {
@@ -28,7 +29,7 @@ public class VersionCompatibilityChecker : IVersionCompatibilityChecker
             return true; // No version constraint
         }
 
-        if (!Version.TryParse(hostVersion, out var host))
+        if (!Semver.TryParse(hostVersion, out var host))
         {
             return false; // Invalid host version
         }
@@ -36,7 +37,7 @@ public class VersionCompatibilityChecker : IVersionCompatibilityChecker
         // Check minimum version
         if (!string.IsNullOrWhiteSpace(extension.MinHostVersion))
         {
-            if (!Version.TryParse(extension.MinHostVersion, out var minVersion))
+            if (!Semver.TryParse(extension.MinHostVersion, out var minVersion))
             {
                 return false;
             }
@@ -50,7 +51,7 @@ public class VersionCompatibilityChecker : IVersionCompatibilityChecker
         // Check maximum version
         if (!string.IsNullOrWhiteSpace(extension.MaxHostVersion))
         {
-            if (!Version.TryParse(extension.MaxHostVersion, out var maxVersion))
+            if (!Semver.TryParse(extension.MaxHostVersion, out var maxVersion))
             {
                 return false;
             }
@@ -77,16 +78,18 @@ public class VersionCompatibilityChecker : IVersionCompatibilityChecker
             {
                 Extension = e,
                 IsCompatible = IsCompatible(e, hostVersion),
-                HasValidVersion = Version.TryParse(e.Version, out var v),
+                HasValidVersion = Semver.TryParse(e.Version, out var v),
                 ParsedVersion = v
             })
             .ToList();
 
-        // Filter to compatible only, then sort: valid versions descending, then unknown versions
+        // Filter to compatible only, then sort: valid versions descending, then unknown versions.
+        // Use Semver.Compare for proper SemVer 2.0 ordering with prerelease support.
         var best = parsed
             .Where(x => x.IsCompatible)
             .OrderBy(x => x.HasValidVersion ? 0 : 1)          // valid versions first
-            .ThenByDescending(x => x.HasValidVersion ? x.ParsedVersion : null)  // highest version first
+            .ThenByDescending(x => x.HasValidVersion ? x.ParsedVersion.ToString() : null,
+                SemverComparer.Instance)                      // highest version first
             .FirstOrDefault();
 
         return best?.Extension;
