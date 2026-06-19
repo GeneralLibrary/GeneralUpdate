@@ -145,13 +145,15 @@ namespace GeneralUpdate.Core.FileSystem
         /// <typeparam name="T">The type of the object to serialize. Must be a reference type.</typeparam>
         /// <param name="targetPath">The full path of the target JSON file.</param>
         /// <param name="obj">The object instance to serialize.</param>
-        /// <param name="typeInfo">JSON type info metadata for source generator serialization support. Required for Native AOT compatibility.</param>
+        /// <param name="typeInfo">JSON type info metadata for source generator serialization support. When <c>null</c>, the reflection-based serializer is used (not AOT-compatible); pass a generated context for Native AOT support.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="targetPath"/> does not contain a valid directory path.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="typeInfo"/> is null.</exception>
         /// <remarks>
         /// If the directory of the target file does not exist, it will be created automatically.
+        /// When <paramref name="typeInfo"/> is null, this method falls back to the reflection-based serializer
+        /// which is not compatible with Native AOT. For AOT compilation, always pass a generated
+        /// <see cref="JsonTypeInfo{T}"/> instance.
         /// </remarks>
-        public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T> typeInfo) where T : class
+        public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
                              throw new ArgumentException("invalid path", nameof(targetPath));
@@ -159,6 +161,11 @@ namespace GeneralUpdate.Core.FileSystem
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
 
+#if NET
+            ArgumentNullException.ThrowIfNull(typeInfo);
+#else
+            if (typeInfo == null) throw new ArgumentNullException(nameof(typeInfo));
+#endif
             var jsonString = JsonSerializer.Serialize(obj, typeInfo);
             File.WriteAllText(targetPath, jsonString);
         }
@@ -169,14 +176,21 @@ namespace GeneralUpdate.Core.FileSystem
         /// </summary>
         /// <typeparam name="T">The target type for deserialization. Must be a reference type.</typeparam>
         /// <param name="path">The full path of the JSON file.</param>
-        /// <param name="typeInfo">JSON type info metadata for source generator deserialization support. Required for Native AOT compatibility.</param>
+        /// <param name="typeInfo">JSON type info metadata for source generator deserialization support. When <c>null</c>, the reflection-based serializer is used (not AOT-compatible); pass a generated context for Native AOT support.</param>
         /// <returns>The deserialized object instance; returns <c>default</c> if the file does not exist.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="typeInfo"/> is null.</exception>
         /// <remarks>
         /// If the file does not exist, no exception is thrown and <c>null</c> is returned.
+        /// When <paramref name="typeInfo"/> is null, this method falls back to the reflection-based serializer
+        /// which is not compatible with Native AOT. For AOT compilation, always pass a generated
+        /// <see cref="JsonTypeInfo{T}"/> instance.
         /// </remarks>
-        public static T? GetJson<T>(string path, JsonTypeInfo<T> typeInfo) where T : class
+        public static T? GetJson<T>(string path, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
+#if NET
+            ArgumentNullException.ThrowIfNull(typeInfo);
+#else
+            if (typeInfo == null) throw new ArgumentNullException(nameof(typeInfo));
+#endif
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);

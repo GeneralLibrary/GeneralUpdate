@@ -138,7 +138,7 @@ namespace GeneralUpdate.Core.Configuration
                 }
 
                 var json = File.ReadAllText(configPath);
-                var config = JsonSerializer.Deserialize(json, JsonContext.HttpParameterJsonContext.Default.UpdateRequest);
+                var config = JsonSerializer.Deserialize(json, JsonContext.UpdateRequestConfigJsonContext.Default.UpdateRequest);
 
                 if (config == null)
                 {

@@ -351,21 +351,20 @@ namespace GeneralUpdate.Core.Configuration
         /// <remarks>
         /// <para><b>Two-phase lookup:</b></para>
         /// <para>
-        /// <b>Phase 1</b> — Looks up the registered factory delegate in the
+        /// <b>Phase 1</b> — Looks up a pre-existing singleton instance in the
+        /// <c>_instances</c> dictionary (registered via the instance overload
+        /// such as <c>HttpAuth(provider)</c>). Singleton instances take precedence.<br/>
+        /// <b>Phase 2</b> — If not found, looks up the registered factory delegate in the
         /// <c>_extensionFactories</c> dictionary by interface type. If found, the factory
-        /// is invoked via <c>new T()</c> constraint, avoiding runtime reflection.<br/>
-        /// <b>Phase 2</b> — If not found in <c>_extensionFactories</c>, looks up an existing
-        /// singleton instance in the <c>_instances</c> dictionary.
+        /// is invoked via <c>new T()</c> constraint, avoiding runtime reflection.
         /// </para>
-        /// <para>Singleton instances in <c>_instances</c> take precedence over lazy
-        /// registrations in <c>_extensions</c>.</para>
         /// </remarks>
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
-            if (_extensionFactories.TryGetValue(typeof(TExtension), out var factory))
-                return factory() as TExtension;
             if (_instances.TryGetValue(typeof(TExtension), out var instance))
                 return instance as TExtension;
+            if (_extensionFactories.TryGetValue(typeof(TExtension), out var factory))
+                return factory() as TExtension;
             return null;
         }
 

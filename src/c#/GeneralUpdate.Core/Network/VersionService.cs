@@ -356,7 +356,11 @@ namespace GeneralUpdate.Core.Network
             var r = await _sharedClient.SendAsync(req, cts.Token).ConfigureAwait(false);
             r.EnsureSuccessStatusCode();
             var rj = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return JsonSerializer.Deserialize(rj, ti);
+            var result = JsonSerializer.Deserialize(rj, ti);
+            if (result is null)
+                throw new InvalidOperationException(
+                    $"Server returned JSON 'null' for type '{typeof(T).Name}' at URL '{url}'.");
+            return result;
         }
 
         /// <summary>
