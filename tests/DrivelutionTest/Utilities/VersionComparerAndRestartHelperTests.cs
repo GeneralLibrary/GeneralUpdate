@@ -212,17 +212,15 @@ public class VersionComparerTests
     }
 
     /// <summary>
-    /// Tests prerelease comparison with large numeric prerelease identifiers.
-    /// Note: values exceeding int.MaxValue are treated as invalid by the aligned
-    /// <see cref="Semver"/>.
+    /// Tests prerelease comparison with very large numeric prerelease identifiers.
+    /// These are valid per SemVer 2.0 — prerelease identifiers are compared as long.
     /// </summary>
     [Fact]
-    public void Compare_PrereleaseWithLargeNumbers_AreInvalid()
+    public void Compare_PrereleaseWithLargeNumbers_ComparesCorrectly()
     {
-        // These values exceed int.MaxValue. The aligned Semver rejects them as invalid,
-        // so Compare returns 0 (both unparseable).
+        // Prerelease "999999999999" > "0" (both fit in long)
         var result = VersionComparer.Compare("1.0.0-999999999999", "1.0.0-0");
-        Assert.Equal(0, result);
+        Assert.True(result > 0);
     }
 
     /// <summary>
