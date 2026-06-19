@@ -102,8 +102,10 @@ public static class DownloadPlanBuilder
         if (assets == null) return DownloadPlan.Empty;
         var parsedClient = ParseVersion(clientVersion);
         if (parsedClient == null) return DownloadPlan.Empty;
+        var cv = parsedClient.Value;
 
         var parsedUpgrade = ParseVersion(upgradeClientVersion) ?? parsedClient;
+        var uv = parsedUpgrade.Value;
 
         // 1. Filter out frozen packages
         var active = assets
@@ -123,8 +125,8 @@ public static class DownloadPlanBuilder
                 if (!Semver.TryParse(a.Version, out var pv)) return false;
 
                 var localVersion = (a.AppType == (int)AppType.Upgrade)
-                    ? parsedUpgrade
-                    : parsedClient;
+                    ? uv
+                    : cv;
 
                 return pv > localVersion;
             })
@@ -145,8 +147,8 @@ public static class DownloadPlanBuilder
             {
                 if (!Semver.TryParse(a.FromVersion, out var fromVer)) return false;
                 var localVersion = (a.AppType == (int)AppType.Upgrade)
-                    ? parsedUpgrade
-                    : parsedClient;
+                    ? uv
+                    : cv;
                 return fromVer == localVersion;
             })
             .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
@@ -197,7 +199,7 @@ public static class DownloadPlanBuilder
         var min = ParseVersion(minClientVersion);
         var cur = ParseVersion(currentVersion);
         if (min == null || cur == null) return true;
-        return cur >= min;
+        return cur.Value >= min.Value;
     }
 
     /// <summary>Parses a version string and returns null if the string cannot be parsed.</summary>
