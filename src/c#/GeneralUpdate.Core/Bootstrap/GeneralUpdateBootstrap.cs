@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -516,15 +517,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var downloadExecutor = ResolveExtension<Download.Abstractions.IDownloadExecutor>();
 
         Func<string?, Download.Abstractions.IDownloadPipeline>? downloadPipelineFactory = null;
-        var pipelineType = ResolveExtensionType<Download.Abstractions.IDownloadPipeline>();
-        if (pipelineType != null)
-        {
-            var stringCtor = pipelineType.GetConstructor([typeof(string)]);
-            if (stringCtor != null)
-                downloadPipelineFactory = hash => (Download.Abstractions.IDownloadPipeline)stringCtor.Invoke([hash]);
-            else
-                downloadPipelineFactory = _ => (Download.Abstractions.IDownloadPipeline)Activator.CreateInstance(pipelineType);
-        }
+        var downloadPipeline = ResolveExtension<Download.Abstractions.IDownloadPipeline>();
+        if (downloadPipeline != null)
+            downloadPipelineFactory = _ => downloadPipeline;
 
         switch (roleStrategy)
         {
