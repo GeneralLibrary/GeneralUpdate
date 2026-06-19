@@ -261,6 +261,22 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         /// <summary>
+        /// Registers a pre-constructed authentication provider instance.
+        /// Use this overload when the provider requires constructor parameters
+        /// (e.g. Basic Auth with username/password, or a custom provider with
+        /// a tenant header).  For parameterless providers, prefer <see cref="HttpAuth{T}"/>.
+        /// </summary>
+        /// <param name="provider">The authentication provider instance.</param>
+        /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="provider"/> is null.</exception>
+        public TBootstrap HttpAuth(Security.IHttpAuthProvider provider)
+        {
+            _instances[typeof(Security.IHttpAuthProvider)] =
+                provider ?? throw new ArgumentNullException(nameof(provider));
+            return (TBootstrap)this;
+        }
+
+        /// <summary>
         /// Registers an HTTP authentication provider for attaching authentication credentials
         /// to download requests.
         /// </summary>

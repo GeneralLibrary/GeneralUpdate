@@ -231,5 +231,19 @@ namespace GeneralUpdate.Core.Configuration
         ///     The unique product identifier for the current application.
         /// </summary>
         public string ProductId { get; set; }
+
+        /// <summary>
+        ///     Custom HTTP headers to include in every request made by the update framework
+        ///     (both version validation and status reporting).
+        ///     Headers are applied after the authentication provider, so they can supplement
+        ///     or override authentication headers if needed.
+        /// </summary>
+        /// <remarks>
+        ///     Example: add <c>["X-Tenant-Id"] = "default-tenant"</c> for multi-tenant servers.
+        ///     Headers set here are synced to <see cref="Network.HttpClientProvider.ExtraHeaders"/>
+        ///     at configuration time.
+        /// </remarks>
+        /// </remarks>
+        public Dictionary<string, string> CustomHeaders { get; set; }
     }
 }

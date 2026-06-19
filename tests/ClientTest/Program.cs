@@ -1,9 +1,12 @@
+using System.Collections.Generic;
+
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Hooks;
+using GeneralUpdate.Core.Security;
 
 try
 {
@@ -47,7 +50,10 @@ static async Task RunUpdateTestAsync()
         ?? "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
 
     Console.WriteLine($"UpdateUrl: {updateUrl}");
+    Console.WriteLine($"ReportUrl: {reportUrl}");
+    Console.WriteLine($"TenantId: default-tenant");
     Console.WriteLine();
+
     Console.WriteLine("NOTE: Configure the GeneralSpacestation server with");
     Console.WriteLine("      the desired test data before running.");
     Console.WriteLine("      - Chain data:      TbPackets (IsCrossVersion=false)");
@@ -67,7 +73,19 @@ static async Task RunUpdateTestAsync()
     //    - Both:       apply upgrade packages → IPC → launch Upgrade process → exit
     //    - None:       no-op
     await new GeneralUpdateBootstrap()
-        .SetSource(updateUrl, appSecretKey, reportUrl)
+        .SetConfig(new UpdateRequest
+        {
+            UpdateUrl = updateUrl,
+            AppSecretKey = appSecretKey,
+            ReportUrl = reportUrl,
+            AuthScheme = AuthScheme.Basic,
+            BasicUsername = "test",
+            BasicPassword = "test",
+            CustomHeaders = new Dictionary<string, string>
+            {
+                ["X-Tenant-Id"] = "default-tenant"
+            }
+        })
         .SetOption(Option.AppType, AppType.Client)
         .Hooks<ClientTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
