@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Download.Reporting;
 
@@ -111,11 +112,13 @@ public class HttpUpdateReporter : IUpdateReporter
 
     /// <summary>
     /// Parameterless constructor required by the extension resolution mechanism.
-    /// Uses a default HttpClient and empty ReportUrl (no-op until configured).
+    /// Uses the shared <see cref="HttpClientProvider.Shared"/> instance and empty ReportUrl
+    /// (no-op until configured). The shared HttpClient honours the global SSL policy set
+    /// via <see cref="HttpClientProvider.SetSslValidationPolicy"/>.
     /// </summary>
     public HttpUpdateReporter()
     {
-        _client = new HttpClient();
+        _client = HttpClientProvider.Shared;
         _reportUrl = string.Empty;
     }
 
@@ -141,6 +144,11 @@ public class HttpUpdateReporter : IUpdateReporter
             var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Apply the global authentication provider (if one was set via
+            // VersionService.SetDefaultAuthProvider or HttpClientProvider.DefaultAuthProvider)
+            // so that report requests carry the same credentials as version validation requests.
+            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
 
             await _client.SendAsync(request, token).ConfigureAwait(false);
         }

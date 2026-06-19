@@ -14,6 +14,7 @@ using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Network;
 using GeneralUpdate.Differential.Differ;
 
 namespace GeneralUpdate.Core;
@@ -197,6 +198,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     {
         configInfo.Validate();
         _configInfo = ConfigurationMapper.MapToUpdateContext(configInfo);
+
+        // Sync custom headers to the global HTTP client so they are applied
+        // to every request (Verification + Report) without manual extra setup.
+        if (_configInfo.CustomHeaders is { Count: > 0 })
+        {
+            foreach (var kv in _configInfo.CustomHeaders)
+                HttpClientProvider.ExtraHeaders[kv.Key] = kv.Value;
+        }
 
         var appType = GetOption(Option.AppType);
         if (appType != AppType.Upgrade)

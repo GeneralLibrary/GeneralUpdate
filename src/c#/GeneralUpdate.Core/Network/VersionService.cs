@@ -66,11 +66,10 @@ namespace GeneralUpdate.Core.Network
     {
         private static readonly HttpClient _sharedClient;
         private static volatile ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
-        private static IHttpAuthProvider? _globalAuthProvider;
 
-        private readonly IHttpAuthProvider _auth;
+        private readonly IHttpAuthProvider _authProvider;
         private readonly TimeSpan _timeout;
-        private readonly int _maxRetries;
+        private readonly int _maxRetryAttempts;
 
         /// <summary>
         /// Static constructor: initializes the static members of <see cref="VersionService"/>.
@@ -111,18 +110,25 @@ namespace GeneralUpdate.Core.Network
         /// Sets the global default HTTP authentication provider.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// Delegates to <see cref="HttpClientProvider.DefaultAuthProvider"/> so that
+        /// <see cref="HttpUpdateReporter"/> and other components using
+        /// <see cref="HttpClientProvider.Shared"/> share the same global authentication.
+        /// </para>
+        /// <para>
         /// When a global authentication provider is set, all requests made via the static APIs
         /// (<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
         /// and <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>)
         /// will preferentially use this provider, overriding the authentication instance
         /// created by <see cref="HttpAuthProviderFactory.Create"/>.
+        /// </para>
         /// <para>
         /// Passing null clears the global authentication provider, reverting to the factory method.
         /// </para>
         /// </remarks>
         /// <param name="provider">The global authentication provider instance, or null to clear the global configuration.</param>
         public static void SetDefaultAuthProvider(IHttpAuthProvider? provider)
-            => _globalAuthProvider = provider;
+            => HttpClientProvider.DefaultAuthProvider = provider;
 
         private static bool SharedCertValidation(HttpRequestMessage m, X509Certificate2? c,
             X509Chain? ch, SslPolicyErrors e)
@@ -134,16 +140,16 @@ namespace GeneralUpdate.Core.Network
         /// <remarks>
         /// Instance methods (<see cref="ValidateAsync"/> and <see cref="ReportAsync"/>) use
         /// this instance's authentication provider and timeout settings.
-        /// When <paramref name="auth"/> is null, <see cref="NoOpAuthProvider"/> (no authentication) is used by default.
+        /// When <paramref name="authProvider"/> is null, <see cref="NoOpAuthProvider"/> (no authentication) is used by default.
         /// </remarks>
-        /// <param name="auth">The HTTP authentication provider. If null, <see cref="NoOpAuthProvider"/> is used.</param>
-        /// <param name="timeout">The request timeout. If null, defaults to 30 seconds.</param>
-        /// <param name="maxRetries">The maximum number of retry attempts. Defaults to 3.</param>
-        public VersionService(IHttpAuthProvider? auth = null, TimeSpan? timeout = null, int maxRetries = 3)
+        /// <param name="authProvider">The HTTP authentication provider. If null, <see cref="NoOpAuthProvider"/> is used.</param>
+        /// <param name="requestTimeout">The request timeout. If null, defaults to 30 seconds.</param>
+        /// <param name="maxRetryAttempts">The maximum number of retry attempts. Defaults to 3.</param>
+        public VersionService(IHttpAuthProvider? authProvider = null, TimeSpan? requestTimeout = null, int maxRetryAttempts = 3)
         {
-            _auth = auth ?? new NoOpAuthProvider();
-            _timeout = timeout ?? TimeSpan.FromSeconds(30);
-            _maxRetries = maxRetries;
+            _authProvider = authProvider ?? new NoOpAuthProvider();
+            _timeout = requestTimeout ?? TimeSpan.FromSeconds(30);
+            _maxRetryAttempts = maxRetryAttempts;
         }
 
         /// <summary>
@@ -185,7 +191,7 @@ namespace GeneralUpdate.Core.Network
             AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, Security.AuthScheme authScheme = Security.AuthScheme.Hmac, string basicUsername = null, string basicPassword = null, CancellationToken ct = default)
         {
-            var auth = _globalAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey, authScheme, basicUsername, basicPassword);
+            var auth = HttpClientProvider.DefaultAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey, authScheme, basicUsername, basicPassword);
             return new VersionService(auth).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
         }
 
@@ -288,9 +294,9 @@ namespace GeneralUpdate.Core.Network
             for (int attempt = 0; ; attempt++)
             {
                 try { return await SendAsync<T>(url, p, ti, t).ConfigureAwait(false); }
-                catch (Exception ex) when (attempt < _maxRetries - 1 && IsRetryable(ex))
+                catch (Exception ex) when (attempt < _maxRetryAttempts - 1 && ShouldRetry(ex))
                 {
-                    GeneralTracer.Warn($"HTTP attempt {attempt + 1}/{_maxRetries} failed, retrying. {ex.Message}");
+                    GeneralTracer.Warn($"HTTP attempt {attempt + 1}/{_maxRetryAttempts} failed, retrying. {ex.Message}");
                     await Task.Delay(TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 1000), t).ConfigureAwait(false);
                 }
             }
@@ -343,7 +349,7 @@ namespace GeneralUpdate.Core.Network
             req.Headers.Accept.ParseAdd("application/json");
             var json = JsonSerializer.Serialize(p, HttpParameterJsonContext.Default.DictionaryStringObject);
             req.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            await _auth.ApplyAuthAsync(req, t).ConfigureAwait(false);
+            await _authProvider.ApplyAuthAsync(req, t).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(t);
             cts.CancelAfter(_timeout);
@@ -354,7 +360,7 @@ namespace GeneralUpdate.Core.Network
         }
 
         /// <summary>
-        /// Determines whether an exception is retryable.
+        /// Determines whether an exception should be retried.
         /// </summary>
         /// <param name="ex">The exception to evaluate.</param>
         /// <returns><c>true</c> if the exception is retryable; otherwise <c>false</c>.</returns>
@@ -375,7 +381,7 @@ namespace GeneralUpdate.Core.Network
         /// </list>
         /// </para>
         /// </remarks>
-        private static bool IsRetryable(Exception ex)
+        private static bool ShouldRetry(Exception ex)
         {
             if (ex is OperationCanceledException) return false;
             if (ex is TaskCanceledException or TimeoutException or System.IO.IOException) return true;

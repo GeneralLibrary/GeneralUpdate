@@ -102,6 +102,7 @@ namespace GeneralUpdate.Core.Configuration
             target.UpdateUrl = source.UpdateUrl;
             target.UpgradeClientVersion = source.UpgradeClientVersion;
             target.ProductId = source.ProductId;
+            target.CustomHeaders = source.CustomHeaders;
 
             return target;
         }
