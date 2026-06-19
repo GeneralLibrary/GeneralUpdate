@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace GeneralUpdate.Drivelution.Core.Utilities;
@@ -151,9 +152,9 @@ public static class Semver
         var dashIdx = input.IndexOf('-');
         if (dashIdx < 0) return false;
 
-        var pre = dashIdx + 1 < input.Length ? input[(dashIdx + 1)..] : string.Empty;
+        var pre = dashIdx + 1 < input.Length ? input.Substring(dashIdx + 1) : string.Empty;
         var plusIdx = pre.IndexOf('+');
-        if (plusIdx >= 0) pre = pre[..plusIdx];
+        if (plusIdx >= 0) pre = pre.Substring(0, plusIdx);
 
         if (pre.Length == 0) return false;
 
