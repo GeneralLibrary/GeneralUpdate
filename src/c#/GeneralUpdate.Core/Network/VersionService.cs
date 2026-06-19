@@ -285,11 +285,11 @@ namespace GeneralUpdate.Core.Network
         /// <typeparam name="T">The deserialization target type for the response data.</typeparam>
         /// <param name="url">The target URL for the request.</param>
         /// <param name="p">The POST body parameter dictionary.</param>
-        /// <param name="ti">The JSON type info metadata for source generator (may be null, in which case reflection-based deserialization is used).</param>
+        /// <param name="ti">The JSON type info metadata for source generator. Required for Native AOT compatibility.</param>
         /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>The deserialized response data.</returns>
         private async Task<T> PostAsync<T>(string url, Dictionary<string, object> p,
-            JsonTypeInfo<T>? ti, CancellationToken t)
+            JsonTypeInfo<T> ti, CancellationToken t)
         {
             for (int attempt = 0; ; attempt++)
             {
@@ -339,11 +339,11 @@ namespace GeneralUpdate.Core.Network
         /// <typeparam name="T">The deserialization target type for the response data.</typeparam>
         /// <param name="url">The target URL for the request.</param>
         /// <param name="p">The POST body parameter dictionary.</param>
-        /// <param name="ti">The JSON type info metadata for source generator (may be null).</param>
+        /// <param name="ti">The JSON type info metadata for source generator. Required for Native AOT compatibility.</param>
         /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>The deserialized response data.</returns>
         private async Task<T> SendAsync<T>(string url, Dictionary<string, object> p,
-            JsonTypeInfo<T>? ti, CancellationToken t)
+            JsonTypeInfo<T> ti, CancellationToken t)
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, new Uri(url));
             req.Headers.Accept.ParseAdd("application/json");
@@ -356,7 +356,7 @@ namespace GeneralUpdate.Core.Network
             var r = await _sharedClient.SendAsync(req, cts.Token).ConfigureAwait(false);
             r.EnsureSuccessStatusCode();
             var rj = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return ti == null ? JsonSerializer.Deserialize<T>(rj) : JsonSerializer.Deserialize(rj, ti);
+            return JsonSerializer.Deserialize(rj, ti);
         }
 
         /// <summary>

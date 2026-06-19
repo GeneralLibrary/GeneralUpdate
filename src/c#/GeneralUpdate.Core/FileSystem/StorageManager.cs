@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -72,7 +72,7 @@ namespace GeneralUpdate.Core.FileSystem
         /// Example of setting: <c>StorageManager.BlackMatcher = new BlackMatcher(config);</c>
         /// </remarks>
         public static IBlackMatcher? BlackMatcher { get; set; }
-        
+
         private ComparisonResult ComparisonResult { get; set; }
 
         #region Public Methods
@@ -140,17 +140,18 @@ namespace GeneralUpdate.Core.FileSystem
 
         /// <summary>
         /// Serializes an object to JSON and writes it to the specified path.
+        /// Uses source generator via <c>JsonTypeInfo</c> to avoid runtime reflection in AOT compilation scenarios.
         /// </summary>
         /// <typeparam name="T">The type of the object to serialize. Must be a reference type.</typeparam>
         /// <param name="targetPath">The full path of the target JSON file.</param>
         /// <param name="obj">The object instance to serialize.</param>
-        /// <param name="typeInfo">Optional JSON type info metadata for source generator serialization support.</param>
+        /// <param name="typeInfo">JSON type info metadata for source generator serialization support. Required for Native AOT compatibility.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="targetPath"/> does not contain a valid directory path.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="typeInfo"/> is null.</exception>
         /// <remarks>
         /// If the directory of the target file does not exist, it will be created automatically.
-        /// Supports source generator mode via <c>JsonTypeInfo</c>, which avoids runtime reflection in AOT compilation scenarios.
         /// </remarks>
-        public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T>? typeInfo = null) where T : class
+        public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T> typeInfo) where T : class
         {
             var folderPath = Path.GetDirectoryName(targetPath) ??
                              throw new ArgumentException("invalid path", nameof(targetPath));
@@ -158,31 +159,28 @@ namespace GeneralUpdate.Core.FileSystem
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
 
-            var jsonString = typeInfo != null ? JsonSerializer.Serialize(obj, typeInfo) : JsonSerializer.Serialize(obj);
+            var jsonString = JsonSerializer.Serialize(obj, typeInfo);
             File.WriteAllText(targetPath, jsonString);
         }
 
         /// <summary>
         /// Reads a JSON file from the specified path and deserializes it into the specified type.
+        /// Uses source generator via <c>JsonTypeInfo</c> to avoid runtime reflection in AOT compilation scenarios.
         /// </summary>
         /// <typeparam name="T">The target type for deserialization. Must be a reference type.</typeparam>
         /// <param name="path">The full path of the JSON file.</param>
-        /// <param name="typeInfo">Optional JSON type info metadata for source generator deserialization support.</param>
+        /// <param name="typeInfo">JSON type info metadata for source generator deserialization support. Required for Native AOT compatibility.</param>
         /// <returns>The deserialized object instance; returns <c>default</c> if the file does not exist.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="typeInfo"/> is null.</exception>
         /// <remarks>
         /// If the file does not exist, no exception is thrown and <c>null</c> is returned.
-        /// Supports source generator mode via <c>JsonTypeInfo</c>.
         /// </remarks>
-        public static T? GetJson<T>(string path, JsonTypeInfo<T>? typeInfo = null) where T : class
+        public static T? GetJson<T>(string path, JsonTypeInfo<T> typeInfo) where T : class
         {
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
-                if (typeInfo != null)
-                {
-                    return JsonSerializer.Deserialize(json, typeInfo);
-                }
-                return JsonSerializer.Deserialize<T>(json);
+                return JsonSerializer.Deserialize(json, typeInfo);
             }
 
             return default;
