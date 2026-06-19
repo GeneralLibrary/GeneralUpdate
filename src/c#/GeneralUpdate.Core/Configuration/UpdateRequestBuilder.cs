@@ -23,7 +23,7 @@ namespace GeneralUpdate.Core.Configuration
     ///         </code>
     ///     </para>
     ///     <para>
-    ///         The design is inspired by the zero-configuration pattern used in projects like Velopack.
+    ///         The design is inspired by the zero-configuration pattern used in projects.
     ///         The <c>Create()</c> static factory method loads settings from an <c>update_config.json</c> file,
     ///         which has the highest priority — all values specified in the configuration file override
     ///         programmatic settings.
