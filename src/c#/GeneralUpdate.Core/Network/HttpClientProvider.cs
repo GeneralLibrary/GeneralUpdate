@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -25,6 +25,7 @@ namespace GeneralUpdate.Core.Network;
 /// The global <see cref="IHttpAuthProvider"/> set via <see cref="DefaultAuthProvider"/> is
 /// applied by <see cref="ApplyAuthAsync"/> so that components like <see cref="HttpUpdateReporter"/>
 /// participate in the same authentication scheme as <see cref="VersionService"/>.
+/// Extra headers set via <see cref="ExtraHeaders"/> are applied after the auth provider.
 /// </para>
 /// </remarks>
 public static class HttpClientProvider
@@ -32,6 +33,15 @@ public static class HttpClientProvider
     private static ISslValidationPolicy _sslPolicy = new StrictSslValidationPolicy();
     private static IHttpAuthProvider? _defaultAuthProvider;
     private static readonly HttpClient _shared;
+
+    // Headers that belong on HttpContentMessage.Headers, not HttpRequestHeaders.
+    // Setting them via request.Headers throws InvalidOperationException.
+    private static readonly HashSet<string> ContentHeaderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Content-Type", "Content-Length", "Content-Encoding", "Content-Language",
+        "Content-Location", "Content-Disposition", "Content-Range", "Content-MD5",
+        "Last-Modified", "Expires", "Allow"
+    };
 
     static HttpClientProvider()
     {
@@ -104,6 +114,15 @@ public static class HttpClientProvider
     /// to the specified request. When no global provider is configured,
     /// the auth step is a no-op.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Extra headers (see <see cref="ExtraHeaders"/>) are applied after the auth provider,
+    /// so they can supplement authentication headers and also appear on their own when
+    /// no auth provider is configured. If an extra header key matches a content header
+    /// (e.g. <c>Content-Type</c>), it is set on <c>request.Content.Headers</c> instead
+    /// of <c>request.Headers</c> to avoid <see cref="InvalidOperationException"/>.
+    /// </para>
+    /// </remarks>
     /// <param name="request">The HTTP request message to authenticate.</param>
     /// <param name="token">A cancellation token for the authentication operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -114,8 +133,16 @@ public static class HttpClientProvider
 
         foreach (var kv in ExtraHeaders)
         {
-            request.Headers.Remove(kv.Key);
-            request.Headers.Add(kv.Key, kv.Value);
+            if (ContentHeaderNames.Contains(kv.Key) && request.Content != null)
+            {
+                request.Content.Headers.Remove(kv.Key);
+                request.Content.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+            }
+            else
+            {
+                request.Headers.Remove(kv.Key);
+                request.Headers.Add(kv.Key, kv.Value);
+            }
         }
     }
 }

@@ -89,6 +89,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private CancellationTokenSource? _cts;
     private DiffPipelineBuilder? _diffPipelineBuilder;
     private Silent.SilentPollOrchestrator? _silentOrchestrator;
+    private List<string> _syncedCustomHeaders = new();
 
     /// <summary>
     /// When silent mode is active, provides access to the background polling orchestrator.
@@ -201,10 +202,19 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         // Sync custom headers to the global HTTP client so they are applied
         // to every request (Verification + Report) without manual extra setup.
+        // First clear stale headers from a previous SetConfig call, then apply
+        // the current ones — avoids leaking headers between bootstrap instances.
+        var oldHeaders = _syncedCustomHeaders;
+        _syncedCustomHeaders = new List<string>();
+        foreach (var key in oldHeaders)
+            HttpClientProvider.ExtraHeaders.TryRemove(key, out _);
         if (_configInfo.CustomHeaders is { Count: > 0 })
         {
             foreach (var kv in _configInfo.CustomHeaders)
+            {
                 HttpClientProvider.ExtraHeaders[kv.Key] = kv.Value;
+                _syncedCustomHeaders.Add(kv.Key);
+            }
         }
 
         var appType = GetOption(Option.AppType);

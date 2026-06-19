@@ -45,7 +45,9 @@ static async Task RunUpdateTestAsync()
 
     var updateUrl = "http://localhost:7391/Upgrade/Verification";
     var reportUrl = "http://localhost:7391/Upgrade/Report";
-    var appSecretKey = "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
+    var appSecretKey =
+        Environment.GetEnvironmentVariable("APP_SECRET_KEY")
+        ?? "dfeb5833-975e-4afb-88f1-6278ee9aeff6";
 
     Console.WriteLine($"UpdateUrl: {updateUrl}");
     Console.WriteLine($"ReportUrl: {reportUrl}");
