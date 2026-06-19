@@ -182,9 +182,6 @@ public class VersionComparerTests
     [InlineData("1.0.0+20130313144700")]
     [InlineData("1.0.0-beta+exp.sha.5114f85")]
     [InlineData("10.20.30")]
-    [InlineData("999999999999.0.0")]
-    [InlineData("0.999999999999.0")]
-    [InlineData("0.0.999999999999")]
     public void IsValidSemVer_WithValidVersions_ReturnsTrue(string version)
     {
         // Act

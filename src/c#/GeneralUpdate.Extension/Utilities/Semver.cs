@@ -169,7 +169,11 @@ public static class Semver
 
     private static bool SysNumOverflow(string version)
     {
-        var tokens = version.Split('.', '-', '+');
+        // Only check the MAJOR.MINOR.PATCH triplet — prerelease and
+        // build metadata identifiers may be longer (e.g. timestamps).
+        var dashIdx = version.IndexOfAny(new[] { '-', '+' });
+        var core = dashIdx >= 0 ? version.Substring(0, dashIdx) : version;
+        var tokens = core.Split('.');
         foreach (var token in tokens)
         {
             if (token.Length == 0) continue;
