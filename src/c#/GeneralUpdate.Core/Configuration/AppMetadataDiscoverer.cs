@@ -30,7 +30,7 @@ public static class AppMetadataDiscoverer
         // otherwise the default blocks the manifest value and causes issues:
         //   • MainAppName "Client" → can't find the real executable
         //   • UpdateAppName "Update.exe" → can't launch the upgrade process
-        //   • ClientVersion "1.0.0.0" → endless update loop (version never updates)
+        //   • ClientVersion "1.0.0" → endless update loop (version never updates)
         if (!string.IsNullOrWhiteSpace(manifest.MainAppName))
             context.MainAppName = manifest.MainAppName;
         if (!string.IsNullOrWhiteSpace(manifest.UpdateAppName))

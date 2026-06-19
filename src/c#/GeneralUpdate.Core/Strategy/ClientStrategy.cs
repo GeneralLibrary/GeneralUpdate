@@ -13,6 +13,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Utilities;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -943,7 +944,7 @@ public class ClientStrategy : IStrategy
     /// <remarks>
     /// Reads the known failed version number from the <c>UpgradeFail</c> environment variable.
     /// If the <c>UpgradeFail</c> environment variable is empty or <paramref name="version"/> is empty, returns <c>false</c>.
-    /// Version comparison uses the semantic version comparison of the <see cref="Version"/> class.
+    /// Version comparison uses the semantic version comparison of the <see cref="Semver"/> class.
     /// This mechanism avoids repeatedly attempting known failed upgrades.
     /// </remarks>
     private bool CheckFail(string version)
@@ -951,8 +952,8 @@ public class ClientStrategy : IStrategy
         var fail = Environments.GetEnvironmentVariable("UpgradeFail");
         if (string.IsNullOrEmpty(fail) || string.IsNullOrEmpty(version))
             return false;
-        if (!Version.TryParse(fail, out var failVersion) ||
-            !Version.TryParse(version, out var versionParsed))
+        if (!Semver.TryParse(fail, out var failVersion) ||
+            !Semver.TryParse(version, out var versionParsed))
             return false;
         return failVersion >= versionParsed;
     }

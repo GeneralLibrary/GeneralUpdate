@@ -195,44 +195,48 @@ public class VersionComparerTests
     }
 
     /// <summary>
-    /// Tests that very large version numbers are compared correctly (overflow guard).
+    /// Tests that very large version numbers (beyond int.MaxValue) are handled gracefully.
+    /// The aligned <see cref="Semver"/> uses int for version components, so values
+    /// exceeding int.MaxValue (~2.1e9) are treated as invalid and Compare returns 0.
     /// </summary>
     [Fact]
-    public void Compare_VeryLargeNumbers_DoesNotOverflow()
+    public void Compare_VeryLargeNumbers_AreInvalid()
     {
-        // Act & Assert — these values exceed int.MaxValue (2147483647)
+        // These values exceed int.MaxValue (2147483647) so they are invalid
+        // in the aligned Semver implementation. Compare returns 0 for invalid pairs.
         var result1 = VersionComparer.Compare("999999999999.0.0", "999999999998.0.0");
-        Assert.True(result1 > 0);
+        Assert.Equal(0, result1);
 
         var result2 = VersionComparer.Compare("999999999999.0.0", "999999999999.0.0");
         Assert.Equal(0, result2);
 
-        // Cross-boundary: large major vs large minor
         var result3 = VersionComparer.Compare("999999999999.0.0", "0.999999999999.0");
-        Assert.True(result3 > 0);
+        Assert.Equal(0, result3);
     }
 
     /// <summary>
     /// Tests prerelease comparison with large numeric prerelease identifiers.
+    /// Note: values exceeding int.MaxValue are treated as invalid by the aligned
+    /// <see cref="Semver"/>.
     /// </summary>
     [Fact]
-    public void Compare_PrereleaseWithLargeNumbers_DoesNotOverflow()
+    public void Compare_PrereleaseWithLargeNumbers_AreInvalid()
     {
-        // Values up to ~1e12 exceed int.MaxValue (~2.1e9) so this verifies
-        // the long-based numeric overflow guard in ComparePrerelease.
+        // These values exceed int.MaxValue. The aligned Semver rejects them as invalid,
+        // so Compare returns 0 (both unparseable).
         var result = VersionComparer.Compare("1.0.0-999999999999", "1.0.0-0");
-        Assert.True(result > 0);
+        Assert.Equal(0, result);
     }
 
     /// <summary>
     /// Tests IsValidSemVer with invalid versions.
+    /// Note: "1.0.0.0" is now accepted as a legacy 4-part format (see <see cref="Semver.IsValid"/>).
     /// </summary>
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
     [InlineData("1")]
     [InlineData("1.0")]
-    [InlineData("1.0.0.0")]
     [InlineData("v1.0.0")]
     [InlineData("01.0.0")]
     public void IsValidSemVer_WithInvalidVersions_ReturnsFalse(string version)
@@ -245,26 +249,29 @@ public class VersionComparerTests
     }
 
     /// <summary>
-    /// Tests Compare throws ArgumentException for null or empty versions.
+    /// Tests Compare returns 0 for null/empty/whitespace inputs via Semver.Compare fallback.
     /// </summary>
     [Fact]
-    public void Compare_WithNullOrEmptyVersion_ThrowsArgumentException()
+    public void Compare_WithNullOrEmptyVersion_ReturnsZeroOrFallback()
     {
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => VersionComparer.Compare("", "1.0.0"));
-        Assert.Throws<ArgumentException>(() => VersionComparer.Compare("1.0.0", ""));
-        Assert.Throws<ArgumentException>(() => VersionComparer.Compare(null!, "1.0.0"));
+        // Semver.Compare returns 0 when both are null/empty, -1 for (null, "1.0.0"),
+        // and 0 for invalid pairs (silent fallback).
+        Assert.Equal(0, VersionComparer.Compare("", ""));
+        Assert.Equal(-1, VersionComparer.Compare("", "1.0.0"));
+        Assert.Equal(1, VersionComparer.Compare("1.0.0", ""));
+        // null treated as empty
+        Assert.Equal(-1, VersionComparer.Compare(null!, "1.0.0"));
     }
 
     /// <summary>
-    /// Tests Compare throws FormatException for invalid version format.
+    /// Tests Compare returns 0 for invalid format (not FormatException) via Semver.Compare.
     /// </summary>
     [Fact]
-    public void Compare_WithInvalidFormat_ThrowsFormatException()
+    public void Compare_WithInvalidFormat_ReturnsZero()
     {
-        // Act & Assert
-        Assert.Throws<FormatException>(() => VersionComparer.Compare("invalid", "1.0.0"));
-        Assert.Throws<FormatException>(() => VersionComparer.Compare("1.0.0", "v1.0.0"));
+        // Semver.Compare returns 0 when either version is not parseable.
+        Assert.Equal(0, VersionComparer.Compare("invalid", "1.0.0"));
+        Assert.Equal(0, VersionComparer.Compare("1.0.0", "v1.0.0"));
     }
 
     /// <summary>

@@ -50,7 +50,7 @@ public class UpdateConfigurationTests
     public void Ctor_ClientVersion_DefaultsToVersion()
     {
         var config = new TestableConfig();
-        Assert.Equal("1.0.0.0", config.ClientVersion);
+        Assert.Equal("1.0.0", config.ClientVersion);
     }
 
     [Fact]
