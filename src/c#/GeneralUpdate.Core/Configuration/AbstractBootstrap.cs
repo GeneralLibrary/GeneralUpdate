@@ -36,8 +36,11 @@ namespace GeneralUpdate.Core.Configuration
     {
         private readonly ConcurrentDictionary<Option, OptionValue> _options;
 
-        /// <summary>User-registered extension type mappings (interface type → implementation type), used for lazy instantiation.</summary>
+        /// <summary>User-registered extension type mappings (interface type → implementation type), used for type metadata queries.</summary>
         private readonly Dictionary<Type, Type> _extensions = new();
+
+        /// <summary>User-registered extension factory delegates (interface type → factory function), used for lazy instantiation.</summary>
+        private readonly Dictionary<Type, Func<object>> _extensionFactories = new();
 
         /// <summary>Registered singleton instances (e.g., <c>BlackPolicy</c>).</summary>
         private readonly Dictionary<Type, object> _instances = new();
@@ -95,7 +98,7 @@ namespace GeneralUpdate.Core.Configuration
         }
 
         // ═══════════ Extension point registration ═══════════
-        
+
         /// <summary>
         /// Registers an update status reporter for reporting update progress and results
         /// to a server (e.g., GeneralSpacestation).
@@ -115,6 +118,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
         {
             _extensions[typeof(Download.Reporting.IUpdateReporter)] = typeof(T);
+            _extensionFactories[typeof(Download.Reporting.IUpdateReporter)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -134,6 +138,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap Strategy<T>() where T : IStrategy, new()
         {
             _extensions[typeof(IStrategy)] = typeof(T);
+            _extensionFactories[typeof(IStrategy)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -157,6 +162,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap Hooks<T>() where T : Hooks.IUpdateHooks, new()
         {
             _extensions[typeof(Hooks.IUpdateHooks)] = typeof(T);
+            _extensionFactories[typeof(Hooks.IUpdateHooks)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -176,6 +182,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap SslPolicy<T>() where T : Security.ISslValidationPolicy, new()
         {
             _extensions[typeof(Security.ISslValidationPolicy)] = typeof(T);
+            _extensionFactories[typeof(Security.ISslValidationPolicy)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -196,6 +203,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadPolicy<T>() where T : Download.Abstractions.IDownloadPolicy, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadPolicy)] = typeof(T);
+            _extensionFactories[typeof(Download.Abstractions.IDownloadPolicy)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -215,6 +223,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadExecutor<T>() where T : Download.Abstractions.IDownloadExecutor, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadExecutor)] = typeof(T);
+            _extensionFactories[typeof(Download.Abstractions.IDownloadExecutor)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -237,6 +246,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadSource<T>() where T : Download.Abstractions.IDownloadSource, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadSource)] = typeof(T);
+            _extensionFactories[typeof(Download.Abstractions.IDownloadSource)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -257,6 +267,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadPipeline<T>() where T : Download.Abstractions.IDownloadPipeline, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadPipeline)] = typeof(T);
+            _extensionFactories[typeof(Download.Abstractions.IDownloadPipeline)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -293,6 +304,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap HttpAuth<T>() where T : Security.IHttpAuthProvider, new()
         {
             _extensions[typeof(Security.IHttpAuthProvider)] = typeof(T);
+            _extensionFactories[typeof(Security.IHttpAuthProvider)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -325,6 +337,7 @@ namespace GeneralUpdate.Core.Configuration
         public TBootstrap DownloadOrchestrator<T>() where T : Download.Abstractions.IDownloadOrchestrator, new()
         {
             _extensions[typeof(Download.Abstractions.IDownloadOrchestrator)] = typeof(T);
+            _extensionFactories[typeof(Download.Abstractions.IDownloadOrchestrator)] = () => new T();
             return (TBootstrap)this;
         }
 
@@ -338,21 +351,20 @@ namespace GeneralUpdate.Core.Configuration
         /// <remarks>
         /// <para><b>Two-phase lookup:</b></para>
         /// <para>
-        /// <b>Phase 1</b> — Looks up the registered implementation <c>Type</c> in the
-        /// <c>_extensions</c> dictionary by interface type. If found, a new instance is
-        /// created via <c>Activator.CreateInstance</c>.<br/>
-        /// <b>Phase 2</b> — If not found in <c>_extensions</c>, looks up an existing
-        /// singleton instance in the <c>_instances</c> dictionary.
+        /// <b>Phase 1</b> — Looks up a pre-existing singleton instance in the
+        /// <c>_instances</c> dictionary (registered via the instance overload
+        /// such as <c>HttpAuth(provider)</c>). Singleton instances take precedence.<br/>
+        /// <b>Phase 2</b> — If not found, looks up the registered factory delegate in the
+        /// <c>_extensionFactories</c> dictionary by interface type. If found, the factory
+        /// is invoked via <c>new T()</c> constraint, avoiding runtime reflection.
         /// </para>
-        /// <para>Singleton instances in <c>_instances</c> take precedence over lazy
-        /// registrations in <c>_extensions</c>.</para>
         /// </remarks>
         protected TExtension? ResolveExtension<TExtension>() where TExtension : class
         {
-            if (_extensions.TryGetValue(typeof(TExtension), out var t))
-                return Activator.CreateInstance((Type)t) as TExtension;
             if (_instances.TryGetValue(typeof(TExtension), out var instance))
                 return instance as TExtension;
+            if (_extensionFactories.TryGetValue(typeof(TExtension), out var factory))
+                return factory() as TExtension;
             return null;
         }
 

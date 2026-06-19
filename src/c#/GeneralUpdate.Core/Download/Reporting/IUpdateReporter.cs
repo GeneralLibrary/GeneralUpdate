@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Download.Reporting;
@@ -141,7 +142,7 @@ public class HttpUpdateReporter : IUpdateReporter
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
             
-            var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
