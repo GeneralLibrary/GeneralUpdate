@@ -27,6 +27,7 @@ jobs:
         run: dotnet build ./src/c#/GeneralUpdate.slnx -c Release --no-restore  # 显式构建，避免重复恢复
 
       - name: 打包NuGet包
+        continue-on-error: true  # NuGet包可单独上传，不阻塞Release
         run: |
           $projects = @(
             "GeneralUpdate.Bowl",
@@ -36,19 +37,28 @@ jobs:
             "GeneralUpdate.Extension"
           )
 
+          $failed = $false
           foreach ($project in $projects) {
-            dotnet pack ./src/c#/$project/$project.csproj `
+            Write-Host "=== 打包 $project ==="
+            & dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
               -o ./nupkgs `
               -p:Version='${{ github.event.inputs.version }}' `
               -p:PackageVersion='${{ github.event.inputs.version }}'
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "!!! 警告: $project 打包时遇到可恢复错误 !!!"
+              $failed = $true
+            }
           }
+          if ($failed) { Write-Host "部分包打包时有警告，但继续执行" }
         shell: pwsh
 
       - name: 推送NuGet包到 nuget.org
+        continue-on-error: true  # 即便推送失败也继续创建GitHub Release
         run: |
           $nupkgs = Get-ChildItem ./nupkgs/*.nupkg
           foreach ($nupkg in $nupkgs) {
+            Write-Host "推送 $($nupkg.Name)..."
             dotnet nuget push $nupkg.FullName `
               --api-key ${{ secrets.NUGET_API_KEY }} `
               --source https://api.nuget.org/v3/index.json `
