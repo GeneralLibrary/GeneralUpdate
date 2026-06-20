@@ -136,9 +136,12 @@ public static class DownloadPlanBuilder
 
         if (candidates.Count == 0) return DownloadPlan.Empty;
 
-        // Separate chain vs full packages
+        // Separate chain vs full packages.
+        // Treat Unspecified (0) as Chain for backward compatibility with older
+        // servers that do not set PackageType yet.
         var chainCandidates = candidates
-            .Where(a => a.PackageType == (int)Configuration.PackageType.Chain)
+            .Where(a => a.PackageType == (int)Configuration.PackageType.Chain
+                        || a.PackageType == (int)Configuration.PackageType.Unspecified)
             .ToList();
 
         var fullCandidates = candidates
@@ -155,7 +158,11 @@ public static class DownloadPlanBuilder
                 .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
                 .First();
 
-            long chainTotal = chainCandidates.Sum(a => a.Size);
+            // Only compare against chain packages of the same AppType as bestFull.
+            // Mixing Client and Upgrade sizes together could trigger incorrect switching.
+            long chainTotal = chainCandidates
+                .Where(a => a.AppType == bestFull.AppType)
+                .Sum(a => a.Size);
             var threshold = (long)(bestFull.Size * 0.8);
 
             if (chainTotal >= threshold)

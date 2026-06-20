@@ -176,6 +176,7 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             SHA256: v.Hash,
             Version: v.Version ?? "0.0.0",
             PackageType: v.PackageType,
+            MinClientVersion: v.MinClientVersion,
             IsForcibly: v.IsForcibly == true,
             IsFreeze: v.IsFreeze == true,
             RecordId: v.RecordId,

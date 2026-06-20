@@ -8,11 +8,10 @@ public class DownloadPlanBuilderTests
 {
     private static DownloadAsset Asset(string name = "a", string version = "2.0.0", string url = "http://u",
         long size = 100, string hash = null, bool isFreeze = false, bool isForcibly = false,
-        bool isCrossVersion = false, string fromVersion = null, string minClientVersion = null)
+        int packageType = (int)PackageType.Chain, string minClientVersion = null)
         => new(name, url, size, hash, version,
               IsFreeze: isFreeze, IsForcibly: isForcibly,
-              IsCrossVersion: isCrossVersion, FromVersion: fromVersion,
-              MinClientVersion: minClientVersion);
+              PackageType: packageType, MinClientVersion: minClientVersion);
 
     [Fact]
     public void Build_AssetsNull_ReturnsEmpty()
@@ -82,40 +81,21 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
-    public void Build_CrossVersionIncluded_CvpFirst_ReturnsCvpOnly()
+    public void Build_FullPackageSelected_WhenChainExceedsThreshold()
     {
-        // When a matching CVP exists, the plan selects the CVP and drops
-        // same-AppType chain packages (CVP covers the full range).
+        // Small chain + small full → chain_total >= 80% full → Full selected
         var assets = new[]
         {
-            Asset("cross", "5.0.0", isCrossVersion: true, fromVersion: "1.0.0"),
-            Asset("inc", "2.0.0"), Asset("inc2", "3.0.0")
+            Asset("chain1", "1.1.0", size: 100),
+            Asset("chain2", "2.0.0", size: 100),
+            Asset("full", "2.0.0", packageType: (int)PackageType.Full),
         };
+        // chain_total=200, 80% of full(100) = 80 → 200 >= 80 → full selected
         var result = DownloadPlanBuilder.Build(assets, "1.0.0");
         Assert.True(result.HasAssets);
         Assert.Single(result.Assets);
-        Assert.True(result.Assets[0].IsCrossVersion);
-        Assert.Equal("5.0.0", result.Assets[0].Version);
-    }
-
-    [Fact]
-    public void Build_CvpWithMixedAppTypes_KeepsChainForOtherTypes()
-    {
-        // CVP covers Client (AppType=1). Upgrade chain packages (AppType=2)
-        // should still be included since the CVP doesn't cover that AppType.
-        var assets = new[]
-        {
-            AssetWithType("cvp", "5.0.0", appType: 1, isCrossVersion: true, fromVersion: "1.0.0"),
-            AssetWithType("upgrade1", "2.0.0", appType: 2),
-            AssetWithType("upgrade2", "3.0.0", appType: 2),
-        };
-        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
-        Assert.True(result.HasAssets);
-        Assert.Equal(3, result.Assets.Count);
-        Assert.Equal("5.0.0", result.Assets[0].Version); // CVP first
-        Assert.True(result.Assets[0].IsCrossVersion);
-        Assert.Equal("2.0.0", result.Assets[1].Version); // chain for other AppType
-        Assert.Equal("3.0.0", result.Assets[2].Version);
+        Assert.Equal((int)PackageType.Full, result.Assets[0].PackageType);
+        Assert.Equal("2.0.0", result.Assets[0].Version);
     }
 
     [Fact]
@@ -174,12 +154,11 @@ public class DownloadPlanBuilderTests
     private static DownloadAsset AssetWithType(string name = "a", string version = "2.0.0",
         string url = "http://u", long size = 100, string? hash = null,
         bool isFreeze = false, bool isForcibly = false,
-        bool isCrossVersion = false, string? fromVersion = null,
+        int packageType = (int)PackageType.Chain,
         string? minClientVersion = null, int? appType = null)
         => new(name, url, size, hash, version,
               IsFreeze: isFreeze, IsForcibly: isForcibly,
-              IsCrossVersion: isCrossVersion, FromVersion: fromVersion,
-              MinClientVersion: minClientVersion, AppType: appType);
+              PackageType: packageType, MinClientVersion: minClientVersion, AppType: appType);
 
     [Fact]
     public void HasUpdate_EmptyAssets_ReturnsFalse()

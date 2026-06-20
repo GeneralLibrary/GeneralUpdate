@@ -209,15 +209,26 @@ namespace GeneralUpdate.Core.Strategy
                         fallbackContext.Add("DiffPipeline", DiffPipeline);
 
                         var fallbackBuilder = BuildPipeline(fallbackContext);
-                        await fallbackBuilder.Build();
-                        status = ReportType.Success;
-                        // Record the fallback full package version so subsequent
-                        // chain packages ≤ this version are skipped.
-                        if (!string.IsNullOrEmpty(version.FallbackFullVersion)
-                            && Semver.TryParse(version.FallbackFullVersion, out var ffv)
-                            && (fallbackEffectiveVersion == null || ffv > fallbackEffectiveVersion))
+                        try
                         {
-                            fallbackEffectiveVersion = ffv;
+                            await fallbackBuilder.Build();
+                            status = ReportType.Success;
+                            // Record the fallback full package version so subsequent
+                            // chain packages ≤ this version are skipped.
+                            if (!string.IsNullOrEmpty(version.FallbackFullVersion)
+                                && Semver.TryParse(version.FallbackFullVersion, out var ffv)
+                                && (fallbackEffectiveVersion == null || ffv > fallbackEffectiveVersion))
+                            {
+                                fallbackEffectiveVersion = ffv;
+                            }
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            // Fallback itself failed (e.g. missing full zip, decompression error).
+                            // Downgrade to normal failure handling so the loop can continue
+                            // processing remaining versions.
+                            GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
+                            status = ReportType.Failure;
                         }
                     }
                     catch (Exception e)

@@ -88,30 +88,33 @@ namespace CoreTest.Configuration
             Assert.Equal("sha256:abc123def456", asset.SHA256);
             Assert.Equal(104857600, asset.Size);
             Assert.Equal(DownloadPriority.Normal, asset.Priority);
-            Assert.False(asset.IsCrossVersion);
+            Assert.Equal(0, asset.PackageType);
             Assert.False(asset.IsForcibly);
             Assert.False(asset.IsFreeze);
         }
 
         [Fact]
-        public void DownloadAsset_CrossVersion_IsForcibly()
+        public void DownloadAsset_ChainWithFallback_PropertiesSet()
         {
             var asset = new DownloadAsset(
-                Name: "critical-patch.zip",
-                Url: "https://cdn.example.com/security/hotfix.zip",
+                Name: "chain-patch.zip",
+                Url: "https://cdn.example.com/chain/patch.zip",
                 Size: 5L * 1024 * 1024,
                 SHA256: null,
-                Version: "2.0.1-hotfix",
+                Version: "2.0.1",
                 Priority: DownloadPriority.High,
-                IsForcibly: true,
-                IsCrossVersion: true,
-                FromVersion: "2.0.0"
+                PackageType: (int)PackageType.Chain,
+                FallbackFullName: "full-v2.0.1",
+                FallbackFullUrl: "https://cdn.example.com/full/v2.0.1.zip",
+                FallbackFullHash: "abc123def456",
+                IsForcibly: true
             );
 
             Assert.Equal(DownloadPriority.High, asset.Priority);
             Assert.True(asset.IsForcibly);
-            Assert.True(asset.IsCrossVersion);
-            Assert.Equal("2.0.0", asset.FromVersion);
+            Assert.Equal((int)PackageType.Chain, asset.PackageType);
+            Assert.Equal("full-v2.0.1", asset.FallbackFullName);
+            Assert.Equal("abc123def456", asset.FallbackFullHash);
         }
 
         #endregion

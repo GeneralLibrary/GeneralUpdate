@@ -22,8 +22,7 @@ public class DownloadModelsTests
         Assert.Null(asset.SHA256);
         Assert.Equal("1.0.0", asset.Version);
         Assert.Equal(DownloadPriority.Normal, asset.Priority);
-        Assert.False(asset.IsCrossVersion);
-        Assert.Null(asset.FromVersion);
+        Assert.Equal(0, asset.PackageType);
         Assert.Null(asset.MinClientVersion);
         Assert.False(asset.IsForcibly);
         Assert.False(asset.IsFreeze);
@@ -34,8 +33,12 @@ public class DownloadModelsTests
     {
         var asset = new DownloadAsset(
             "package.zip", "https://cdn/pkg.zip", 1024, "abc123", "3.0.0",
-            DownloadPriority.High, true, "1.0.0", "2.0.0",
-            "srcHash", "tgtHash", true, false
+            DownloadPriority.High, 0,
+            MinClientVersion: "2.0.0",
+            FallbackFullName: "full-pkg",
+            FallbackFullUrl: "https://cdn/full.zip",
+            FallbackFullHash: "fullhash",
+            IsForcibly: true, IsFreeze: false
         );
 
         Assert.Equal("package.zip", asset.Name);
@@ -44,11 +47,10 @@ public class DownloadModelsTests
         Assert.Equal("abc123", asset.SHA256);
         Assert.Equal("3.0.0", asset.Version);
         Assert.Equal(DownloadPriority.High, asset.Priority);
-        Assert.True(asset.IsCrossVersion);
-        Assert.Equal("1.0.0", asset.FromVersion);
         Assert.Equal("2.0.0", asset.MinClientVersion);
-        Assert.Equal("srcHash", asset.SourceArchiveHash);
-        Assert.Equal("tgtHash", asset.TargetArchiveHash);
+        Assert.Equal("full-pkg", asset.FallbackFullName);
+        Assert.Equal("https://cdn/full.zip", asset.FallbackFullUrl);
+        Assert.Equal("fullhash", asset.FallbackFullHash);
         Assert.True(asset.IsForcibly);
         Assert.False(asset.IsFreeze);
     }
