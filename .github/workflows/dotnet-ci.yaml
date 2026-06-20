@@ -63,7 +63,6 @@ jobs:
           foreach ($nupkg in $nupkgs) {
             Write-Host "推送 $($nupkg.Name)..."
             dotnet nuget push $nupkg.FullName `
-              --api-key azure `
               --source https://api.nuget.org/v3/index.json `
               --skip-duplicate
           }
