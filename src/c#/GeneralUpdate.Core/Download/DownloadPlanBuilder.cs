@@ -28,8 +28,8 @@ namespace GeneralUpdate.Core.Download;
 ///         if the current client version is below the minimum, the package is skipped.</description></item>
 /// </list>
 /// <para>
-/// Note: This builder does not distinguish between cross-version and in-order updates;
-/// each package carries its own <c>IsCrossVersion</c> metadata for downstream processing.
+/// All packages are treated uniformly; the builder evaluates chain vs full packages
+/// based on total download size.
 /// </para>
 /// </remarks>
 public static class DownloadPlanBuilder
@@ -136,41 +136,98 @@ public static class DownloadPlanBuilder
 
         if (candidates.Count == 0) return DownloadPlan.Empty;
 
-        // ── CVP-first selection ──
-        // If a matching cross-version package (CVP) exists whose FromVersion
-        // equals the client's current version, prefer it over chain packages.
-        // This gives the client a single-package shortcut from old → latest.
-        // Prefer the CVP with the highest target version when multiple CVPs match.
-        var matchingCvp = candidates
-            .Where(a => a.IsCrossVersion)
-            .Where(a =>
-            {
-                if (!Semver.TryParse(a.FromVersion, out var fromVer)) return false;
-                var localVersion = (a.AppType == (int)AppType.Upgrade)
-                    ? uv
-                    : cv;
-                return fromVer == localVersion;
-            })
-            .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
-            .FirstOrDefault();
+        // Separate chain vs full packages.
+        // Treat Unspecified (0) as Chain for backward compatibility with older
+        // servers that do not set PackageType yet.
+        var chainCandidates = candidates
+            .Where(a => a.PackageType == (int)Configuration.PackageType.Chain
+                        || a.PackageType == (int)Configuration.PackageType.Unspecified)
+            .ToList();
 
-        if (matchingCvp != null)
+        var fullCandidates = candidates
+            .Where(a => a.PackageType == (int)Configuration.PackageType.Full)
+            .ToList();
+
+        // ── Chain vs Full size-based decision ──
+        // If a full replacement package is available and the total chain download
+        // size approaches or exceeds the full package size, skip chain and use full.
+        if (chainCandidates.Count > 0 && fullCandidates.Count > 0)
         {
-            // CVP covers one AppType in a single hop. Still need chain packages
-            // for other AppTypes, and for the same AppType beyond the CVP's target.
-            var cvpAppType = matchingCvp.AppType;
-            Semver.TryParse(matchingCvp.Version, out var cvpVersion);
-            var planAssets = new List<DownloadAsset> { matchingCvp };
-            planAssets.AddRange(candidates
-                .Where(a => !a.IsCrossVersion)
-                .Where(a => a.AppType != cvpAppType
-                            || (Semver.TryParse(a.Version, out var av) && av > cvpVersion))
-                .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; }));
-            return new DownloadPlan(planAssets, isForcibly);
+            // Pick the latest full package (highest version) across all AppTypes
+            var bestFull = fullCandidates
+                .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
+                .First();
+
+            // Only compare against chain packages of the same AppType as bestFull.
+            // Mixing Client and Upgrade sizes together could trigger incorrect switching.
+            long chainTotal = chainCandidates
+                .Where(a => a.AppType == bestFull.AppType)
+                .Sum(a => a.Size);
+            var threshold = (long)(bestFull.Size * 0.8);
+
+            if (chainTotal >= threshold)
+            {
+                // Chain is too expensive — use full package instead.
+                // Supplement with chain packages for other AppTypes not covered by full.
+                GeneralTracer.Info($"DownloadPlanBuilder: chain total {chainTotal} >= 80% of full size {bestFull.Size}, switching to full package {bestFull.Name}");
+                var planAssets = new List<DownloadAsset> { bestFull };
+                planAssets.AddRange(chainCandidates
+                    .Where(a => a.AppType != bestFull.AppType
+                                || (Semver.TryParse(a.Version, out var av)
+                                    && Semver.TryParse(bestFull.Version, out var fv)
+                                    && av > fv))
+                    .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; }));
+                return new DownloadPlan(planAssets, isForcibly);
+            }
         }
 
-        // No matching CVP: return all chain packages sorted by version (ascending)
-        return new DownloadPlan(candidates, isForcibly);
+        // ── Chain plan with fallback fulls ──
+        // Use chain packages normally. Attach FallbackFull* info to each chain entry
+        // so that if a chain patch fails, AbstractStrategy can fall back to full.
+        if (fullCandidates.Count > 0)
+        {
+            var fallbackFulls = new List<DownloadAsset>();
+
+            var chainWithFallback = chainCandidates
+                .Select(chain =>
+                {
+                    // Find a matching full: same AppType + same Version (or closest)
+                    var match = fullCandidates
+                        .Where(f => f.AppType == chain.AppType)
+                        .OrderBy(f => { Semver.TryParse(f.Version, out var sv); return sv; })
+                        .FirstOrDefault(f =>
+                        {
+                            if (!Semver.TryParse(f.Version, out var fv)) return false;
+                            if (!Semver.TryParse(chain.Version, out var cv)) return false;
+                            return fv >= cv;
+                        });
+
+                    if (match != null)
+                    {
+                        // Add matching full to the fallback list once
+                        if (!fallbackFulls.Any(f => f.Url == match.Url))
+                            fallbackFulls.Add(match);
+
+                        return chain with
+                        {
+                            FallbackFullName = match.Name,
+                            FallbackFullUrl = match.Url,
+                            FallbackFullHash = match.SHA256,
+                            FallbackFullVersion = match.Version
+                        };
+                    }
+                    return chain;
+                })
+                .ToList();
+
+            return new DownloadPlan(chainWithFallback, isForcibly)
+            {
+                FallbackFulls = fallbackFulls
+            };
+        }
+
+        // No full packages at all: return chain packages as-is
+        return new DownloadPlan(chainCandidates, isForcibly);
     }
 
     /// <summary>

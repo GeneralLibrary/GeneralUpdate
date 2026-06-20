@@ -7,6 +7,8 @@ using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Hooks;
 using GeneralUpdate.Core.Security;
+using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Configuration;
 
 try
 {
@@ -87,6 +89,7 @@ static async Task RunUpdateTestAsync()
             }
         })
         .SetOption(Option.AppType, AppType.Client)
+        .UseDiffPipeline(builder => builder.WithStopOnFirstError(true))
         .Hooks<ClientTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
         .AddListenerMultiDownloadCompleted(OnDownloadCompleted)
@@ -140,7 +143,7 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
     {
         foreach (var vi in e.Info.Body)
         {
-            var mode = vi.IsCrossVersion == true ? "CVP" : "Chain";
+            var mode = vi.PackageType == (int)PackageType.Full ? "Full" : "Chain";
             var appType = vi.AppType switch
             {
                 1 => "Client",
@@ -149,8 +152,7 @@ static void OnUpdateInfo(object sender, UpdateInfoEventArgs e)
             };
             Console.WriteLine($"  - [{mode}] {vi.Version} ({vi.Name}) [{vi.Size} bytes] " +
                               $"AppType={appType} " +
-                              $"{(vi.IsForcibly == true ? "(forced)" : "")}" +
-                              $"{(!string.IsNullOrEmpty(vi.FromVersion) ? $" from={vi.FromVersion}" : "")}");
+                              $"{(vi.IsForcibly == true ? "(forced)" : "")}");
         }
     }
     else

@@ -7,6 +7,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Utilities;
 
 using GeneralUpdate.Core.Hooks;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
@@ -146,8 +147,25 @@ namespace GeneralUpdate.Core.Strategy
                 AllPackagesSucceeded = true;
                 var status = ReportType.None;
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
+
+                // Track the highest version already applied via full-package fallback,
+                // so subsequent chain packages covered by that version are skipped.
+                SemVersion? fallbackEffectiveVersion = null;
+
                 foreach (var version in _configinfo.UpdateVersions)
                 {
+                    // When a previous chain package fell back to a full package,
+                    // the application is already at or beyond that full version.
+                    // Skip any remaining chain packages whose version is ≤ the
+                    // fallback version — applying them would be redundant.
+                    if (fallbackEffectiveVersion != null
+                        && version.PackageType == (int)PackageType.Chain
+                        && Semver.TryParse(version.Version, out var versionSv)
+                        && versionSv <= fallbackEffectiveVersion)
+                    {
+                        GeneralTracer.Info($"AbstractStrategy.ExecuteAsync: skipping {version.Version} ({version.Name}) — already covered by fallback full package v{fallbackEffectiveVersion}.");
+                        continue;
+                    }
                     try
                     {
                         // Use a version-specific subdirectory under patchRoot so that
@@ -168,6 +186,50 @@ namespace GeneralUpdate.Core.Strategy
                         var pipelineBuilder = BuildPipeline(context);
                         await pipelineBuilder.Build();
                         status = ReportType.Success;
+                    }
+                    catch (Exception e) when (version.PackageType == (int)PackageType.Chain
+                        && !string.IsNullOrEmpty(version.FallbackFullName))
+                    {
+                        GeneralTracer.Warn($"AbstractStrategy.ExecuteAsync: chain patch failed for {version.Version}, falling back to full package {version.FallbackFullName}. Error: {e.Message}");
+
+                        // Rebuild pipeline context with the fallback full zip.
+                        // CompressMiddleware will extract directly to SourcePath,
+                        // and platform strategies skip PatchMiddleware for Full packages.
+                        var fallbackContext = new PipelineContext();
+                        var fallbackZipPath = Path.Combine(_configinfo.TempPath,
+                            $"{version.FallbackFullName}{_configinfo.Format.ToExtension()}");
+                        fallbackContext.Add("ZipFilePath", fallbackZipPath);
+                        fallbackContext.Add("Hash", version.FallbackFullHash);
+                        fallbackContext.Add("Format", _configinfo.Format);
+                        fallbackContext.Add("Encoding", _configinfo.Encoding);
+                        fallbackContext.Add("SourcePath", ResolveTargetPath(version));
+                        fallbackContext.Add("PatchPath", Path.Combine(patchRoot, "fallback"));
+                        fallbackContext.Add("PatchEnabled", false);
+                        fallbackContext.Add("PackageType", (int)PackageType.Full);
+                        fallbackContext.Add("DiffPipeline", DiffPipeline);
+
+                        var fallbackBuilder = BuildPipeline(fallbackContext);
+                        try
+                        {
+                            await fallbackBuilder.Build();
+                            status = ReportType.Success;
+                            // Record the fallback full package version so subsequent
+                            // chain packages ≤ this version are skipped.
+                            if (!string.IsNullOrEmpty(version.FallbackFullVersion)
+                                && Semver.TryParse(version.FallbackFullVersion, out var ffv)
+                                && (fallbackEffectiveVersion == null || ffv > fallbackEffectiveVersion))
+                            {
+                                fallbackEffectiveVersion = ffv;
+                            }
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            // Fallback itself failed (e.g. missing full zip, decompression error).
+                            // Downgrade to normal failure handling so the loop can continue
+                            // processing remaining versions.
+                            GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
+                            status = ReportType.Failure;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -250,6 +312,10 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("SourcePath", sourcePath);
             context.Add("PatchPath", patchPath);
             context.Add("PatchEnabled", _configinfo.PatchEnabled);
+            // PackageType: 0=Unspecified, 1=Chain (differential), 2=Full (self-contained).
+            // Used by CompressMiddleware and platform strategies to decide decompression target
+            // and whether PatchMiddleware is needed.
+            context.Add("PackageType", version.PackageType);
             // DiffPipeline for parallel patch application with progress reporting
             context.Add("DiffPipeline", DiffPipeline);
             

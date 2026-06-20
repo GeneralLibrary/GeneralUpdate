@@ -175,15 +175,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             Size: v.Size ?? 0,
             SHA256: v.Hash,
             Version: v.Version ?? "0.0.0",
+            PackageType: v.PackageType,
+            MinClientVersion: v.MinClientVersion,
             IsForcibly: v.IsForcibly == true,
             IsFreeze: v.IsFreeze == true,
             RecordId: v.RecordId,
             AppType: v.AppType,
-            IsCrossVersion: v.IsCrossVersion == true,
-            FromVersion: v.FromVersion,
-            MinClientVersion: v.MinClientVersion,
-            SourceArchiveHash: v.SourceArchiveHash,
-            TargetArchiveHash: v.TargetArchiveHash,
             AuthScheme: v.AuthScheme,
             AuthToken: v.AuthToken
         );

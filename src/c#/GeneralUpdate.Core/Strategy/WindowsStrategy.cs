@@ -67,11 +67,13 @@ namespace GeneralUpdate.Core.Strategy
         /// </remarks>
         protected override PipelineBuilder BuildPipeline(PipelineContext context)
         {
-            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}");
+            var packageType = context.Get<int?>("PackageType");
+            var needsPatch = _configinfo.PatchEnabled == true && packageType != (int)PackageType.Full;
+            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.BuildPipeline: assembling middleware pipeline. PatchEnabled={_configinfo.PatchEnabled}, PackageType={packageType}, NeedsPatch={needsPatch}");
             var builder = new PipelineBuilder(context)
                 .UseMiddleware<HashMiddleware>()
                 .UseMiddleware<CompressMiddleware>()
-                .UseMiddlewareIf<PatchMiddleware>(_configinfo.PatchEnabled);
+                .UseMiddlewareIf<PatchMiddleware>(needsPatch);
             return builder;
         }
 
