@@ -631,7 +631,8 @@ public class ClientStrategy : IStrategy
                 PackageType = a.PackageType,
                 FallbackFullName = a.FallbackFullName,
                 FallbackFullUrl = a.FallbackFullUrl,
-                FallbackFullHash = a.FallbackFullHash
+                FallbackFullHash = a.FallbackFullHash,
+                FallbackFullVersion = a.FallbackFullVersion
             }).ToList();
 
             var uVersions = dVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();

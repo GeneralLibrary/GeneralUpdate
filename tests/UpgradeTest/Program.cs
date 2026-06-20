@@ -3,6 +3,7 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Hooks;
+using GeneralUpdate.Core.Pipeline;
 
 try
 {
@@ -41,6 +42,7 @@ static async Task RunStandardUpgradeAsync()
 
     await new GeneralUpdateBootstrap()
         .SetOption(Option.AppType, AppType.Upgrade)
+        .UseDiffPipeline(builder => builder.WithStopOnFirstError(true))
         .Hooks<UpgradeTestHooks>()
         .AddListenerMultiDownloadStatistics(OnDownloadStatistics)
         .AddListenerMultiDownloadCompleted(OnDownloadCompleted)

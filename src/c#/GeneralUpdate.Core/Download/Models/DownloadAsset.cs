@@ -15,6 +15,7 @@ public record DownloadAsset(
     string? FallbackFullName = null,
     string? FallbackFullUrl = null,
     string? FallbackFullHash = null,
+    string? FallbackFullVersion = null,
     bool IsForcibly = false,
     bool IsFreeze = false,
     int RecordId = 0,

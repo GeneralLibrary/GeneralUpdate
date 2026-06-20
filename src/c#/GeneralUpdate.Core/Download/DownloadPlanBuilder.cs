@@ -205,7 +205,8 @@ public static class DownloadPlanBuilder
                         {
                             FallbackFullName = match.Name,
                             FallbackFullUrl = match.Url,
-                            FallbackFullHash = match.SHA256
+                            FallbackFullHash = match.SHA256,
+                            FallbackFullVersion = match.Version
                         };
                     }
                     return chain;

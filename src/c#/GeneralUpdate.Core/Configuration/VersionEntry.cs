@@ -205,4 +205,12 @@ public class VersionEntry : VersionIdentity
     /// </summary>
     [JsonPropertyName("fallbackFullHash")]
     public string? FallbackFullHash { get; set; }
+
+    /// <summary>
+    ///     The version string of the fallback full replacement package.
+    ///     Used by <see cref="Strategy.AbstractStrategy"/> to skip chain packages
+    ///     already covered by a previous fallback.
+    /// </summary>
+    [JsonPropertyName("fallbackFullVersion")]
+    public string? FallbackFullVersion { get; set; }
 }
