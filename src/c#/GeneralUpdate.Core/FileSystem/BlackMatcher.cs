@@ -95,9 +95,16 @@ public class BlackMatcher : IBlackMatcher
     /// Uses case-insensitive substring containment matching (<c>string.IndexOf</c>) for evaluation.
     /// The directory is considered skippable if its name contains any string from the <c>Directories</c> list.
     /// </remarks>
-    public bool ShouldSkipDirectory(string directoryName)
-        => _config.Directories?.Any(d =>
-            directoryName.StartsWith(d, StringComparison.OrdinalIgnoreCase)) == true;
+    public bool ShouldSkipDirectory(string directoryOrPath)
+    {
+        // Extract the directory name from a possible full path so both
+        // bare names ("backup-2026") and full paths (".backups/backup-2026") work.
+        var dirName = Path.GetFileName(directoryOrPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrEmpty(dirName)) return false;
+
+        return _config.Directories?.Any(d =>
+            dirName.StartsWith(d, StringComparison.OrdinalIgnoreCase)) == true;
+    }
 
     /// <summary>
     /// Matches a file name against a simple Glob pattern.

@@ -69,9 +69,9 @@ namespace GeneralUpdate.Core.Configuration
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> is <c>null</c>.</exception>
         public static Option<T> ValueOf<T>(string name, T defaultValue = default!)
         {
-            // GetOrAdd is lock-free on ConcurrentDictionary; the factory runs at most once per key.
-            // First registration wins — subsequent calls with the same name return the existing
-            // singleton instance (preserving the original default value).
+            // GetOrAdd is lock-free on ConcurrentDictionary. Under contention the
+            // factory may run multiple times, but only one instance is stored and
+            // returned by all racing callers. The factory must be side-effect-free.
             var raw = _registry.GetOrAdd(name, _ => new Option<T>(name, defaultValue));
 
             // If the existing entry was registered with a different type T, create a new one.

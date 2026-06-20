@@ -248,9 +248,10 @@ namespace GeneralUpdate.Core.FileSystem
                         var dirName = dirInfo.Name;
 
                         // Parse timestamp from "generalupdate_yyyy-MM-dd-HHmmss-fff_PID_name"
+                        // Splitting by '_': [0]=prefix, [1]=timestamp, [2]=PID, [3..]=name.
                         // If the PID segment matches the current process, skip it.
                         var parts = dirName.Split('_');
-                        if (parts.Length >= 4 && int.TryParse(parts[3], out var pid) && pid == currentPid)
+                        if (parts.Length >= 3 && int.TryParse(parts[2], out var pid) && pid == currentPid)
                             continue;
 
                         if (dirInfo.CreationTimeUtc < cutoff)
@@ -346,42 +347,58 @@ namespace GeneralUpdate.Core.FileSystem
             // Enumerate then delete with per-item exception handling.
             // Between enumeration and deletion, concurrent processes may add/remove
             // files — handle these races gracefully instead of crashing.
-            foreach (var file in Directory.GetFiles(targetDir))
-            {
-                try
-                {
-                    File.SetAttributes(file, FileAttributes.Normal);
-                    File.Delete(file);
-                }
-                catch (FileNotFoundException) { /* raced away — already deleted */ }
-                catch (DirectoryNotFoundException) { /* raced away */ }
-                catch (UnauthorizedAccessException ex)
-                {
-                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete file '{Path.GetFileName(file)}': {ex.Message}");
-                }
-            }
-
-            foreach (var dir in Directory.GetDirectories(targetDir))
-            {
-                try
-                {
-                    DeleteDirectory(dir);
-                }
-                catch (DirectoryNotFoundException) { /* raced away */ }
-                catch (UnauthorizedAccessException ex)
-                {
-                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(dir)}': {ex.Message}");
-                }
-            }
-
             try
             {
-                Directory.Delete(targetDir, false);
+                foreach (var file in Directory.GetFiles(targetDir))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        File.Delete(file);
+                    }
+                    catch (FileNotFoundException) { /* raced away — already deleted */ }
+                    catch (DirectoryNotFoundException) { /* raced away */ }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete file '{Path.GetFileName(file)}': {ex.Message}");
+                    }
+                }
+
+                try
+                {
+                    foreach (var dir in Directory.GetDirectories(targetDir))
+                    {
+                        try
+                        {
+                            DeleteDirectory(dir);
+                        }
+                        catch (DirectoryNotFoundException) { /* raced away */ }
+                        catch (UnauthorizedAccessException ex)
+                        {
+                            GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(dir)}': {ex.Message}");
+                        }
+                    }
+                }
+                catch (DirectoryNotFoundException) { /* parent raced away */ }
+                catch (UnauthorizedAccessException ex)
+                {
+                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot enumerate subdirectories: {ex.Message}");
+                }
+
+                try
+                {
+                    Directory.Delete(targetDir, false);
+                }
+                catch (DirectoryNotFoundException) { /* raced away */ }
+                catch (UnauthorizedAccessException ex)
+                {
+                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(targetDir)}': {ex.Message}");
+                }
             }
-            catch (DirectoryNotFoundException) { /* raced away */ }
+            catch (DirectoryNotFoundException) { /* parent raced away before enumeration */ }
             catch (UnauthorizedAccessException ex)
             {
-                GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(targetDir)}': {ex.Message}");
+                GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot enumerate '{targetDir}': {ex.Message}");
             }
         }
 

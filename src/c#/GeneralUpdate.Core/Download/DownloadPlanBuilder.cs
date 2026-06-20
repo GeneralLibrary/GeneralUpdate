@@ -86,9 +86,15 @@ public static class DownloadPlanBuilder
     /// <summary>Pre-parses versions for a list of assets to avoid repeated Semver.TryParse calls.</summary>
     private static Dictionary<DownloadAsset, SemVersion?> PreParseVersions(IEnumerable<DownloadAsset> assets)
     {
-        return assets.ToDictionary(
-            a => a,
-            a => ParseVersion(a.Version));
+        var map = new Dictionary<DownloadAsset, SemVersion?>();
+        foreach (var a in assets)
+        {
+            // Custom IDownloadSource implementations could return duplicate records;
+            // silently accept the first occurrence rather than throwing.
+            if (!map.ContainsKey(a))
+                map[a] = ParseVersion(a.Version);
+        }
+        return map;
     }
 
     /// <summary>

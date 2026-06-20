@@ -61,7 +61,7 @@ public static class GracefulExit
             // a no-op, but the process will exit when the async call stack unwinds.
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                var p = Process.GetCurrentProcess();
+                using var p = Process.GetCurrentProcess();
                 if (!p.HasExited)
                     p.CloseMainWindow();
             }
