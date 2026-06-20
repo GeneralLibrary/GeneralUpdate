@@ -56,13 +56,21 @@ jobs:
           if ($failed) { Write-Host "部分包打包时有警告，但继续执行" }
         shell: pwsh
 
+      - name: 登录 nuget.org (OIDC → 临时 API Key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: 推送NuGet包到 nuget.org
         continue-on-error: true  # 即便推送失败也继续创建GitHub Release
         run: |
+          $apiKey = '${{ steps.login.outputs.NUGET_API_KEY }}'
           $nupkgs = Get-ChildItem ./nupkgs/*.nupkg
           foreach ($nupkg in $nupkgs) {
             Write-Host "推送 $($nupkg.Name)..."
             dotnet nuget push $nupkg.FullName `
+              --api-key $apiKey `
               --source https://api.nuget.org/v3/index.json `
               --skip-duplicate
           }
