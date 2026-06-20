@@ -5,7 +5,7 @@
     <RepositoryUrl>https://github.com/JusterZhu/GeneralUpdate</RepositoryUrl>
     <Description>Binary diff/patch algorithms (BSDIFF, HDiffPatch) with Brotli compression for generating and applying incremental updates. Includes parallel file processing with progress reporting and cancellation support.</Description>
     <Authors>JusterZhu</Authors>
-    <Version>10.5.0-beta.2</Version>
+    <Version>10.5.0-beta.6</Version>
     <PackageProjectUrl>https://github.com/GeneralLibrary/GeneralUpdate</PackageProjectUrl>
     <Copyright>Copyright © 2020-2026 JusterZhu. All rights reserved.</Copyright>
     <LangVersion>default</LangVersion>

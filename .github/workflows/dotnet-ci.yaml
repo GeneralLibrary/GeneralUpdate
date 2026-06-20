@@ -30,8 +30,6 @@ jobs:
         run: |
           $projects = @(
             "GeneralUpdate.Bowl",
-            "GeneralUpdate.ClientCore",
-            "GeneralUpdate.Common",
             "GeneralUpdate.Core",
             "GeneralUpdate.Differential",
             "GeneralUpdate.Drivelution",
@@ -47,6 +45,19 @@ jobs:
               --no-build  # 避免重复构建，使用已生成的文件
           }
         shell: pwsh
+
+      - name: 推送NuGet包到 nuget.org
+        run: |
+          $nupkgs = Get-ChildItem ./nupkgs/*.nupkg
+          foreach ($nupkg in $nupkgs) {
+            dotnet nuget push $nupkg.FullName `
+              --api-key ${{ secrets.NUGET_API_KEY }} `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+          }
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
       - name: 生成更新日志
         shell: pwsh
