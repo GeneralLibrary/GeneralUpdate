@@ -11,6 +11,9 @@ on:
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    permissions:
+      contents: write  # 创建 Release
+      id-token: write  # 用于 nuget.org Trusted Publishing (OIDC)
     steps:
       - name: 检出代码
         uses: actions/checkout@v6
@@ -60,13 +63,11 @@ jobs:
           foreach ($nupkg in $nupkgs) {
             Write-Host "推送 $($nupkg.Name)..."
             dotnet nuget push $nupkg.FullName `
-              --api-key ${{ secrets.NUGET_API_KEY }} `
+              --api-key azure `
               --source https://api.nuget.org/v3/index.json `
               --skip-duplicate
           }
         shell: pwsh
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
       - name: 生成更新日志
         shell: pwsh
