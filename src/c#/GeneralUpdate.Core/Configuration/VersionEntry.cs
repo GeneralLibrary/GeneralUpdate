@@ -165,29 +165,18 @@ public class VersionEntry : VersionIdentity
     public DateTime? UrlExpireTimeUtc { get; set; }
 
     /// <summary>
-    ///     Whether this is a cross-version upgrade package.
-    ///     <c>true</c> indicates this package is used to upgrade directly from an old version to a new version,
-    ///     rather than through sequential chain upgrades.
-    /// </summary>
-    [JsonPropertyName("isCrossVersion")]
-    public bool? IsCrossVersion { get; set; }
-
-    /// <summary>
-    ///     The source version number for cross-version upgrade packages.
-    ///     Indicates which source version this differential patch can be applied to.
-    /// </summary>
-    /// <remarks>
-    ///     Only valid when <see cref="IsCrossVersion" /> is <c>true</c>.
-    /// </remarks>
-    [JsonPropertyName("fromVersion")]
-    public string? FromVersion { get; set; }
-
-    /// <summary>
     ///     Whether this version package is frozen (archived and not used for active updates).
     ///     Frozen version packages will not be used for update detection or download.
     /// </summary>
     [JsonPropertyName("isFreeze")]
     public bool? IsFreeze { get; set; }
+
+    /// <summary>
+    ///     Package type: 0=Unspecified, 1=Chain (differential patch), 2=Full (self-contained replacement).
+    ///     The client pipeline uses this value to decide how to apply the package.
+    /// </summary>
+    [JsonPropertyName("packageType")]
+    public int PackageType { get; set; }
 
     /// <summary>
     ///     The minimum client version required for this package.
@@ -197,16 +186,23 @@ public class VersionEntry : VersionIdentity
     public string? MinClientVersion { get; set; }
 
     /// <summary>
-    ///     The hash of the source full-version archive used to build this cross-version package.
-    ///     Only valid when <see cref="IsCrossVersion"/> is <c>true</c>.
+    ///     The filename of the fallback full replacement package (without extension).
+    ///     Populated by <see cref="Download.DownloadPlanBuilder"/> when a full package
+    ///     is available as fallback for this chain package.
+    ///     Only valid when <see cref="PackageType"/> is <c>Chain</c>.
     /// </summary>
-    [JsonPropertyName("sourceArchiveHash")]
-    public string? SourceArchiveHash { get; set; }
+    [JsonPropertyName("fallbackFullName")]
+    public string? FallbackFullName { get; set; }
 
     /// <summary>
-    ///     The hash of the target full-version archive used to build this cross-version package.
-    ///     Only valid when <see cref="IsCrossVersion"/> is <c>true</c>.
+    ///     The download URL of the fallback full replacement package.
     /// </summary>
-    [JsonPropertyName("targetArchiveHash")]
-    public string? TargetArchiveHash { get; set; }
+    [JsonPropertyName("fallbackFullUrl")]
+    public string? FallbackFullUrl { get; set; }
+
+    /// <summary>
+    ///     The SHA256 hash of the fallback full replacement package.
+    /// </summary>
+    [JsonPropertyName("fallbackFullHash")]
+    public string? FallbackFullHash { get; set; }
 }

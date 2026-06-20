@@ -10,11 +10,11 @@ public record DownloadAsset(
     string? SHA256,
     string Version,
     DownloadPriority Priority = DownloadPriority.Normal,
-    bool IsCrossVersion = false,
-    string? FromVersion = null,
+    int PackageType = 0,
     string? MinClientVersion = null,
-    string? SourceArchiveHash = null,
-    string? TargetArchiveHash = null,
+    string? FallbackFullName = null,
+    string? FallbackFullUrl = null,
+    string? FallbackFullHash = null,
     bool IsForcibly = false,
     bool IsFreeze = false,
     int RecordId = 0,
@@ -28,4 +28,11 @@ public record DownloadPlan(IReadOnlyList<DownloadAsset> Assets, bool IsForcibly)
 {
     public static DownloadPlan Empty { get; } = new(new List<DownloadAsset>(), false);
     public bool HasAssets => Assets.Count > 0;
+
+    /// <summary>
+    /// Full replacement packages downloaded alongside chain packages as fallback.
+    /// Not applied during the normal pipeline — only used when a chain package fails
+    /// and its <see cref="DownloadAsset.FallbackFullUrl"/> matches an entry here.
+    /// </summary>
+    public IReadOnlyList<DownloadAsset> FallbackFulls { get; init; } = new List<DownloadAsset>();
 }

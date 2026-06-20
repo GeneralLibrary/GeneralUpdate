@@ -169,6 +169,31 @@ namespace GeneralUpdate.Core.Strategy
                         await pipelineBuilder.Build();
                         status = ReportType.Success;
                     }
+                    catch (Exception e) when (version.PackageType == (int)PackageType.Chain
+                        && !string.IsNullOrEmpty(version.FallbackFullName))
+                    {
+                        GeneralTracer.Warn($"AbstractStrategy.ExecuteAsync: chain patch failed for {version.Version}, falling back to full package {version.FallbackFullName}. Error: {e.Message}");
+
+                        // Rebuild pipeline context with the fallback full zip.
+                        // CompressMiddleware will extract directly to SourcePath,
+                        // and platform strategies skip PatchMiddleware for Full packages.
+                        var fallbackContext = new PipelineContext();
+                        var fallbackZipPath = Path.Combine(_configinfo.TempPath,
+                            $"{version.FallbackFullName}{_configinfo.Format.ToExtension()}");
+                        fallbackContext.Add("ZipFilePath", fallbackZipPath);
+                        fallbackContext.Add("Hash", version.FallbackFullHash);
+                        fallbackContext.Add("Format", _configinfo.Format);
+                        fallbackContext.Add("Encoding", _configinfo.Encoding);
+                        fallbackContext.Add("SourcePath", ResolveTargetPath(version));
+                        fallbackContext.Add("PatchPath", Path.Combine(patchRoot, "fallback"));
+                        fallbackContext.Add("PatchEnabled", false);
+                        fallbackContext.Add("PackageType", (int)PackageType.Full);
+                        fallbackContext.Add("DiffPipeline", DiffPipeline);
+
+                        var fallbackBuilder = BuildPipeline(fallbackContext);
+                        await fallbackBuilder.Build();
+                        status = ReportType.Success;
+                    }
                     catch (Exception e)
                     {
                         status = ReportType.Failure;
@@ -250,6 +275,10 @@ namespace GeneralUpdate.Core.Strategy
             context.Add("SourcePath", sourcePath);
             context.Add("PatchPath", patchPath);
             context.Add("PatchEnabled", _configinfo.PatchEnabled);
+            // PackageType: 0=Unspecified, 1=Chain (differential), 2=Full (self-contained).
+            // Used by CompressMiddleware and platform strategies to decide decompression target
+            // and whether PatchMiddleware is needed.
+            context.Add("PackageType", version.PackageType);
             // DiffPipeline for parallel patch application with progress reporting
             context.Add("DiffPipeline", DiffPipeline);
             

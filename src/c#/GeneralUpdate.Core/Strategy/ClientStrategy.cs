@@ -480,12 +480,6 @@ public class ClientStrategy : IStrategy
         _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 
-        // Store original assets and CVP flag for chain fallback.
-        // If the CVP download/apply fails, we rebuild the plan from cached chain
-        // packages without a second server request.
-        var isCvpAttempt = downloadPlan.Assets.Any(a => a.IsCrossVersion);
-        var originalAssets = sourceResult.Assets.ToList();
-
         // Dispatch update info event with populated version data (full GeneralSpacestation-compatible fields)
         var versionInfos = downloadPlan.Assets.Select(a => new VersionEntry
         {
@@ -498,8 +492,10 @@ public class ClientStrategy : IStrategy
             IsForcibly = a.IsForcibly,
             IsFreeze = a.IsFreeze,
             AppType = a.AppType,
-            IsCrossVersion = a.IsCrossVersion,
-            FromVersion = a.FromVersion
+            PackageType = a.PackageType,
+            FallbackFullName = a.FallbackFullName,
+            FallbackFullUrl = a.FallbackFullUrl,
+            FallbackFullHash = a.FallbackFullHash
         }).ToList();
 
         var versionResp = new VersionRespDTO
@@ -593,8 +589,16 @@ public class ClientStrategy : IStrategy
         // Download + report + build version lists + scenario dispatch
         async Task DownloadAndApplyAsync(Download.Models.DownloadPlan plan, UpdateScenario sc)
         {
-            GeneralTracer.Info($"ClientStrategy: downloading {plan.Assets.Count} asset(s).");
-            var downloadReport = await ExecuteDownloadAsync(plan).ConfigureAwait(false);
+            // Merge fallback full packages into the download plan so they are
+            // available locally if a chain package fails and needs fallback.
+            var allAssets = plan.Assets.Concat(plan.FallbackFulls)
+                                      .GroupBy(a => a.Url)
+                                      .Select(g => g.First())
+                                      .ToList();
+            var mergedPlan = new Download.Models.DownloadPlan(allAssets, plan.IsForcibly);
+
+            GeneralTracer.Info($"ClientStrategy: downloading {mergedPlan.Assets.Count} asset(s) ({plan.Assets.Count} primary + {plan.FallbackFulls.Count} fallback).");
+            var downloadReport = await ExecuteDownloadAsync(mergedPlan).ConfigureAwait(false);
 
             if (downloadReport.FailedCount > 0)
             {
@@ -623,7 +627,11 @@ public class ClientStrategy : IStrategy
                 Url = a.Url,
                 Version = a.Version,
                 Format = _configInfo.Format.ToExtension(),
-                AppType = a.AppType ?? (int)AppType.Client
+                AppType = a.AppType ?? (int)AppType.Client,
+                PackageType = a.PackageType,
+                FallbackFullName = a.FallbackFullName,
+                FallbackFullUrl = a.FallbackFullUrl,
+                FallbackFullHash = a.FallbackFullHash
             }).ToList();
 
             var uVersions = dVersions.Where(v => v.AppType == (int)AppType.Upgrade).ToList();
@@ -696,23 +704,7 @@ public class ClientStrategy : IStrategy
             }
         }
 
-        try
-        {
-            await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (isCvpAttempt && ex is not OperationCanceledException)
-        {
-            GeneralTracer.Warn($"ClientStrategy: CVP attempt failed, falling back to chain packages. {ex.Message}");
-            var fallback = BuildChainFallback(originalAssets, localClientVersion, resolvedUpgradeVersion);
-            if (fallback == null)
-                throw new InvalidOperationException(
-                    "CVP failed and no chain packages are available for fallback.", ex);
-
-            (downloadPlan, scenario) = fallback.Value;
-            UpdateRecordIdsFromPlan(downloadPlan);
-            GeneralTracer.Info($"ClientStrategy: retrying with {downloadPlan.Assets.Count} chain asset(s), Scenario={scenario}");
-            await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
-        }
+        await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
     }
 
     #endregion
@@ -1216,34 +1208,6 @@ public class ClientStrategy : IStrategy
     }
 
     /// <summary>
-    /// Builds a chain-only fallback plan from the cached original server response,
-    /// excluding any CVP assets. Returns null when no chain packages are available.
-    /// </summary>
-    private (Download.Models.DownloadPlan Plan, UpdateScenario Scenario)? BuildChainFallback(
-        List<Download.Models.DownloadAsset> originalAssets,
-        string localClientVersion,
-        string? resolvedUpgradeVersion)
-    {
-        var chainAssets = originalAssets.Where(a => !a.IsCrossVersion).ToList();
-        var plan = DownloadPlanBuilder.Build(chainAssets, localClientVersion, resolvedUpgradeVersion);
-        if (!plan.HasAssets) return null;
-
-        _configInfo.LastVersion = plan.Assets.LastOrDefault()?.Version;
-        _configInfo.IsMainUpdate = DownloadPlanBuilder.HasUpdate(chainAssets, AppType.Client, localClientVersion);
-        _configInfo.IsUpgradeUpdate = DownloadPlanBuilder.HasUpdate(chainAssets, AppType.Upgrade, resolvedUpgradeVersion);
-
-        var sc = (_configInfo.IsMainUpdate, _configInfo.IsUpgradeUpdate) switch
-        {
-            (false, true) => UpdateScenario.UpgradeOnly,
-            (true, false) => UpdateScenario.MainOnly,
-            (true, true) => UpdateScenario.Both,
-            _ => UpdateScenario.None
-        };
-
-        return (plan, sc);
-    }
-
-    /// <summary>
     /// Returns <c>true</c> when the OS strategy reports that all upgrade packages
     /// were applied successfully. For custom <see cref="IStrategy"/> implementations
     /// that do not expose <see cref="AbstractStrategy.AllPackagesSucceeded"/>,
@@ -1252,18 +1216,6 @@ public class ClientStrategy : IStrategy
     private bool UpgradePackagesSucceeded()
     {
         return (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
-    }
-
-    /// <summary>
-    /// Updates <see cref="_mainRecordId"/> and <see cref="_upgradeRecordId"/> from the
-    /// current download plan so status reports use correct record identifiers after fallback.
-    /// </summary>
-    private void UpdateRecordIdsFromPlan(Download.Models.DownloadPlan plan)
-    {
-        _mainRecordId = plan.Assets
-            .FirstOrDefault(a => (a.AppType ?? (int)AppType.Client) == (int)AppType.Client)?.RecordId ?? 0;
-        _upgradeRecordId = plan.Assets
-            .FirstOrDefault(a => a.AppType == (int)AppType.Upgrade)?.RecordId ?? 0;
     }
 
     #endregion

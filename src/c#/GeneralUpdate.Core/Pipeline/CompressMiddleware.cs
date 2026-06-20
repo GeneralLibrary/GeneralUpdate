@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Compress;
+using GeneralUpdate.Core.Configuration;
 
 namespace GeneralUpdate.Core.Pipeline;
 
@@ -63,7 +64,13 @@ public class CompressMiddleware : IMiddleware
             var encoding = context.Get<Encoding>("Encoding");
             var appPath = context.Get<string>("SourcePath");
             var patchEnabled = context.Get<bool?>("PatchEnabled");
-            var targetPath = patchEnabled == false ? appPath : patchPath;
+            var packageType = context.Get<int?>("PackageType");
+
+            // Full packages (PackageType=2) are self-contained: decompress directly
+            // to the install directory regardless of PatchEnabled.
+            // Chain packages need patch processing: decompress to PatchPath.
+            var isFullPackage = packageType == (int)PackageType.Full;
+            var targetPath = (patchEnabled == false || isFullPackage) ? appPath : patchPath;
             GeneralTracer.Info($"CompressMiddleware.InvokeAsync: decompressing package. Format={format}, Source={sourcePath}, Target={targetPath}, PatchEnabled={patchEnabled}");
             try
             {
