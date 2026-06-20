@@ -97,7 +97,7 @@ public class BlackMatcher : IBlackMatcher
     /// </remarks>
     public bool ShouldSkipDirectory(string directoryName)
         => _config.Directories?.Any(d =>
-            directoryName.IndexOf(d, StringComparison.OrdinalIgnoreCase) >= 0) == true;
+            directoryName.StartsWith(d, StringComparison.OrdinalIgnoreCase)) == true;
 
     /// <summary>
     /// Matches a file name against a simple Glob pattern.

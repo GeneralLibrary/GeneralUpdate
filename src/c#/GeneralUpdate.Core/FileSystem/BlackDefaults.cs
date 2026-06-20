@@ -28,4 +28,21 @@ public static class BlackDefaults
         StorageManager.LegacyDirectoryPrefix,
         "fail"
     };
+
+    /// <summary>
+    /// Creates a <see cref="BlackPolicy"/> using caller-provided lists, falling back to
+    /// <see cref="DefaultFiles"/>, <see cref="DefaultFormats"/>, and <see cref="DefaultDirectories"/>
+    /// for any list that is null or empty.
+    /// </summary>
+    public static BlackPolicy CreatePolicyWithDefaults(
+        IReadOnlyList<string>? files,
+        IReadOnlyList<string>? formats,
+        IReadOnlyList<string>? directories)
+    {
+        return new BlackPolicy(
+            files?.Count > 0 ? new List<string>(files) : DefaultFiles,
+            formats?.Count > 0 ? new List<string>(formats) : DefaultFormats,
+            directories?.Count > 0 ? new List<string>(directories) : DefaultDirectories
+        );
+    }
 }
