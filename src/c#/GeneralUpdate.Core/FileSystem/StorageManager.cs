@@ -222,6 +222,58 @@ namespace GeneralUpdate.Core.FileSystem
         }
 
         /// <summary>
+        /// Cleans up temporary directories created by previous runs that are older than <paramref name="maxAge"/>.
+        /// These directories match the pattern "generalupdate_*" created by <see cref="GetTempDirectory"/>.
+        /// </summary>
+        /// <param name="maxAge">Maximum age to retain. Defaults to 24 hours.</param>
+        /// <remarks>
+        /// This is safe to call at application startup or update cycle start to prevent disk
+        /// accumulation from silent-mode polling or crashed update processes.
+        /// Only directories belonging to OTHER processes (different PID) are cleaned —
+        /// the current process's temp directory is left untouched.
+        /// </remarks>
+        public static void CleanupOldTempDirectories(TimeSpan? maxAge = null)
+        {
+            maxAge ??= TimeSpan.FromHours(24);
+            var cutoff = DateTime.UtcNow - maxAge.Value;
+            var currentPid = System.Diagnostics.Process.GetCurrentProcess().Id;
+
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), "generalupdate_*"))
+                {
+                    try
+                    {
+                        var dirInfo = new DirectoryInfo(dir);
+                        var dirName = dirInfo.Name;
+
+                        // Parse timestamp from "generalupdate_yyyy-MM-dd-HHmmss-fff_PID_name"
+                        // Splitting by '_': [0]=prefix, [1]=timestamp, [2]=PID, [3..]=name.
+                        // If the PID segment matches the current process, skip it.
+                        var parts = dirName.Split('_');
+                        if (parts.Length >= 3 && int.TryParse(parts[2], out var pid) && pid == currentPid)
+                            continue;
+
+                        if (dirInfo.CreationTimeUtc < cutoff)
+                        {
+                            try { DeleteDirectory(dir); }
+                            catch (Exception ex)
+                            {
+                                GeneralTracer.Warn($"StorageManager.CleanupOldTempDirectories: failed to delete old temp '{dir}': {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (UnauthorizedAccessException) { /* skip */ }
+                    catch (DirectoryNotFoundException) { /* raced away */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                GeneralTracer.Warn($"StorageManager.CleanupOldTempDirectories: enumeration failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Generates a timestamp-based backup directory name in the format "backup-{yyyyMMddHHmmss}".
         /// </summary>
         /// <returns>A backup directory name string, e.g. "backup-20260606235200".</returns>
@@ -292,18 +344,62 @@ namespace GeneralUpdate.Core.FileSystem
         /// </remarks>
         public static void DeleteDirectory(string targetDir)
         {
-            foreach (var file in Directory.GetFiles(targetDir))
+            // Enumerate then delete with per-item exception handling.
+            // Between enumeration and deletion, concurrent processes may add/remove
+            // files — handle these races gracefully instead of crashing.
+            try
             {
-                File.SetAttributes(file, FileAttributes.Normal);
-                File.Delete(file);
-            }
+                foreach (var file in Directory.GetFiles(targetDir))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        File.Delete(file);
+                    }
+                    catch (FileNotFoundException) { /* raced away — already deleted */ }
+                    catch (DirectoryNotFoundException) { /* raced away */ }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete file '{Path.GetFileName(file)}': {ex.Message}");
+                    }
+                }
 
-            foreach (var dir in Directory.GetDirectories(targetDir))
+                try
+                {
+                    foreach (var dir in Directory.GetDirectories(targetDir))
+                    {
+                        try
+                        {
+                            DeleteDirectory(dir);
+                        }
+                        catch (DirectoryNotFoundException) { /* raced away */ }
+                        catch (UnauthorizedAccessException ex)
+                        {
+                            GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(dir)}': {ex.Message}");
+                        }
+                    }
+                }
+                catch (DirectoryNotFoundException) { /* parent raced away */ }
+                catch (UnauthorizedAccessException ex)
+                {
+                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot enumerate subdirectories: {ex.Message}");
+                }
+
+                try
+                {
+                    Directory.Delete(targetDir, false);
+                }
+                catch (DirectoryNotFoundException) { /* raced away */ }
+                catch (UnauthorizedAccessException ex)
+                {
+                    GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot delete directory '{Path.GetFileName(targetDir)}': {ex.Message}");
+                }
+            }
+            catch (DirectoryNotFoundException) { /* parent raced away before enumeration */ }
+            catch (UnauthorizedAccessException ex)
             {
-                DeleteDirectory(dir);
+                GeneralTracer.Warn($"StorageManager.DeleteDirectory: cannot enumerate '{targetDir}': {ex.Message}");
             }
-
-            Directory.Delete(targetDir, false);
         }
 
         /// <summary>

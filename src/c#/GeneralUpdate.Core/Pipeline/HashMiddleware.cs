@@ -32,6 +32,9 @@ namespace GeneralUpdate.Core.Pipeline;
 /// </remarks>
 public class HashMiddleware : IMiddleware
 {
+    // Reusable thread-safe algorithm instance. SHA256.Create is stateless
+    // once initialized; individual calls compute on their own input stream.
+    private static readonly Sha256HashAlgorithm HashAlgorithm = new();
     /// <summary>
     /// Asynchronously executes the hash verification logic.
     /// </summary>
@@ -95,8 +98,7 @@ public class HashMiddleware : IMiddleware
     {
         return Task.Run(() =>
         {
-            var hashAlgorithm = new Sha256HashAlgorithm();
-            var hashSha256 = hashAlgorithm.ComputeHash(path);
+            var hashSha256 = HashAlgorithm.ComputeHash(path);
             return string.Equals(hash, hashSha256, StringComparison.OrdinalIgnoreCase);
         });
     }

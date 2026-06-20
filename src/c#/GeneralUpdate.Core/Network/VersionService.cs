@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -64,47 +62,17 @@ namespace GeneralUpdate.Core.Network
     /// </remarks>
     public class VersionService
     {
-        private static readonly HttpClient _sharedClient;
-        private static volatile ISslValidationPolicy _globalSslPolicy = new StrictSslValidationPolicy();
-
         private readonly IHttpAuthProvider _authProvider;
         private readonly TimeSpan _timeout;
         private readonly int _maxRetryAttempts;
 
         /// <summary>
-        /// Static constructor: initializes the static members of <see cref="VersionService"/>.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Execution flow:
-        /// <list type="number">
-        ///   <item><description>Creates an <see cref="HttpClientHandler"/> with a custom SSL validation callback.</description></item>
-        ///   <item><description>The SSL validation logic is delegated to <see cref="ISslValidationPolicy"/>,
-        ///   which can be replaced globally via <see cref="SetSslValidationPolicy"/>.</description></item>
-        ///   <item><description>Initializes the static shared <see cref="HttpClient"/> instance using the handler.</description></item>
-        /// </list>
-        /// </para>
-        /// </remarks>
-        static VersionService()
-        {
-            var handler = new HttpClientHandler();
-            handler.ServerCertificateCustomValidationCallback = SharedCertValidation;
-            _sharedClient = new HttpClient(handler, disposeHandler: false);
-        }
-
-        /// <summary>
         /// Sets the global SSL certificate validation policy.
+        /// Delegates to <see cref="HttpClientProvider.SetSslValidationPolicy"/> so there is
+        /// only one SSL policy for all HTTP traffic in the framework.
         /// </summary>
-        /// <remarks>
-        /// This policy affects all HTTPS requests made by <see cref="VersionService"/> instances.
-        /// The default is <see cref="StrictSslValidationPolicy"/>, i.e., strict mode.
-        /// Pass a custom <see cref="ISslValidationPolicy"/> implementation to relax or replace
-        /// the validation logic.
-        /// </remarks>
-        /// <param name="policy">The SSL validation policy instance. Must not be null.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
         public static void SetSslValidationPolicy(ISslValidationPolicy policy)
-            => _globalSslPolicy = policy ?? throw new ArgumentNullException(nameof(policy));
+            => HttpClientProvider.SetSslValidationPolicy(policy);
 
         /// <summary>
         /// Sets the global default HTTP authentication provider.
@@ -115,24 +83,9 @@ namespace GeneralUpdate.Core.Network
         /// <see cref="HttpUpdateReporter"/> and other components using
         /// <see cref="HttpClientProvider.Shared"/> share the same global authentication.
         /// </para>
-        /// <para>
-        /// When a global authentication provider is set, all requests made via the static APIs
-        /// (<see cref="Validate(string, string, AppType, string, PlatformType, string, string, string, CancellationToken)"/>
-        /// and <see cref="Report(string, int, int, int?, string, string, CancellationToken)"/>)
-        /// will preferentially use this provider, overriding the authentication instance
-        /// created by <see cref="HttpAuthProviderFactory.Create"/>.
-        /// </para>
-        /// <para>
-        /// Passing null clears the global authentication provider, reverting to the factory method.
-        /// </para>
         /// </remarks>
-        /// <param name="provider">The global authentication provider instance, or null to clear the global configuration.</param>
         public static void SetDefaultAuthProvider(IHttpAuthProvider? provider)
             => HttpClientProvider.DefaultAuthProvider = provider;
-
-        private static bool SharedCertValidation(HttpRequestMessage m, X509Certificate2? c,
-            X509Chain? ch, SslPolicyErrors e)
-            => _globalSslPolicy.ValidateCertificate(c, ch, e);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VersionService"/> class.
@@ -353,7 +306,7 @@ namespace GeneralUpdate.Core.Network
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(t);
             cts.CancelAfter(_timeout);
-            var r = await _sharedClient.SendAsync(req, cts.Token).ConfigureAwait(false);
+            var r = await HttpClientProvider.Shared.SendAsync(req, cts.Token).ConfigureAwait(false);
             r.EnsureSuccessStatusCode();
             var rj = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
             var result = JsonSerializer.Deserialize(rj, ti);

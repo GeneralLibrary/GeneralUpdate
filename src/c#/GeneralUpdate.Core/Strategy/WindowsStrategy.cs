@@ -109,8 +109,11 @@ namespace GeneralUpdate.Core.Strategy
 
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
                 using var appProcess = Process.Start(appPath);
-                if (appProcess == null || appProcess.HasExited)
+                if (appProcess == null)
                     throw new InvalidOperationException($"Failed to start application: {appPath}");
+                // Do NOT check appProcess.HasExited here — a fast-starting app may
+                // have already exited by the time we check, causing a false failure.
+                // Process.Start returning non-null confirms the OS created the process.
                 appLaunched = true;
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 

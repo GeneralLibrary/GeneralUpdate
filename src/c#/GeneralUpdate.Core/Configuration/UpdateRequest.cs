@@ -37,13 +37,7 @@ namespace GeneralUpdate.Core.Configuration
         ///         <item>
         ///             <c>UpdateLogUrl</c>: If set, must be a valid absolute URI.</item>
         ///         <item>
-        ///             <c>UpdateAppName</c>: Must not be empty.</item>
-        ///         <item>
-        ///             <c>MainAppName</c>: Must not be empty.</item>
-        ///         <item>
         ///             <c>AppSecretKey</c>: Must not be empty.</item>
-        ///         <item>
-        ///             <c>ClientVersion</c>: Must not be empty.</item>
         ///     </list>
         ///     <para>
         ///         This method is typically called at the end of the <see cref="UpdateRequestBuilder.Build" /> method

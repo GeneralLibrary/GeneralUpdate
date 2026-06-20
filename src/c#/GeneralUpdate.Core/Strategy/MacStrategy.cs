@@ -76,8 +76,11 @@ public class MacStrategy : AbstractStrategy
             {
                 GeneralTracer.Info($"MacStrategy.StartApp: launching app={mainApp}");
                 using var process = System.Diagnostics.Process.Start(mainApp);
-                if (process == null || process.HasExited)
+                if (process == null)
                     throw new InvalidOperationException($"Failed to start application: {mainApp}");
+                // Do NOT check process.HasExited here — a fast-starting app may
+                // have already exited by the time we check, causing a false failure.
+                // Process.Start returning non-null confirms the OS created the process.
                 GeneralTracer.Info($"MacStrategy.StartApp: app launched successfully (PID: {process.Id}).");
             }
             else

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -158,16 +157,12 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
             if (sslPolicy != null)
             {
-                Network.VersionService.SetSslValidationPolicy(sslPolicy);
                 Network.HttpClientProvider.SetSslValidationPolicy(sslPolicy);
             }
             var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
             if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
             ConfigureStrategy(roleStrategy);
-
-            if (roleStrategy is ClientStrategy cs)
-                await CallSmallBowlHomeAsync(_configInfo.Bowl).ConfigureAwait(false);
 
             roleStrategy.Create(_configInfo);
 
@@ -221,6 +216,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var appType = GetOption(Option.AppType);
         if (appType != AppType.Upgrade)
         {
+            // Cleanup temp directories from previous runs (older than 24h) to
+            // prevent disk accumulation from silent-mode polling or crashes.
+            StorageManager.CleanupOldTempDirectories();
             _configInfo.TempPath = StorageManager.GetTempDirectory("upgrade_temp");
             InitBlackPolicy();
         }
@@ -466,7 +464,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var sslPolicy = ResolveExtension<Security.ISslValidationPolicy>();
         if (sslPolicy != null)
         {
-            Network.VersionService.SetSslValidationPolicy(sslPolicy);
             Network.HttpClientProvider.SetSslValidationPolicy(sslPolicy);
         }
         var authProvider = ResolveExtension<Security.IHttpAuthProvider>();
@@ -577,38 +574,12 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     private void InitBlackPolicy()
     {
-        // Build blacklist matcher from UpdateContext and set on StorageManager.
-        // The matcher combines user config with system defaults.
-        var effectiveConfig = new BlackPolicy(
-            _configInfo.Files?.Count > 0 ? _configInfo.Files : BlackDefaults.DefaultFiles,
-            _configInfo.Formats?.Count > 0 ? _configInfo.Formats : BlackDefaults.DefaultFormats,
-            _configInfo.Directories?.Count > 0
-                ? _configInfo.Directories
-                : BlackDefaults.DefaultDirectories
-        );
-        StorageManager.BlackMatcher = new BlackMatcher(effectiveConfig);
-    }
-
-    private async Task CallSmallBowlHomeAsync(string processName)
-    {
-        if (string.IsNullOrWhiteSpace(processName))
-        {
-            GeneralTracer.Warn("CallSmallBowlHomeAsync: Bowl process name is empty or whitespace, skipping shutdown.");
-            return;
-        }
-        try
-        {
-            var processes = Process.GetProcessesByName(processName);
-            foreach (var process in processes)
-            {
-                GeneralTracer.Info($"Shutting down process {process.ProcessName} (ID: {process.Id})");
-                await GracefulExit.ShutdownAsync(process).ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
-        }
+        StorageManager.BlackMatcher = new BlackMatcher(
+            BlackDefaults.CreatePolicyWithDefaults(
+                _configInfo.Files,
+                _configInfo.Formats,
+                _configInfo.Directories
+            ));
     }
 
     // ════════════════════════════════════════════════════════════════

@@ -83,6 +83,20 @@ public static class DownloadPlanBuilder
         return serverVersions.Max() > local;
     }
 
+    /// <summary>Pre-parses versions for a list of assets to avoid repeated Semver.TryParse calls.</summary>
+    private static Dictionary<DownloadAsset, SemVersion?> PreParseVersions(IEnumerable<DownloadAsset> assets)
+    {
+        var map = new Dictionary<DownloadAsset, SemVersion?>();
+        foreach (var a in assets)
+        {
+            // Custom IDownloadSource implementations could return duplicate records;
+            // silently accept the first occurrence rather than throwing.
+            if (!map.ContainsKey(a))
+                map[a] = ParseVersion(a.Version);
+        }
+        return map;
+    }
+
     /// <summary>
     /// Builds a download plan with AppType-aware version filtering.
     /// Client-type assets are compared against <paramref name="clientVersion"/>.
@@ -107,6 +121,16 @@ public static class DownloadPlanBuilder
         var parsedUpgrade = ParseVersion(upgradeClientVersion) ?? parsedClient;
         var uv = parsedUpgrade.Value;
 
+        // Pre-parse all asset versions to avoid repeated Semver.TryParse calls.
+        var versionMap = PreParseVersions(assets);
+
+        // Helper: safe lookup that matches netstandard2.0 (no GetValueOrDefault).
+        SemVersion? Lookup(DownloadAsset a)
+        {
+            versionMap.TryGetValue(a, out var sv);
+            return sv;
+        }
+
         // 1. Filter out frozen packages
         var active = assets
             .Where(a => !a.IsFreeze)
@@ -122,23 +146,22 @@ public static class DownloadPlanBuilder
         var candidates = active
             .Where(a =>
             {
-                if (!Semver.TryParse(a.Version, out var pv)) return false;
+                var pv = Lookup(a);
+                if (pv == null) return false;
 
                 var localVersion = (a.AppType == (int)AppType.Upgrade)
                     ? uv
                     : cv;
 
-                return pv > localVersion;
+                return pv.Value > localVersion;
             })
             .Where(a => IsCompatible(a.MinClientVersion, clientVersion))
-            .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; })
+            .OrderBy(a => Lookup(a))
             .ToList();
 
         if (candidates.Count == 0) return DownloadPlan.Empty;
 
-        // Separate chain vs full packages.
-        // Treat Unspecified (0) as Chain for backward compatibility with older
-        // servers that do not set PackageType yet.
+        // 4. Separate chain vs full packages.
         var chainCandidates = candidates
             .Where(a => a.PackageType == (int)Configuration.PackageType.Chain
                         || a.PackageType == (int)Configuration.PackageType.Unspecified)
@@ -149,17 +172,12 @@ public static class DownloadPlanBuilder
             .ToList();
 
         // ── Chain vs Full size-based decision ──
-        // If a full replacement package is available and the total chain download
-        // size approaches or exceeds the full package size, skip chain and use full.
         if (chainCandidates.Count > 0 && fullCandidates.Count > 0)
         {
-            // Pick the latest full package (highest version) across all AppTypes
             var bestFull = fullCandidates
-                .OrderByDescending(a => { Semver.TryParse(a.Version, out var sv); return sv; })
+                .OrderByDescending(a => Lookup(a))
                 .First();
 
-            // Only compare against chain packages of the same AppType as bestFull.
-            // Mixing Client and Upgrade sizes together could trigger incorrect switching.
             long chainTotal = chainCandidates
                 .Where(a => a.AppType == bestFull.AppType)
                 .Sum(a => a.Size);
@@ -167,23 +185,18 @@ public static class DownloadPlanBuilder
 
             if (chainTotal >= threshold)
             {
-                // Chain is too expensive — use full package instead.
-                // Supplement with chain packages for other AppTypes not covered by full.
                 GeneralTracer.Info($"DownloadPlanBuilder: chain total {chainTotal} >= 80% of full size {bestFull.Size}, switching to full package {bestFull.Name}");
+                var bestFullSv = Lookup(bestFull);
                 var planAssets = new List<DownloadAsset> { bestFull };
                 planAssets.AddRange(chainCandidates
                     .Where(a => a.AppType != bestFull.AppType
-                                || (Semver.TryParse(a.Version, out var av)
-                                    && Semver.TryParse(bestFull.Version, out var fv)
-                                    && av > fv))
-                    .OrderBy(a => { Semver.TryParse(a.Version, out var sv); return sv; }));
+                                || (Lookup(a) is { } av && bestFullSv != null && av > bestFullSv))
+                    .OrderBy(a => Lookup(a)));
                 return new DownloadPlan(planAssets, isForcibly);
             }
         }
 
         // ── Chain plan with fallback fulls ──
-        // Use chain packages normally. Attach FallbackFull* info to each chain entry
-        // so that if a chain patch fails, AbstractStrategy can fall back to full.
         if (fullCandidates.Count > 0)
         {
             var fallbackFulls = new List<DownloadAsset>();
@@ -191,20 +204,18 @@ public static class DownloadPlanBuilder
             var chainWithFallback = chainCandidates
                 .Select(chain =>
                 {
-                    // Find a matching full: same AppType + same Version (or closest)
                     var match = fullCandidates
                         .Where(f => f.AppType == chain.AppType)
-                        .OrderBy(f => { Semver.TryParse(f.Version, out var sv); return sv; })
+                        .OrderBy(f => Lookup(f))
                         .FirstOrDefault(f =>
                         {
-                            if (!Semver.TryParse(f.Version, out var fv)) return false;
-                            if (!Semver.TryParse(chain.Version, out var cv)) return false;
-                            return fv >= cv;
+                            var fv = Lookup(f);
+                            var cv = Lookup(chain);
+                            return fv != null && cv != null && fv.Value >= cv.Value;
                         });
 
                     if (match != null)
                     {
-                        // Add matching full to the fallback list once
                         if (!fallbackFulls.Any(f => f.Url == match.Url))
                             fallbackFulls.Add(match);
 
@@ -226,7 +237,6 @@ public static class DownloadPlanBuilder
             };
         }
 
-        // No full packages at all: return chain packages as-is
         return new DownloadPlan(chainCandidates, isForcibly);
     }
 
@@ -245,11 +255,7 @@ public static class DownloadPlanBuilder
 
     /// <summary>
     /// Checks whether the specified MinClientVersion is compatible with the current client version.
-    /// If a package's MinClientVersion is higher than the current version, the package is not applicable.
     /// </summary>
-    /// <param name="minClientVersion">The minimum client version required by the package. If null or empty, the package is considered compatible.</param>
-    /// <param name="currentVersion">The current client version string.</param>
-    /// <returns>True if the current version meets or exceeds the minimum requirement; otherwise false.</returns>
     internal static bool IsCompatible(string? minClientVersion, string currentVersion)
     {
         if (string.IsNullOrEmpty(minClientVersion)) return true;
@@ -260,8 +266,6 @@ public static class DownloadPlanBuilder
     }
 
     /// <summary>Parses a version string and returns null if the string cannot be parsed.</summary>
-    /// <param name="version">The version string to parse.</param>
-    /// <returns>A parsed <see cref="SemVersion"/> value, or null if parsing fails.</returns>
     internal static SemVersion? ParseVersion(string? version)
     {
         if (string.IsNullOrWhiteSpace(version)) return null;

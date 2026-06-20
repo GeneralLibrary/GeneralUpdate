@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -39,10 +40,39 @@ public static class GracefulExit
             process.Kill(); // Last resort
     }
 
-    /// <summary>Shutdown the current process gracefully.</summary>
-    public static async Task CurrentProcessAsync(int timeoutMs = 3000)
+    /// <summary>Exit the current process gracefully.</summary>
+    /// <remarks>
+    /// <para>
+    /// For external processes, <see cref="ShutdownAsync"/> sends WM_CLOSE then waits.
+    /// For self-shutdown (the current process), calling <c>CloseMainWindow</c> + <c>Kill</c>
+    /// on oneself is harmful — <c>Kill</c> skips finally blocks, <c>CloseMainWindow</c> is a
+    /// no-op for console apps, and the 3-second wait is wasted.
+    /// </para>
+    /// <para>
+    /// Instead, this method signals the process to exit naturally.
+    /// Callers must dispose their own resources (tracer, etc.) before calling this method.
+    /// </para>
+    /// </remarks>
+    public static Task CurrentProcessAsync(int timeoutMs = 3000)
     {
-        var p = Process.GetCurrentProcess();
-        await ShutdownAsync(p, timeoutMs).ConfigureAwait(false);
+        try
+        {
+            // Signal GUI windows to close. For console/background processes this is
+            // a no-op, but the process will exit when the async call stack unwinds.
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                using var p = Process.GetCurrentProcess();
+                if (!p.HasExited)
+                    p.CloseMainWindow();
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exiting — nothing to do.
+        }
+
+        // The process exits naturally when the async call stack completes.
+        // Callers should have already disposed critical resources (tracer, etc.).
+        return Task.CompletedTask;
     }
 }

@@ -38,11 +38,6 @@ namespace GeneralUpdate.Core.Configuration
         private static readonly ConcurrentDictionary<string, Option> _registry = new();
 
         /// <summary>
-        ///     The synchronization lock object for thread-safe option creation.
-        /// </summary>
-        private static readonly object _lock = new();
-
-        /// <summary>
         ///     The unique name identifier for this option.
         ///     Remains unique throughout the application lifetime.
         /// </summary>
@@ -74,15 +69,19 @@ namespace GeneralUpdate.Core.Configuration
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="name" /> is <c>null</c>.</exception>
         public static Option<T> ValueOf<T>(string name, T defaultValue = default!)
         {
-            lock (_lock)
-            {
-                if (_registry.TryGetValue(name, out var existing) && existing is Option<T> typed)
-                    return typed;
+            // GetOrAdd is lock-free on ConcurrentDictionary. Under contention the
+            // factory may run multiple times, but only one instance is stored and
+            // returned by all racing callers. The factory must be side-effect-free.
+            var raw = _registry.GetOrAdd(name, _ => new Option<T>(name, defaultValue));
 
-                var option = new Option<T>(name, defaultValue);
-                _registry[name] = option;
-                return option;
-            }
+            // If the existing entry was registered with a different type T, create a new one.
+            // This is the same "last writer wins" behavior as the original lock-based implementation.
+            if (raw is Option<T> typed)
+                return typed;
+
+            var replacement = new Option<T>(name, defaultValue);
+            _registry[name] = replacement;
+            return replacement;
         }
 
         /// <summary>

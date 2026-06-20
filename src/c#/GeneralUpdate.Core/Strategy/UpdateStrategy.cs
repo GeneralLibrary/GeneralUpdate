@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Event;
@@ -213,17 +212,7 @@ public class UpdateStrategy : IStrategy
     #region Helpers
 
     private IStrategy ResolveOsStrategy()
-    {
-        if (_customOsStrategy != null)
-            return _customOsStrategy;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return new WindowsStrategy();
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return new LinuxStrategy();
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return new MacStrategy();
-        throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
+        => OsStrategyResolver.Resolve(_customOsStrategy);
 
     private Hooks.HookContext BuildUpdateContext()
     {
@@ -239,7 +228,7 @@ public class UpdateStrategy : IStrategy
     private async Task<bool> SafeOnBeforeUpdateAsync(Hooks.HookContext ctx)
     {
         try { return await Hooks.OnBeforeUpdateAsync(ctx).ConfigureAwait(false); }
-        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return true; }
+        catch (Exception ex) { GeneralTracer.Warn($"OnBeforeUpdateAsync hook failed: {ex.Message}"); return false; }
     }
 
     private async Task SafeOnAfterUpdateAsync(Hooks.HookContext ctx)

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
@@ -46,6 +47,12 @@ namespace GeneralUpdate.Core.Strategy
     public abstract class AbstractStrategy : IStrategy
     {
         private const string Patchs = "patchs";
+
+        /// <summary>Guard against re-entrant <see cref="ExecuteAsync"/> calls.</summary>
+        private int _executing;
+
+        /// <summary>Tracks whether at least one version was applied successfully in the current batch.</summary>
+        private bool _appliedAnyVersion;
 
         /// <summary>
         /// Global configuration information containing parameters such as update package path, temporary directory, report URL, and version list.
@@ -141,10 +148,18 @@ namespace GeneralUpdate.Core.Strategy
         /// </remarks>
         public virtual async Task ExecuteAsync()
         {
+            if (Interlocked.Exchange(ref _executing, 1) == 1)
+            {
+                GeneralTracer.Warn("AbstractStrategy.ExecuteAsync: re-entrant call ignored.");
+                AllPackagesSucceeded = false;
+                return;
+            }
+
             var patchRoot = string.Empty;
             try
             {
                 AllPackagesSucceeded = true;
+                _appliedAnyVersion = false;
                 var status = ReportType.None;
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
 
@@ -185,6 +200,7 @@ namespace GeneralUpdate.Core.Strategy
                         var context = CreatePipelineContext(version, patchPath);
                         var pipelineBuilder = BuildPipeline(context);
                         await pipelineBuilder.Build();
+                        _appliedAnyVersion = true;
                         status = ReportType.Success;
                     }
                     catch (Exception e) when (version.PackageType == (int)PackageType.Chain
@@ -212,6 +228,7 @@ namespace GeneralUpdate.Core.Strategy
                         try
                         {
                             await fallbackBuilder.Build();
+                            _appliedAnyVersion = true;
                             status = ReportType.Success;
                             // Record the fallback full package version so subsequent
                             // chain packages ≤ this version are skipped.
@@ -236,7 +253,12 @@ namespace GeneralUpdate.Core.Strategy
                         status = ReportType.Failure;
                         AllPackagesSucceeded = false;
                         HandleExecuteException(e);
-                        TryRollback();
+                        // Only rollback when NO version has succeeded yet in this batch.
+                        // If a previous version was already applied successfully,
+                        // rolling back would undo valid work and leave the app in
+                        // a downgraded state across version boundaries.
+                        if (!_appliedAnyVersion)
+                            TryRollback();
                     }
                     finally
                     {
@@ -258,6 +280,7 @@ namespace GeneralUpdate.Core.Strategy
             }
             finally
             {
+                Interlocked.Exchange(ref _executing, 0);
                 if (!string.IsNullOrEmpty(patchRoot))
                     Clear(patchRoot);
             }
@@ -522,6 +545,14 @@ namespace GeneralUpdate.Core.Strategy
         private void DeleteVersionZip(VersionEntry version)
         {
             if (string.IsNullOrWhiteSpace(_configinfo.TempPath)) return;
+
+            // Guard: version.Name must not be null or empty, otherwise the path
+            // would resolve to TempPath/.zip which could delete an unrelated file.
+            if (string.IsNullOrWhiteSpace(version.Name))
+            {
+                GeneralTracer.Warn($"AbstractStrategy: cannot delete zip for version {version.Version ?? "null"} — Name is empty.");
+                return;
+            }
 
             var zipPath = Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format.ToExtension()}");
             try

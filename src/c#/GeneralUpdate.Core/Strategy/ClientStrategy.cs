@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
@@ -857,17 +856,7 @@ public class ClientStrategy : IStrategy
     /// <para>If neither matches, a <see cref="PlatformNotSupportedException"/> is thrown.</para>
     /// </remarks>
     private IStrategy ResolveOsStrategy()
-    {
-        if (_customOsStrategy != null)
-            return _customOsStrategy;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return new WindowsStrategy();
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return new LinuxStrategy();
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return new MacStrategy();
-        throw new PlatformNotSupportedException("The current operating system is not supported!");
-    }
+        => OsStrategyResolver.Resolve(_customOsStrategy);
 
     /// <summary>
     /// Initializes the file blacklist configuration. Used to exclude files, formats, and directories that do not need processing
@@ -880,14 +869,12 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     private void InitBlackPolicy()
     {
-        var effectiveConfig = new BlackPolicy(
-            _configInfo!.Files?.Count > 0 ? _configInfo.Files : BlackDefaults.DefaultFiles,
-            _configInfo.Formats?.Count > 0 ? _configInfo.Formats : BlackDefaults.DefaultFormats,
-            _configInfo.Directories?.Count > 0
-                ? _configInfo.Directories
-                : BlackDefaults.DefaultDirectories
-        );
-        StorageManager.BlackMatcher = new BlackMatcher(effectiveConfig);
+        StorageManager.BlackMatcher = new BlackMatcher(
+            BlackDefaults.CreatePolicyWithDefaults(
+                _configInfo!.Files,
+                _configInfo.Formats,
+                _configInfo.Directories
+            ));
     }
 
     /// <summary>
@@ -951,22 +938,9 @@ public class ClientStrategy : IStrategy
         return failVersion >= versionParsed;
     }
 
-    /// <summary>
     /// Gets the platform type for the current running OS.
-    /// </summary>
-    /// <returns>The current platform type (<see cref="PlatformType.Windows"/>, <see cref="PlatformType.Linux"/>,
-    /// <see cref="PlatformType.MacOS"/>, or <see cref="PlatformType.Unknown"/>).</returns>
-    /// <remarks>
-    /// Uses <c>RuntimeInformation.IsOSPlatform</c> for runtime detection.
-    /// The return value is used to inform the server of the client platform when constructing <c>HttpDownloadSource</c>.
-    /// </remarks>
     private static PlatformType GetPlatform()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return PlatformType.Windows;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return PlatformType.Linux;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return PlatformType.MacOS;
-        return PlatformType.Unknown;
-    }
+        => OsStrategyResolver.GetPlatform();
 
     /// <summary>
     /// After upgrade packages have been applied in-place, writes the latest upgrade version
