@@ -192,29 +192,26 @@ public static class DownloadPlanBuilder
                 .Sum(a => a.Size);
             int chainCount = chainCandidates.Count(a => a.AppType == bestFull.AppType);
 
-            if (maxChainBeforeFallback > 0 && chainCount > maxChainBeforeFallback)
+            // Local helper: build a "switch to full" plan that replaces same-AppType
+            // chain packages with bestFull, while keeping chains for other AppTypes
+            // (and any same-AppType chains whose version exceeds the full's version).
+            DownloadPlan SwitchToFull(string reason)
             {
-                GeneralTracer.Info($"DownloadPlanBuilder: chain count {chainCount} exceeds MaxChainBeforeFallback {maxChainBeforeFallback}, switching to full package {bestFull.Name} (chain total {chainTotal}, full size {bestFull.Size})");
-                var bestFullSv = Lookup(bestFull);
+                GeneralTracer.Info($"DownloadPlanBuilder: {reason}, switching to full package {bestFull.Name} (chain count {chainCount}, chain total {chainTotal}, full size {bestFull.Size})");
+                var fullVersion = Lookup(bestFull);
                 var planAssets = new List<DownloadAsset> { bestFull };
                 planAssets.AddRange(chainCandidates
                     .Where(a => a.AppType != bestFull.AppType
-                                || (Lookup(a) is { } av && bestFullSv != null && av > bestFullSv))
+                                || (Lookup(a) is { } av && fullVersion != null && av > fullVersion))
                     .OrderBy(a => Lookup(a)));
                 return new DownloadPlan(planAssets, isForcibly);
             }
 
+            if (maxChainBeforeFallback > 0 && chainCount > maxChainBeforeFallback)
+                return SwitchToFull($"chain count {chainCount} exceeds MaxChainBeforeFallback {maxChainBeforeFallback}");
+
             if (chainTotal >= bestFull.Size)
-            {
-                GeneralTracer.Info($"DownloadPlanBuilder: chain total {chainTotal} >= full size {bestFull.Size}, switching to full package {bestFull.Name}");
-                var bestFullSv = Lookup(bestFull);
-                var planAssets = new List<DownloadAsset> { bestFull };
-                planAssets.AddRange(chainCandidates
-                    .Where(a => a.AppType != bestFull.AppType
-                                || (Lookup(a) is { } av && bestFullSv != null && av > bestFullSv))
-                    .OrderBy(a => Lookup(a)));
-                return new DownloadPlan(planAssets, isForcibly);
-            }
+                return SwitchToFull($"chain total {chainTotal} >= full size {bestFull.Size}");
         }
 
         // ── Chain plan with fallback fulls ──
