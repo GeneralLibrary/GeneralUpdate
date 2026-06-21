@@ -475,7 +475,8 @@ public class ClientStrategy : IStrategy
         var downloadPlan = Download.DownloadPlanBuilder.Build(
             sourceResult.Assets,
             localClientVersion,
-            resolvedUpgradeVersion);
+            resolvedUpgradeVersion,
+            _configInfo.MaxChainBeforeFallback);
         _configInfo.LastVersion = downloadPlan.Assets.LastOrDefault()?.Version;
         GeneralTracer.Info($"ClientStrategy: Scenario={scenario}, AssetCount={downloadPlan.Assets.Count}");
 

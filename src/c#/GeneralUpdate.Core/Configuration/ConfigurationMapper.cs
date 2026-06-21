@@ -103,6 +103,7 @@ namespace GeneralUpdate.Core.Configuration
             target.UpgradeClientVersion = source.UpgradeClientVersion;
             target.ProductId = source.ProductId;
             target.CustomHeaders = source.CustomHeaders;
+            target.MaxChainBeforeFallback = source.MaxChainBeforeFallback;
 
             return target;
         }

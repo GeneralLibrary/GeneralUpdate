@@ -245,5 +245,23 @@ namespace GeneralUpdate.Core.Configuration
         /// </remarks>
         /// </remarks>
         public Dictionary<string, string> CustomHeaders { get; set; }
+
+        /// <summary>
+        ///     Maximum number of chain (delta) packages allowed before falling back to a single
+        ///     full replacement package. When the number of chain packages for an AppType exceeds
+        ///     this limit, the download plan switches to the full package for that AppType —
+        ///     even if the combined chain size is smaller than the full package.
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         A full package is also selected when the combined download size of all chain
+        ///         packages equals or exceeds the full package size, regardless of the count.
+        ///     </para>
+        ///     <para>
+        ///         Set to <c>0</c> or a negative value to disable the count-based fallback
+        ///         (only the size comparison applies).
+        ///     </para>
+        /// </remarks>
+        public int MaxChainBeforeFallback { get; set; } = 8;
     }
 }
