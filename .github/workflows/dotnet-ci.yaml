@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Fetch all tags so changelog generation works
 
       - name: 安装.NET SDK
         uses: actions/setup-dotnet@v5
