@@ -81,21 +81,86 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
-    public void Build_FullPackageSelected_WhenChainExceedsThreshold()
+    public void Build_FullPackageSelected_WhenChainTotalExceedsFullSize()
     {
-        // Small chain + small full → chain_total >= 80% full → Full selected
+        // 2 chain packages (total 200), full=100 → 200 >= 100 → full selected
         var assets = new[]
         {
             Asset("chain1", "1.1.0", size: 100),
             Asset("chain2", "2.0.0", size: 100),
             Asset("full", "2.0.0", packageType: (int)PackageType.Full),
         };
-        // chain_total=200, 80% of full(100) = 80 → 200 >= 80 → full selected
         var result = DownloadPlanBuilder.Build(assets, "1.0.0");
         Assert.True(result.HasAssets);
         Assert.Single(result.Assets);
         Assert.Equal((int)PackageType.Full, result.Assets[0].PackageType);
         Assert.Equal("2.0.0", result.Assets[0].Version);
+    }
+
+    [Fact]
+    public void Build_FullPackageSelected_WhenChainCountExceedsMaxChainBeforeFallback()
+    {
+        // 12 small chain packages (total 120), full=500, maxChainBeforeFallback=10
+        // → chain count 12 > 10 → full selected despite chain being much smaller
+        var assets = new List<DownloadAsset>();
+        for (int i = 1; i <= 12; i++)
+            assets.Add(Asset($"chain{i}", $"1.{i}.0", size: 10));
+        assets.Add(Asset("full", "2.0.0", size: 500, packageType: (int)PackageType.Full));
+
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0", null, maxChainBeforeFallback: 10);
+        Assert.True(result.HasAssets);
+        Assert.Single(result.Assets);
+        Assert.Equal((int)PackageType.Full, result.Assets[0].PackageType);
+    }
+
+    [Fact]
+    public void Build_ChainSelected_WhenCountBelowThresholdAndTotalBelowFullSize()
+    {
+        // 3 chain packages (total 150), full=500, maxChainBeforeFallback=default(8)
+        // → chain count 3 <= 8 AND 150 < 500 → chain selected
+        var assets = new[]
+        {
+            Asset("chain1", "1.1.0", size: 50),
+            Asset("chain2", "1.2.0", size: 50),
+            Asset("chain3", "2.0.0", size: 50),
+            Asset("full", "2.0.0", size: 500, packageType: (int)PackageType.Full),
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
+        Assert.True(result.HasAssets);
+        Assert.Equal(3, result.Assets.Count);
+        Assert.All(result.Assets, a => Assert.Equal((int)PackageType.Chain, a.PackageType));
+    }
+
+    [Fact]
+    public void Build_FullPackageSelected_WhenChainTotalEqualsFullSize()
+    {
+        // chain total == full size → full selected (boundary: >= not >)
+        var assets = new[]
+        {
+            Asset("chain1", "1.1.0", size: 200),
+            Asset("chain2", "2.0.0", size: 300),
+            Asset("full", "2.0.0", size: 500, packageType: (int)PackageType.Full),
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0", null, maxChainBeforeFallback: 10);
+        Assert.True(result.HasAssets);
+        Assert.Single(result.Assets);
+        Assert.Equal((int)PackageType.Full, result.Assets[0].PackageType);
+    }
+
+    [Fact]
+    public void Build_ChainSelected_WhenMaxChainBeforeFallbackIsZero()
+    {
+        // maxChainBeforeFallback=0 disables count-based fallback
+        // 25 chain packages (total 400), full=500 → 400 < 500 → chain selected
+        var assets = new List<DownloadAsset>();
+        for (int i = 1; i <= 25; i++)
+            assets.Add(Asset($"chain{i}", $"1.{i}.0", size: 16));
+        assets.Add(Asset("full", "2.0.0", size: 500, packageType: (int)PackageType.Full));
+
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0", null, maxChainBeforeFallback: 0);
+        Assert.True(result.HasAssets);
+        Assert.Equal(25, result.Assets.Count);
+        Assert.All(result.Assets, a => Assert.Equal((int)PackageType.Chain, a.PackageType));
     }
 
     [Fact]

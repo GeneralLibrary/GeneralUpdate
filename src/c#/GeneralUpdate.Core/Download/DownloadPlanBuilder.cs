@@ -28,8 +28,10 @@ namespace GeneralUpdate.Core.Download;
 ///         if the current client version is below the minimum, the package is skipped.</description></item>
 /// </list>
 /// <para>
-/// All packages are treated uniformly; the builder evaluates chain vs full packages
-/// based on total download size.
+/// Chain vs full evaluation uses a count-first heuristic:
+/// a full package is selected when the number of chain packages exceeds
+/// <c>MaxChainBeforeFallback</c> (default 8), or when the combined download size
+/// of all chain packages equals or exceeds the full package size.
 /// </para>
 /// </remarks>
 public static class DownloadPlanBuilder
@@ -108,10 +110,17 @@ public static class DownloadPlanBuilder
     /// <param name="upgradeClientVersion">
     /// The current upgrade (updater) version, or null to fall back to <paramref name="clientVersion"/>.
     /// </param>
+    /// <param name="maxChainBeforeFallback">
+    /// Maximum number of chain packages allowed before falling back to a single full package.
+    /// Default is <c>8</c>. Set to <c>0</c> to disable the count-based fallback; set to
+    /// a negative value to always prefer chain packages when their combined size is smaller
+    /// than the full package.
+    /// </param>
     public static DownloadPlan Build(
         IEnumerable<DownloadAsset> assets,
         string clientVersion,
-        string? upgradeClientVersion)
+        string? upgradeClientVersion,
+        int maxChainBeforeFallback = 8)
     {
         if (assets == null) return DownloadPlan.Empty;
         var parsedClient = ParseVersion(clientVersion);
@@ -171,7 +180,7 @@ public static class DownloadPlanBuilder
             .Where(a => a.PackageType == (int)Configuration.PackageType.Full)
             .ToList();
 
-        // ── Chain vs Full size-based decision ──
+        // ── Chain vs Full: count-first heuristic ──
         if (chainCandidates.Count > 0 && fullCandidates.Count > 0)
         {
             var bestFull = fullCandidates
@@ -181,11 +190,23 @@ public static class DownloadPlanBuilder
             long chainTotal = chainCandidates
                 .Where(a => a.AppType == bestFull.AppType)
                 .Sum(a => a.Size);
-            var threshold = (long)(bestFull.Size * 0.8);
+            int chainCount = chainCandidates.Count(a => a.AppType == bestFull.AppType);
 
-            if (chainTotal >= threshold)
+            if (maxChainBeforeFallback > 0 && chainCount > maxChainBeforeFallback)
             {
-                GeneralTracer.Info($"DownloadPlanBuilder: chain total {chainTotal} >= 80% of full size {bestFull.Size}, switching to full package {bestFull.Name}");
+                GeneralTracer.Info($"DownloadPlanBuilder: chain count {chainCount} exceeds MaxChainBeforeFallback {maxChainBeforeFallback}, switching to full package {bestFull.Name} (chain total {chainTotal}, full size {bestFull.Size})");
+                var bestFullSv = Lookup(bestFull);
+                var planAssets = new List<DownloadAsset> { bestFull };
+                planAssets.AddRange(chainCandidates
+                    .Where(a => a.AppType != bestFull.AppType
+                                || (Lookup(a) is { } av && bestFullSv != null && av > bestFullSv))
+                    .OrderBy(a => Lookup(a)));
+                return new DownloadPlan(planAssets, isForcibly);
+            }
+
+            if (chainTotal >= bestFull.Size)
+            {
+                GeneralTracer.Info($"DownloadPlanBuilder: chain total {chainTotal} >= full size {bestFull.Size}, switching to full package {bestFull.Name}");
                 var bestFullSv = Lookup(bestFull);
                 var planAssets = new List<DownloadAsset> { bestFull };
                 planAssets.AddRange(chainCandidates
