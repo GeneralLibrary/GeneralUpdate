@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '发布版本号 (例如: 1.0.0)'
+        description: '发布版本号 (例如: 10.5.0-beta.7 或 v10.5.0-beta.7，v 前缀可选)'
         required: true
         type: string
 
@@ -22,6 +22,22 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'  # 支持GeneralUpdate.Drivelution的.NET 10目标框架
+
+      - name: 标准化版本号
+        id: normalize
+        shell: pwsh
+        run: |
+          $raw = '${{ github.event.inputs.version }}'.Trim()
+          if ($raw.StartsWith('v') -or $raw.StartsWith('V')) {
+            $raw = $raw.Substring(1)
+          }
+          # Validate is a valid SemVer-like string (digits.digits.digits[-prerelease])
+          if ($raw -notmatch '^\d+\.\d+\.\d+(-[\w.-]+)?(\+[\w.-]+)?$') {
+            Write-Error "Invalid version string: '${{ github.event.inputs.version }}' (after stripping prefix: '$raw'). Expected format: 1.0.0 or 1.0.0-beta.1"
+            exit 1
+          }
+          Write-Host "Normalized version: $raw"
+          echo "version=$raw" >> $env:GITHUB_OUTPUT
 
       - name: 恢复依赖
         run: dotnet restore ./src/c#/GeneralUpdate.slnx  # 使用解决方案统一恢复
@@ -46,8 +62,8 @@ jobs:
             & dotnet pack ./src/c#/$project/$project.csproj `
               -c Release `
               -o ./nupkgs `
-              -p:Version='${{ github.event.inputs.version }}' `
-              -p:PackageVersion='${{ github.event.inputs.version }}'
+              -p:Version='${{ steps.normalize.outputs.version }}' `
+              -p:PackageVersion='${{ steps.normalize.outputs.version }}'
             if ($LASTEXITCODE -ne 0) {
               Write-Host "!!! 警告: $project 打包时遇到可恢复错误 !!!"
               $failed = $true
@@ -135,8 +151,8 @@ jobs:
       - name: 创建GitHub Release并上传NuGet包
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: Release v${{ github.event.inputs.version }}
+          tag_name: v${{ steps.normalize.outputs.version }}
+          name: Release v${{ steps.normalize.outputs.version }}
           body_path: changelog.md
           files: ./nupkgs/*.nupkg
         env:
