@@ -147,8 +147,10 @@ public class OssDownloadExecutorTests
         var asset = CreateAsset();
         var destPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.zip");
 
+        // Use a synchronous IProgress<T> instead of System.Progress<T>
+        // to avoid SynchronizationContext dispatch races on Linux CI runners.
         var progressValues = new List<DownloadProgress>();
-        var progress = new Progress<DownloadProgress>(p => progressValues.Add(p));
+        var progress = new SyncProgress<DownloadProgress>(p => progressValues.Add(p));
 
         try
         {
@@ -288,4 +290,17 @@ public class OssDownloadExecutorTests
     }
 
     #endregion
+}
+
+/// <summary>
+/// Synchronous <see cref="IProgress{T}"/> that invokes the handler immediately.
+/// Unlike <see cref="System.Progress{T}"/>, this does not post to
+/// <see cref="SynchronizationContext"/>, making it deterministic in test environments
+/// where a sync context may defer or drop callbacks (e.g. headless Linux CI runners).
+/// </summary>
+internal sealed class SyncProgress<T> : IProgress<T>
+{
+    private readonly Action<T> _handler;
+    public SyncProgress(Action<T> handler) => _handler = handler ?? throw new ArgumentNullException(nameof(handler));
+    public void Report(T value) => _handler(value);
 }
