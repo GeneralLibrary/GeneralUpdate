@@ -7,6 +7,7 @@ namespace CoreTest.Event;
 /// Implements <see cref="IDisposable"/> for explicit TearDown — clears singleton state
 /// after each test to ensure test isolation regardless of test execution order.
 /// </summary>
+[Collection("NonParallel_EventManager")]
 public class EventManagerTests : IDisposable
 {
     public class TestEventArgs : EventArgs

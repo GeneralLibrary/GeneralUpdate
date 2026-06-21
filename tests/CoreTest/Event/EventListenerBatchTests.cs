@@ -9,6 +9,7 @@ namespace CoreTest.Event;
 /// Batch tests for <see cref="IUpdateEventListener"/> and <see cref="EventManager"/>
 /// following AAAT (Arrange-Act-Assert-TearDown).
 /// </summary>
+[Collection("NonParallel_EventManager")]
 public class EventListenerBatchTests : IDisposable
 {
     /// <summary>TearDown: clear singleton state after each test for isolation.</summary>

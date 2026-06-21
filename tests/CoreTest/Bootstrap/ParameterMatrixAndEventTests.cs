@@ -22,6 +22,7 @@ namespace CoreTest.Bootstrap
     ///   - Various encoding/format combinations
     ///   - UpdateRequest validation edge cases
     /// </summary>
+    [Collection("NonParallel_EventManager")]
     public class ParameterMatrixAndEventTests : IDisposable
     {
         private readonly string _testDir;

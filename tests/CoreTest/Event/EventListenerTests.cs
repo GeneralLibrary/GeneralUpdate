@@ -6,6 +6,7 @@ using Xunit;
 
 namespace CoreTest.Event;
 
+[Collection("NonParallel_EventManager")]
 public class EventListenerTests : IDisposable
 {
     /// <summary>TearDown: clear singleton state after each test for isolation.</summary>
