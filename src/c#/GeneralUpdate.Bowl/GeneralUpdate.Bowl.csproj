@@ -14,7 +14,7 @@
         <RepositoryType>public</RepositoryType>
         <PackageTags>upgrade,update,crash,recovery,rollback,monitor,backup</PackageTags>
         <PackageReleaseNotes>10.5.0-beta.1: Refactored to instance-based async design with DI support. Removed IPC dependency and macOS platform support.</PackageReleaseNotes>
-        <Version>10.5.0-beta.6</Version>
+        <Version>10.5.0-beta.7</Version>
         <PackageIcon>bowl.jpeg</PackageIcon>
         <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     </PropertyGroup>

@@ -13,7 +13,7 @@
         <PackageReleaseNotes>10.5.0-beta.1: Zero-config SetSource() API, manifest.json auto-discovery, IUpdateHooks extension points, appsettings.json LoadFromConfiguration() support, SSL/HttpClient lifecycle fixes, and OSS update flow improvements.</PackageReleaseNotes>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <Version>10.5.0-beta.6</Version>
+        <Version>10.5.0-beta.7</Version>
         <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
         <IsAotCompatible Condition="'$(TargetFramework)' != 'netstandard2.0'">true</IsAotCompatible>
         <EnableTrimAnalyzer Condition="'$(TargetFramework)' != 'netstandard2.0'">true</EnableTrimAnalyzer>
