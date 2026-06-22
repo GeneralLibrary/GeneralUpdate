@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Download.Abstractions;
+using GeneralUpdate.Core.Network;
 using GeneralUpdate.Core.Download.Models;
 
 namespace GeneralUpdate.Core.Download.Executors;
@@ -118,6 +119,11 @@ public class HttpDownloadExecutor : IDownloadExecutor
                 request.Headers.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue(asset.AuthScheme, asset.AuthToken);
             }
+
+            // Apply global auth provider and extra headers (e.g. X-Tenant-Id) from HttpClientProvider.
+            // This ensures download requests carry the same auth context as version validation
+            // and status reporting requests.
+            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             cts.CancelAfter(_timeout);
