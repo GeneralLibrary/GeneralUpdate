@@ -10,19 +10,25 @@ namespace CoreTest.Ipc;
 [Collection("IpcTests")]
 public class EncryptedFileIpcTests : IDisposable
 {
-    private static readonly string IpcFilePath =
-        EncryptedFileProcessContractProvider.GetDefaultFilePath();
+    private readonly string _tmpDir;
 
     public EncryptedFileIpcTests()
     {
-        // Clean up any leftover IPC file from a previous (possibly parallel) test run
-        // to ensure deterministic test behaviour.
-        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+        // Each test instance gets its own isolated IPC directory to prevent
+        // cross-test file collisions (especially on Linux where file-system
+        // operation ordering differs from Windows).
+        _tmpDir = Path.Combine(Path.GetTempPath(), "CoreTest.Ipc", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tmpDir);
     }
 
     public void Dispose()
     {
-        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+        try { if (Directory.Exists(_tmpDir)) Directory.Delete(_tmpDir, true); } catch { /* best-effort */ }
+    }
+
+    private EncryptedFileProcessContractProvider CreateProvider()
+    {
+        return new EncryptedFileProcessContractProvider(_tmpDir);
     }
 
     private static ProcessContract CreateTestInfo(string appName, string currentVersion)
@@ -39,7 +45,7 @@ public class EncryptedFileIpcTests : IDisposable
     [Fact]
     public void Send_And_Receive_RoundTrip()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = CreateProvider();
         var info = CreateTestInfo("TestApp", "1.0.0");
 
         provider.Send(info);
@@ -53,7 +59,7 @@ public class EncryptedFileIpcTests : IDisposable
     [Fact]
     public void Receive_Without_Send_ReturnsNull()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = CreateProvider();
         var received = provider.Receive();
         Assert.Null(received);
     }
@@ -61,7 +67,7 @@ public class EncryptedFileIpcTests : IDisposable
     [Fact]
     public void Data_Confidentiality_And_SingleRead()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = CreateProvider();
         var info = CreateTestInfo("SecureApp", "1.0.0");
 
         provider.Send(info);
@@ -78,7 +84,7 @@ public class EncryptedFileIpcTests : IDisposable
     [Fact]
     public async Task Async_Api_Delegates_To_Sync()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = CreateProvider();
         var info = CreateTestInfo("AsyncApp", "1.0.0");
 
         await provider.SendAsync(info);

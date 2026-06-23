@@ -77,25 +77,26 @@ public class IpcEncryptionTests
 [Collection("IpcTests")]
 public class EncryptedFileProcessContractProviderTests : IDisposable
 {
-    private static readonly string IpcFilePath =
-        EncryptedFileProcessContractProvider.GetDefaultFilePath();
+    private readonly string _tmpDir;
 
     public EncryptedFileProcessContractProviderTests()
     {
-        // Clean up any leftover IPC file from a previous (possibly parallel) test run
-        // to ensure deterministic test behaviour.
-        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+        // Each test instance gets its own isolated IPC directory to prevent
+        // cross-test file collisions (especially on Linux where file-system
+        // operation ordering differs from Windows).
+        _tmpDir = Path.Combine(Path.GetTempPath(), "CoreTest.Ipc", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tmpDir);
     }
 
     public void Dispose()
     {
-        try { if (File.Exists(IpcFilePath)) File.Delete(IpcFilePath); } catch { /* best-effort */ }
+        try { if (Directory.Exists(_tmpDir)) Directory.Delete(_tmpDir, true); } catch { /* best-effort */ }
     }
 
     [Fact]
     public void SendAndReceive_RoundTrip_ProcessContractPreserved()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = new EncryptedFileProcessContractProvider(_tmpDir);
         var info = new GeneralUpdate.Core.Configuration.ProcessContract(
             "MyApp", Path.GetTempPath(), "1.0.0", "2.0.0",
             null, System.Text.Encoding.UTF8, ".zip", 30, "secret",
@@ -115,7 +116,7 @@ public class EncryptedFileProcessContractProviderTests : IDisposable
     [Fact]
     public void Receive_NoFile_ReturnsNull()
     {
-        var provider = new EncryptedFileProcessContractProvider();
+        var provider = new EncryptedFileProcessContractProvider(_tmpDir);
         var result = provider.Receive();
         Assert.Null(result);
     }
