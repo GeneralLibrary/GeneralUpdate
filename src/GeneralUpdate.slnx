@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="GeneralUpdate.Bowl/GeneralUpdate.Bowl.csproj" />
+    <Project Path="GeneralUpdate.Core/GeneralUpdate.Core.csproj" />
+    <Project Path="GeneralUpdate.Differential/GeneralUpdate.Differential.csproj" />
+    <Project Path="GeneralUpdate.Drivelution/GeneralUpdate.Drivelution.csproj" />
+    <Project Path="GeneralUpdate.Extension/GeneralUpdate.Extension.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../tests/BowlTest/BowlTest.csproj" />
+    <Project Path="../tests/ClientTest/ClientTest.csproj" />
+    <Project Path="../tests/CoreTest/CoreTest.csproj" />
+    <Project Path="../tests/DifferentialTest/DifferentialTest.csproj" />
+    <Project Path="../tests/DrivelutionTest/DrivelutionTest.csproj" />
+    <Project Path="../tests/ExtensionTest/ExtensionTest.csproj" />
+    <Project Path="../tests/UpgradeTest/UpgradeTest.csproj" />
+  </Folder>
+</Solution>

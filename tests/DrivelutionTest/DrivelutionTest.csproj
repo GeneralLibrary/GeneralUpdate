@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\c#\GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj" />
+    <ProjectReference Include="..\..\src\GeneralUpdate.Drivelution\GeneralUpdate.Drivelution.csproj" />
   </ItemGroup>
 
 </Project>

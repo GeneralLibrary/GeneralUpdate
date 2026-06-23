@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\c#\GeneralUpdate.Extension\GeneralUpdate.Extension.csproj" />
+        <ProjectReference Include="..\..\src\GeneralUpdate.Extension\GeneralUpdate.Extension.csproj" />
     </ItemGroup>
 
 </Project>

@@ -42,10 +42,10 @@ jobs:
           echo "version=$raw" >> $env:GITHUB_OUTPUT
 
       - name: 恢复依赖
-        run: dotnet restore ./src/c#/GeneralUpdate.slnx  # 使用解决方案统一恢复
+        run: dotnet restore ./src/GeneralUpdate.slnx  # 使用解决方案统一恢复
 
       - name: 构建项目（确保生成DLL）
-        run: dotnet build ./src/c#/GeneralUpdate.slnx -c Release --no-restore  # 显式构建，避免重复恢复
+        run: dotnet build ./src/GeneralUpdate.slnx -c Release --no-restore  # 显式构建，避免重复恢复
 
       - name: 打包NuGet包
         continue-on-error: true  # NuGet包可单独上传，不阻塞Release
@@ -61,7 +61,7 @@ jobs:
           $failed = $false
           foreach ($project in $projects) {
             Write-Host "=== 打包 $project ==="
-            & dotnet pack ./src/c#/$project/$project.csproj `
+            & dotnet pack ./src/$project/$project.csproj `
               -c Release `
               -o ./nupkgs `
               -p:Version='${{ steps.normalize.outputs.version }}' `
