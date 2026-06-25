@@ -250,9 +250,9 @@ namespace BowlTest.Integration
 
         // ---- Test Helpers ----
 
-        private static Bowl CreateBowl(IBowlStrategy strategy)
+        private static BowlBootstrap CreateBowl(IBowlStrategy strategy)
         {
-            return new Bowl(strategy, new CrashReporter(),
+            return new BowlBootstrap(strategy, new CrashReporter(),
                 new NoOpInfoProvider());
         }
 

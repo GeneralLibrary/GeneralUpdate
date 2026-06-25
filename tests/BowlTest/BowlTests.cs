@@ -29,8 +29,8 @@ public class BowlTests
         _sysInfo = new FakeSystemInfoProvider();
     }
 
-    private Bowl CreateBowl() =>
-        new Bowl(_strategy, _reporter, _sysInfo);
+    private BowlBootstrap CreateBowl() =>
+        new BowlBootstrap(_strategy, _reporter, _sysInfo);
 
     private static BowlContext CreateValidContext(
         string processName = "test.exe",
@@ -64,7 +64,7 @@ public class BowlTests
     public void Constructor_StrategyNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(null!, _reporter, _sysInfo));
+            new BowlBootstrap(null!, _reporter, _sysInfo));
         Assert.Equal("strategy", ex.ParamName);
     }
 
@@ -72,7 +72,7 @@ public class BowlTests
     public void Constructor_CrashReporterNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(_strategy, null!, _sysInfo));
+            new BowlBootstrap(_strategy, null!, _sysInfo));
         Assert.Equal("crashReporter", ex.ParamName);
     }
 
@@ -80,7 +80,7 @@ public class BowlTests
     public void Constructor_SystemInfoProviderNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new Bowl(_strategy, _reporter, null!));
+            new BowlBootstrap(_strategy, _reporter, null!));
         Assert.Equal("systemInfoProvider", ex.ParamName);
     }
 

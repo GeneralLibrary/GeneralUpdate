@@ -15,7 +15,7 @@ namespace BowlTest.Strategies
         [Fact]
         public void Bowl_Constructor_DoesNotThrow()
         {
-            var bowl = new Bowl();
+            var bowl = new BowlBootstrap();
             Assert.NotNull(bowl);
         }
 
@@ -26,7 +26,7 @@ namespace BowlTest.Strategies
         [Fact]
         public async Task LaunchAsync_WithInvalidAppPath_Throws()
         {
-            var bowl = new Bowl();
+            var bowl = new BowlBootstrap();
             var ctx = new BowlContext
             {
                 ProcessNameOrId = "__nonexistent_app_42__",
