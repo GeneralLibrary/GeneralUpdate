@@ -36,12 +36,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="../../../imgs/bowl.jpeg">
+        <None Include="../../imgs/bowl.jpeg">
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>
             <PackagePath>./</PackagePath>
         </None>
-        <None Include="../../../README.md">
+        <None Include="../../README.md">
             <Pack>True</Pack>
             <PackagePath>\</PackagePath>
         </None>

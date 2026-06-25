@@ -36,17 +36,17 @@
 
   <!-- Package Icon -->
   <ItemGroup>
-    <None Include="../../../imgs/GeneralUpdate.ico">
+    <None Include="../../imgs/GeneralUpdate.ico">
       <Pack>True</Pack>
       <Link>%(Filename)%(Extension)</Link>
       <PackagePath>./</PackagePath>
     </None>
-    <None Include="../../../imgs/GeneralUpdate.png">
+    <None Include="../../imgs/GeneralUpdate.png">
       <Pack>True</Pack>
       <Link>%(Filename)%(Extension)</Link>
       <PackagePath>./</PackagePath>
     </None>
-    <None Include="../../../README.md">
+    <None Include="../../README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
