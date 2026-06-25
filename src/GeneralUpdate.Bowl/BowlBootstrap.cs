@@ -14,7 +14,7 @@ namespace GeneralUpdate.Bowl;
 /// If a startup crash is detected, captures a dump, exports diagnostics,
 /// and optionally restores the backup version.
 /// </summary>
-public sealed class Bowl
+public sealed class BowlBootstrap
 {
     private readonly IBowlStrategy _strategy;
     private readonly ICrashReporter _crashReporter;
@@ -23,9 +23,9 @@ public sealed class Bowl
     // ---- Constructors ----
 
     /// <summary>
-    /// Creates a Bowl instance with auto-detected platform strategy and default providers.
+    /// Creates a BowlBootstrap instance with auto-detected platform strategy and default providers.
     /// </summary>
-    public Bowl()
+    public BowlBootstrap()
         : this(
             StrategyFactory.Create(),
             new CrashReporter(),
@@ -35,7 +35,7 @@ public sealed class Bowl
     /// <summary>
     /// DI-friendly constructor for testing. All dependencies are injectable.
     /// </summary>
-    internal Bowl(
+    internal BowlBootstrap(
         IBowlStrategy strategy,
         ICrashReporter crashReporter,
         ISystemInfoProvider systemInfoProvider)
@@ -57,7 +57,7 @@ public sealed class Bowl
     {
         context = context.Normalize();
 
-        GeneralTracer.Info($"Bowl.LaunchAsync: monitoring '{context.ProcessNameOrId}' " +
+        GeneralTracer.Info($"BowlBootstrap.LaunchAsync: monitoring '{context.ProcessNameOrId}' " +
             $"at '{context.TargetPath}', workModel={context.WorkModel}");
 
         // Phase 1: Prepare child process start info
@@ -66,7 +66,7 @@ public sealed class Bowl
         {
             // Strategy may return null when tooling is unavailable (e.g. procdump not installed on Linux).
             // This is a graceful degradation, not a platform error.
-            GeneralTracer.Warn("Bowl.LaunchAsync: strategy returned null — monitoring tool unavailable.");
+            GeneralTracer.Warn("BowlBootstrap.LaunchAsync: strategy returned null — monitoring tool unavailable.");
             return new BowlResult { Success = false, ExitCode = -1, DumpCaptured = false };
         }
 
@@ -78,12 +78,12 @@ public sealed class Bowl
         }
         catch (OperationCanceledException)
         {
-            GeneralTracer.Warn("Bowl.LaunchAsync: cancelled.");
+            GeneralTracer.Warn("BowlBootstrap.LaunchAsync: cancelled.");
             throw;
         }
         catch (TimeoutException)
         {
-            GeneralTracer.Warn("Bowl.LaunchAsync: child process timed out.");
+            GeneralTracer.Warn("BowlBootstrap.LaunchAsync: child process timed out.");
             // Treat timeout as a non-crash exit (no dump captured)
             return new BowlResult { Success = false, ExitCode = -1, DumpCaptured = false };
         }
@@ -94,7 +94,7 @@ public sealed class Bowl
 
         if (!dumpCaptured)
         {
-            GeneralTracer.Info("Bowl.LaunchAsync: no dump file found, process exited normally.");
+            GeneralTracer.Info("BowlBootstrap.LaunchAsync: no dump file found, process exited normally.");
             return new BowlResult
             {
                 Success = exitResult.ExitCode == 0,
@@ -104,7 +104,7 @@ public sealed class Bowl
         }
 
         // Phase 4: Crash detected — run the full remediation pipeline
-        GeneralTracer.Warn($"Bowl.LaunchAsync: crash detected, dump at {dumpPath}.");
+        GeneralTracer.Warn($"BowlBootstrap.LaunchAsync: crash detected, dump at {dumpPath}.");
         return await HandleCrashAsync(context, exitResult, dumpPath!, ct);
     }
 
@@ -128,7 +128,7 @@ public sealed class Bowl
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("Bowl.HandleCrashAsync: crash report generation failed.", ex);
+            GeneralTracer.Error("BowlBootstrap.HandleCrashAsync: crash report generation failed.", ex);
             // Continue with remaining steps even if report generation fails
         }
 
@@ -143,7 +143,7 @@ public sealed class Bowl
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("Bowl.HandleCrashAsync: system info export failed.", ex);
+            GeneralTracer.Error("BowlBootstrap.HandleCrashAsync: system info export failed.", ex);
         }
 
         // 3. Restore backup if in Upgrade mode with AutoRestore enabled
@@ -151,11 +151,11 @@ public sealed class Bowl
         {
             try
             {
-                GeneralTracer.Info($"Bowl.HandleCrashAsync: restoring backup from " +
+                GeneralTracer.Info($"BowlBootstrap.HandleCrashAsync: restoring backup from " +
                     $"'{context.BackupDirectory}' to '{context.TargetPath}'.");
                 StorageHelper.Restore(context.BackupDirectory, context.TargetPath);
                 restored = true;
-                GeneralTracer.Info("Bowl.HandleCrashAsync: restore completed.");
+                GeneralTracer.Info("BowlBootstrap.HandleCrashAsync: restore completed.");
             }
             catch (OperationCanceledException)
             {
@@ -163,7 +163,7 @@ public sealed class Bowl
             }
             catch (Exception ex)
             {
-                GeneralTracer.Error("Bowl.HandleCrashAsync: restore failed.", ex);
+                GeneralTracer.Error("BowlBootstrap.HandleCrashAsync: restore failed.", ex);
             }
         }
 
@@ -178,7 +178,7 @@ public sealed class Bowl
         }
         catch (Exception ex)
         {
-            GeneralTracer.Error("Bowl.HandleCrashAsync: post-process failed.", ex);
+            GeneralTracer.Error("BowlBootstrap.HandleCrashAsync: post-process failed.", ex);
         }
 
         // 5. Invoke crash callback
@@ -201,7 +201,7 @@ public sealed class Bowl
             }
             catch (Exception ex)
             {
-                GeneralTracer.Error("Bowl.HandleCrashAsync: OnCrash callback failed.", ex);
+                GeneralTracer.Error("BowlBootstrap.HandleCrashAsync: OnCrash callback failed.", ex);
             }
         }
 
