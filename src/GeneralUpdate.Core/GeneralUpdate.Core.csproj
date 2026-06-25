@@ -10,10 +10,10 @@
         <RepositoryUrl>https://github.com/GeneralLibrary/GeneralUpdate</RepositoryUrl>
         <PackageIcon>GeneralUpdate.png</PackageIcon>
         <PackageTags>upgrade,update,auto-update,client,bootstrap,pipeline,download,oss,silent,hooks</PackageTags>
-        <PackageReleaseNotes>10.5.0-beta.1: Zero-config SetSource() API, manifest.json auto-discovery, IUpdateHooks extension points, appsettings.json LoadFromConfiguration() support, SSL/HttpClient lifecycle fixes, and OSS update flow improvements.</PackageReleaseNotes>
+        <PackageReleaseNotes>10.5.0-rc.1: Zero-config SetSource() API, manifest.json auto-discovery, IUpdateHooks extension points, appsettings.json LoadFromConfiguration() support, SSL/HttpClient lifecycle fixes, and OSS update flow improvements.</PackageReleaseNotes>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <Version>10.5.0-beta.7</Version>
+        <Version>10.5.0-rc.1</Version>
         <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
         <IsAotCompatible Condition="'$(TargetFramework)' != 'netstandard2.0'">true</IsAotCompatible>
         <EnableTrimAnalyzer Condition="'$(TargetFramework)' != 'netstandard2.0'">true</EnableTrimAnalyzer>
