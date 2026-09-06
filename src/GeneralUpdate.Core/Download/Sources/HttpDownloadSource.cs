@@ -183,6 +183,9 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             AppType: v.AppType,
             AuthScheme: v.AuthScheme,
             AuthToken: v.AuthToken
-        );
+        )
+        {
+            UpdateLog = v.UpdateLog
+        };
     }
 }

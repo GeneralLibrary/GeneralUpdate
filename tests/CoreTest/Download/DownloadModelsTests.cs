@@ -24,6 +24,7 @@ public class DownloadModelsTests
         Assert.Equal(DownloadPriority.Normal, asset.Priority);
         Assert.Equal(0, asset.PackageType);
         Assert.Null(asset.MinClientVersion);
+        Assert.Null(asset.UpdateLog);
         Assert.False(asset.IsForcibly);
         Assert.False(asset.IsFreeze);
     }
@@ -39,7 +40,10 @@ public class DownloadModelsTests
             FallbackFullUrl: "https://cdn/full.zip",
             FallbackFullHash: "fullhash",
             IsForcibly: true, IsFreeze: false
-        );
+        )
+        {
+            UpdateLog = "Release notes"
+        };
 
         Assert.Equal("package.zip", asset.Name);
         Assert.Equal("https://cdn/pkg.zip", asset.Url);
@@ -48,6 +52,7 @@ public class DownloadModelsTests
         Assert.Equal("3.0.0", asset.Version);
         Assert.Equal(DownloadPriority.High, asset.Priority);
         Assert.Equal("2.0.0", asset.MinClientVersion);
+        Assert.Equal("Release notes", asset.UpdateLog);
         Assert.Equal("full-pkg", asset.FallbackFullName);
         Assert.Equal("https://cdn/full.zip", asset.FallbackFullUrl);
         Assert.Equal("fullhash", asset.FallbackFullHash);
