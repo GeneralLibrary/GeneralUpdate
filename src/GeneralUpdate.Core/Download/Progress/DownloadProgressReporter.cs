@@ -18,6 +18,9 @@ namespace GeneralUpdate.Core.Download.Progress;
 /// <list type="bullet">
 ///   <item><term><c>ProgressEventArgs</c></term><description>Fired on every progress report,
 ///         containing the download percentage, bytes downloaded, and other information.</description></item>
+///   <item><term><c>MultiDownloadStatisticsEventArgs</c></term><description>Fired on every progress report
+///         with the asset name, byte counts and percentage. Unknown totals use zero; speed and remaining
+///         time are unavailable in DownloadProgress and use an empty string and TimeSpan.Zero.</description></item>
 ///   <item><term><c>MultiDownloadCompletedEventArgs</c></term><description>Fired when the download status is <c>Completed</c>.</description></item>
 ///   <item><term><c>MultiDownloadErrorEventArgs</c></term><description>Fired when the download status is <c>Failed</c>.</description></item>
 ///   <item><term><c>MultiAllDownloadCompletedEventArgs</c></term><description>Fired via the static <c>DispatchAllCompleted</c> method when all download tasks are finished.</description></item>
@@ -57,6 +60,11 @@ public class DownloadProgressReporter : IProgress
 
         // Fire progress event via EventManager
         EventManager.Instance.Dispatch(this, new ProgressEventArgs(value));
+        var version = value.VersionContext ?? value.AssetName ?? "unknown";
+        EventManager.Instance.Dispatch(this,
+            new MultiDownloadStatisticsEventArgs(version,
+                TimeSpan.Zero, string.Empty, value.TotalBytes ?? 0,
+                value.BytesDownloaded, value.Percentage));
 
         if (value.Status == Models.DownloadStatus.Completed)
         {

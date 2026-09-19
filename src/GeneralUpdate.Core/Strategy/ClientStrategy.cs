@@ -573,9 +573,10 @@ public class ClientStrategy : IStrategy
 
         async Task<Download.Abstractions.DownloadReport> ExecuteDownloadAsync(Download.Models.DownloadPlan plan)
         {
+            var progress = Download.Progress.DownloadProgressReporter.CreateEventBridge();
             if (_orchestrator != null)
             {
-                return await _orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
+                return await _orchestrator.ExecuteAsync(plan, _configInfo.TempPath, progress: progress).ConfigureAwait(false);
             }
             else
             {
@@ -583,7 +584,7 @@ public class ClientStrategy : IStrategy
                 var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
                     httpClient, orchOptions, _customDownloadPolicy,
                     _customDownloadExecutor, _customDownloadPipelineFactory);
-                return await orchestrator.ExecuteAsync(plan, _configInfo.TempPath).ConfigureAwait(false);
+                return await orchestrator.ExecuteAsync(plan, _configInfo.TempPath, progress: progress).ConfigureAwait(false);
             }
         }
 

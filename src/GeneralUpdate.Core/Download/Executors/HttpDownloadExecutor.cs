@@ -146,12 +146,12 @@ public class HttpDownloadExecutor : IDownloadExecutor
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             var (downloaded, elapsed) = await StreamDownloadAsync(stream, fs, totalBytes, existingBytes,
-                destPath, progress, sw, token).ConfigureAwait(false);
+                destPath, progress, sw, token, asset.VersionContext).ConfigureAwait(false);
 
             progress?.Report(new DownloadProgress(
                 Path.GetFileName(destPath), downloaded,
                 totalBytes > 0 ? totalBytes + existingBytes : null,
-                100, DownloadStatus.Completed));
+                100, DownloadStatus.Completed, asset.VersionContext));
 
             return new DownloadResult(asset, destPath, downloaded, elapsed, retries, true, null);
         }
@@ -189,7 +189,8 @@ public class HttpDownloadExecutor : IDownloadExecutor
     /// </remarks>
     internal static async Task<(long Downloaded, TimeSpan Elapsed)> StreamDownloadAsync(
         Stream source, Stream dest, long totalBytes, long existingBytes,
-        string destPath, IProgress<DownloadProgress>? progress, Stopwatch sw, CancellationToken token)
+        string destPath, IProgress<DownloadProgress>? progress, Stopwatch sw, CancellationToken token,
+        object? versionContext = null)
     {
         var buffer = new byte[8192];
         long downloaded = existingBytes;
@@ -209,7 +210,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
                 progress?.Report(new DownloadProgress(
                     Path.GetFileName(destPath), downloaded,
                     totalBytes > 0 ? totalBytes + existingBytes : null,
-                    pct, DownloadStatus.Downloading));
+                    pct, DownloadStatus.Downloading, versionContext));
             }
         }
 

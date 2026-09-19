@@ -520,9 +520,10 @@ public class OssStrategy : IStrategy
     private async Task DownloadAssetsAsync(List<DownloadAsset> assets, string targetPath)
     {
         var plan = new DownloadPlan(assets, false);
+        var progress = Download.Progress.DownloadProgressReporter.CreateEventBridge();
         if (DownloadOrchestrator != null)
         {
-            await DownloadOrchestrator.ExecuteAsync(plan, targetPath).ConfigureAwait(false);
+            await DownloadOrchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
         }
         else
         {
@@ -533,7 +534,7 @@ public class OssStrategy : IStrategy
             };
             var orchestrator = new DefaultDownloadOrchestrator(
                 Network.HttpClientProvider.Shared, options);
-            await orchestrator.ExecuteAsync(plan, targetPath).ConfigureAwait(false);
+            await orchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
         }
     }
 
