@@ -88,10 +88,11 @@ public class OssDownloadExecutor : IDownloadExecutor
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             var (downloaded, elapsed) = await HttpDownloadExecutor.StreamDownloadAsync(
-                stream, fs, total, 0, destPath, progress, sw, token).ConfigureAwait(false);
+                stream, fs, total, 0, destPath, progress, sw, token, asset.VersionContext).ConfigureAwait(false);
 
             progress?.Report(new DownloadProgress(
-                Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100, DownloadStatus.Completed));
+                Path.GetFileName(destPath), downloaded, total > 0 ? total : null, 100,
+                DownloadStatus.Completed, asset.VersionContext));
             return new DownloadResult(asset, destPath, downloaded, elapsed, 0, true, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

@@ -42,6 +42,21 @@ public class DownloadProgressReporterTests : IDisposable
     }
 
     [Fact]
+    public void Report_StatisticsUsesVersionContextWhenProvided()
+    {
+        MultiDownloadStatisticsEventArgs? statistics = null;
+        new GeneralUpdate.Core.GeneralUpdateBootstrap()
+            .AddListenerMultiDownloadStatistics((_, args) => statistics = args);
+        var version = new GeneralUpdate.Core.Configuration.VersionEntry { Version = "1.2.3" };
+        var progress = new DownloadProgress("asset.zip", 500, 1000, 50.0, DownloadStatus.Downloading, version);
+
+        DownloadProgressReporter.CreateEventBridge().Report(progress);
+
+        Assert.NotNull(statistics);
+        Assert.Same(version, statistics!.Version);
+    }
+
+    [Fact]
     public void Report_InvokesOnProgressCallback()
     {
         DownloadProgress? captured = null;

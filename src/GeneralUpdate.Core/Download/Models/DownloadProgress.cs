@@ -11,7 +11,8 @@ public record DownloadProgress(
     long BytesDownloaded,
     long? TotalBytes,
     double Percentage,
-    DownloadStatus Status
+    DownloadStatus Status,
+    object? VersionContext = null
 );
 
 public record DownloadResult(

@@ -21,7 +21,8 @@ public record DownloadAsset(
     int RecordId = 0,
     int? AppType = null,
     string? AuthScheme = null,
-    string? AuthToken = null
+    string? AuthToken = null,
+    object? VersionContext = null
 )
 {
     public string? UpdateLog { get; init; }

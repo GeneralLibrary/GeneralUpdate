@@ -60,8 +60,9 @@ public class DownloadProgressReporter : IProgress
 
         // Fire progress event via EventManager
         EventManager.Instance.Dispatch(this, new ProgressEventArgs(value));
+        var version = value.VersionContext ?? value.AssetName ?? "unknown";
         EventManager.Instance.Dispatch(this,
-            new MultiDownloadStatisticsEventArgs(value.AssetName ?? "unknown",
+            new MultiDownloadStatisticsEventArgs(version,
                 TimeSpan.Zero, string.Empty, value.TotalBytes ?? 0,
                 value.BytesDownloaded, value.Percentage));
 

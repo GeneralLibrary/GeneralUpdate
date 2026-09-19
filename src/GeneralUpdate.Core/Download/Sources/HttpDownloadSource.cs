@@ -182,7 +182,8 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
             RecordId: v.RecordId,
             AppType: v.AppType,
             AuthScheme: v.AuthScheme,
-            AuthToken: v.AuthToken
+            AuthToken: v.AuthToken,
+            VersionContext: v
         )
         {
             UpdateLog = v.UpdateLog
