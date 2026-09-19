@@ -493,6 +493,7 @@ public class ClientStrategy : IStrategy
             IsFreeze = a.IsFreeze,
             AppType = a.AppType,
             PackageType = a.PackageType,
+            UpdateLog = a.UpdateLog,
             FallbackFullName = a.FallbackFullName,
             FallbackFullUrl = a.FallbackFullUrl,
             FallbackFullHash = a.FallbackFullHash

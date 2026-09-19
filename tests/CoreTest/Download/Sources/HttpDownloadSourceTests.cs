@@ -1,5 +1,7 @@
+using System.Reflection;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
+using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Sources;
 using GeneralUpdate.Core.Security;
 
@@ -100,6 +102,28 @@ public class HttpDownloadSourceTests
             AuthScheme.Hmac, null, null);
 
         Assert.IsAssignableFrom<IDownloadSource>(source);
+    }
+
+    #endregion
+
+    #region Mapping
+
+    [Fact]
+    public void MapVersionEntry_PreservesUpdateLog()
+    {
+        var version = new VersionEntry
+        {
+            Name = "package.zip",
+            Url = "https://cdn.example.com/package.zip",
+            Version = "2.0.0",
+            UpdateLog = "# 2.0.0\n- Fixed startup issue"
+        };
+        var method = typeof(HttpDownloadSource).GetMethod("MapVersionEntry",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        var asset = Assert.IsType<DownloadAsset>(method!.Invoke(null, new object[] { version }));
+
+        Assert.Equal(version.UpdateLog, asset.UpdateLog);
     }
 
     #endregion

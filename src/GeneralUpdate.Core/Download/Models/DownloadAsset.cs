@@ -22,7 +22,10 @@ public record DownloadAsset(
     int? AppType = null,
     string? AuthScheme = null,
     string? AuthToken = null
-);
+)
+{
+    public string? UpdateLog { get; init; }
+}
 
 /// <summary>Ordered download plan built from server response.</summary>
 public record DownloadPlan(IReadOnlyList<DownloadAsset> Assets, bool IsForcibly)
