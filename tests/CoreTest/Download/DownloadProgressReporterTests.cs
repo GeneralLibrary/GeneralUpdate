@@ -15,6 +15,32 @@ public class DownloadProgressReporterTests : IDisposable
 
     #region Progress callback
 
+    [Theory]
+    [InlineData(1000L, 50.0, DownloadStatus.Downloading)]
+    [InlineData(null, -1.0, DownloadStatus.Downloading)]
+    [InlineData(500L, 100.0, DownloadStatus.Completed)]
+    public void Report_DispatchesStatisticsAlongsideProgress(long? totalBytes, double percentage, DownloadStatus status)
+    {
+        MultiDownloadStatisticsEventArgs? statistics = null;
+        ProgressEventArgs? progressArgs = null;
+        var completedCount = 0;
+        new GeneralUpdate.Core.GeneralUpdateBootstrap()
+            .AddListenerMultiDownloadStatistics((_, args) => statistics = args)
+            .AddListenerProgress((_, args) => progressArgs = args)
+            .AddListenerMultiDownloadCompleted((_, _) => completedCount++);
+        var progress = new DownloadProgress("asset.zip", 500, totalBytes, percentage, status);
+
+        DownloadProgressReporter.CreateEventBridge().Report(progress);
+
+        Assert.NotNull(statistics);
+        Assert.Equal("asset.zip", statistics.Version);
+        Assert.Equal(totalBytes ?? 0, statistics.TotalBytesToReceive);
+        Assert.Equal(500, statistics.BytesReceived);
+        Assert.Equal(percentage, statistics.ProgressPercentage);
+        Assert.Same(progress, progressArgs?.Progress);
+        Assert.Equal(status == DownloadStatus.Completed ? 1 : 0, completedCount);
+    }
+
     [Fact]
     public void Report_InvokesOnProgressCallback()
     {
