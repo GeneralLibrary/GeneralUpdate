@@ -21,6 +21,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+    <ProjectReference Include="..\MonitoringTestHost\MonitoringTestHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Target Name="CopyMonitoringFixture" AfterTargets="Build">
+    <ItemGroup>
+      <MonitoringFixture Include="..\MonitoringTestHost\bin\$(Configuration)\net10.0\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(MonitoringFixture)" DestinationFolder="$(OutDir)MonitorFixture\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

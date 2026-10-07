@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -31,7 +32,7 @@ namespace GeneralUpdate.Core.Strategy;
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/> hook,
 ///   allowing the caller to perform additional operations before launching the main application
 ///   (such as setting executable permissions or preparing resource files).</description></item>
-///   <item><description>Launches the main application (<c>MainAppName</c>) and the Bowl helper process through the OS strategy.</description></item>
+///   <item><description>Launches the main application and records its identity for an already-ready optional external monitor.</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -84,6 +85,7 @@ public class UpdateStrategy : IStrategy
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
             abs.Reporter = this.Reporter;
+            abs.ReportPackageResults = false;
         }
     }
 
@@ -98,16 +100,23 @@ public class UpdateStrategy : IStrategy
         var ctx = BuildUpdateContext();
         try
         {
+            _configInfo.ReportType = _reportType;
+            var attempt = UpdateAttempt.Begin(_configInfo, "update");
             GeneralTracer.Debug("UpdateStrategy.ExecuteAsync start.");
 
             // Hooks: allow cancellation before applying updates
             if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
             {
                 GeneralTracer.Info("UpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+                attempt.Record("cancelled");
                 return;
             }
 
+            if (_configInfo.Monitoring?.Enabled == true && _osStrategy is not AbstractStrategy)
+                throw new InvalidOperationException("Bowl monitoring requires an AbstractStrategy with the application-start callback.");
+            await attempt.StartMonitoringAsync(_configInfo.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0, _reportType);
             _osStrategy!.Create(_configInfo);
+            attempt.BeforeFileChanges();
 
             // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
             var pipelineSucceeded = true;
@@ -119,7 +128,7 @@ public class UpdateStrategy : IStrategy
 
                 // Only advance the manifest version when every package was applied
                 // successfully. AbstractStrategy catches per-package failures and
-                // continues the loop, so ExecuteAsync() completing is not a
+                // stops the chain, so ExecuteAsync() completing is not a
                 // reliable success signal on its own.
                 // For custom IStrategy implementations that don't expose
                 // AllPackagesSucceeded, assume success (coalesce to true)
@@ -127,6 +136,7 @@ public class UpdateStrategy : IStrategy
                 pipelineSucceeded = (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
                 if (pipelineSucceeded)
                 {
+                    attempt.EnsureMonitorAlive();
                     WriteBackClientVersion();
                 }
                 else
@@ -144,7 +154,9 @@ public class UpdateStrategy : IStrategy
             // restart it with old files, causing it to re-detect the update and loop.
             if (!pipelineSucceeded)
             {
-                var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                var failEx = (_osStrategy as AbstractStrategy)?.LastError ??
+                    new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                attempt.RecordFailure(failEx);
                 await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
                 await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
@@ -154,35 +166,62 @@ public class UpdateStrategy : IStrategy
             // Hooks: after all updates applied
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
 
-            // Report: update applied successfully — uses the first Client package's RecordId
-            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+            attempt.EnsureMonitorAlive();
+            attempt.Record("filesApplied");
 
             // Hooks: before starting main app (e.g. chmod +x on Linux/macOS)
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            // Delegate to OS strategy: launch MainAppName + Bowl.
+            // The external monitor is already ready; only launch the application here.
             // Skip if silent mode requested no-launch (e.g. maintenance windows).
             if (_configInfo.LaunchClientAfterUpdate)
             {
                 if (_osStrategy is AbstractStrategy abs2)
                 {
                     abs2.LaunchAppName = _configInfo.MainAppName;
-                    abs2.LaunchBowl = true;
+                    abs2.LaunchBowl = false;
+                    abs2.OnAppStarted = async process =>
+                    {
+                        attempt.EnsureMonitorAlive();
+                        if (attempt.MonitoringActive && _configInfo.Monitoring!.VerifyLaunch)
+                            attempt.Record("awaitingHealth", application: ProcessIdentity.From(process));
+                        else
+                        {
+                            attempt.Record("completed");
+                            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+                        }
+                    };
                 }
 
+                attempt.EnsureMonitorAlive();
+                attempt.Record("launching");
                 await _osStrategy.StartAppAsync();
+                if (_osStrategy is not AbstractStrategy)
+                {
+                    attempt.Record("completed");
+                    await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+                }
             }
             else
             {
                 GeneralTracer.Info("UpdateStrategy: LaunchClientAfterUpdate=false, skipping app launch.");
+                attempt.EnsureMonitorAlive();
+                attempt.Record("completed");
+                await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
+            _configInfo.Attempt?.RecordFailure(ex,
+                _configInfo.Attempt.Stage == "launching" ? "launchFailure" : "updateFailure");
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
             GeneralTracer.Error("UpdateStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        }
+        finally
+        {
+            _configInfo.Attempt?.Dispose();
         }
     }
 
@@ -254,9 +293,8 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
-                    (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, recordId, (int)UpdateStatus.Success, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -269,9 +307,9 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
-                    (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
+            _configInfo?.Attempt?.RecordFailure(error);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, recordId, (int)UpdateStatus.Failure, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -304,6 +342,9 @@ public class UpdateStrategy : IStrategy
         {
             GeneralTracer.Warn(
                 $"UpdateStrategy: failed to write back ClientVersion: {ex.Message}");
+            ex.Data["UpdateStage"] = "manifest";
+            ex.Data["UpdateFailedPath"] = System.IO.Path.Combine(_configInfo!.InstallPath, ManifestInfo.FileName);
+            throw;
         }
     }
 

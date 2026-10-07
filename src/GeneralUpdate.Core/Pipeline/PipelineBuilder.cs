@@ -118,7 +118,18 @@ namespace GeneralUpdate.Core.Pipeline
         {
             foreach (var middleware in _middlewareQueue)
             {
-                await middleware.InvokeAsync(context);
+                try
+                {
+                    context.Attempt?.EnsureMonitorAlive();
+                    await middleware.InvokeAsync(context);
+                }
+                catch (System.Exception error)
+                {
+                    error.Data["UpdateStage"] = middleware.GetType().Name;
+                    error.Data["UpdateFailedPath"] = middleware is HashMiddleware || middleware is CompressMiddleware
+                        ? context.Get<string>("ZipFilePath") : context.Get<string>("SourcePath");
+                    throw;
+                }
             }
         }
     }

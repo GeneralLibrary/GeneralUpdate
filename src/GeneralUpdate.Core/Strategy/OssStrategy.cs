@@ -13,6 +13,7 @@ using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Orchestrators;
 using GeneralUpdate.Core.Utilities;
+using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -159,11 +160,28 @@ public class OssStrategy : IStrategy
         // Dispatch by role — no env-var detection needed.
         if (_role == AppType.OssUpgrade)
         {
+            _configInfo.UpdateAttemptId ??= Environment.GetEnvironmentVariable("GENERALUPDATE_ATTEMPT_ID");
+            _configInfo.DiagnosticsDirectory ??= Environment.GetEnvironmentVariable("GENERALUPDATE_DIAGNOSTICS_ROOT");
+            var monitoringJson = Environment.GetEnvironmentVariable("GENERALUPDATE_MONITORING_OPTIONS");
+            if (_configInfo.Monitoring == null && !string.IsNullOrEmpty(monitoringJson))
+                _configInfo.Monitoring = JsonSerializer.Deserialize(monitoringJson, AttemptJsonContext.Default.BowlOptions);
+            var launch = Environment.GetEnvironmentVariable("GENERALUPDATE_LAUNCH_CLIENT_AFTER_UPDATE");
+            if (bool.TryParse(launch, out var launchClient)) _configInfo.LaunchClientAfterUpdate = launchClient;
             await ExecuteUpgradeAsync();
             return;
         }
 
-        await ExecuteClientAsync();
+        try
+        {
+            UpdateAttempt.Begin(_configInfo, "client", newAttempt: true);
+            _configInfo.Attempt!.Record("validating");
+            await ExecuteClientAsync();
+        }
+        catch (Exception error)
+        {
+            _configInfo.Attempt?.RecordFailure(error);
+            throw;
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -292,7 +310,17 @@ public class OssStrategy : IStrategy
         }
 
         GeneralTracer.Info($"[OssClient] Launching upgrade: {appPath}");
-        Process.Start(appPath);
+        _configInfo.LastVersion = latest.Version;
+        _configInfo.Attempt?.Record("launchingUpdater");
+        var start = new ProcessStartInfo(appPath) { UseShellExecute = false, WorkingDirectory = upgradeDir };
+        start.Environment["GENERALUPDATE_ATTEMPT_ID"] = _configInfo.UpdateAttemptId!;
+        start.Environment["GENERALUPDATE_DIAGNOSTICS_ROOT"] = _configInfo.DiagnosticsDirectory!;
+        start.Environment["GENERALUPDATE_LAUNCH_CLIENT_AFTER_UPDATE"] = _configInfo.LaunchClientAfterUpdate.ToString();
+        if (_configInfo.Monitoring != null)
+            start.Environment["GENERALUPDATE_MONITORING_OPTIONS"] =
+                JsonSerializer.Serialize(_configInfo.Monitoring, AttemptJsonContext.Default.BowlOptions);
+        using var updater = Process.Start(start) ?? throw new InvalidOperationException("The OSS updater did not start.");
+        _configInfo.Attempt?.Record("handedOff");
         GeneralTracer.Info("[OssClient] Upgrade launched, exiting.");
         await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
     }
@@ -327,6 +355,8 @@ public class OssStrategy : IStrategy
         var ctx = BuildUpdateContext();
         try
         {
+            var attempt = UpdateAttempt.Begin(_configInfo!, "update");
+            attempt.Record("validating");
             // Client downloaded the version JSON to InstallPath; Upgrade reads it from there
             var installPath = _configInfo!.InstallPath;
             var versionFileName = $"{_configInfo.MainAppName ?? _configInfo.UpdateAppName}_versions.json";
@@ -395,13 +425,17 @@ public class OssStrategy : IStrategy
             }
 
             await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
+            await attempt.StartMonitoringAsync(0, 1).ConfigureAwait(false);
+            attempt.BeforeFileChanges();
 
             GeneralTracer.Debug($"OssStrategy (upgrade): downloading {assets.Count} asset(s).");
             await DownloadAssetsAsync(assets, installPath).ConfigureAwait(false);
 
+            attempt.EnsureMonitorAlive();
             GeneralTracer.Debug("OssStrategy (upgrade): decompressing.");
             var encoding = Encoding.GetEncoding(_configInfo?.Encoding?.CodePage ?? Encoding.UTF8.CodePage);
             DecompressAssets(assets, installPath, encoding);
+            attempt.EnsureMonitorAlive();
 
             // Update generalupdate.manifest.json ClientVersion so the client
             // reads the correct version on next startup, preventing infinite loops.
@@ -411,14 +445,26 @@ public class OssStrategy : IStrategy
 
             await SafeOnDownloadCompletedAsync(ctx).ConfigureAwait(false);
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
-            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+            attempt.EnsureMonitorAlive();
+            attempt.Record("filesApplied");
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
             GeneralTracer.Debug("OssStrategy (upgrade): launching main app.");
-            await StartAppAsync();
+            if (_configInfo!.LaunchClientAfterUpdate)
+            {
+                attempt.Record("launching");
+                await StartAppAsync();
+            }
+            else
+            {
+                attempt.EnsureMonitorAlive();
+                attempt.Record("completed");
+                await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
+            _configInfo?.Attempt?.RecordFailure(ex, _configInfo.Attempt.Stage == "launching" ? "launchFailure" : "updateFailure");
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
             GeneralTracer.Error("OssStrategy.ExecuteUpgradeAsync failed.", ex);
@@ -426,6 +472,7 @@ public class OssStrategy : IStrategy
         }
         finally
         {
+            _configInfo?.Attempt?.Dispose();
             await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
         }
     }
@@ -449,19 +496,36 @@ public class OssStrategy : IStrategy
     /// the exit operation is handled by the caller <c>ExecuteUpgradeAsync</c> in its finally block.
     /// </para>
     /// </remarks>
-    public Task StartAppAsync()
+    public async Task StartAppAsync()
     {
         var appName = _configInfo?.MainAppName ?? _configInfo?.UpdateAppName;
-        if (string.IsNullOrEmpty(appName)) return Task.CompletedTask;
+        if (string.IsNullOrEmpty(appName))
+        {
+            if (_configInfo?.Attempt != null) throw new InvalidOperationException("Application name is required for launch.");
+            return;
+        }
 
         var targetDir = _configInfo?.InstallPath ?? _appPath;
         var appPath = Path.Combine(targetDir, appName);
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Application not found: {appPath}");
 
-        Process.Start(appPath);
+        _configInfo?.Attempt?.EnsureMonitorAlive();
+        using var application = Process.Start(new ProcessStartInfo(appPath)
+        {
+            UseShellExecute = false, WorkingDirectory = targetDir
+        }) ?? throw new InvalidOperationException("The application did not start.");
+        if (_configInfo?.Attempt is UpdateAttempt attempt)
+        {
+            if (attempt.MonitoringActive && _configInfo.Monitoring!.VerifyLaunch)
+                attempt.Record("awaitingHealth", application: ProcessIdentity.From(application));
+            else
+            {
+                attempt.Record("completed");
+                await SafeReportUpdateAppliedAsync(BuildUpdateContext()).ConfigureAwait(false);
+            }
+        }
         GeneralTracer.Debug("OssStrategy: main application started.");
-        return Task.CompletedTask;
     }
 
     #region Helpers
@@ -521,9 +585,10 @@ public class OssStrategy : IStrategy
     {
         var plan = new DownloadPlan(assets, false);
         var progress = Download.Progress.DownloadProgressReporter.CreateEventBridge();
+        DownloadReport report;
         if (DownloadOrchestrator != null)
         {
-            await DownloadOrchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
+            report = await DownloadOrchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
         }
         else
         {
@@ -534,8 +599,11 @@ public class OssStrategy : IStrategy
             };
             var orchestrator = new DefaultDownloadOrchestrator(
                 Network.HttpClientProvider.Shared, options);
-            await orchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
+            report = await orchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
         }
+        if (report.FailedCount > 0)
+            throw new InvalidOperationException("OSS download failed: " +
+                string.Join("; ", report.Results.Where(r => !r.Success).Select(r => $"{r.Asset.Name}: {r.ErrorMessage}")));
     }
 
     /// <summary>
@@ -548,12 +616,20 @@ public class OssStrategy : IStrategy
     /// Iterates through the asset list and performs ZIP decompression for each asset.
     /// Deletes the original ZIP files after decompression completes.
     /// </remarks>
-    private static void DecompressAssets(List<DownloadAsset> assets, string targetPath, Encoding encoding)
+    private void DecompressAssets(List<DownloadAsset> assets, string targetPath, Encoding encoding)
     {
         foreach (var asset in assets)
         {
+            _configInfo?.Attempt?.EnsureMonitorAlive();
+            _configInfo?.Attempt?.SetPackage(new VersionEntry { Name = asset.Name, Version = asset.Version });
             var zipFilePath = Path.Combine(targetPath, asset.Name);
-            CompressProvider.Decompress(Format.Zip, zipFilePath, targetPath, encoding);
+            try { CompressProvider.Decompress(Format.Zip, zipFilePath, targetPath, encoding); }
+            catch (Exception error)
+            {
+                error.Data["UpdateStage"] = "decompressing";
+                error.Data["UpdateFailedPath"] = zipFilePath;
+                throw;
+            }
 
             if (!File.Exists(zipFilePath)) continue;
             File.SetAttributes(zipFilePath, FileAttributes.Normal);
@@ -637,7 +713,8 @@ public class OssStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Updating, 1)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, 0, (int)UpdateStatus.Updating, 1).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateStarted failed: {ex.Message}"); }
     }
@@ -649,7 +726,8 @@ public class OssStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, 0, (int)UpdateStatus.Success, 1).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}"); }
     }
@@ -662,7 +740,9 @@ public class OssStrategy : IStrategy
     {
         try
         {
-            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Failure, 1)).ConfigureAwait(false);
+            _configInfo?.Attempt?.RecordFailure(error);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, 0, (int)UpdateStatus.Failure, 1).ConfigureAwait(false);
         }
         catch (Exception ex) { GeneralTracer.Warn($"Report UpdateFailed failed: {ex.Message}"); }
     }

@@ -64,7 +64,23 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// This record is serialized to JSON using camelCase naming policy.
 /// Example JSON: {"recordId": 123, "status": 1, "type": 1}
 /// </remarks>
-public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
+public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
+{
+    public int ProtocolVersion { get; init; } = 1;
+    public string? UpdateAttemptId { get; init; }
+    public string? EventId { get; init; }
+    public string? PackageName { get; init; }
+    public string? PackageVersion { get; init; }
+    public string? Role { get; init; }
+    public string? Stage { get; init; }
+    public string? Outcome { get; init; }
+    public string? CurrentVersion { get; init; }
+    public string? TargetVersion { get; init; }
+    public DateTimeOffset TimestampUtc { get; init; } = DateTimeOffset.UtcNow;
+    public UpdateFailure? Error { get; init; }
+}
+
+internal record LegacyUpdateReport(int RecordId, int Status, int Type);
 
 /// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
@@ -81,8 +97,8 @@ public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 ///   <item>Serializes the <see cref="UpdateReport"/> to a JSON string using camelCase naming policy.</item>
 ///   <item>Creates an HTTP POST request with Content-Type set to application/json.</item>
 ///   <item>Sends the request to the configured report URL.</item>
-///   <item>If the request fails (e.g., network error), logs a warning without throwing an exception,
-///         to avoid disrupting the main update flow.</item>
+///   <item>Non-2xx responses and network errors propagate to the caller. Role strategies
+///         retain pending records and isolate delivery failures from update/rollback work.</item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -142,7 +158,8 @@ public class HttpUpdateReporter : IUpdateReporter
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
             
-            var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
+            var json = JsonSerializer.Serialize(new LegacyUpdateReport(report.RecordId, report.Status, report.Type),
+                AttemptJsonContext.Default.LegacyUpdateReport);
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -151,11 +168,13 @@ public class HttpUpdateReporter : IUpdateReporter
             // so that report requests carry the same credentials as version validation requests.
             await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
 
-            await _client.SendAsync(request, token).ConfigureAwait(false);
+            using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");
+            throw;
         }
     }
 }

@@ -71,6 +71,11 @@ namespace GeneralUpdate.Core.Configuration
     /// <seealso cref="VersionEntry" />
     public class ProcessContract
     {
+        public string? UpdateAttemptId { get; set; }
+        public string? DiagnosticsDirectory { get; set; }
+        public BowlOptions? Monitoring { get; set; }
+        public bool? BackupEnabled { get; set; }
+
         /// <summary>
         ///     Default parameterless constructor for JSON deserialization.
         /// </summary>

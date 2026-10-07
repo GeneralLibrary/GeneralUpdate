@@ -42,6 +42,11 @@ namespace GeneralUpdate.Core.Configuration;
 /// <seealso cref="ProcessContract" />
 public class UpdateContext : UpdateConfiguration
 {
+    public string? UpdateAttemptId { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal Download.Reporting.UpdateAttempt? Attempt { get; set; }
+
     // ──────────────────────────────
     //  Runtime-computed fields (calculated during pipeline execution)
     // ──────────────────────────────

@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Strategy
     ///   <item><c>BuildPipeline</c> — Builds the middleware pipeline, executing hash verification, decompression,
     ///        and (optionally) patch application in order.</item>
     ///   <item><c>CreatePipelineContext</c> — Creates the pipeline context containing version information and patch path.</item>
-    ///   <item><c>StartAppAsync</c> — Starts the updated main application (and the Bowl helper process if configured),
+    ///   <item><c>StartAppAsync</c> — Starts the updated main application,
     ///        then releases the tracer and gracefully exits the current updater process.</item>
     /// </list>
     /// </para>
@@ -89,7 +89,7 @@ namespace GeneralUpdate.Core.Strategy
         ///   <item>Uses the <c>LaunchAppName</c> property to get the main application name; throws if not set.</item>
         ///   <item>Calls <c>ResolveAppPath</c> to resolve the full path of the application.</item>
         ///   <item>Starts the main application using <c>Process.Start</c>.</item>
-        ///   <item>If <c>LaunchBowl</c> is true, also starts the Bowl helper process (for UI interaction or status monitoring).</item>
+        ///   <item>Awaits the application-start callback before exiting, allowing durable identity recording.</item>
         ///   <item>Disposes the <c>GeneralTracer</c> resources.</item>
         ///   <item>Calls <c>GracefulExit.CurrentProcessAsync()</c> to gracefully terminate the updater process.</item>
         /// </list>
@@ -117,22 +117,13 @@ namespace GeneralUpdate.Core.Strategy
                 appLaunched = true;
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 
-                if (LaunchBowl)
-                {
-                    var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
-                    if (!string.IsNullOrEmpty(bowlAppPath))
-                    {
-                        GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching Bowl process={bowlAppPath}");
-                        using var bowlProcess = Process.Start(bowlAppPath);
-                        if (bowlProcess != null)
-                            GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: Bowl process started (PID: {bowlProcess.Id}).");
-                    }
-                }
+                if (OnAppStarted != null) await OnAppStarted(appProcess).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 GeneralTracer.Error("The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                if (OnAppStarted != null) throw;
 
                 // If the main app was already launched, still need to exit the updater.
                 if (!appLaunched) return;

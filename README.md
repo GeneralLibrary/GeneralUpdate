@@ -48,6 +48,15 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 </div>
 
+## Update evidence and optional external monitoring
+
+Update attempts now persist diagnostics outside the application tree. Optional
+external Bowl monitoring uses a readiness-gated, versioned disk protocol;
+unmonitored installations require no Bowl deployment. See the
+[v1 integration contract and compatibility notes](docs/bowl-integration-v1.md).
+The standalone host is not included in this change; the existing Bowl sources
+remain until migration is verified.
+
 
 
 ## 🎏 Code Platforms

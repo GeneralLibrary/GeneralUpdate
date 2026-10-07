@@ -70,6 +70,7 @@ namespace GeneralUpdate.Core.Pipeline;
 /// </remarks>
 public class PipelineContext
 {
+    internal Download.Reporting.UpdateAttempt? Attempt { get; set; }
     private ConcurrentDictionary<string, object?> _context = new();
 
     /// <summary>

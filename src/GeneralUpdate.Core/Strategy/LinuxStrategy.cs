@@ -114,12 +114,14 @@ public class LinuxStrategy : AbstractStrategy
                 throw new InvalidOperationException($"Failed to start application: {appPath}");
             appLaunched = true;
             GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: app launched successfully (PID: {process.Id}).");
+            if (OnAppStarted != null) await OnAppStarted(process).ConfigureAwait(false);
         }
         catch (Exception e)
         {
             GeneralTracer.Error(
                 "The StartApp method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            if (OnAppStarted != null) throw;
 
             // If the main app was already launched, still need to exit the updater.
             if (!appLaunched) return;

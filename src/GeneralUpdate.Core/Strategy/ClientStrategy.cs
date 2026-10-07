@@ -73,6 +73,7 @@ public class ClientStrategy : IStrategy
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
     private int _upgradeRecordId;
+    private int _activeRecordId;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
@@ -238,6 +239,7 @@ public class ClientStrategy : IStrategy
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
             abs.Reporter = this.Reporter;
+            abs.ReportPackageResults = false;
         }
     }
 
@@ -249,7 +251,7 @@ public class ClientStrategy : IStrategy
     /// <exception cref="InvalidOperationException">Thrown when the strategy has not been configured via <see cref="Create"/>.</exception>
     /// <remarks>
     /// <para>Execution flow:</para>
-    /// <para>1. Calls <see cref="CallSmallBowlHomeAsync"/> to shut down potentially conflicting upgrade processes (Bowl).</para>
+    /// <para>1. Creates a persistent attempt journal without terminating unrelated monitor processes.</para>
     /// <para>2. Calls <see cref="ExecuteWorkflowAsync"/> to execute the core update workflow.</para>
     /// <para>3. If the above steps throw an exception, safely invokes in order: error hook, failure report, log, and event dispatch.</para>
     /// <para>All exceptions are caught and dispatched as <see cref="ExceptionEventArgs"/> via <see cref="EventManager"/> without propagating upward.</para>
@@ -259,15 +261,21 @@ public class ClientStrategy : IStrategy
         if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
 
         HasPreparedClientUpdate = false;
+        _mainRecordId = 0;
+        _upgradeRecordId = 0;
+        _activeRecordId = 0;
 
         try
         {
             GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
-            await CallSmallBowlHomeAsync(_configInfo.Bowl);
+            _configInfo.ReportType = _reportType;
+            Download.Reporting.UpdateAttempt.Begin(_configInfo, "client", newAttempt: true);
+            _configInfo.Attempt!.Record("validating");
             await ExecuteWorkflowAsync();
         }
         catch (Exception ex)
         {
+            _configInfo.Attempt?.RecordFailure(ex);
             var errCtx = BuildUpdateContext();
             await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
@@ -519,6 +527,7 @@ public class ClientStrategy : IStrategy
             .FirstOrDefault(a => (a.AppType ?? (int)AppType.Client) == (int)AppType.Client)?.RecordId ?? 0;
         _upgradeRecordId = downloadPlan.Assets
             .FirstOrDefault(a => a.AppType == (int)AppType.Upgrade)?.RecordId ?? 0;
+        _activeRecordId = _mainRecordId != 0 ? _mainRecordId : _upgradeRecordId;
         EventManager.Instance.Dispatch(this, updateInfoArgs);
 
         var isForcibly = downloadPlan.IsForcibly;
@@ -543,6 +552,7 @@ public class ClientStrategy : IStrategy
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, StorageManager.BackupRootDirectory,
             StorageManager.GetBackupDirectoryName());
+        Download.Reporting.UpdateAttempt.ValidateExternalPath(_configInfo.DiagnosticsDirectory!, _configInfo);
 
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
@@ -555,6 +565,7 @@ public class ClientStrategy : IStrategy
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
         {
+            _configInfo.Attempt?.Record("backup");
             Backup();
         }
         else
@@ -600,6 +611,7 @@ public class ClientStrategy : IStrategy
             var mergedPlan = new Download.Models.DownloadPlan(allAssets, plan.IsForcibly);
 
             GeneralTracer.Info($"ClientStrategy: downloading {mergedPlan.Assets.Count} asset(s) ({plan.Assets.Count} primary + {plan.FallbackFulls.Count} fallback).");
+            _configInfo.Attempt?.Record("downloading");
             var downloadReport = await ExecuteDownloadAsync(mergedPlan).ConfigureAwait(false);
 
             if (downloadReport.FailedCount > 0)
@@ -611,7 +623,9 @@ public class ClientStrategy : IStrategy
                 // Single exception instance for both event dispatch and throw — no
                 // allocations, consistent correlation in logs and event subscribers.
                 var ex = new InvalidOperationException(
-                    $"{downloadReport.FailedCount} download(s) failed. Aborting apply phase.");
+                    $"{downloadReport.FailedCount} download(s) failed: {failDetails}");
+                ex.Data["UpdateFailedPath"] = downloadReport.Results.First(r => !r.Success).LocalPath;
+                ex.Data["UpdateStage"] = "downloading";
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, "Download failures detected."));
                 // Throw so CVP fallback can retry with chain packages.
                 throw ex;
@@ -655,7 +669,8 @@ public class ClientStrategy : IStrategy
                     }
                     else
                     {
-                        var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
+                        var failEx = (_osStrategy as AbstractStrategy)?.LastError ?? new InvalidOperationException("Upgrade packages failed to apply.");
+                        _configInfo.Attempt?.RecordFailure(failEx);
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
                         await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
@@ -666,7 +681,7 @@ public class ClientStrategy : IStrategy
                 case UpdateScenario.MainOnly:
                     SendProcessIpc(cVersions);
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                    await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
+                    _configInfo.Attempt?.Record("prepared");
                     if (LaunchAfterPrepare)
                     {
                         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
@@ -683,7 +698,8 @@ public class ClientStrategy : IStrategy
                     // cause undefined behavior in the upgrade process.
                     if (!UpgradePackagesSucceeded())
                     {
-                        var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
+                        var failEx = (_osStrategy as AbstractStrategy)?.LastError ?? new InvalidOperationException("Upgrade packages failed to apply.");
+                        _configInfo.Attempt?.RecordFailure(failEx);
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
                         await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
@@ -726,8 +742,10 @@ public class ClientStrategy : IStrategy
     private async Task ApplyUpgradePackagesAsync(List<VersionEntry> upgradeVersions)
     {
         if (upgradeVersions.Count == 0) return;
+        _activeRecordId = _upgradeRecordId;
         GeneralTracer.Info("ClientStrategy: applying Upgrade packages in place.");
         _configInfo!.UpdateVersions = upgradeVersions;
+        _configInfo.Attempt?.Record("filesApplying");
         _osStrategy!.Create(_configInfo);
         await _osStrategy.ExecuteAsync().ConfigureAwait(false);
 
@@ -736,7 +754,10 @@ public class ClientStrategy : IStrategy
         // continues the loop, so ExecuteAsync() completing is not a
         // reliable success signal on its own.
         if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+        {
             WriteBackUpgradeVersion(upgradeVersions, _configInfo!.InstallPath);
+            _configInfo.Attempt?.Record("filesApplied");
+        }
     }
 
     /// <summary>
@@ -753,6 +774,7 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     private void SendProcessIpc(List<VersionEntry> clientVersions)
     {
+        _activeRecordId = _mainRecordId;
         var processInfo = ConfigurationMapper.MapToProcessContract(
             _configInfo!, clientVersions,
             _configInfo!.Formats ?? BlackDefaults.DefaultFormats,
@@ -784,10 +806,16 @@ public class ClientStrategy : IStrategy
             abs.LaunchAppName = _configInfo!.UpdateAppName;
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.OnAppStarted = process =>
+            {
+                _configInfo.Attempt?.Record("handedOff");
+                return Task.CompletedTask;
+            };
         }
 
         GeneralTracer.Info(
             $"ClientStrategy: launching upgrade process {_configInfo!.UpdateAppName} via OS strategy.");
+        _configInfo.Attempt?.Record("launchingUpdater");
         await _osStrategy!.StartAppAsync();
     }
 
@@ -807,6 +835,17 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     internal void LaunchUpgradeProcessSync()
     {
+        try { LaunchUpgradeProcessSyncCore(); }
+        catch (Exception error)
+        {
+            _configInfo?.Attempt?.RecordFailure(error, "launchFailure");
+            throw;
+        }
+    }
+
+    private void LaunchUpgradeProcessSyncCore()
+    {
+        _configInfo?.Attempt?.Record("launchingUpdater");
         // Run the pre-launch lifecycle hook (e.g. UnixPermissionHooks for chmod +x).
         // In the standard flow this runs inside ExecuteStandardWorkflowAsync; in
         // silent mode it was deferred and must run now, before the process starts.
@@ -822,6 +861,7 @@ public class ClientStrategy : IStrategy
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
             abs.StartProcess(abs.LaunchAppName!, abs.UseUpdatePath);
+            _configInfo.Attempt?.Record("handedOff");
             return;
         }
 
@@ -841,6 +881,7 @@ public class ClientStrategy : IStrategy
         if (process == null)
             throw new InvalidOperationException($"Failed to start upgrade process: {appPath}");
         GeneralTracer.Info($"ClientStrategy: upgrade process launched (PID: {process.Id}).");
+        _configInfo.Attempt?.Record("handedOff");
     }
 
     #endregion
@@ -971,36 +1012,9 @@ public class ClientStrategy : IStrategy
         {
             GeneralTracer.Warn(
                 $"ClientStrategy: failed to write back UpgradeClientVersion: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Shuts down conflicting processes (Bowl upgrade process) by name to release file locks.
-    /// </summary>
-    /// <param name="processName">The name of the process to shut down (without extension). Skipped if null or whitespace.</param>
-    /// <remarks>
-    /// This method is called at the entry point of the update flow to ensure the upgrade process (Bowl) is not running,
-    /// preventing file locks from causing subsequent backup or replacement operations to fail.
-    /// The shutdown is performed gracefully via <c>GracefulExit.ShutdownAsync</c>.
-    /// If the specified process does not exist or an exception occurs during shutdown, this method logs a warning
-    /// but does not block the flow.
-    /// </remarks>
-    private async Task CallSmallBowlHomeAsync(string processName)
-    {
-        if (string.IsNullOrWhiteSpace(processName)) return;
-        try
-        {
-            var processes = Process.GetProcessesByName(processName);
-            if (processes.Length == 0) return;
-            foreach (var process in processes)
-            {
-                GeneralTracer.Info($"Shutting down process {process.ProcessName} (ID: {process.Id})");
-                await GracefulExit.ShutdownAsync(process).ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            GeneralTracer.Error("CallSmallBowlHomeAsync failed.", ex);
+            ex.Data["UpdateStage"] = "manifest";
+            ex.Data["UpdateFailedPath"] = Path.Combine(installPath, ManifestInfo.FileName);
+            throw;
         }
     }
 
@@ -1120,9 +1134,9 @@ public class ClientStrategy : IStrategy
     {
         try
         {
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, _mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Updating, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -1138,9 +1152,10 @@ public class ClientStrategy : IStrategy
     {
         try
         {
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
+            _configInfo?.Attempt?.Record("downloaded");
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, _mainRecordId,
+                    (int)Download.Reporting.UpdateStatus.Updating, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -1157,9 +1172,10 @@ public class ClientStrategy : IStrategy
     {
         try
         {
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
-                    (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
+            _configInfo?.Attempt?.RecordFailure(error);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, _activeRecordId,
+                    (int)Download.Reporting.UpdateStatus.Failure, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -1175,9 +1191,9 @@ public class ClientStrategy : IStrategy
     {
         try
         {
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
-                    (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, recordId,
+                    (int)Download.Reporting.UpdateStatus.Success, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

@@ -91,6 +91,8 @@ namespace GeneralUpdate.Core.Configuration
             target.Directories = source.Directories;
             target.ReportUrl = source.ReportUrl;
             target.Bowl = source.Bowl;
+            target.Monitoring = source.Monitoring;
+            target.DiagnosticsDirectory = source.DiagnosticsDirectory;
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.AuthScheme = source.AuthScheme;
@@ -208,6 +210,10 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
+            processInfo.UpdateAttemptId = source.UpdateAttemptId;
+            processInfo.DiagnosticsDirectory = source.DiagnosticsDirectory;
+            processInfo.Monitoring = source.Monitoring;
+            processInfo.BackupEnabled = source.BackupEnabled;
             return processInfo;
         }
     }

@@ -30,6 +30,12 @@ namespace GeneralUpdate.Core.Configuration
     /// <seealso cref="ProcessContract" />
     public abstract class UpdateConfiguration
     {
+        /// <summary>External Bowl monitoring is disabled unless explicitly enabled.</summary>
+        public BowlOptions? Monitoring { get; set; }
+
+        /// <summary>Persistent diagnostic root outside installation, staging and backup directories.</summary>
+        public string? DiagnosticsDirectory { get; set; }
+
         /// <summary>
         ///     The executable file name of the updater application (e.g., "Update.exe").
         ///     When the client needs to launch the upgrade process, this name is used to locate and start the updater.
@@ -157,12 +163,11 @@ namespace GeneralUpdate.Core.Configuration
         public string ReportUrl { get; set; }
 
         /// <summary>
-        ///     The name of the process to terminate before starting the update.
-        ///     Typically used to shut down conflicting background processes (e.g., the "Bowl" process).
+        ///     Legacy configuration retained for deserialization compatibility.
+        ///     Use <see cref="Monitoring"/> for external Bowl integration.
         /// </summary>
         /// <remarks>
-        ///     In the update workflow, the system attempts to terminate the process matching this name before
-        ///     launching the upgrade process, to avoid file-locking issues that could cause the update to fail.
+        ///     No process is killed by name and no helper is launched after the application.
         /// </remarks>
         public string Bowl { get; set; }
 
