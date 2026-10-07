@@ -73,6 +73,7 @@ public class ClientStrategy : IStrategy
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
     private int _upgradeRecordId;
+    // Both scenarios involve two server records; failures must identify whichever target is currently being processed.
     private int _activeRecordId;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
@@ -269,12 +270,14 @@ public class ClientStrategy : IStrategy
         {
             GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
             _configInfo.ReportType = _reportType;
+            // A reused ClientStrategy starts a new workflow, while the spawned Update will retain this ID.
             Download.Reporting.UpdateAttempt.Begin(_configInfo, "client", newAttempt: true);
             _configInfo.Attempt!.Record("validating");
             await ExecuteWorkflowAsync();
         }
         catch (Exception ex)
         {
+            // Leave evidence before calling extension hooks or sending anything over the network.
             _configInfo.Attempt?.RecordFailure(ex);
             var errCtx = BuildUpdateContext();
             await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
@@ -517,7 +520,7 @@ public class ClientStrategy : IStrategy
         var updateInfoArgs = new UpdateInfoEventArgs(versionResp);
 
         // Capture RecordIds per AppType for status reporting.
-        // Client packages are reported by UpdateStrategy (Bowl) via IPC; Upgrade packages
+        // Main-app results belong to UpdateStrategy or its external monitor after IPC handoff; Upgrade packages
         // are applied in-place and reported by ClientStrategy.
         //
         // Note: _mainRecordId treats null AppType as Client (matching the fallback in
@@ -681,6 +684,7 @@ public class ClientStrategy : IStrategy
                 case UpdateScenario.MainOnly:
                     SendProcessIpc(cVersions);
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
+                    // Prepared/downloaded is not applied: only the updater (or its monitor) may report main-app success.
                     _configInfo.Attempt?.Record("prepared");
                     if (LaunchAfterPrepare)
                     {
@@ -751,7 +755,7 @@ public class ClientStrategy : IStrategy
 
         // Only advance the manifest version when every package was applied
         // successfully. AbstractStrategy catches per-package failures and
-        // continues the loop, so ExecuteAsync() completing is not a
+        // stops the chain, so ExecuteAsync() completing is not a
         // reliable success signal on its own.
         if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
         {
@@ -769,7 +773,7 @@ public class ClientStrategy : IStrategy
     /// <para>1. Uses <c>ConfigurationMapper.MapToProcessContract</c> to map configuration information and version list into a <c>ProcessContract</c> object;</para>
     /// <para>2. Serializes the <c>ProcessContract</c> as a JSON string and stores it in <c>_configInfo.ProcessContract</c>;</para>
     /// <para>3. Sends the encrypted process information to the upgrade process via <c>EncryptedFileProcessContractProvider</c>.</para>
-    /// <para>After the upgrade process (Bowl) receives this information, it will perform the actual installation and replacement operations
+    /// <para>After the upgrade process receives this information, it will perform the actual installation and replacement operations
     /// based on the <c>ProcessContract</c>.</para>
     /// </remarks>
     private void SendProcessIpc(List<VersionEntry> clientVersions)
@@ -790,12 +794,12 @@ public class ClientStrategy : IStrategy
     }
 
     /// <summary>
-    /// Launches the upgrade process (Bowl/Upgrade App), delegating to the OS strategy for platform-specific process startup.
+    /// Launches the upgrade application, delegating to the OS strategy for platform-specific process startup.
     /// </summary>
     /// <remarks>
     /// <para>Configures the OS strategy launch parameters before starting:</para>
     /// <para>- <c>LaunchAppName</c>: Set to <c>_configInfo.UpdateAppName</c>, specifying the upgrade program file name to launch;</para>
-    /// <para>- <c>LaunchBowl</c>: Set to <c>false</c> to avoid recursively launching the Bowl process;</para>
+    /// <para>- <c>LaunchBowl</c>: Legacy flag remains false; Update initializes optional external monitoring independently;</para>
     /// <para>- <c>UseUpdatePath</c>: Determined by whether <c>_configInfo.UpdatePath</c> is empty.</para>
     /// <para>After calling <see cref="StartAppAsync"/>, the upgrade process takes over the subsequent installation and replacement operations.</para>
     /// </remarks>
@@ -835,6 +839,7 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     internal void LaunchUpgradeProcessSync()
     {
+        // Silent ProcessExit launch bypasses the normal async workflow, so it must persist its own launch failures.
         try { LaunchUpgradeProcessSyncCore(); }
         catch (Exception error)
         {
@@ -1012,6 +1017,7 @@ public class ClientStrategy : IStrategy
         {
             GeneralTracer.Warn(
                 $"ClientStrategy: failed to write back UpgradeClientVersion: {ex.Message}");
+            // Do not hand off to an updater whose recorded version could not be advanced after applying its files.
             ex.Data["UpdateStage"] = "manifest";
             ex.Data["UpdateFailedPath"] = Path.Combine(installPath, ManifestInfo.FileName);
             throw;

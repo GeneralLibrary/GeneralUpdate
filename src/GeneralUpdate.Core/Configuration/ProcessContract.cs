@@ -71,9 +71,13 @@ namespace GeneralUpdate.Core.Configuration
     /// <seealso cref="VersionEntry" />
     public class ProcessContract
     {
+        /// <summary>Client-generated correlation ID reused by Update; omitted by older clients.</summary>
         public string? UpdateAttemptId { get; set; }
+        /// <summary>Shared durable evidence root, never the application's replaceable installation directory.</summary>
         public string? DiagnosticsDirectory { get; set; }
+        /// <summary>Optional external host settings; null preserves legacy unmonitored operation.</summary>
         public BowlOptions? Monitoring { get; set; }
+        /// <summary>Preserves an explicit false across IPC so Update cannot authorize rollback using stale backups.</summary>
         public bool? BackupEnabled { get; set; }
 
         /// <summary>
@@ -137,7 +141,7 @@ namespace GeneralUpdate.Core.Configuration
         /// <param name="updateVersions">The list of version information to update; must not be empty.</param>
         /// <param name="reportUrl">The URL for reporting update status.</param>
         /// <param name="backupDirectory">The directory path for backup files.</param>
-        /// <param name="bowl">The process name to terminate before the update.</param>
+        /// <param name="bowl">Legacy process-name value retained for compatibility; does not start or terminate a monitor.</param>
         /// <param name="scheme">The URL scheme for update requests.</param>
         /// <param name="token">The authentication token.</param>
         /// <param name="authScheme">Explicitly selects the HTTP authentication method.</param>

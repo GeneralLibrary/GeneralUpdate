@@ -82,10 +82,12 @@ public class MacStrategy : AbstractStrategy
                 // have already exited by the time we check, causing a false failure.
                 // Process.Start returning non-null confirms the OS created the process.
                 GeneralTracer.Info($"MacStrategy.StartApp: app launched successfully (PID: {process.Id}).");
+                // Record the launched identity before disposing the process handle or exiting the updater.
                 if (OnAppStarted != null) await OnAppStarted(process).ConfigureAwait(false);
             }
             else
             {
+                // The legacy standalone path permits no app; a role-managed launch must not silently claim success.
                 if (OnAppStarted != null) throw new FileNotFoundException("Application to launch was not found.", mainApp);
                 GeneralTracer.Info("MacStrategy.StartApp: no app to launch (app path not found or empty).");
             }
@@ -96,6 +98,7 @@ public class MacStrategy : AbstractStrategy
         {
             GeneralTracer.Error("The StartApp method in MacStrategy threw an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            // The role owns failure persistence and terminal reporting.
             if (OnAppStarted != null) throw;
 
             // If the main app was already launched, still need to exit the updater.

@@ -8,12 +8,14 @@ using GeneralUpdate.Core.Strategy;
 // A protocol test peer, not a Bowl implementation: no repair, result.json or network delivery.
 if (args[0] == "--application")
 {
+    // The test terminates this exact process during the observation window; no GUI or application installation is needed.
     await Task.Delay(TimeSpan.FromSeconds(30));
     return;
 }
 
 if (args[0] == "--producer")
 {
+    // Run the real updater and block inside apply, allowing the test to verify evidence survives abrupt process death.
     var root = args[1];
     var config = new UpdateContext
     {
@@ -38,10 +40,12 @@ var request = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "request.j
 if (request["protocolVersion"]!.GetValue<int>() != 1 || request["attemptId"]!.GetValue<string>() != id)
     throw new InvalidDataException("Invalid request.");
 var modePath = Path.Combine(stateRoot, "fixture-mode.txt");
+// Per-test files select fault injection without changing the production command-line contract or global environment.
 var mode = File.Exists(modePath) ? File.ReadAllText(modePath) : "normal";
 if (mode == "exit-before") return;
 if (mode == "timeout") { await Task.Delay(TimeSpan.FromSeconds(30)); return; }
 using var self = Process.GetCurrentProcess();
+// Each malformed mode breaks exactly one readiness invariant; the rest of the peer record remains valid.
 var ready = new
 {
     protocolVersion = mode == "wrong-version" ? 99 : 1,
@@ -54,11 +58,13 @@ var ready = new
     }
 };
 File.WriteAllText(Path.Combine(directory, "ready.tmp"), JsonSerializer.Serialize(ready));
+// Publish only complete JSON, matching the protocol's immutable readiness acknowledgment.
 File.Move(Path.Combine(directory, "ready.tmp"), Path.Combine(directory, "ready.json"));
 var deadline = DateTime.UtcNow.AddSeconds(30);
 while (DateTime.UtcNow < deadline)
 {
     if (File.Exists(Path.Combine(stateRoot, "exit-host"))) return;
+    // The producer uses atomic replacement; denying delete-sharing here would create an artificial Windows file-lock failure.
     using var stateStream = new FileStream(Path.Combine(directory, "producer.json"), FileMode.Open,
         FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
     var state = JsonNode.Parse(stateStream)!;
@@ -67,11 +73,13 @@ while (DateTime.UtcNow < deadline)
     var stage = state["stage"]!.GetValue<string>();
     if (stage == "completed" || stage == "failed")
     {
+        // Fixture receipts are deliberately not result.json: these tests do not certify production Bowl terminal delivery.
         File.WriteAllText(Path.Combine(directory, "fixture-outcome.txt"), stage);
         return;
     }
     if (stage == "awaitingHealth")
     {
+        // Observe only the declared PID/start-time pair for the complete window; absence of a dump is irrelevant.
         var identity = state["application"]!;
         var watch = Stopwatch.StartNew();
         var healthy = true;
@@ -85,6 +93,7 @@ while (DateTime.UtcNow < deadline)
     }
     if (!IsAlive(request["updater"]!))
     {
+        // Before handoff to application observation, producer death leaves the last durable stage as recovery evidence.
         File.WriteAllText(Path.Combine(directory, "fixture-outcome.txt"), "updaterExited");
         return;
     }
@@ -92,6 +101,7 @@ while (DateTime.UtcNow < deadline)
 }
 throw new TimeoutException("Fixture timed out.");
 
+// Process lookup after exit is an expected negative observation, not a fixture infrastructure failure.
 static bool IsAlive(JsonNode identity)
 {
     try
@@ -103,6 +113,7 @@ static bool IsAlive(JsonNode identity)
     catch (ArgumentException) { return false; }
 }
 
+/// <summary>Blocks after the real updater persisted filesApplying, without performing destructive application writes.</summary>
 sealed class WaitingStrategy(string root) : AbstractStrategy
 {
     protected override PipelineBuilder BuildPipeline(PipelineContext context) => new(context);

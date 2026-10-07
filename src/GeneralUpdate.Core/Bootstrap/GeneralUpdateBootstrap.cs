@@ -405,6 +405,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 UpdatePath = processInfo.UpdatePath,
                 LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
                 ReportType = processInfo.ReportType,
+                // Nullable additions keep old IPC contracts valid while carrying one attempt across processes.
                 UpdateAttemptId = processInfo.UpdateAttemptId,
                 DiagnosticsDirectory = processInfo.DiagnosticsDirectory,
                 Monitoring = processInfo.Monitoring,

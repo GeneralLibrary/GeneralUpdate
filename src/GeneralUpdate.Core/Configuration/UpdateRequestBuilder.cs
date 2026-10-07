@@ -62,12 +62,17 @@ namespace GeneralUpdate.Core.Configuration
         private BowlOptions? _monitoring;
         private string? _diagnosticsDirectory;
 
+        /// <summary>Configures an optional separately deployed Bowl host; settings alone do not enable monitoring.</summary>
+        /// <param name="options">Host settings. Set Enabled explicitly to require monitoring.</param>
+        /// <remarks>Executable availability, timeouts and directory isolation are checked before the update applies files.</remarks>
         public UpdateRequestBuilder SetMonitoring(BowlOptions options)
         {
             _monitoring = options ?? throw new ArgumentNullException(nameof(options));
             return this;
         }
 
+        /// <summary>Sets the persistent root shared by Client, Update and an optional monitor.</summary>
+        /// <param name="path">A directory outside installation, staging and backup trees; validated when the attempt begins.</param>
         public UpdateRequestBuilder SetDiagnosticsDirectory(string path)
         {
             _diagnosticsDirectory = path;

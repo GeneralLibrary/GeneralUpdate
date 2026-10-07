@@ -120,11 +120,13 @@ namespace GeneralUpdate.Core.Pipeline
             {
                 try
                 {
+                    // Stop at middleware boundaries if supervision disappears; an in-flight synchronous write cannot be interrupted here.
                     context.Attempt?.EnsureMonitorAlive();
                     await middleware.InvokeAsync(context);
                 }
                 catch (System.Exception error)
                 {
+                    // Enrich the original exception instead of wrapping it, preserving its type, HResult and stack.
                     error.Data["UpdateStage"] = middleware.GetType().Name;
                     error.Data["UpdateFailedPath"] = middleware is HashMiddleware || middleware is CompressMiddleware
                         ? context.Get<string>("ZipFilePath") : context.Get<string>("SourcePath");

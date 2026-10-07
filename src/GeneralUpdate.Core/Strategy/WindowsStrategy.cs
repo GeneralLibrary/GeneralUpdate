@@ -117,12 +117,14 @@ namespace GeneralUpdate.Core.Strategy
                 appLaunched = true;
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 
+                // Publish application identity/completion while its handle is available and before requesting updater exit.
                 if (OnAppStarted != null) await OnAppStarted(appProcess).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 GeneralTracer.Error("The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                // A role-managed launch must propagate failure so it cannot be mistaken for successful completion.
                 if (OnAppStarted != null) throw;
 
                 // If the main app was already launched, still need to exit the updater.

@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Used only by producer mode to run the real UpdateStrategy in a killable child process. -->
     <ProjectReference Include="..\..\src\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -21,9 +21,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+    <!-- Build the peer as a separate executable; tests must exercise process identity, not an in-process mock. -->
     <ProjectReference Include="..\MonitoringTestHost\MonitoringTestHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <!-- Include the apphost, runtime config and dependencies so process tests work without a published production Bowl host. -->
   <Target Name="CopyMonitoringFixture" AfterTargets="Build">
     <ItemGroup>
       <MonitoringFixture Include="..\MonitoringTestHost\bin\$(Configuration)\net10.0\**\*" />

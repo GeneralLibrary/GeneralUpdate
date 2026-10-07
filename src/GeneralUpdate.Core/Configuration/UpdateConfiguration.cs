@@ -31,9 +31,11 @@ namespace GeneralUpdate.Core.Configuration
     public abstract class UpdateConfiguration
     {
         /// <summary>External Bowl monitoring is disabled unless explicitly enabled.</summary>
+        /// <remarks>The legacy Bowl process-name setting does not enable this protocol or satisfy its readiness handshake.</remarks>
         public BowlOptions? Monitoring { get; set; }
 
         /// <summary>Persistent diagnostic root outside installation, staging and backup directories.</summary>
+        /// <remarks>Null selects per-user LocalApplicationData/GeneralUpdate/state. Client and Update must have access to the same root.</remarks>
         public string? DiagnosticsDirectory { get; set; }
 
         /// <summary>

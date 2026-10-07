@@ -160,6 +160,8 @@ public class OssStrategy : IStrategy
         // Dispatch by role — no env-var detection needed.
         if (_role == AppType.OssUpgrade)
         {
+            // OSS has no standard ProcessContract handoff. Reuse correlation/settings from the child environment,
+            // without serializing credentials or replacing explicitly configured monitor settings.
             _configInfo.UpdateAttemptId ??= Environment.GetEnvironmentVariable("GENERALUPDATE_ATTEMPT_ID");
             _configInfo.DiagnosticsDirectory ??= Environment.GetEnvironmentVariable("GENERALUPDATE_DIAGNOSTICS_ROOT");
             var monitoringJson = Environment.GetEnvironmentVariable("GENERALUPDATE_MONITORING_OPTIONS");
@@ -313,6 +315,7 @@ public class OssStrategy : IStrategy
         _configInfo.LastVersion = latest.Version;
         _configInfo.Attempt?.Record("launchingUpdater");
         var start = new ProcessStartInfo(appPath) { UseShellExecute = false, WorkingDirectory = upgradeDir };
+        // Set child-only values rather than changing this process's environment or persisting secrets.
         start.Environment["GENERALUPDATE_ATTEMPT_ID"] = _configInfo.UpdateAttemptId!;
         start.Environment["GENERALUPDATE_DIAGNOSTICS_ROOT"] = _configInfo.DiagnosticsDirectory!;
         start.Environment["GENERALUPDATE_LAUNCH_CLIENT_AFTER_UPDATE"] = _configInfo.LaunchClientAfterUpdate.ToString();
@@ -425,6 +428,7 @@ public class OssStrategy : IStrategy
             }
 
             await SafeReportUpdateStartedAsync(ctx).ConfigureAwait(false);
+            // OSS downloads packages into InstallPath, so supervision must start before downloading as well as extraction.
             await attempt.StartMonitoringAsync(0, 1).ConfigureAwait(false);
             attempt.BeforeFileChanges();
 
@@ -517,6 +521,7 @@ public class OssStrategy : IStrategy
         }) ?? throw new InvalidOperationException("The application did not start.");
         if (_configInfo?.Attempt is UpdateAttempt attempt)
         {
+            // Identical terminal ownership to the standard updater: only Bowl confirms a monitored survival window.
             if (attempt.MonitoringActive && _configInfo.Monitoring!.VerifyLaunch)
                 attempt.Record("awaitingHealth", application: ProcessIdentity.From(application));
             else
@@ -602,6 +607,7 @@ public class OssStrategy : IStrategy
             report = await orchestrator.ExecuteAsync(plan, targetPath, progress: progress).ConfigureAwait(false);
         }
         if (report.FailedCount > 0)
+            // A completed orchestrator task is not proof of successful downloads; never extract after a failed result.
             throw new InvalidOperationException("OSS download failed: " +
                 string.Join("; ", report.Results.Where(r => !r.Success).Select(r => $"{r.Asset.Name}: {r.ErrorMessage}")));
     }
@@ -626,6 +632,7 @@ public class OssStrategy : IStrategy
             try { CompressProvider.Decompress(Format.Zip, zipFilePath, targetPath, encoding); }
             catch (Exception error)
             {
+                // Retain the archive path and original exception for the common attempt journal.
                 error.Data["UpdateStage"] = "decompressing";
                 error.Data["UpdateFailedPath"] = zipFilePath;
                 throw;

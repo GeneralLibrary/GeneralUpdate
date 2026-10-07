@@ -11,6 +11,10 @@ using GeneralUpdate.Core.Strategy;
 
 namespace CoreTest.Strategy;
 
+/// <summary>
+/// Exercises real disk records and separate peer processes. The peer is not a production Bowl host:
+/// these tests cover GeneralUpdate's producer contract, not Bowl rollback, outbox delivery or business health.
+/// </summary>
 public sealed class UpdateReportingTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "UpdateReporting-" + Guid.NewGuid().ToString("N"));
@@ -18,6 +22,7 @@ public sealed class UpdateReportingTests : IDisposable
     private static string HostPath => Path.Combine(AppContext.BaseDirectory, "MonitorFixture",
         OperatingSystem.IsWindows() ? "MonitoringTestHost.exe" : "MonitoringTestHost");
 
+    /// <summary>Keep install, staging and evidence paths isolated; monitor deployment stays outside all of them.</summary>
     private UpdateContext Config(bool monitoring = false, bool launch = false)
     {
         Directory.CreateDirectory(Path.Combine(_root, "install"));
@@ -53,6 +58,7 @@ public sealed class UpdateReportingTests : IDisposable
         await strategy.ExecuteAsync();
     }
 
+    /// <summary>No monitor deployment is required for file-only completion, and success explicitly means filesApplied.</summary>
     [Fact]
     public async Task FilesOnly_WithoutMonitor_ReportsOneFilesAppliedSuccess()
     {
@@ -67,6 +73,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.False(File.Exists(Path.Combine(AttemptPath(config), "request.json")));
     }
 
+    /// <summary>A failure after file application must not be preceded by the old premature Success report.</summary>
     [Fact]
     public async Task LaunchFailure_NeverReportsPrematureSuccess()
     {
@@ -80,6 +87,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Contains("FileNotFoundException", failure.Error.StackTrace);
     }
 
+    /// <summary>Timeout, exit and malformed identity/version must all fail closed before any application-file work.</summary>
     [Theory]
     [InlineData("timeout")]
     [InlineData("exit-before")]
@@ -103,6 +111,7 @@ public sealed class UpdateReportingTests : IDisposable
         TrackHost(config);
     }
 
+    /// <summary>A missing optional deployment is a monitor outage, not a legacy server update Failure.</summary>
     [Fact]
     public async Task MissingExecutable_IsMonitoringUnavailableNotUpdateFailure()
     {
@@ -117,6 +126,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Contains(events, file => File.ReadAllText(file).Contains("monitorUnavailable"));
     }
 
+    /// <summary>The real producer writes its handoff; only the test peer observes the terminal window, with no updater HTTP success.</summary>
     [Theory]
     [InlineData(false, "filesOnly", "completed")]
     [InlineData(true, "processAlive", "processAlive")]
@@ -140,6 +150,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.False(File.Exists(Path.Combine(AttemptPath(config), "result.json")));
     }
 
+    /// <summary>Ready is not a permanent health guarantee: loss of the peer must block subsequent apply/launch work.</summary>
     [Fact]
     public async Task MonitorExitsDuringApply_PreventsLaunch()
     {
@@ -162,6 +173,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal("monitorUnavailable", Read(config, "producer.json")["error"]!["category"]!.GetValue<string>());
     }
 
+    /// <summary>Starting a process is insufficient for processAlive when that exact process dies during observation.</summary>
     [Fact]
     public async Task ApplicationDiesInObservationWindow_ProducerNeverClaimsSuccess()
     {
@@ -181,6 +193,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal("awaitingHealth", Read(config, "producer.json")["stage"]!.GetValue<string>());
     }
 
+    /// <summary>Kill a real updater process, then recover identity and its last stage exclusively from disk.</summary>
     [Fact]
     public async Task UpdaterKilled_PreservesDiskEvidenceAndExactIdentity()
     {
@@ -203,6 +216,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.NotEmpty(Directory.GetFiles(Path.Combine(attempt, "events")));
     }
 
+    /// <summary>A non-2xx leaves redacted evidence pending; retry sends only the legacy allowlisted HTTP fields.</summary>
     [Fact]
     public async Task FailedHttpDelivery_RemainsPendingAndRetriesLegacyPayloadOnly()
     {
@@ -222,6 +236,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Empty(Directory.GetFiles(Path.Combine(directory, "pending")));
     }
 
+    /// <summary>Direct callers also need an error signal, otherwise a durable queue would falsely delete unsent records.</summary>
     [Fact]
     public async Task HttpNonSuccess_ThrowsRatherThanAcknowledgingDelivery()
     {
@@ -230,6 +245,7 @@ public sealed class UpdateReportingTests : IDisposable
         await Assert.ThrowsAsync<HttpRequestException>(() => reporter.ReportAsync(new UpdateReport(42)));
     }
 
+    /// <summary>Reject evidence paths that an application update or rollback could overwrite.</summary>
     [Fact]
     public async Task StateDirectoryInsideInstall_IsRejectedBeforeApply()
     {
@@ -241,6 +257,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.False(Directory.Exists(config.DiagnosticsDirectory));
     }
 
+    /// <summary>Both delta and full fallback fail: preserve the concrete exception and never apply a dependent later package.</summary>
     [Fact]
     public async Task PipelineAndFallbackFailure_PreserveOriginalErrorWithoutLaterSuccess()
     {
@@ -269,6 +286,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Contains("original pipeline failure", failure.Error.StackTrace);
     }
 
+    /// <summary>Preparation failures retain the known download path and push trigger rather than substituting package AppType.</summary>
     [Fact]
     public async Task ClientDownloadFailure_PersistsKnownPathAndPushType()
     {
@@ -289,6 +307,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Contains("simulated download error", failure.Error.StackTrace);
     }
 
+    /// <summary>OSS must inspect the orchestrator result instead of treating completion of its Task as download success.</summary>
     [Fact]
     public async Task OssDownloadFailure_DoesNotApplyOrReportSuccess()
     {
@@ -304,6 +323,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Contains(reporter.Reports, report => report.Status == 3 && report.Error!.Message!.Contains("simulated download error"));
     }
 
+    /// <summary>Use production source-generated JSON to guard Client-to-Update correlation and option compatibility.</summary>
     [Fact]
     public void ProcessContract_PreservesAttemptAndMonitorConfiguration()
     {
@@ -322,6 +342,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal(2, roundtrip.ReportType);
     }
 
+    /// <summary>Keep handles to this test's peers only; cleanup must never terminate a process selected by a shared name.</summary>
     private void TrackHost(UpdateContext config)
     {
         var path = Path.Combine(AttemptPath(config), "ready.json");
@@ -331,6 +352,7 @@ public sealed class UpdateReportingTests : IDisposable
         catch (ArgumentException) { }
     }
 
+    /// <summary>Bound inter-process observation so a broken fixture fails rather than leaving the suite hanging.</summary>
     private static async Task WaitForFile(string path)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
@@ -348,6 +370,7 @@ public sealed class UpdateReportingTests : IDisposable
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
+    /// <summary>Uses the real pipeline/error handling while substituting file work and the platform's self-exit behavior.</summary>
     private sealed class TestOs : AbstractStrategy
     {
         public bool Applied { get; private set; }
@@ -379,12 +402,14 @@ public sealed class UpdateReportingTests : IDisposable
         }
     }
 
+    /// <summary>Supplies the same concrete error through normal and fallback pipelines to verify original evidence is retained.</summary>
     public sealed class FailingMiddleware : IMiddleware
     {
         public Task InvokeAsync(PipelineContext context) =>
             throw new InvalidDataException("original pipeline failure");
     }
 
+    /// <summary>Deterministic version discovery without a server or network dependency.</summary>
     private sealed class AssetSource : IDownloadSource
     {
         public Task<DownloadSourceResult> ListAsync(CancellationToken token = default) =>
@@ -396,6 +421,7 @@ public sealed class UpdateReportingTests : IDisposable
             });
     }
 
+    /// <summary>Return a failed batch rather than throwing, exercising the caller's required result inspection.</summary>
     private sealed class FailedDownload : IDownloadOrchestrator
     {
         public Task<DownloadReport> ExecuteAsync(DownloadPlan plan, string destDir, int maxConcurrency = 3,
@@ -406,6 +432,7 @@ public sealed class UpdateReportingTests : IDisposable
                 0, TimeSpan.Zero, 0, plan.Assets.Count));
     }
 
+    /// <summary>Captures richer reporter objects so tests can distinguish evidence semantics from the HTTP wire shape.</summary>
     private sealed class CaptureReporter : IUpdateReporter
     {
         public List<UpdateReport> Reports { get; } = [];
@@ -416,6 +443,7 @@ public sealed class UpdateReportingTests : IDisposable
         }
     }
 
+    /// <summary>Inspects the actual serialized HTTP body and controls acknowledgment without making a network request.</summary>
     private sealed class CaptureHandler(HttpStatusCode status) : HttpMessageHandler
     {
         public HttpStatusCode Status { get; set; } = status;

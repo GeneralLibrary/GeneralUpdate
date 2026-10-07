@@ -27,7 +27,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// </list>
 /// </para>
 /// <para>
-/// Unlike the Windows strategy, the Linux strategy does not include Bowl helper process launch logic.
+/// External Bowl monitoring is initialized by the role strategy before file changes on every platform.
 /// The patching feature is controlled by the <c>PatchEnabled</c> configuration.
 /// </para>
 /// </remarks>
@@ -94,7 +94,7 @@ public class LinuxStrategy : AbstractStrategy
     ///   <item>Calls <c>GracefulExit.CurrentProcessAsync()</c> to gracefully terminate the updater process.</item>
     /// </list>
     /// <para>
-    /// Note: The Linux strategy does not support the Bowl helper process when starting the application.
+    /// Optional external monitoring is already armed by the role strategy; this method only launches the application.
     /// Any exception is caught and dispatched as an <c>ExceptionEventArgs</c> event via <c>EventManager</c>.
     /// </para>
     /// </remarks>
@@ -114,6 +114,7 @@ public class LinuxStrategy : AbstractStrategy
                 throw new InvalidOperationException($"Failed to start application: {appPath}");
             appLaunched = true;
             GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: app launched successfully (PID: {process.Id}).");
+            // Match Windows: durable identity/completion must precede updater exit on every supported OS.
             if (OnAppStarted != null) await OnAppStarted(process).ConfigureAwait(false);
         }
         catch (Exception e)
@@ -121,6 +122,7 @@ public class LinuxStrategy : AbstractStrategy
             GeneralTracer.Error(
                 "The StartApp method in the GeneralUpdate.Core.LinuxStrategy class throws an exception.", e);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            // Preserve legacy direct calls, but let a managing role record and report actual launch failure.
             if (OnAppStarted != null) throw;
 
             // If the main app was already launched, still need to exit the updater.

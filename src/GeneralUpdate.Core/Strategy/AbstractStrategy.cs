@@ -40,7 +40,7 @@ namespace GeneralUpdate.Core.Strategy
     /// </para>
     /// <para>
     /// <b>Error Handling:</b> When an individual version update fails, <see cref="HandleExecuteException"/> records the exception and dispatches events,
-    /// then <c>TryRollback</c> attempts to restore from the backup directory. Errors do not interrupt processing of subsequent versions.
+    /// then <c>TryRollback</c> attempts restoration when this process owns recovery. An unrecovered failure stops subsequent versions.
     /// After all versions have been processed, the temporary directory is cleaned up and <see cref="OnExecuteCompleteAsync"/> is called.
     /// </para>
     /// </remarks>
@@ -69,9 +69,12 @@ namespace GeneralUpdate.Core.Strategy
         /// Gets or sets the update status reporter. Responsible for reporting the processing progress and final result of each version to the server.
         /// </summary>
         public IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
+        /// <summary>Disable under a role strategy so per-package results cannot race its single terminal report or Bowl.</summary>
         public bool ReportPackageResults { get; set; } = true;
+        /// <summary>Original unrecovered pipeline exception, retained for the role's failure report rather than replaced with a generic error.</summary>
         public Exception? LastError { get; private set; }
         /// <summary>Must be awaited before exiting after launch; supplies exact process identity.</summary>
+        /// <remarks>Custom OS strategies must invoke this callback before disposing the Process or signaling updater exit.</remarks>
         public Func<Process, Task>? OnAppStarted { get; set; }
 
         /// <summary>
@@ -252,8 +255,7 @@ namespace GeneralUpdate.Core.Strategy
                         catch (Exception fallbackEx)
                         {
                             // Fallback itself failed (e.g. missing full zip, decompression error).
-                            // Downgrade to normal failure handling so the loop can continue
-                            // processing remaining versions.
+                            // Preserve the fallback failure and stop the chain; later packages depend on this version.
                             GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
                             status = ReportType.Failure;
                             AllPackagesSucceeded = false;
@@ -281,6 +283,7 @@ namespace GeneralUpdate.Core.Strategy
                     {
                         if (ReportPackageResults)
                         {
+                            // A network error must not replace a pipeline error or prevent package cleanup/recovery.
                             try { await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, _configinfo.ReportType)); }
                             catch (Exception reportError) { GeneralTracer.Warn($"Package reporting failed: {reportError.Message}"); }
                         }
@@ -527,6 +530,8 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         private void TryRollback()
         {
+            // A previously accepted monitor retains recovery ownership even if it later exits.
+            // Two independent restorers could otherwise overwrite each other's files while recovery is in progress.
             if (_configinfo.BackupEnabled == false) return;
             if (_configinfo.Attempt?.MonitoringActive == true) return;
             try

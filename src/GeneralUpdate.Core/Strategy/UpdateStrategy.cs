@@ -26,6 +26,7 @@ namespace GeneralUpdate.Core.Strategy;
 ///   which contains already-downloaded update package paths, hash values, and other metadata.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> lifecycle hook,
 ///   allowing the caller to execute custom logic or cancel the operation before applying updates.</description></item>
+///   <item><description>When external monitoring is enabled, publishes the immutable attempt request and waits for verified readiness before file application.</description></item>
 ///   <item><description>Delegates to the OS strategy to execute the update pipeline: processes each version through the
 ///   <c>Hash</c> (hash verification) → <c>Decompress</c> (extraction) → <c>Patch</c> (incremental patch) middleware chain.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/> hook to notify the caller that all updates have been applied.</description></item>
@@ -38,7 +39,8 @@ namespace GeneralUpdate.Core.Strategy;
 /// <para>
 /// <b>Design Note:</b> The upgrade side does not perform version validation or download operations.
 /// The client has already completed all network requests and downloads, passing results through process information.
-/// The upgrade side is responsible only for applying updates and launching the application -- zero network overhead.
+/// The upgrade side applies updates and launches the application. Unmonitored status delivery is best-effort;
+/// monitored terminal delivery is delegated to the independent Bowl host.
 /// </para>
 /// </remarks>
 public class UpdateStrategy : IStrategy
@@ -114,6 +116,7 @@ public class UpdateStrategy : IStrategy
 
             if (_configInfo.Monitoring?.Enabled == true && _osStrategy is not AbstractStrategy)
                 throw new InvalidOperationException("Bowl monitoring requires an AbstractStrategy with the application-start callback.");
+            // Preflight hooks may cancel, but must not modify application files. Arm supervision before the apply boundary.
             await attempt.StartMonitoringAsync(_configInfo.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0, _reportType);
             _osStrategy!.Create(_configInfo);
             attempt.BeforeFileChanges();
@@ -182,11 +185,13 @@ public class UpdateStrategy : IStrategy
                     abs2.LaunchBowl = false;
                     abs2.OnAppStarted = async process =>
                     {
+                        // The OS strategy awaits this before exit: Bowl can recover the exact application identity from disk.
                         attempt.EnsureMonitorAlive();
                         if (attempt.MonitoringActive && _configInfo.Monitoring!.VerifyLaunch)
                             attempt.Record("awaitingHealth", application: ProcessIdentity.From(process));
                         else
                         {
+                            // Without launch observation, completion means applied files and successful process creation only.
                             attempt.Record("completed");
                             await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
                         }
@@ -212,6 +217,7 @@ public class UpdateStrategy : IStrategy
         }
         catch (Exception ex)
         {
+            // Persist before invoking user hooks, which may throw or terminate the updater themselves.
             _configInfo.Attempt?.RecordFailure(ex,
                 _configInfo.Attempt.Stage == "launching" ? "launchFailure" : "updateFailure");
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
@@ -221,6 +227,7 @@ public class UpdateStrategy : IStrategy
         }
         finally
         {
+            // Release only our handle; the independent monitor may need to outlive this updater.
             _configInfo.Attempt?.Dispose();
         }
     }
@@ -342,6 +349,7 @@ public class UpdateStrategy : IStrategy
         {
             GeneralTracer.Warn(
                 $"UpdateStrategy: failed to write back ClientVersion: {ex.Message}");
+            // A stale manifest can trigger repeated updates; record its path and fail instead of claiming completion.
             ex.Data["UpdateStage"] = "manifest";
             ex.Data["UpdateFailedPath"] = System.IO.Path.Combine(_configInfo!.InstallPath, ManifestInfo.FileName);
             throw;

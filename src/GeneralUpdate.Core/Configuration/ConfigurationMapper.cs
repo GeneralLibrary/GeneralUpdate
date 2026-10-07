@@ -91,6 +91,7 @@ namespace GeneralUpdate.Core.Configuration
             target.Directories = source.Directories;
             target.ReportUrl = source.ReportUrl;
             target.Bowl = source.Bowl;
+            // Preserve the opt-in boundary: the legacy Bowl name must not implicitly enable a host.
             target.Monitoring = source.Monitoring;
             target.DiagnosticsDirectory = source.DiagnosticsDirectory;
             target.Scheme = source.Scheme;
@@ -210,6 +211,7 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
+            // The updater must reuse the client's evidence root/ID, not create an unrelated recovery history.
             processInfo.UpdateAttemptId = source.UpdateAttemptId;
             processInfo.DiagnosticsDirectory = source.DiagnosticsDirectory;
             processInfo.Monitoring = source.Monitoring;

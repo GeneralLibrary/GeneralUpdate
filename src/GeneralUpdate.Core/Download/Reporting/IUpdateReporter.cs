@@ -61,25 +61,39 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// <param name="Status">The update status code: 1 = Updating, 2 = Success, 3 = Failure. Defaults to 1 (Updating).</param>
 /// <param name="Type">The update type: 1 = Upgrade, 2 = Push. Defaults to 1 (Upgrade).</param>
 /// <remarks>
-/// This record is serialized to JSON using camelCase naming policy.
-/// Example JSON: {"recordId": 123, "status": 1, "type": 1}
+/// Local persistence and custom reporters receive the diagnostic fields below.
+/// HttpUpdateReporter deliberately projects only {"recordId":123,"status":1,"type":1};
+/// local paths and exception details are not automatically uploaded.
 /// </remarks>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
 {
+    /// <summary>Local evidence schema version; independent of the legacy server's three-field payload.</summary>
     public int ProtocolVersion { get; init; } = 1;
+    /// <summary>Correlates Client preparation, Update execution and monitor recovery.</summary>
     public string? UpdateAttemptId { get; init; }
+    /// <summary>Stable identifier once persisted; retries reuse it, but the legacy server does not receive it.</summary>
     public string? EventId { get; init; }
+    /// <summary>Name of the package being applied when this evidence was captured, if known.</summary>
     public string? PackageName { get; init; }
+    /// <summary>That package's version, which may differ from the whole attempt's target version.</summary>
     public string? PackageVersion { get; init; }
+    /// <summary>Producer role, normally client or update; not the poll/push Type field.</summary>
     public string? Role { get; init; }
+    /// <summary>Workflow stage at capture time; Error.Stage retains the originating failure stage.</summary>
     public string? Stage { get; init; }
+    /// <summary>Explicit local meaning such as filesApplied, updateFailed or monitorUnavailable; not business health.</summary>
     public string? Outcome { get; init; }
+    /// <summary>Application version before this attempt.</summary>
     public string? CurrentVersion { get; init; }
+    /// <summary>Intended final application version for this attempt.</summary>
     public string? TargetVersion { get; init; }
+    /// <summary>UTC capture time, retained rather than regenerated during retries.</summary>
     public DateTimeOffset TimestampUtc { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>Local failure evidence; custom reporters must redact/allowlist it before transmission.</summary>
     public UpdateFailure? Error { get; init; }
 }
 
+/// <summary>Explicit wire allowlist: adding local diagnostic fields cannot silently change the server API.</summary>
 internal record LegacyUpdateReport(int RecordId, int Status, int Type);
 
 /// <summary>
@@ -94,7 +108,7 @@ internal record LegacyUpdateReport(int RecordId, int Status, int Type);
 /// <para>
 /// Workflow:
 /// <list type="number">
-///   <item>Serializes the <see cref="UpdateReport"/> to a JSON string using camelCase naming policy.</item>
+///   <item>Projects the three legacy fields from <see cref="UpdateReport"/> and serializes them using camelCase.</item>
 ///   <item>Creates an HTTP POST request with Content-Type set to application/json.</item>
 ///   <item>Sends the request to the configured report URL.</item>
 ///   <item>Non-2xx responses and network errors propagate to the caller. Role strategies
@@ -151,6 +165,9 @@ public class HttpUpdateReporter : IUpdateReporter
         _reportUrl = reportUrl ?? string.Empty;
     }
 
+    /// <summary>Sends the legacy payload; only a 2xx response acknowledges delivery.</summary>
+    /// <remarks>An empty URL remains a no-op for direct callers; UpdateAttempt retains such reports as pending.</remarks>
+    /// <exception cref="HttpRequestException">The request fails or returns a non-success HTTP status.</exception>
     public async Task ReportAsync(UpdateReport report, CancellationToken token = default)
     {
         try
