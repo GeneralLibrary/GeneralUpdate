@@ -52,7 +52,10 @@ GeneralUpdate是一款基于.NET Standard2.0 Apache 2.0协议开源的跨平台�
 更新尝试会在应用目录之外持久化诊断现场；可选的外部 Bowl 监护采用带就绪握手的版本化磁盘协议，
 未启用监护的应用无需部署 Bowl。配置、成功语义与兼容说明见
 [v1 集成协议](docs/bowl-integration-v1.md)。
-独立宿主从 Bowl 仓库构建部署，已提供可选的真实宿主联调测试；原 Bowl 源码仍保留，待迁移最终确认后再移除。
+原 Bowl 类库、测试及专属资源已迁移至 [GeneralLibrary/Bowl](https://github.com/GeneralLibrary/Bowl) 独立维护，
+本仓库仅保留可选的外部集成与真实宿主契约测试。宿主单独部署，同一安装目录的所有尝试共享同一
+`state-root`，由外部调度调用 `--retry`，不安装系统服务。宿主仅记录元数据；更新进程仍可能写文件时，
+回滚进入 `deferred`，需先恢复前次尝试再开始新更新，具体边界见集成协议。
 
 
 

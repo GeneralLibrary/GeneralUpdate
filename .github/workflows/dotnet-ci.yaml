@@ -51,7 +51,6 @@ jobs:
         continue-on-error: true  # NuGet包可单独上传，不阻塞Release
         run: |
           $projects = @(
-            "GeneralUpdate.Bowl",
             "GeneralUpdate.Core",
             "GeneralUpdate.Differential",
             "GeneralUpdate.Drivelution",

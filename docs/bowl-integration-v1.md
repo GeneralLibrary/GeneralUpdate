@@ -3,11 +3,15 @@
 ## Delivery status
 
 GeneralUpdate now provides the producer side of an **opt-in external process
-protocol**. The standalone Bowl host is **built and deployed from the independent
-Bowl repository, not bundled with Core**. An explicit real-host integration suite
+protocol**. The standalone Bowl host is **built and deployed from
+[GeneralLibrary/Bowl](https://github.com/GeneralLibrary/Bowl), not bundled with Core**.
+An explicit real-host integration suite
 now validates the producer against that separately built executable; see the
-validation section below. The existing `src/GeneralUpdate.Bowl`, `tests/BowlTest`, resources and
-project references remain in this repository pending verified migration.
+validation section below. The former Bowl library, its tests, bundled diagnostic
+tools and dedicated images have been removed from this repository after verified
+migration. Their implementation, packaging and maintenance now belong to Bowl.
+Migration evidence is maintained in the independent repository's
+[migration record](https://github.com/GeneralLibrary/Bowl/blob/main/docs/migration.md).
 Do not enable monitoring against the old Bowl library: it does not implement
 this host protocol. `tests/MonitoringTestHost` is only a test peer; it does not
 implement repair, reporting, a production health checker, or `result.json`.
@@ -51,6 +55,12 @@ staging, or backup trees. Symbolic links/junctions are rejected on their path.
 Never include the state root in update archives or rollback deletion scopes.
 Maintain retention and disk capacity separately; this change does not delete
 diagnostic history automatically.
+
+All attempts targeting **one installation must share the same state root**,
+including attempts launched by different users or schedulers. Bowl's persistent
+installation-owner lock is scoped to that root; choosing a fresh root per attempt
+would bypass cross-attempt coordination. Configure an explicit shared root when
+the default per-user directory does not provide this guarantee.
 
 Client creates `UpdateAttemptId` once per workflow; standard/silent IPC carries
 it, the root and monitor options to Update. OSS transfers these through child
@@ -193,6 +203,45 @@ in that repository, not in Core. GeneralUpdate neither
 writes nor trusts a result file to claim success. A future consumer must
 validate version/attempt/process identities before accepting a result.
 
+## Independent deployment and recovery
+
+Build/publish the host from the Bowl repository and keep its executable outside
+all application/update/backup directories. Core starts it on demand; neither
+repository installs a continuously running system service. The authoritative
+host CLI, result/outbox schemas and recovery rules are documented in
+[Bowl protocol v1](https://github.com/GeneralLibrary/Bowl/blob/main/docs/protocol-v1.md).
+
+Monitored delivery requires an **existing external scheduler** to invoke a bounded
+retry batch when needed:
+
+```text
+Bowl.Host --retry 100 --state-root <shared-absolute-directory>
+```
+
+The retry limit is 1 through 100. Failed HTTP delivery stays pending and follows
+the host's retry backoff; only 2xx acknowledges it. Provision reporting credentials
+for that scheduled process as well as the initially launched host. The optional
+Bearer environment credential is only sent over HTTPS.
+
+If the host crashes before writing its result, explicitly resume the same
+attempt rather than inventing a new ID or state root:
+
+```text
+Bowl.Host --attempt <existing-GUID> --state-root <same-shared-directory>
+```
+
+When the updater is still alive and may write files, the host records rollback
+as `deferred` instead of restoring concurrently. A deferred rollback retains
+installation ownership and blocks a later attempt. Let the updater stop, then
+resume the previous attempt before starting another update. Pending/in-progress
+recovery is not a delivered terminal result. HTTP delivery does not gate file
+recovery.
+
+The production host's diagnostic mode is **metadata-only**. Its result journal
+does not automatically collect or upload dumps or arbitrary application files.
+The migrated legacy diagnostic tools are maintained by Bowl separately and are
+not silently activated by the Core integration.
+
 ## Evidence, delivery and privacy
 
 `events/*.json` contains immutable local `UpdateReport` evidence: stable
@@ -272,5 +321,8 @@ are cleaned up; no installed application is updated.
 This is a bounded protocol/lifecycle/delivery integration check, not deployment
 certification. It does not replace the Bowl repository's rollback/recovery
 tests, migration-integrity checks, or platform-specific deployment validation.
-The old source component must remain until migration receives explicit final
-approval.
+Migration approval followed byte-exact source/resource verification, the Bowl
+Release test suite, pack/publish checks, and these six scenarios against the
+final self-contained Windows host. The standalone code and resources are now
+maintained only in the Bowl repository; Core's external producer, compatibility
+options and contract tests remain here.
