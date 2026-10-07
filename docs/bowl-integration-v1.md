@@ -3,8 +3,10 @@
 ## Delivery status
 
 GeneralUpdate now provides the producer side of an **opt-in external process
-protocol**. The standalone Bowl host is **not delivered or validated by this
-change**. The existing `src/GeneralUpdate.Bowl`, `tests/BowlTest`, resources and
+protocol**. The standalone Bowl host is **built and deployed from the independent
+Bowl repository, not bundled with Core**. An explicit real-host integration suite
+now validates the producer against that separately built executable; see the
+validation section below. The existing `src/GeneralUpdate.Bowl`, `tests/BowlTest`, resources and
 project references remain in this repository pending verified migration.
 Do not enable monitoring against the old Bowl library: it does not implement
 this host protocol. `tests/MonitoringTestHost` is only a test peer; it does not
@@ -36,7 +38,7 @@ builder.SetDiagnosticsDirectory(@"C:\ProgramData\MyProduct\UpdateState")
        });
 ```
 
-Only enable this after deploying a separately validated compatible host.
+Only enable this after deploying a separately validated compatible production host.
 Timeouts must be positive and the update timeout must exceed the readiness
 timeout. Missing executables, malformed/mismatched ready records, host exit, or
 readiness timeout abort the update before application file operations.
@@ -185,9 +187,9 @@ concurrently with an in-flight update. Preserve/exclude nested
 `install/.backups` when restoring and never delete the backup before reading
 it. Report network failures must not delay rollback.
 
-`result.json` and a durable monitored outbox are **reserved for the standalone
-Bowl implementation**. Their complete schemas, retry/recovery implementation,
-and production validation are not delivered here. GeneralUpdate neither
+`result.json` and a durable monitored outbox are **owned by the standalone
+Bowl implementation**. Their schemas and retry/recovery implementation live
+in that repository, not in Core. GeneralUpdate neither
 writes nor trusts a result file to claim success. A future consumer must
 validate version/attempt/process identities before accepting a result.
 
@@ -244,3 +246,31 @@ timeouts/early exit, mid-update monitor loss, updater termination with durable
 evidence, launch failure, files-only mode and an observed survival window.
 It is not evidence of a real Bowl host's recovery, rollback, diagnostic
 collection or reliable outbox implementation.
+
+### Opt-in real-host integration
+
+`RealBowlIntegrationTests` instead starts the **production Bowl executable**
+supplied by the caller, using the actual Core `UpdateStrategy` as producer.
+It requires no cross-repository project reference. Without an existing host
+path these tests are explicitly skipped rather than silently replaced by the
+test peer:
+
+```powershell
+$env:GENERALUPDATE_REAL_BOWL_HOST = 'C:\External\Bowl.Host.exe'
+dotnet test tests\CoreTest\CoreTest.csproj --filter FullyQualifiedName~RealBowlIntegrationTests
+```
+
+Six scenarios have been verified against the independently built net8.0 host:
+files-only success, the complete application-survival window, launch failure,
+application exit during that window (`healthCheckFailure`), real updater
+termination, and HTTP 503 followed by a successful explicit `--retry`.
+Assertions cover the real result envelope/process identity, verification
+meaning, unchanged legacy HTTP fields, stable outbox event ID, and pending
+versus acknowledged delivery. Test processes and isolated temporary directories
+are cleaned up; no installed application is updated.
+
+This is a bounded protocol/lifecycle/delivery integration check, not deployment
+certification. It does not replace the Bowl repository's rollback/recovery
+tests, migration-integrity checks, or platform-specific deployment validation.
+The old source component must remain until migration receives explicit final
+approval.

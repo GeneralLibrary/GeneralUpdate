@@ -13,6 +13,36 @@ if (args[0] == "--application")
     return;
 }
 
+if (args[0] == "--real-producer")
+{
+    // Opt-in cross-repository integration: exercise the real Core producer against a separately built Bowl executable.
+    // Only the isolated install/state trees below are written; this fixture never implements Bowl result/outbox behavior.
+    var root = args[1];
+    var scenario = args[3];
+    var config = new UpdateContext
+    {
+        InstallPath = Path.Combine(root, "install"),
+        DiagnosticsDirectory = Path.Combine(root, "state"),
+        ClientVersion = "1.0.0", LastVersion = "2.0.0",
+        LaunchClientAfterUpdate = scenario is "processAlive" or "launchFailure" or "healthCheckFailure",
+        ReportUrl = args.Length > 4 ? args[4] : string.Empty,
+        Monitoring = new BowlOptions
+        {
+            Enabled = true, ExecutablePath = args[2], ReadyTimeoutSeconds = 10,
+            HealthTimeoutSeconds = 2, UpdateTimeoutSeconds = 30
+        },
+        UpdateVersions = scenario == "updaterTerminated"
+            ? [new VersionEntry { RecordId = 42, Version = "2.0.0", Name = "sample" }]
+            : []
+    };
+    Directory.CreateDirectory(config.InstallPath);
+    var strategy = new UpdateStrategy();
+    strategy.SetOsStrategy(scenario == "updaterTerminated" ? new WaitingStrategy(root) : new RealLaunchStrategy(scenario));
+    strategy.Create(config);
+    await strategy.ExecuteAsync();
+    return;
+}
+
 if (args[0] == "--producer")
 {
     // Run the real updater and block inside apply, allowing the test to verify evidence survives abrupt process death.
@@ -121,5 +151,28 @@ sealed class WaitingStrategy(string root) : AbstractStrategy
     {
         File.WriteAllText(Path.Combine(root, "applying.txt"), "filesApplying");
         await Task.Delay(Timeout.Infinite);
+    }
+
+}
+
+/// <summary>Launch an isolated test application while preserving Core's real identity-recording callback.</summary>
+sealed class RealLaunchStrategy(string mode) : AbstractStrategy
+{
+    protected override PipelineBuilder BuildPipeline(PipelineContext context) => new(context);
+
+    public override async Task StartAppAsync()
+    {
+        if (mode == "launchFailure")
+            throw new FileNotFoundException("Deliberately missing integration-test application.", "missing-test-app");
+        var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        info.ArgumentList.Add("--application");
+        using var application = Process.Start(info) ?? throw new InvalidOperationException("Test application did not start.");
+        if (OnAppStarted != null) await OnAppStarted(application);
+        if (mode == "healthCheckFailure")
+        {
+            // The process exists at handoff but fails inside the survival window, distinct from failing to start it.
+            application.Kill();
+            await application.WaitForExitAsync();
+        }
     }
 }

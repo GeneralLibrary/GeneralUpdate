@@ -54,8 +54,9 @@ Update attempts now persist diagnostics outside the application tree. Optional
 external Bowl monitoring uses a readiness-gated, versioned disk protocol;
 unmonitored installations require no Bowl deployment. See the
 [v1 integration contract and compatibility notes](docs/bowl-integration-v1.md).
-The standalone host is not included in this change; the existing Bowl sources
-remain until migration is verified.
+The standalone host is deployed from the independent Bowl repository; opt-in
+real-host integration tests are available. Existing Bowl sources remain until
+migration receives final approval.
 
 
 
