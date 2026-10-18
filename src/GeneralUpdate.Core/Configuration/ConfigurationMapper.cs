@@ -208,6 +208,13 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
+            // Self-check switches ride the same additive tail as ReportType: appended after
+            // construction so the 23-parameter constructor signature stays untouched and old
+            // updaters simply ignore the new JSON fields.
+            processInfo.SelfCheckEnabled = source.SelfCheckEnabled;
+            processInfo.SelfCheckStartupWindowSeconds =
+                source.SelfCheckStartupWindowSeconds > 0 ? source.SelfCheckStartupWindowSeconds : 30;
+            processInfo.SelfCheckRequireAck = source.SelfCheckRequireAck;
             return processInfo;
         }
     }

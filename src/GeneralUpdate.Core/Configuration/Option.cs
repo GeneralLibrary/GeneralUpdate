@@ -131,6 +131,48 @@ namespace GeneralUpdate.Core.Configuration
 
         public static Option<bool> LaunchClientAfterUpdate { get; } = ValueOf<bool>("LAUNCHCLIENTAFTERUPDATE", true);
 
+        /// <summary>
+        ///     自检总开关。默认 <c>false</c> —— 关闭时更新流程与历史版本完全一致。
+        ///     开启后，updater 在主程序更新完成后进入观察窗口验证应用可用性，
+        ///     不可用则自动回滚（见 <c>SelfCheck</c> 命名空间与 docs/self-check-design.md）。
+        /// </summary>
+        /// <remarks>
+        ///     <c>bool?</c> 语义与 <see cref="PatchEnabled"/>/<see cref="BackupEnabled"/> 一致：
+        ///     updater 侧 <c>??=</c> 保留 IPC 传入值，用户显式 <c>SetOption</c> 仍然优先。
+        /// </remarks>
+        public static Option<bool?> SelfCheckEnabled { get; } = ValueOf<bool?>("SELFCHECKENABLED", false);
+
+        /// <summary>
+        ///     进程启动观察窗口（秒）。自检开启时，主程序启动后在该窗口内裁决其是否可用。
+        /// </summary>
+        public static Option<int> SelfCheckStartupWindowSeconds { get; } = ValueOf<int>("SELFCHECKSTARTUPWINDOWSECONDS", 30);
+
+        /// <summary>
+        ///     严格模式：要求主程序在窗口内写入 verify-ok 应答文件，超时未应答视为失败。
+        ///     默认宽松：窗口内进程存活即视为可用（兼容未接入确认协议的宿主）。
+        /// </summary>
+        public static Option<bool> SelfCheckRequireAck { get; } = ValueOf<bool>("SELFCHECKREQUIREACK", false);
+
+        /// <summary>
+        ///     更新完成后是否由 updater 拉起 Bowl 守护进程。
+        ///     默认 <c>false</c> —— Bowl 独立安装后的主入口是主程序自拉起
+        ///     （<c>BowlLauncher.EnsureRunningAsync</c>），updater 拉起仅为兼容路径。
+        /// </summary>
+        public static Option<bool> LaunchBowl { get; } = ValueOf<bool>("LAUNCHBOWL", false);
+
+        /// <summary>
+        ///     诊断上报总开关。默认 <c>false</c>。开启后 Core 在主程序启动时后台扫描
+        ///     fail 目录 outbox 补传崩溃采证，并在自检失败/回滚时实时上传诊断包。
+        ///     Core 是唯一网络出口；Bowl 本身无网络依赖。
+        /// </summary>
+        public static Option<bool> DiagnosticsUploadEnabled { get; } = ValueOf<bool>("DIAGNOSTICSUPLOADENABLED", false);
+
+        /// <summary>
+        ///     诊断上报服务端地址。独立于状态上报地址（<c>UpdateRequest.ReportUrl</c> 只承载
+        ///     UpdateStatus 状态上报，二者互不影响），为空时视为未配置诊断通道。
+        /// </summary>
+        public static Option<string> DiagnosticsReportUrl { get; } = ValueOf<string>("DIAGNOSTICSREPORTURL", string.Empty);
+
         public static Option<int> MaxConcurrency { get; } = ValueOf<int>("MAXCONCURRENCY", 3);
 
         public static Option<bool> EnableResume { get; } = ValueOf<bool>("ENABLERESUME", true);

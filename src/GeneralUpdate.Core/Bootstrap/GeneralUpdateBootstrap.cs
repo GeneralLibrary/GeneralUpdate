@@ -405,6 +405,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 UpdatePath = processInfo.UpdatePath,
                 LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
                 ReportType = processInfo.ReportType,
+                // Self-check switches travel through IPC; ApplyRuntimeOptions later applies
+                // them with ??= so an explicit updater-side SetOption still wins.
+                SelfCheckEnabled = processInfo.SelfCheckEnabled,
+                SelfCheckStartupWindowSeconds = processInfo.SelfCheckStartupWindowSeconds,
+                SelfCheckRequireAck = processInfo.SelfCheckRequireAck,
                 Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
                 Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
                 Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
@@ -438,6 +443,22 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         // bool? options: use ??= so user-configured false is preserved
         _configInfo.PatchEnabled ??= GetOption(Option.PatchEnabled);
         _configInfo.BackupEnabled ??= GetOption(Option.BackupEnabled);
+
+        // Self-check: IPC-supplied values (updater side) win over defaults, explicit
+        // SetOption on this bootstrap wins over both (same resolution as PatchEnabled).
+        _configInfo.SelfCheckEnabled ??= GetOption(Option.SelfCheckEnabled);
+        _configInfo.SelfCheckRequireAck ??= GetOption(Option.SelfCheckRequireAck);
+        if (_configInfo.SelfCheckStartupWindowSeconds <= 0)
+            _configInfo.SelfCheckStartupWindowSeconds = GetOption(Option.SelfCheckStartupWindowSeconds);
+
+        // Self-check without backup cannot roll back — auto-enable backup unless the user
+        // explicitly chose a backup mode. Explicit false is the documented degraded mode:
+        // the check still runs and reports, but skips file rollback + old-version relaunch.
+        if (_configInfo.SelfCheckEnabled == true && !HasOption(Option.BackupEnabled))
+        {
+            _configInfo.BackupEnabled = true;
+            GeneralTracer.Info("GeneralUpdateBootstrap: SelfCheckEnabled with no explicit backup setting — BackupEnabled auto-enabled (rollback material).");
+        }
 
         // Always apply from Option — no other code sets these before
         // ApplyRuntimeOptions() runs. Defaults are functionally reasonable.
@@ -518,6 +539,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         if (downloadPipeline != null)
             downloadPipelineFactory = _ => downloadPipeline;
 
+        var diagnostics = BuildDiagnosticsChannel();
         switch (roleStrategy)
         {
             case ClientStrategy cs:
@@ -528,11 +550,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 if (downloadExecutor != null) cs.SetDownloadExecutor(downloadExecutor);
                 if (downloadPipelineFactory != null) cs.SetDownloadPipelineFactory(downloadPipelineFactory);
                 if (_updatePrecheck != null) cs.UseUpdatePrecheck(_updatePrecheck);
+                cs.Diagnostics = diagnostics;
                 break;
 
             case UpdateStrategy us:
                 us.SetDiffPipeline(diffPipeline);
                 us.SetReportType(_configInfo.ReportType);
+                us.SetSelfCheckRules(ResolveSelfCheckRules());
+                us.LaunchBowl = GetOption(Option.LaunchBowl);
+                us.SetDiagnosticsUploader(diagnostics?.Uploader);
                 break;
         }
 
@@ -560,6 +586,29 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             .WithParallelism(2)
             .WithProgress(new DiffProgressReporter(this))
             .Build();
+    }
+
+    /// <summary>
+    ///     Builds the client diagnostics channel when the upload switch is on and a report URL
+    ///     is configured; <c>null</c> otherwise, keeping every diagnostics path inert.
+    /// </summary>
+    private Diagnostics.DiagnosticsChannel? BuildDiagnosticsChannel()
+    {
+        if (!GetOption(Option.DiagnosticsUploadEnabled))
+            return null;
+
+        var url = GetOption(Option.DiagnosticsReportUrl);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: DiagnosticsUploadEnabled without DiagnosticsReportUrl — diagnostics channel disabled.");
+            return null;
+        }
+
+        return new Diagnostics.DiagnosticsChannel(_configInfo.InstallPath, new Diagnostics.DiagnosticsOptions
+        {
+            Enabled = true,
+            Url = url
+        }, FileSystem.StorageManager.BlackMatcher);
     }
 
     private static Format ParseFormat(string? compressFormat)
@@ -647,12 +696,26 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         Action<object, UpdateInfoEventArgs> cb) => AddListener(cb);
 
     /// <summary>
-    /// Registers a callback for general progress events during the update process.
+    ///     Registers a callback for general progress events during the update process.
     /// </summary>
     /// <param name="cb">The callback to invoke.</param>
     /// <returns>This bootstrap instance for chaining.</returns>
     public GeneralUpdateBootstrap AddListenerProgress(
         Action<object, ProgressEventArgs> cb) => AddListener(cb);
+
+    /// <summary>
+    ///     Registers a callback for self-check completion events, raised by the updater when the
+    ///     observation window over the freshly updated main application ends — both for passed
+    ///     and failed sessions (a failed session is followed by a rollback).
+    /// </summary>
+    /// <param name="cb">The callback to invoke.</param>
+    /// <returns>This bootstrap instance for chaining.</returns>
+    /// <remarks>
+    ///     Only fires when <see cref="Option.SelfCheckEnabled"/> is on. Use
+    ///     <see cref="Event.SelfCheckCompletedEventArgs.Report"/> for the rule-by-rule evidence.
+    /// </remarks>
+    public GeneralUpdateBootstrap AddListenerSelfCheckCompleted(
+        Action<object, Event.SelfCheckCompletedEventArgs> cb) => AddListener(cb);
 
     /// <summary>
     /// Batch-register an event listener implementing <see cref="IUpdateEventListener"/>.

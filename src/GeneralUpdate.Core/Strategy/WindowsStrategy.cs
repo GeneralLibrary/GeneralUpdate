@@ -117,6 +117,11 @@ namespace GeneralUpdate.Core.Strategy
                 appLaunched = true;
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 
+                // Legacy compatibility: updater-side Bowl launch. Deprecated — Bowl is
+                // independently installed and self-launched by the main application
+                // (BowlLauncher.EnsureRunningAsync); this branch only runs when a host
+                // explicitly opts in via Option.LaunchBowl for one release cycle.
+#pragma warning disable CS0618 // Type or member is obsolete
                 if (LaunchBowl)
                 {
                     var bowlAppPath = CheckPath(_configinfo.InstallPath, _configinfo.Bowl);
@@ -128,6 +133,7 @@ namespace GeneralUpdate.Core.Strategy
                             GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: Bowl process started (PID: {bowlProcess.Id}).");
                     }
                 }
+#pragma warning restore CS0618 // Type or member is obsolete
             }
             catch (Exception e)
             {

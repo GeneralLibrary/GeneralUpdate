@@ -403,5 +403,31 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("ReportType")]
         public int ReportType { get; set; } = 1;
+
+        /// <summary>
+        ///     Whether the upgrade process verifies the updated main application in an observation
+        ///     window and rolls back on failure. Set by <see cref="ConfigurationMapper.MapToProcessContract" />
+        ///     from <see cref="UpdateContext.SelfCheckEnabled"/>.
+        /// </summary>
+        /// <remarks>
+        ///     Old updaters ignore this field when deserializing IPC data (only additive change);
+        ///     new updaters reading old IPC data see <c>null</c> and keep the legacy behaviour.
+        /// </remarks>
+        [JsonPropertyName("SelfCheckEnabled")]
+        public bool? SelfCheckEnabled { get; set; }
+
+        /// <summary>
+        ///     The startup observation window (seconds) used by the upgrade-side self check.
+        /// </summary>
+        [JsonPropertyName("SelfCheckStartupWindowSeconds")]
+        public int SelfCheckStartupWindowSeconds { get; set; } = 30;
+
+        /// <summary>
+        ///     Strict acknowledgement mode: the main application must write the verify-ok file
+        ///     inside the observation window. <c>null</c> means the sender did not specify it
+        ///     (e.g. an older client) and the updater falls back to its own option/default.
+        /// </summary>
+        [JsonPropertyName("SelfCheckRequireAck")]
+        public bool? SelfCheckRequireAck { get; set; }
     }
 }

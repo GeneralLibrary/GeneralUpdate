@@ -45,6 +45,13 @@ namespace GeneralUpdate.Core.Configuration
         /// <summary>Registered singleton instances (e.g., <c>BlackPolicy</c>).</summary>
         private readonly Dictionary<Type, object> _instances = new();
 
+        /// <summary>
+        ///     Registered self-check rule factories. Unlike <see cref="ResolveExtension{TExtension}"/>
+        ///     (interface → single implementation), rules are collection semantics: every
+        ///     registration adds one rule and all of them execute per session.
+        /// </summary>
+        private readonly List<Func<SelfCheck.ISelfCheckRule>> _selfCheckRuleFactories = new();
+
         protected internal AbstractBootstrap()
         {
             _options = new ConcurrentDictionary<Option, OptionValue>();
@@ -340,6 +347,48 @@ namespace GeneralUpdate.Core.Configuration
             _extensionFactories[typeof(Download.Abstractions.IDownloadOrchestrator)] = () => new T();
             return (TBootstrap)this;
         }
+
+        /// <summary>
+        ///     Registers a custom self-check rule executed by the updater inside the verification
+        ///     window (may be called multiple times; rules run in registration order after the
+        ///     built-in rules). Use this to encode what "usable" means for the application —
+        ///     database connectivity, licence state, core service readiness.
+        /// </summary>
+        /// <typeparam name="T">The rule implementation type; must implement
+        /// <c>ISelfCheckRule</c> and have a parameterless constructor.</typeparam>
+        /// <returns>The current <typeparamref name="TBootstrap"/> instance for chaining.</returns>
+        /// <remarks>
+        ///     Takes effect only when <see cref="Option.SelfCheckEnabled"/> is on and the update
+        ///     runs through the verified launch path (<c>UpdateStrategy</c>).
+        /// </remarks>
+        public TBootstrap SelfCheckRule<T>() where T : SelfCheck.ISelfCheckRule, new()
+        {
+            _selfCheckRuleFactories.Add(() => new T());
+            return (TBootstrap)this;
+        }
+
+        /// <summary>
+        ///     Instantiates every registered self-check rule. Returns an empty list when the host
+        ///     registered none — the built-in rules still cover "can the application start".
+        /// </summary>
+        protected IReadOnlyList<SelfCheck.ISelfCheckRule> ResolveSelfCheckRules()
+        {
+            if (_selfCheckRuleFactories.Count == 0)
+                return Array.Empty<SelfCheck.ISelfCheckRule>();
+
+            var rules = new List<SelfCheck.ISelfCheckRule>(_selfCheckRuleFactories.Count);
+            foreach (var factory in _selfCheckRuleFactories)
+                rules.Add(factory());
+            return rules;
+        }
+
+        /// <summary>
+        ///     Determines whether the user explicitly set the given option on this bootstrap
+        ///     instance (as opposed to the value coming from the option's default). Used by the
+        ///     runtime-option wiring where "unset" triggers a linkage rule — e.g. self-check
+        ///     auto-enables backup unless the user explicitly chose a backup mode.
+        /// </summary>
+        protected bool HasOption<T>(Option<T> option) => option != null && _options.ContainsKey(option);
 
         /// <summary>
         /// Resolves and instantiates an extension of the specified interface type using a

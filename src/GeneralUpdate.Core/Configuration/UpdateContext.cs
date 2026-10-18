@@ -131,6 +131,35 @@ public class UpdateContext : UpdateConfiguration
     public string BackupDirectory { get; set; }
 
     // ──────────────────────────────
+    //  Self-check options (Client → Updater via ProcessContract)
+    // ──────────────────────────────
+
+    /// <summary>
+    ///     Whether the updater verifies the freshly updated main application inside an
+    ///     observation window and rolls back to the previous version when it is unusable.
+    ///     Computed from <see cref="Option.SelfCheckEnabled" />, defaults to <c>false</c>.
+    /// </summary>
+    /// <remarks>
+    ///     Nullable so the updater side can distinguish "IPC supplied a value" from
+    ///     "user SetOption wins" — same pattern as <see cref="PatchEnabled" />/<see cref="BackupEnabled" />.
+    /// </remarks>
+    public bool? SelfCheckEnabled { get; set; }
+
+    /// <summary>
+    ///     The startup observation window in seconds during which the updater watches the
+    ///     relaunched main application. Computed from <see cref="Option.SelfCheckStartupWindowSeconds" />,
+    ///     defaults to 30 seconds.
+    /// </summary>
+    public int SelfCheckStartupWindowSeconds { get; set; } = 30;
+
+    /// <summary>
+    ///     Strict mode: the main application must acknowledge health (verify-ok file) inside the
+    ///     observation window; missing acknowledgement is treated as failure.
+    ///     Computed from <see cref="Option.SelfCheckRequireAck" />, defaults to <c>false</c>.
+    /// </summary>
+    public bool? SelfCheckRequireAck { get; set; }
+
+    // ──────────────────────────────
     //  Download/Update behavior options (injected from Option)
     // ──────────────────────────────
 

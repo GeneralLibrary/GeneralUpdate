@@ -82,9 +82,18 @@ namespace GeneralUpdate.Core.Strategy
         public string? LaunchAppName { get; set; }
 
         /// <summary>
-        /// Gets or sets whether to also launch the Bowl helper process. Only valid on the Windows platform.
-        /// Set by the upper-level strategy before calling <see cref="StartAppAsync"/>.
+        ///     Gets or sets whether to also launch the Bowl helper process. Only valid on the Windows platform.
+        ///     Set by the upper-level strategy before calling <see cref="StartAppAsync"/>.
         /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         [Deprecated] Bowl is independently installed since 10.5 and is launched by the main
+        ///         application itself (<c>BowlLauncher.EnsureRunningAsync</c>) — not by the updater.
+        ///         Kept for one compatibility cycle so custom hosts still compile; the updater no
+        ///         longer sets it by default (<c>Option.LaunchBowl</c> defaults to <c>false</c>).
+        ///     </para>
+        /// </remarks>
+        [Obsolete("Bowl is launched by the main application (BowlLauncher.EnsureRunningAsync); updater-side launch is deprecated and disabled by default (Option.LaunchBowl).")]
         public bool LaunchBowl { get; set; }
 
         /// <summary>
@@ -449,6 +458,39 @@ namespace GeneralUpdate.Core.Strategy
             if (process == null)
                 throw new InvalidOperationException($"Failed to start process: {appPath}");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: process started (PID: {process.Id}).");
+        }
+
+        /// <summary>
+        ///     Resolves and starts the target executable, returning the live <see cref="Process"/>
+        ///     handle to the caller. Unlike <see cref="StartAppAsync"/> it launches ONLY the
+        ///     application: no Bowl, no hooks, no tracer disposal, no updater self-exit — the
+        ///     self-check flow needs the process object to observe and the updater to stay alive
+        ///     for the whole observation window.
+        /// </summary>
+        /// <param name="appName">The name of the executable to launch.</param>
+        /// <exception cref="FileNotFoundException">Thrown when the executable cannot be resolved.</exception>
+        internal Process StartProcessForVerification(string appName)
+        {
+            var appPath = ResolveAppPath(appName);
+            if (string.IsNullOrEmpty(appPath))
+                throw new FileNotFoundException($"Can't find the app {appName}!");
+            GeneralTracer.Info($"AbstractStrategy.StartProcessForVerification: launching {appPath}");
+            var process = Process.Start(appPath);
+            if (process == null)
+                throw new InvalidOperationException($"Failed to start process: {appPath}");
+            GeneralTracer.Info($"AbstractStrategy.StartProcessForVerification: process started (PID: {process.Id}).");
+            return process;
+        }
+
+        /// <summary>
+        ///     Resolves an executable path without starting it, for callers outside the strategy
+        ///     hierarchy that need the path first (updater integrity check before launch).
+        /// </summary>
+        /// <returns>The full path, or <c>null</c> when the executable does not exist.</returns>
+        internal string? TryResolveAppPath(string appName, bool preferUpdatePath = false)
+        {
+            var path = ResolveAppPath(appName, preferUpdatePath);
+            return string.IsNullOrEmpty(path) ? null : path;
         }
 
         /// <summary>

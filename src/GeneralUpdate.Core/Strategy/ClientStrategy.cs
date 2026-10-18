@@ -4,14 +4,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Diagnostics;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.SelfCheck;
 using GeneralUpdate.Core.Utilities;
 
 namespace GeneralUpdate.Core.Strategy;
@@ -74,6 +77,19 @@ public class ClientStrategy : IStrategy
     private int _mainRecordId;
     private int _upgradeRecordId;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
+    private DiagnosticsChannel? _diagnostics;
+    private bool _upgradePackagesApplied;
+
+    /// <summary>
+    ///     The client's diagnostics channel (outbox catch-up scan + upload). Injected by the
+    ///     bootstrap when <see cref="Option.DiagnosticsUploadEnabled"/> is on; <c>null</c>
+    ///     keeps every diagnostics path inert.
+    /// </summary>
+    public DiagnosticsChannel? Diagnostics
+    {
+        get => _diagnostics;
+        set => _diagnostics = value;
+    }
 
     /// <summary>
     /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
@@ -263,6 +279,16 @@ public class ClientStrategy : IStrategy
         try
         {
             GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
+
+            // P1 fallback line: an orphaned verify marker means the updater died inside the
+            // observation window — recover BEFORE any other work so the install directory is
+            // back to a known-good state (and the UpgradeFail guard is armed) first.
+            await RecoverOrphanVerificationMarkerAsync().ConfigureAwait(false);
+
+            // B0: catch up on crash evidence Bowl left in the outbox (fire-and-forget; Core is
+            // the only network egress of the diagnostics feature).
+            _diagnostics?.StartBackgroundScan();
+
             await CallSmallBowlHomeAsync(_configInfo.Bowl);
             await ExecuteWorkflowAsync();
         }
@@ -730,6 +756,7 @@ public class ClientStrategy : IStrategy
         _configInfo!.UpdateVersions = upgradeVersions;
         _osStrategy!.Create(_configInfo);
         await _osStrategy.ExecuteAsync().ConfigureAwait(false);
+        _upgradePackagesApplied = true;
 
         // Only advance the manifest version when every package was applied
         // successfully. AbstractStrategy catches per-package failures and
@@ -782,8 +809,18 @@ public class ClientStrategy : IStrategy
         if (_osStrategy is AbstractStrategy abs)
         {
             abs.LaunchAppName = _configInfo!.UpdateAppName;
+#pragma warning disable CS0618 // Compat: explicitly keep the deprecated updater-side Bowl launch off on this path.
             abs.LaunchBowl = false;
+#pragma warning restore CS0618
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+        }
+
+        // P1: updater integrity self-check — the Upgrade package was just applied in place; if
+        // Update.exe is broken, recover it from the backup before attempting to start it.
+        var updaterPath = TryResolveUpdaterPath();
+        if (!EnsureUpdaterExecutable(updaterPath))
+        {
+            return; // Recovery failed: reported + evented; the current client stays usable.
         }
 
         GeneralTracer.Info(
@@ -819,8 +856,16 @@ public class ClientStrategy : IStrategy
         if (_osStrategy is AbstractStrategy abs)
         {
             abs.LaunchAppName = _configInfo!.UpdateAppName;
+#pragma warning disable CS0618 // Compat: explicitly keep the deprecated updater-side Bowl launch off on this path.
             abs.LaunchBowl = false;
+#pragma warning restore CS0618
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+
+            // Same integrity gate as the async path (shared method) — silent mode only
+            // defers the launch, it must not skip the updater self-check.
+            if (!EnsureUpdaterExecutable(abs.TryResolveAppPath(abs.LaunchAppName!, abs.UseUpdatePath)))
+                return;
+
             abs.StartProcess(abs.LaunchAppName!, abs.UseUpdatePath);
             return;
         }
@@ -834,6 +879,8 @@ public class ClientStrategy : IStrategy
                 : Path.Combine(_configInfo.InstallPath, _configInfo.UpdatePath))
             : _configInfo.InstallPath;
         var appPath = Path.Combine(updaterDir, _configInfo.UpdateAppName);
+        if (!EnsureUpdaterExecutable(File.Exists(appPath) ? appPath : null))
+            return;
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Upgrade application not found: {appPath}");
         GeneralTracer.Info($"ClientStrategy: launching upgrade process {appPath}");
@@ -841,6 +888,212 @@ public class ClientStrategy : IStrategy
         if (process == null)
             throw new InvalidOperationException($"Failed to start upgrade process: {appPath}");
         GeneralTracer.Info($"ClientStrategy: upgrade process launched (PID: {process.Id}).");
+    }
+
+    #endregion
+
+    #region Self-check support (docs/self-check-design.md §7)
+
+    /// <summary>
+    ///     P1 fallback line: detect a verify marker the updater never resolved.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         The updater owns the marker lifecycle (write → verdict → delete); a marker that
+    ///         survives into the next client start means the updater died inside the observation
+    ///         window. Within the orphan window the installation is rolled back to the recorded
+    ///         previous version; beyond the window the marker is only cleaned up — rolling back
+    ///         a long-running installation on stale evidence would downgrade it arbitrarily.
+    ///         Enabled together with <see cref="Option.SelfCheckEnabled"/>.
+    ///     </para>
+    /// </remarks>
+    private async Task RecoverOrphanVerificationMarkerAsync()
+    {
+        if (_configInfo!.SelfCheckEnabled != true) return;
+
+        var installPath = _configInfo.InstallPath;
+        var marker = UpdateVerificationMarker.TryRead(installPath);
+        if (marker == null) return;
+
+        if (UpdateVerificationMarker.IsOrphanedBeyondWindow(marker))
+        {
+            GeneralTracer.Warn(
+                $"ClientStrategy: verify marker from {marker.CreatedAtUtc:O} is beyond the orphan window — cleanup only, no rollback.");
+            UpdateVerificationMarker.Delete(installPath);
+            UpdateVerificationMarker.DeleteAckFiles(installPath);
+            return;
+        }
+
+        GeneralTracer.Warn(
+            $"ClientStrategy: orphan verify marker (target={marker.TargetVersion}) — updater never rendered a verdict, rolling back to {marker.PreviousVersion}.");
+
+        var rollback = new RollbackManager(installPath, Reporter, _diagnostics?.Uploader);
+        var result = await rollback.RollbackAsync(new RollbackRequest(
+            FailedVersion: marker.TargetVersion ?? "unknown",
+            PreviousVersion: marker.PreviousVersion,
+            BackupDirectory: marker.BackupDirectory,
+            RecordId: 0,
+            ReportType: _reportType,
+            Reason: "orphan verify marker — updater did not finish the observation window"),
+            CancellationToken.None).ConfigureAwait(false);
+
+        UpdateVerificationMarker.Delete(installPath);
+        UpdateVerificationMarker.DeleteAckFiles(installPath);
+
+        if (string.IsNullOrEmpty(result.ActiveVersion))
+            GeneralTracer.Error("ClientStrategy: orphan-marker rollback incomplete — the regular update check continues with caution.");
+
+        // No relaunch here: the client process IS the running application. The UpgradeFail
+        // marker written by RollbackManager makes the regular check below refuse the broken
+        // target version until the server publishes a fix.
+    }
+
+    /// <summary>
+    ///     P1 file-level updater self-check: the Upgrade package was just applied in place, so
+    ///     a damaged <c>Update.exe</c> would crash at <c>Process.Start</c>. Verify existence,
+    ///     non-emptiness and the executable magic number; on failure recover the updater
+    ///     subtree from the backup and re-check once.
+    /// </summary>
+    /// <returns><c>true</c> when launching the updater may proceed.</returns>
+    private bool EnsureUpdaterExecutable(string? updaterPath)
+    {
+        if (IsValidExecutable(updaterPath)) return true;
+
+        GeneralTracer.Warn(
+            $"ClientStrategy: updater executable unusable ({updaterPath ?? "not found"}), starting recovery.");
+
+        if (!_upgradePackagesApplied)
+        {
+            // Not damaged by this session — recovery could clobber an intentionally different
+            // updater installation. Surface the failure instead.
+            return FailUpdaterLaunch("updater executable is missing or corrupted (no Upgrade packages applied this session).");
+        }
+
+        var updaterDir = ResolveUpdaterDirectory();
+        var backupDir = _configInfo!.BackupDirectory;
+        if (string.IsNullOrWhiteSpace(backupDir) || !Directory.Exists(backupDir))
+            backupDir = StorageManager.GetLatestBackup(_configInfo.InstallPath);
+
+        if (!string.IsNullOrWhiteSpace(backupDir) && Directory.Exists(backupDir))
+        {
+            try
+            {
+                // The backup mirrors the install root; the updater subtree is addressed
+                // relative to it so an UpdatePath outside InstallPath stays targeted.
+                var updaterDirFullName = Path.GetFullPath(updaterDir).TrimEnd(Path.DirectorySeparatorChar);
+                var installFullName = Path.GetFullPath(_configInfo.InstallPath).TrimEnd(Path.DirectorySeparatorChar);
+                var backupUpdaterDir = updaterDirFullName.StartsWith(installFullName, StringComparison.OrdinalIgnoreCase)
+                    ? Path.Combine(backupDir, updaterDirFullName.Substring(installFullName.Length)
+                        .TrimStart(Path.DirectorySeparatorChar))
+                    : null;
+
+                if (backupUpdaterDir != null && Directory.Exists(backupUpdaterDir))
+                {
+                    GeneralTracer.Warn($"ClientStrategy: restoring updater subtree {backupUpdaterDir} -> {updaterDir}.");
+                    StorageManager.Restore(backupUpdaterDir, updaterDir);
+                }
+                else if (string.Equals(updaterDirFullName, installFullName, StringComparison.OrdinalIgnoreCase))
+                {
+                    GeneralTracer.Warn($"ClientStrategy: updater lives in the install root — restoring full backup {backupDir}.");
+                    StorageManager.Restore(backupDir, updaterDir);
+                }
+                else
+                {
+                    GeneralTracer.Warn("ClientStrategy: updater directory outside the backup mirror — cannot recover.");
+                }
+            }
+            catch (Exception ex)
+            {
+                GeneralTracer.Error("ClientStrategy: updater recovery from backup failed.", ex);
+            }
+        }
+        else
+        {
+            GeneralTracer.Warn("ClientStrategy: no backup material — updater recovery impossible (degraded mode).");
+        }
+
+        if (IsValidExecutable(TryResolveUpdaterPath()))
+        {
+            GeneralTracer.Info("ClientStrategy: updater recovered from backup — continuing launch.");
+            return true;
+        }
+
+        return FailUpdaterLaunch("updater executable is corrupted and could not be recovered from backup.");
+    }
+
+    /// <summary>Reports the aborted updater launch (report + event + trace) and returns <c>false</c>.</summary>
+    private bool FailUpdaterLaunch(string reason)
+    {
+        var ex = new InvalidOperationException($"ClientStrategy: {reason}");
+        GeneralTracer.Error("ClientStrategy: skipping upgrade launch — the current client keeps running; the update retries next cycle.", ex);
+        try
+        {
+            var ctx = BuildUpdateContext();
+            SafeOnUpdateErrorAsync(ctx, ex).GetAwaiter().GetResult();
+            SafeReportUpdateFailedAsync(ctx, ex).GetAwaiter().GetResult();
+        }
+        catch (Exception callbackEx)
+        {
+            GeneralTracer.Warn($"ClientStrategy: abort callbacks failed: {callbackEx.Message}");
+        }
+        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        return false;
+    }
+
+    /// <summary>Resolves the updater executable path through the OS strategy (or a manual fallback).</summary>
+    private string? TryResolveUpdaterPath()
+    {
+        if (_osStrategy is AbstractStrategy abs)
+            return abs.TryResolveAppPath(_configInfo!.UpdateAppName,
+                !string.IsNullOrWhiteSpace(_configInfo.UpdatePath));
+
+        // Custom IStrategy: fall back to the same lookup LaunchUpgradeProcessSync uses.
+        var updaterDir = ResolveUpdaterDirectory();
+        var appPath = Path.Combine(updaterDir, _configInfo!.UpdateAppName);
+        return File.Exists(appPath) ? appPath : null;
+    }
+
+    private string ResolveUpdaterDirectory()
+    {
+        var updatePath = _configInfo!.UpdatePath;
+        if (string.IsNullOrWhiteSpace(updatePath)) return _configInfo.InstallPath;
+        return Path.IsPathRooted(updatePath)
+            ? updatePath
+            : Path.Combine(_configInfo.InstallPath, updatePath);
+    }
+
+    /// <summary>
+    ///     Existence + non-emptiness + executable-magic check (PE / ELF / Mach-O). The magic
+    ///     check accepts any known executable format rather than only the running platform's —
+    ///     a file carrying the wrong platform's header is equally corrupted, and the loose
+    ///     check avoids false rejections on unusual but valid binaries.
+    /// </summary>
+    private static bool IsValidExecutable(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+        if (new FileInfo(path).Length == 0) return false;
+
+        try
+        {
+            using var stream = File.OpenRead(path);
+            var header = new byte[4];
+            var read = stream.Read(header, 0, header.Length);
+            if (read < 4) return true; // Too small to judge — the size check above already passed.
+
+            if (header[0] == (byte)'M' && header[1] == (byte)'Z') return true;                                        // PE/COFF
+            if (header[0] == 0x7F && header[1] == (byte)'E' && header[2] == (byte)'L' && header[3] == (byte)'F') return true; // ELF
+            if (header[0] == 0xFE && header[1] == 0xED && header[2] == 0xFA && (header[3] == 0xCE || header[3] == 0xCF)) return true; // Mach-O 32/64
+            if (header[0] == 0xCE && header[1] == 0xFA && header[2] == 0xED && header[3] == 0xFE) return true;
+            if (header[0] == 0xCF && header[1] == 0xFA && header[2] == 0xED && header[3] == 0xFE) return true;
+            if (header[0] == 0xCA && header[1] == 0xFE && header[2] == 0xBA && header[3] == 0xBE) return true;        // Mach-O fat
+
+            return false;
+        }
+        catch
+        {
+            // Unreadable for the header probe — do not block the launch on the probe alone.
+            return true;
+        }
     }
 
     #endregion
