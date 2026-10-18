@@ -22,7 +22,7 @@ namespace GeneralUpdate.Core.Strategy
     ///   <item><c>BuildPipeline</c> — Builds the middleware pipeline, executing hash verification, decompression,
     ///        and (optionally) patch application in order.</item>
     ///   <item><c>CreatePipelineContext</c> — Creates the pipeline context containing version information and patch path.</item>
-    ///   <item><c>StartAppAsync</c> — Starts the updated main application (and the Bowl helper process if configured),
+    ///   <item><c>StartAppAsync</c> — Starts the updated main application,
     ///        then releases the tracer and gracefully exits the current updater process.</item>
     /// </list>
     /// </para>
@@ -89,7 +89,7 @@ namespace GeneralUpdate.Core.Strategy
         ///   <item>Uses the <c>LaunchAppName</c> property to get the main application name; throws if not set.</item>
         ///   <item>Calls <c>ResolveAppPath</c> to resolve the full path of the application.</item>
         ///   <item>Starts the main application using <c>Process.Start</c>.</item>
-        ///   <item>If <c>LaunchBowl</c> is true, also starts the Bowl helper process (for UI interaction or status monitoring).</item>
+        ///   <item>Awaits the application-start callback before exiting, allowing durable identity recording.</item>
         ///   <item>Disposes the <c>GeneralTracer</c> resources.</item>
         ///   <item>Calls <c>GracefulExit.CurrentProcessAsync()</c> to gracefully terminate the updater process.</item>
         /// </list>
@@ -117,10 +117,14 @@ namespace GeneralUpdate.Core.Strategy
                 appLaunched = true;
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: app launched successfully (PID: {appProcess.Id}).");
 
+                // Publish application identity/completion while its handle is available and before requesting updater exit.
+                if (OnAppStarted != null) await OnAppStarted(appProcess).ConfigureAwait(false);
+
                 // Legacy compatibility: updater-side Bowl launch. Deprecated — Bowl is
                 // independently installed and self-launched by the main application
-                // (BowlLauncher.EnsureRunningAsync); this branch only runs when a host
-                // explicitly opts in via Option.LaunchBowl for one release cycle.
+                // (BowlLauncher.EnsureRunningAsync); this branch only runs in unmonitored
+                // runs when a host explicitly opts in via Option.LaunchBowl for one
+                // release cycle (UpdateStrategy clears the flag when monitoring is active).
 #pragma warning disable CS0618 // Type or member is obsolete
                 if (LaunchBowl)
                 {
@@ -139,6 +143,8 @@ namespace GeneralUpdate.Core.Strategy
             {
                 GeneralTracer.Error("The StartApp method in the GeneralUpdate.Core.WindowsStrategy class throws an exception.", e);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+                // A role-managed launch must propagate failure so it cannot be mistaken for successful completion.
+                if (OnAppStarted != null) throw;
 
                 // If the main app was already launched, still need to exit the updater.
                 if (!appLaunched) return;

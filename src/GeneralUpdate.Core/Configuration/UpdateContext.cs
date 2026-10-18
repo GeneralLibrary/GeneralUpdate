@@ -42,6 +42,13 @@ namespace GeneralUpdate.Core.Configuration;
 /// <seealso cref="ProcessContract" />
 public class UpdateContext : UpdateConfiguration
 {
+    /// <summary>One workflow's correlation ID, created by Client and preserved across updater process handoff.</summary>
+    public string? UpdateAttemptId { get; set; }
+
+    /// <summary>Process-local journal/monitor handle; only its ID and configuration may cross IPC.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal Download.Reporting.UpdateAttempt? Attempt { get; set; }
+
     // ──────────────────────────────
     //  Runtime-computed fields (calculated during pipeline execution)
     // ──────────────────────────────

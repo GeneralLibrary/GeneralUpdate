@@ -205,7 +205,7 @@ flowchart TB
     subgraph CLIENT["ClientStrategy 执行流程"]
         direction TB
 
-        START(["启动"]) --> CS0["CallSmallBowlHomeAsync()\n杀掉冲突的升级进程"]
+        START(["启动"]) --> CS0["UpdateAttempt.Begin()\n创建关联ID与持久化现场"]
 
         CS0 --> CS1["版本校验\nHttpDownloadSource.ListAsync()\n请求服务端获取 Assets 列表"]
 
@@ -263,19 +263,17 @@ flowchart TB
 
 ### 3.2 步骤详解
 
-#### Step 1：清理冲突进程（CallSmallBowlHomeAsync）
+#### Step 1：创建更新现场（UpdateAttempt）
 
 ```csharp
-// ClientStrategy.cs:985-1002
-// 在开始更新前，杀掉正在运行的升级进程（Bowl）
-// 防止它们持有文件锁，导致后续备份或替换失败
-private async Task CallSmallBowlHomeAsync(string processName)
-{
-    var processes = Process.GetProcessesByName(processName);
-    foreach (var process in processes)
-        await GracefulExit.ShutdownAsync(process);
-}
+// 一次工作流共用 UpdateAttemptId，Update 通过 IPC 继承此 ID。
+// 现场目录位于应用、更新临时文件及备份目录之外，不会被文件替换/回滚覆盖。
+UpdateAttempt.Begin(_configInfo, "client", newAttempt: true);
+_configInfo.Attempt.Record("validating");
 ```
+
+不再按进程名称终止 Bowl。Bowl 现由 [GeneralLibrary/Bowl](https://github.com/GeneralLibrary/Bowl)
+独立维护，启用监护时由 Update 在修改应用文件之前启动宿主并完成就绪握手。
 
 #### Step 2：版本校验
 
@@ -1120,7 +1118,9 @@ public static void EncryptToFile(byte[] plainBytes, string filePath, byte[] key,
 
 ## 10. UpdateStrategy：Upgrade 进程的执行流程
 
-`UpdateStrategy` 是 Upgrade 进程的策略。与 `ClientStrategy` 最大的区别是：**它不做任何网络请求**。
+`UpdateStrategy` 是 Upgrade 进程的策略。与 `ClientStrategy` 最大的区别是：
+**它不再做版本校验与包下载**。未启用监护时仍可发送兼容的状态上报；
+启用外部 Bowl 后由宿主独占最终判定与投递。
 
 ### 10.1 完整流程
 
@@ -1136,7 +1136,10 @@ flowchart TB
         OS_CREATE --> HOOK_BEFORE["OnBeforeUpdateAsync 钩子"]
         HOOK_BEFORE --> HOOK_R{"返回 false?"}
         HOOK_R -- Yes --> EXIT_CANCEL["取消更新"]
-        HOOK_R -- No --> EXECUTE["_osStrategy.ExecuteAsync()"]
+        HOOK_R -- No --> MONITOR["可选：启动外部 Bowl\n校验版本/attemptId/PID/启动时间与存活"]
+        MONITOR --> READY{"未启用监护或握手成功?"}
+        READY -- No --> MONITOR_FAIL["持久化 monitorUnavailable\n不修改应用文件"]
+        READY -- Yes --> EXECUTE["_osStrategy.ExecuteAsync()"]
 
         EXECUTE --> PIPELINE["对每个 Client 版本\n循环跑中间件管道"]
 
@@ -1147,7 +1150,9 @@ flowchart TB
         WRITE_MANIFEST --> HOOK_AFTER["OnAfterUpdate 钩子"]
 
         HOOK_AFTER --> HOOK_START["OnBeforeStartApp 钩子"]
-        HOOK_START --> LAUNCH_APP["_osStrategy.StartAppAsync()\n拉起主程序"]
+        HOOK_START --> LAUNCH_FLAG{"LaunchClientAfterUpdate?"}
+        LAUNCH_FLAG -- No --> FILES_ONLY["completed\n只确认文件结果"]
+        LAUNCH_FLAG -- Yes --> LAUNCH_APP["_osStrategy.StartAppAsync()\n拉起主程序并持久化身份"]
 
         LAUNCH_APP --> GRACEFUL["GracefulExit.CurrentProcessAsync()\nUpgrade 进程退出"]
 
@@ -1155,10 +1160,10 @@ flowchart TB
     end
 ```
 
-### 10.2 为什么 Upgrade 进程不做网络请求？
+### 10.2 为什么 Upgrade 进程不重复校验与下载？
 
 ```csharp
-// UpdateStrategy.cs 的核心逻辑
+// 仅展示文件应用主线；监护握手、现场落盘和终态归属见下文与外部集成协议。
 public async Task ExecuteAsync()
 {
     // 没有调用 IDownloadSource.ListAsync()
@@ -1182,10 +1187,10 @@ public async Task ExecuteAsync()
 }
 ```
 
-**设计意图：** Upgrade 进程是一个"短暂的一次性进程"。
-- 它不需要网络能力（减小二进制体积）
-- 它不需要知道服务端地址（安全：攻击面更小）
-- 它只需要读本地文件并执行文件操作
+**设计意图：** Upgrade 进程不重复 Client 已完成的校验与下载，只负责应用已准备好的包和启动。
+文件完成不等于健康启动：启用监护且要求验证时，Update 写入 `awaitingHealth` 和准确的应用进程身份，
+由 Bowl 观察完整存活窗口；关闭启动时仅确认文件结果。未启用监护的 Success 也不代表业务健康。
+完整的就绪、终态及 HTTP 兼容语义见 [外部 Bowl v1 集成协议](bowl-integration-v1.md)。
 
 ### 10.3 防止更新循环
 
@@ -1314,11 +1319,13 @@ public bool TryLaunchUpgrade()
 | 方面 | Windows | Linux | macOS |
 |------|---------|-------|-------|
 | **管道构建** | `Hash→Compress→Patch(IfNeeded)` | 同上 | 同上 |
-| **启动主程序** | 拉起应用 + 可选 Bowl 守护进程 → `GracefulExit.CurrentProcessAsync()` | 只拉起应用 → `GracefulExit` | 只拉起应用，额外 `File.Exists` 验证 |
+| **启动主程序** | 拉起应用 → 等待身份记录回调 → `GracefulExit.CurrentProcessAsync()` | 同上 | 同上，额外 `File.Exists` 验证 |
 | **路径大小写** | 不敏感 | 敏感 | 不敏感（APFS 默认） |
-| **Bowl 支持** | ✅ 支持崩溃守护 | ❌ | ❌ |
+| **外部 Bowl 集成** | Core 在文件修改前启动可选宿主 | 同一版本化进程协议 | 同一版本化进程协议 |
 
-Bowl 是一个 Windows-only 的崩溃守护进程。当主程序意外退出时，Bowl 可以检测到并重新拉起。在更新流程中，Bowl 会被 ClientStrategy 的 `CallSmallBowlHomeAsync()` 先杀死以避免文件锁。
+Core 不再内置 Bowl 类库或诊断工具；各平台需要从 [Bowl 独立仓库](https://github.com/GeneralLibrary/Bowl)
+部署对应宿主并验证平台支持，Windows 实测结果不等价于其他平台认证。监护不在 `StartAppAsync` 中补启动，
+也不按名称杀进程；未配置 Bowl 的更新用法无需额外部署。
 
 ---
 
@@ -1328,8 +1335,8 @@ Bowl 是一个 Windows-only 的崩溃守护进程。当主程序意外退出时�
 |----------|----------|----------|------|
 | **下载失败** | `ClientStrategy.DownloadAndApplyAsync()` | 检查 `FailedCount > 0`，抛异常 | 冒泡到 `ExecuteAsync()` catch → 触发错误钩子 + 上报失败 |
 | **Chain 包管道失败（有 FallbackFull）** | `AbstractStrategy.ExecuteAsync()` catch when | **重建 PipelineContext**，设置 PackageType=Full，重新跑 Hash→Compress | 最终更新成功，`fallbackEffectiveVersion` 记录回退版本 |
-| **Chain 包管道失败（无 FallbackFull）** | `AbstractStrategy.ExecuteAsync()` catch | `AllPackagesSucceeded=false`，触发 `HandleExecuteException`，如果还没成功过则 `TryRollback()` | 该版本失败，继续下一个版本 |
-| **Fallback Full 也失败** | `AbstractStrategy.ExecuteAsync()` catch (内层 try) | `AllPackagesSucceeded=false`，继续下一个版本 | 该版本失败 |
+| **Chain 包管道失败（无 FallbackFull）** | `AbstractStrategy.ExecuteAsync()` catch | `AllPackagesSucceeded=false`，保留原异常，允许且本进程负责恢复时尝试回滚 | 立即停止版本链，避免后续依赖包误报成功 |
+| **Fallback Full 也失败** | `AbstractStrategy.ExecuteAsync()` catch (内层 try) | `AllPackagesSucceeded=false`，保留原异常与失败路径 | 停止版本链 |
 | **Upgrade 包失败（Both 场景）** | `ClientStrategy.cs` Both 分支 | **中止** IPC 发送 + Upgrade 进程启动 | 防止 Upgrade 进程拿到失效的 TempPath |
 | **Upgrade 进程管道失败** | `UpdateStrategy.ExecuteAsync()` | `AllPackagesSucceeded=false`，跳过 manifest 写回，跳过主程序启动 | 下次 Client 启动重新检测到更新 |
 | **Rollback 失败** | `AbstractStrategy.TryRollback()` | 只打日志，不阻断 | 安装目录可能处于不一致状态 |
@@ -1337,6 +1344,10 @@ Bowl 是一个 Windows-only 的崩溃守护进程。当主程序意外退出时�
 | **文件被锁定** | `IpcEncryption.DecryptFromFile()` | 捕获 `IOException`，返回 null | IPC 文件未就绪，Upgrade 进程等待或退出 |
 
 ### Rollback 的逻辑
+
+下面仅说明未启用监护的进程内恢复。监护已接管后由 Bowl 独占回滚；Update 仍可能写文件时宿主进入
+`deferred`，暂不恢复或投递，并阻止同安装目录的新尝试。应使用相同 `state-root` 恢复前次尝试，
+不是启动第二个恢复者。具体调度与重试边界见外部集成协议。
 
 ```csharp
 // AbstractStrategy.cs:504-532

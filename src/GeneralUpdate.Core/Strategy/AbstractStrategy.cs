@@ -40,7 +40,7 @@ namespace GeneralUpdate.Core.Strategy
     /// </para>
     /// <para>
     /// <b>Error Handling:</b> When an individual version update fails, <see cref="HandleExecuteException"/> records the exception and dispatches events,
-    /// then <c>TryRollback</c> attempts to restore from the backup directory. Errors do not interrupt processing of subsequent versions.
+    /// then <c>TryRollback</c> attempts restoration when this process owns recovery. An unrecovered failure stops subsequent versions.
     /// After all versions have been processed, the temporary directory is cleaned up and <see cref="OnExecuteCompleteAsync"/> is called.
     /// </para>
     /// </remarks>
@@ -69,6 +69,13 @@ namespace GeneralUpdate.Core.Strategy
         /// Gets or sets the update status reporter. Responsible for reporting the processing progress and final result of each version to the server.
         /// </summary>
         public IUpdateReporter Reporter { get; set; } = new Download.Reporting.HttpUpdateReporter();
+        /// <summary>Disable under a role strategy so per-package results cannot race its single terminal report or Bowl.</summary>
+        public bool ReportPackageResults { get; set; } = true;
+        /// <summary>Original unrecovered pipeline exception, retained for the role's failure report rather than replaced with a generic error.</summary>
+        public Exception? LastError { get; private set; }
+        /// <summary>Must be awaited before exiting after launch; supplies exact process identity.</summary>
+        /// <remarks>Custom OS strategies must invoke this callback before disposing the Process or signaling updater exit.</remarks>
+        public Func<Process, Task>? OnAppStarted { get; set; }
 
         /// <summary>
         /// Gets or sets the differential patch pipeline. Supports parallel application of incremental patches and progress reporting.
@@ -82,8 +89,10 @@ namespace GeneralUpdate.Core.Strategy
         public string? LaunchAppName { get; set; }
 
         /// <summary>
-        ///     Gets or sets whether to also launch the Bowl helper process. Only valid on the Windows platform.
-        ///     Set by the upper-level strategy before calling <see cref="StartAppAsync"/>.
+        ///     Legacy source-compatible flag; no longer starts a helper by default. Use
+        ///     <c>UpdateConfiguration.Monitoring</c> for a readiness-gated external monitor, or
+        ///     <c>Option.LaunchBowl</c> (default <c>false</c>) for the deprecated updater-side
+        ///     launch of the independently installed watchdog.
         /// </summary>
         /// <remarks>
         ///     <para>
@@ -106,8 +115,8 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>
         /// After <see cref="ExecuteAsync"/> completes, indicates whether every package in the
-        /// current batch was applied without error. A per-package failure does not prevent the
-        /// loop from continuing, so callers must inspect this flag before treating the batch
+        /// current batch was applied without error. An unrecovered failure stops the
+        /// chain; callers must inspect this flag before treating the batch
         /// as fully successful (e.g. before writing updated version numbers to the manifest).
         /// </summary>
         public bool AllPackagesSucceeded { get; private set; }
@@ -147,7 +156,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <para>
         /// <b>Error Handling Strategy:</b> When an individual version update fails, the exception is caught and
         /// <see cref="HandleExecuteException"/> logs the error, <c>TryRollback</c> attempts to restore from the backup,
-        /// and processing continues with the next version. After all versions have been processed, regardless of whether any versions failed,
+        /// and the chain stops at the first unrecovered failure. After processing,
         /// cleanup operations are performed and <see cref="OnExecuteCompleteAsync"/> is called.
         /// </para>
         /// <para>
@@ -168,6 +177,7 @@ namespace GeneralUpdate.Core.Strategy
             try
             {
                 AllPackagesSucceeded = true;
+                LastError = null;
                 _appliedAnyVersion = false;
                 var status = ReportType.None;
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
@@ -192,6 +202,8 @@ namespace GeneralUpdate.Core.Strategy
                     }
                     try
                     {
+                        _configinfo.Attempt?.SetPackage(version);
+                        _configinfo.Attempt?.BeforeFileChanges();
                         // Use a version-specific subdirectory under patchRoot so that
                         // chain packages do not overwrite each other's extracted patches.
                         // patchRoot is cleaned as a whole after the loop.
@@ -215,12 +227,14 @@ namespace GeneralUpdate.Core.Strategy
                     catch (Exception e) when (version.PackageType == (int)PackageType.Chain
                         && !string.IsNullOrEmpty(version.FallbackFullName))
                     {
+                        _configinfo.Attempt?.Record("filesApplying", e,
+                            failedPath: Path.Combine(_configinfo.TempPath, version.Name ?? string.Empty));
                         GeneralTracer.Warn($"AbstractStrategy.ExecuteAsync: chain patch failed for {version.Version}, falling back to full package {version.FallbackFullName}. Error: {e.Message}");
 
                         // Rebuild pipeline context with the fallback full zip.
                         // CompressMiddleware will extract directly to SourcePath,
                         // and platform strategies skip PatchMiddleware for Full packages.
-                        var fallbackContext = new PipelineContext();
+                        var fallbackContext = new PipelineContext { Attempt = _configinfo.Attempt };
                         var fallbackZipPath = Path.Combine(_configinfo.TempPath,
                             $"{version.FallbackFullName}{_configinfo.Format.ToExtension()}");
                         fallbackContext.Add("ZipFilePath", fallbackZipPath);
@@ -236,6 +250,7 @@ namespace GeneralUpdate.Core.Strategy
                         var fallbackBuilder = BuildPipeline(fallbackContext);
                         try
                         {
+                            _configinfo.Attempt?.EnsureMonitorAlive();
                             await fallbackBuilder.Build();
                             _appliedAnyVersion = true;
                             status = ReportType.Success;
@@ -251,16 +266,22 @@ namespace GeneralUpdate.Core.Strategy
                         catch (Exception fallbackEx)
                         {
                             // Fallback itself failed (e.g. missing full zip, decompression error).
-                            // Downgrade to normal failure handling so the loop can continue
-                            // processing remaining versions.
+                            // Preserve the fallback failure and stop the chain; later packages depend on this version.
                             GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
                             status = ReportType.Failure;
+                            AllPackagesSucceeded = false;
+                            LastError = fallbackEx;
+                            _configinfo.Attempt?.RecordFailure(fallbackEx, failedPath: fallbackZipPath);
+                            if (!_appliedAnyVersion) TryRollback();
                         }
                     }
                     catch (Exception e)
                     {
                         status = ReportType.Failure;
                         AllPackagesSucceeded = false;
+                        LastError = e;
+                        _configinfo.Attempt?.RecordFailure(e,
+                            failedPath: (e as FileNotFoundException)?.FileName ?? ResolveTargetPath(version));
                         HandleExecuteException(e);
                         // Only rollback when NO version has succeeded yet in this batch.
                         // If a previous version was already applied successfully,
@@ -271,12 +292,18 @@ namespace GeneralUpdate.Core.Strategy
                     }
                     finally
                     {
-                        await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, version.AppType ?? 1));
+                        if (ReportPackageResults)
+                        {
+                            // A network error must not replace a pipeline error or prevent package cleanup/recovery.
+                            try { await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, _configinfo.ReportType)); }
+                            catch (Exception reportError) { GeneralTracer.Warn($"Package reporting failed: {reportError.Message}"); }
+                        }
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
                         DeleteVersionZip(version);
                     }
+                    if (!AllPackagesSucceeded) break;
                 }
 
                 TryCleanTempPath();
@@ -285,6 +312,8 @@ namespace GeneralUpdate.Core.Strategy
             catch (Exception e)
             {
                 AllPackagesSucceeded = false;
+                LastError = e;
+                _configinfo.Attempt?.RecordFailure(e);
                 HandleExecuteException(e);
             }
             finally
@@ -330,7 +359,7 @@ namespace GeneralUpdate.Core.Strategy
         /// <returns>The populated pipeline context instance.</returns>
         protected virtual PipelineContext CreatePipelineContext(VersionEntry version, string patchPath)
         {
-            var context = new PipelineContext();
+            var context = new PipelineContext { Attempt = _configinfo.Attempt };
             // Common parameters
             context.Add("ZipFilePath", Path.Combine(_configinfo.TempPath, $"{version.Name}{_configinfo.Format.ToExtension()}"));
             // Hash middleware
@@ -545,6 +574,10 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         private void TryRollback()
         {
+            // A previously accepted monitor retains recovery ownership even if it later exits.
+            // Two independent restorers could otherwise overwrite each other's files while recovery is in progress.
+            if (_configinfo.BackupEnabled == false) return;
+            if (_configinfo.Attempt?.MonitoringActive == true) return;
             try
             {
                 var backupDir = _configinfo.BackupDirectory;

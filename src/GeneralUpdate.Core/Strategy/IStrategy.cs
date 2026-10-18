@@ -75,7 +75,7 @@ namespace GeneralUpdate.Core.Strategy
         ///   <item>Call <c>GracefulExit.CurrentProcessAsync()</c> to gracefully terminate the updater process.</item>
         /// </list>
         /// <para>
-        /// For the Windows strategy, if a <c>Bowl</c> helper process is configured, it will also be started.
+        /// Optional external monitoring is initialized by the role strategy before file modification, not here.
         /// </para>
         /// </remarks>
         Task StartAppAsync();

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Diagnostics;
+using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.SelfCheck;
@@ -31,19 +32,24 @@ namespace GeneralUpdate.Core.Strategy;
 ///   which contains already-downloaded update package paths, hash values, and other metadata.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeUpdateAsync"/> lifecycle hook,
 ///   allowing the caller to execute custom logic or cancel the operation before applying updates.</description></item>
+///   <item><description>When external monitoring is enabled, publishes the immutable attempt request and waits for verified readiness before file application.</description></item>
 ///   <item><description>Delegates to the OS strategy to execute the update pipeline: processes each version through the
 ///   <c>Hash</c> (hash verification) → <c>Decompress</c> (extraction) → <c>Patch</c> (incremental patch) middleware chain.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnAfterUpdateAsync"/> hook to notify the caller that all updates have been applied.</description></item>
 ///   <item><description>Calls the <see cref="Hooks.IUpdateHooks.OnBeforeStartAppAsync"/> hook,
 ///   allowing the caller to perform additional operations before launching the main application
 ///   (such as setting executable permissions or preparing resource files).</description></item>
-///   <item><description>Launches the main application (<c>MainAppName</c>) and the Bowl helper process through the OS strategy.</description></item>
+///   <item><description>Launches the main application and records its identity for an already-ready optional external monitor.
+///   When self-check is enabled and NO external monitor is active, the updater instead runs a verified launch
+///   (<c>ExecuteVerifiedLaunchAsync</c>): the application is observed inside the startup window and rolled back to
+///   the previous version when judged unusable — the external monitor, when present, always owns the verdict.</description></item>
 /// </list>
 /// </para>
 /// <para>
 /// <b>Design Note:</b> The upgrade side does not perform version validation or download operations.
 /// The client has already completed all network requests and downloads, passing results through process information.
-/// The upgrade side is responsible only for applying updates and launching the application -- zero network overhead.
+/// The upgrade side applies updates and launches the application. Unmonitored status delivery is best-effort;
+/// monitored terminal delivery is delegated to the independent Bowl host.
 /// </para>
 /// </remarks>
 public class UpdateStrategy : IStrategy
@@ -117,6 +123,7 @@ public class UpdateStrategy : IStrategy
         {
             if (_pendingDiffPipeline != null) abs.DiffPipeline = _pendingDiffPipeline;
             abs.Reporter = this.Reporter;
+            abs.ReportPackageResults = false;
         }
     }
 
@@ -131,16 +138,24 @@ public class UpdateStrategy : IStrategy
         var ctx = BuildUpdateContext();
         try
         {
+            _configInfo.ReportType = _reportType;
+            var attempt = UpdateAttempt.Begin(_configInfo, "update");
             GeneralTracer.Debug("UpdateStrategy.ExecuteAsync start.");
 
             // Hooks: allow cancellation before applying updates
             if (!await SafeOnBeforeUpdateAsync(ctx).ConfigureAwait(false))
             {
                 GeneralTracer.Info("UpdateStrategy: update cancelled by OnBeforeUpdateAsync hook.");
+                attempt.Record("cancelled");
                 return;
             }
 
+            if (_configInfo.Monitoring?.Enabled == true && _osStrategy is not AbstractStrategy)
+                throw new InvalidOperationException("Bowl monitoring requires an AbstractStrategy with the application-start callback.");
+            // Preflight hooks may cancel, but must not modify application files. Arm supervision before the apply boundary.
+            await attempt.StartMonitoringAsync(_configInfo.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0, _reportType);
             _osStrategy!.Create(_configInfo);
+            attempt.BeforeFileChanges();
 
             // Apply MainApp updates -- Client already applied Upgrade packages, IPC only has MainApp versions
             var pipelineSucceeded = true;
@@ -152,7 +167,7 @@ public class UpdateStrategy : IStrategy
 
                 // Only advance the manifest version when every package was applied
                 // successfully. AbstractStrategy catches per-package failures and
-                // continues the loop, so ExecuteAsync() completing is not a
+                // stops the chain, so ExecuteAsync() completing is not a
                 // reliable success signal on its own.
                 // For custom IStrategy implementations that don't expose
                 // AllPackagesSucceeded, assume success (coalesce to true)
@@ -160,6 +175,7 @@ public class UpdateStrategy : IStrategy
                 pipelineSucceeded = (_osStrategy as AbstractStrategy)?.AllPackagesSucceeded ?? true;
                 if (pipelineSucceeded)
                 {
+                    attempt.EnsureMonitorAlive();
                     WriteBackClientVersion();
                 }
                 else
@@ -177,7 +193,9 @@ public class UpdateStrategy : IStrategy
             // restart it with old files, causing it to re-detect the update and loop.
             if (!pipelineSucceeded)
             {
-                var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                var failEx = (_osStrategy as AbstractStrategy)?.LastError ??
+                    new InvalidOperationException("MainApp pipeline did not complete successfully.");
+                attempt.RecordFailure(failEx);
                 await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
                 await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
@@ -189,46 +207,94 @@ public class UpdateStrategy : IStrategy
             // app launch and updater exit — the plain launch below is skipped entirely.
             // LaunchClientAfterUpdate=false (maintenance/silent staging) has no launchable
             // process to verify and keeps the legacy path.
+            //
+            // Precedence: an ACTIVE external monitor is the post-update arbiter (protocol v1:
+            // "Update must suppress its own rollback"), so self-check defers instead of
+            // running a second verdict over the same launch.
             if (IsVerifiedLaunchRequested())
             {
-                await ExecuteVerifiedLaunchAsync(ctx).ConfigureAwait(false);
-                return;
+                if (attempt.MonitoringActive)
+                {
+                    GeneralTracer.Warn(
+                        "UpdateStrategy: SelfCheckEnabled and Monitoring.Enabled are both on — the external monitor owns the verdict, self-check deferred.");
+                }
+                else
+                {
+                    attempt.EnsureMonitorAlive();
+                    attempt.Record("filesApplied");
+                    await ExecuteVerifiedLaunchAsync(ctx).ConfigureAwait(false);
+                    return;
+                }
             }
 
             // Hooks: after all updates applied
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
 
-            // Report: update applied successfully — uses the first Client package's RecordId
-            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+            attempt.EnsureMonitorAlive();
+            attempt.Record("filesApplied");
 
             // Hooks: before starting main app (e.g. chmod +x on Linux/macOS)
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            // Delegate to OS strategy: launch MainAppName + Bowl.
+            // The external monitor is already ready; only launch the application here.
             // Skip if silent mode requested no-launch (e.g. maintenance windows).
             if (_configInfo.LaunchClientAfterUpdate)
             {
                 if (_osStrategy is AbstractStrategy abs2)
                 {
                     abs2.LaunchAppName = _configInfo.MainAppName;
-#pragma warning disable CS0618 // Compatibility path: updater-side Bowl launch stays available for one release cycle via Option.LaunchBowl (default false).
-                    abs2.LaunchBowl = LaunchBowl;
-#pragma warning restore CS0618
+                    // The external monitor owns the post-update verdict when active; the
+                    // deprecated updater-side watchdog launch (Option.LaunchBowl, default
+                    // false) only applies to unmonitored runs — never both arbiters.
+#pragma warning disable CS0618 // Type or member is obsolete
+                    abs2.LaunchBowl = !attempt.MonitoringActive && LaunchBowl;
+#pragma warning restore CS0618 // Type or member is obsolete
+                    abs2.OnAppStarted = async process =>
+                    {
+                        // The OS strategy awaits this before exit: Bowl can recover the exact application identity from disk.
+                        attempt.EnsureMonitorAlive();
+                        if (attempt.MonitoringActive && _configInfo.Monitoring!.VerifyLaunch)
+                            attempt.Record("awaitingHealth", application: ProcessIdentity.From(process));
+                        else
+                        {
+                            // Without launch observation, completion means applied files and successful process creation only.
+                            attempt.Record("completed");
+                            await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+                        }
+                    };
                 }
 
+                attempt.EnsureMonitorAlive();
+                attempt.Record("launching");
                 await _osStrategy.StartAppAsync();
+                if (_osStrategy is not AbstractStrategy)
+                {
+                    attempt.Record("completed");
+                    await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
+                }
             }
             else
             {
                 GeneralTracer.Info("UpdateStrategy: LaunchClientAfterUpdate=false, skipping app launch.");
+                attempt.EnsureMonitorAlive();
+                attempt.Record("completed");
+                await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
+            // Persist before invoking user hooks, which may throw or terminate the updater themselves.
+            _configInfo.Attempt?.RecordFailure(ex,
+                _configInfo.Attempt.Stage == "launching" ? "launchFailure" : "updateFailure");
             await SafeOnUpdateErrorAsync(ctx, ex).ConfigureAwait(false);
             await SafeReportUpdateFailedAsync(ctx, ex).ConfigureAwait(false);
             GeneralTracer.Error("UpdateStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
+        }
+        finally
+        {
+            // Release only our handle; the independent monitor may need to outlive this updater.
+            _configInfo.Attempt?.Dispose();
         }
     }
 
@@ -262,12 +328,12 @@ public class UpdateStrategy : IStrategy
 
         GeneralTracer.Info($"UpdateStrategy: verified launch starting (target={targetVersion}, previous={previousVersion}).");
 
-        // 1. Advance the manifest as usual — a failed verification rolls it back.
-        WriteBackClientVersion();
+        // The manifest was already advanced by the shared pipeline flow (WriteBackClientVersion
+        // runs right after pipeline success); a failed verification rolls it back below.
 
-        // 2. Verify marker + stale-ack cleanup. Ack files MUST be removed before the app
-        //    starts: a leftover verify-ok from an earlier session would satisfy this session's
-        //    strict check.
+        // Verify marker + stale-ack cleanup. Ack files MUST be removed before the app
+        // starts: a leftover verify-ok from an earlier session would satisfy this session's
+        // strict check.
         UpdateVerificationMarker.Delete(installPath);
         UpdateVerificationMarker.DeleteAckFiles(installPath);
         UpdateVerificationMarker.Write(installPath, targetVersion, previousVersion, config.BackupDirectory);
@@ -275,16 +341,16 @@ public class UpdateStrategy : IStrategy
         Process? process = null;
         try
         {
-            // 3. Post-update hook (parity with the plain launch path) + pre-start hook
-            //    (e.g. chmod +x on Linux/macOS).
+            // Post-update hook (parity with the plain launch path) + pre-start hook
+            // (e.g. chmod +x on Linux/macOS).
             await SafeOnAfterUpdateAsync(ctx).ConfigureAwait(false);
             await SafeOnBeforeStartAppAsync(ctx).ConfigureAwait(false);
 
-            // 4. Start the app WITHOUT Bowl and WITHOUT updater self-exit — the updater must
-            //    stay alive to render the verdict. The observation window deliberately does not
-            //    run Bowl, avoiding two arbiters for the same crash.
+            // Start the app WITHOUT Bowl and WITHOUT updater self-exit — the updater must
+            // stay alive to render the verdict. The observation window deliberately does not
+            // run Bowl, avoiding two arbiters for the same crash.
             process = StartProcessForVerification(config.MainAppName);
-            // 5. Observe the window with built-in + host-registered rules.
+            // Observe the window with built-in + host-registered rules.
             var report = await RunSelfCheckAsync(process, targetVersion, previousVersion).ConfigureAwait(false);
             EventManager.Instance.Dispatch(this,
                 new SelfCheckCompletedEventArgs(report, targetVersion, previousVersion));
@@ -293,6 +359,8 @@ public class UpdateStrategy : IStrategy
             {
                 UpdateVerificationMarker.Delete(installPath);
                 UpdateVerificationMarker.DeleteAckFiles(installPath);
+                // Keep the shared evidence chain consistent with the plain launch path.
+                config.Attempt?.Record("completed");
                 await SafeReportUpdateAppliedAsync(ctx).ConfigureAwait(false);
                 LaunchBowlCompat();
                 GeneralTracer.Info("UpdateStrategy: self-check passed — verified launch completed.");
@@ -382,6 +450,11 @@ public class UpdateStrategy : IStrategy
         try
         {
             GeneralTracer.Warn($"UpdateStrategy: self-check failed — rolling back. Reason: {report.FirstFailureReason}");
+
+            // Evidence chain: a failed self-check is a health-check failure in protocol-v1 terms.
+            config.Attempt?.RecordFailure(
+                new InvalidOperationException(report.FirstFailureReason ?? "self-check failed"),
+                "healthCheckFailure");
 
             var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnosticsUploader);
             var result = await rollback.RollbackAsync(new RollbackRequest(
@@ -532,9 +605,8 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
-                    (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, recordId, (int)UpdateStatus.Success, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -547,9 +619,9 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
-            await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(recordId,
-                    (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
+            _configInfo?.Attempt?.RecordFailure(error);
+            if (_configInfo?.Attempt != null)
+                await _configInfo.Attempt.ReportAsync(Reporter, recordId, (int)UpdateStatus.Failure, _reportType).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -582,6 +654,10 @@ public class UpdateStrategy : IStrategy
         {
             GeneralTracer.Warn(
                 $"UpdateStrategy: failed to write back ClientVersion: {ex.Message}");
+            // A stale manifest can trigger repeated updates; record its path and fail instead of claiming completion.
+            ex.Data["UpdateStage"] = "manifest";
+            ex.Data["UpdateFailedPath"] = System.IO.Path.Combine(_configInfo!.InstallPath, ManifestInfo.FileName);
+            throw;
         }
     }
 

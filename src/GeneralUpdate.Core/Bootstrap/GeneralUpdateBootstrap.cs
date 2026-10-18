@@ -410,6 +410,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 SelfCheckEnabled = processInfo.SelfCheckEnabled,
                 SelfCheckStartupWindowSeconds = processInfo.SelfCheckStartupWindowSeconds,
                 SelfCheckRequireAck = processInfo.SelfCheckRequireAck,
+                // Nullable additions keep old IPC contracts valid while carrying one attempt across processes.
+                UpdateAttemptId = processInfo.UpdateAttemptId,
+                DiagnosticsDirectory = processInfo.DiagnosticsDirectory,
+                Monitoring = processInfo.Monitoring,
+                BackupEnabled = processInfo.BackupEnabled,
                 Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
                 Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
                 Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
@@ -451,10 +456,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         if (_configInfo.SelfCheckStartupWindowSeconds <= 0)
             _configInfo.SelfCheckStartupWindowSeconds = GetOption(Option.SelfCheckStartupWindowSeconds);
 
-        // Self-check without backup cannot roll back — auto-enable backup unless the user
-        // explicitly chose a backup mode. Explicit false is the documented degraded mode:
-        // the check still runs and reports, but skips file rollback + old-version relaunch.
-        if (_configInfo.SelfCheckEnabled == true && !HasOption(Option.BackupEnabled))
+        // Self-check without backup cannot roll back — auto-enable backup ONLY when nothing
+        // specified it: not the IPC contract (an explicit client-side false is the documented
+        // degraded mode and must survive the process boundary), not a user SetOption. In
+        // degraded mode the check still runs and reports, but skips file rollback + relaunch.
+        if (_configInfo.SelfCheckEnabled == true && _configInfo.BackupEnabled == null)
         {
             _configInfo.BackupEnabled = true;
             GeneralTracer.Info("GeneralUpdateBootstrap: SelfCheckEnabled with no explicit backup setting — BackupEnabled auto-enabled (rollback material).");

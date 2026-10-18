@@ -59,6 +59,25 @@ namespace GeneralUpdate.Core.Configuration
         private string _updateLogUrl;
         private string _reportUrl;
         private string _bowl;
+        private BowlOptions? _monitoring;
+        private string? _diagnosticsDirectory;
+
+        /// <summary>Configures an optional separately deployed Bowl host; settings alone do not enable monitoring.</summary>
+        /// <param name="options">Host settings. Set Enabled explicitly to require monitoring.</param>
+        /// <remarks>Executable availability, timeouts and directory isolation are checked before the update applies files.</remarks>
+        public UpdateRequestBuilder SetMonitoring(BowlOptions options)
+        {
+            _monitoring = options ?? throw new ArgumentNullException(nameof(options));
+            return this;
+        }
+
+        /// <summary>Sets the persistent root shared by Client, Update and an optional monitor.</summary>
+        /// <param name="path">A directory outside installation, staging and backup trees; validated when the attempt begins.</param>
+        public UpdateRequestBuilder SetDiagnosticsDirectory(string path)
+        {
+            _diagnosticsDirectory = path;
+            return this;
+        }
         private string _driverDirectory;
         private List<string> _blackFiles;
         private List<string> _blackFormats;
@@ -180,6 +199,10 @@ namespace GeneralUpdate.Core.Configuration
                     builder.SetReportUrl(config.ReportUrl);
                 if (!string.IsNullOrWhiteSpace(config.Bowl))
                     builder.SetBowl(config.Bowl);
+                if (config.Monitoring != null)
+                    builder.SetMonitoring(config.Monitoring);
+                if (!string.IsNullOrWhiteSpace(config.DiagnosticsDirectory))
+                    builder.SetDiagnosticsDirectory(config.DiagnosticsDirectory);
                 if (!string.IsNullOrWhiteSpace(config.DriverDirectory))
                     builder.SetDriverDirectory(config.DriverDirectory);
                 if (config.Files != null)
@@ -525,6 +548,8 @@ namespace GeneralUpdate.Core.Configuration
                 UpdateLogUrl = _updateLogUrl,
                 ReportUrl = _reportUrl,
                 Bowl = _bowl,
+                Monitoring = _monitoring,
+                DiagnosticsDirectory = _diagnosticsDirectory,
                 DriverDirectory = _driverDirectory,
                 Files = _blackFiles ?? new List<string>(),
                 Formats = _blackFormats ?? new List<string>(),

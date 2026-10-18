@@ -48,6 +48,21 @@ A one-click startup example helps you quickly understand how to integrate automa
 
 </div>
 
+## Update evidence and optional external monitoring
+
+Update attempts now persist diagnostics outside the application tree. Optional
+external Bowl monitoring uses a readiness-gated, versioned disk protocol;
+unmonitored installations require no Bowl deployment. See the
+[v1 integration contract and compatibility notes](docs/bowl-integration-v1.md).
+The standalone host is maintained and deployed from
+[GeneralLibrary/Bowl](https://github.com/GeneralLibrary/Bowl). Its library,
+tests and bundled resources have been migrated out of this repository;
+Core retains only optional external integration and real-host contract tests.
+Deploy the host separately, use one shared state root per installation, and
+schedule its `--retry` command externally; no system service is installed.
+The host records metadata only and defers rollback while the updater can still
+write files. See the integration guide for recovery and deployment boundaries.
+
 
 
 ## 🎏 Code Platforms

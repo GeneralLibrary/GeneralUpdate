@@ -91,6 +91,9 @@ namespace GeneralUpdate.Core.Configuration
             target.Directories = source.Directories;
             target.ReportUrl = source.ReportUrl;
             target.Bowl = source.Bowl;
+            // Preserve the opt-in boundary: the legacy Bowl name must not implicitly enable a host.
+            target.Monitoring = source.Monitoring;
+            target.DiagnosticsDirectory = source.DiagnosticsDirectory;
             target.Scheme = source.Scheme;
             target.Token = source.Token;
             target.AuthScheme = source.AuthScheme;
@@ -208,13 +211,19 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
-            // Self-check switches ride the same additive tail as ReportType: appended after
-            // construction so the 23-parameter constructor signature stays untouched and old
-            // updaters simply ignore the new JSON fields.
+            // Both feature sets ride the same additive tail after construction so the
+            // 23-parameter constructor signature stays untouched; old updaters simply
+            // ignore unknown JSON fields, new updaters fall back for missing ones.
+            // Self-check switches (updater-observed verification):
             processInfo.SelfCheckEnabled = source.SelfCheckEnabled;
             processInfo.SelfCheckStartupWindowSeconds =
                 source.SelfCheckStartupWindowSeconds > 0 ? source.SelfCheckStartupWindowSeconds : 30;
             processInfo.SelfCheckRequireAck = source.SelfCheckRequireAck;
+            // The updater must reuse the client's evidence root/ID, not create an unrelated recovery history.
+            processInfo.UpdateAttemptId = source.UpdateAttemptId;
+            processInfo.DiagnosticsDirectory = source.DiagnosticsDirectory;
+            processInfo.Monitoring = source.Monitoring;
+            processInfo.BackupEnabled = source.BackupEnabled;
             return processInfo;
         }
     }

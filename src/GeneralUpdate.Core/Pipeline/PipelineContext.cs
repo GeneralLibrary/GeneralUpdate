@@ -70,6 +70,8 @@ namespace GeneralUpdate.Core.Pipeline;
 /// </remarks>
 public class PipelineContext
 {
+    /// <summary>Process-local monitor guard inherited by normal and fallback pipelines; never serialized as package data.</summary>
+    internal Download.Reporting.UpdateAttempt? Attempt { get; set; }
     private ConcurrentDictionary<string, object?> _context = new();
 
     /// <summary>
