@@ -145,13 +145,15 @@ public static class BowlLauncher
     ///     wrong "not running" verdict is harmless because the watchdog itself exits with
     ///     code 2 on a duplicate start.
     /// </summary>
-    private static bool IsAlreadyRunning(string instanceKey)
+    internal static bool IsAlreadyRunning(string instanceKey)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             try
             {
-                using var probe = Mutex.OpenExisting(instanceKey);
+                // The watchdog creates the mutex under its documented full name
+                // (SingleInstanceLock.Acquire) — probing the bare key would never match it.
+                using var probe = Mutex.OpenExisting(BuildMutexName(instanceKey));
                 return true;
             }
             catch (WaitHandleCannotBeOpenedException)
@@ -213,4 +215,13 @@ public static class BowlLauncher
     /// <summary>Well-known Unix lock file location (mirrored by the watchdog; temp dir = same user session).</summary>
     public static string GetUnixLockPath(string instanceKey) =>
         Path.Combine(Path.GetTempPath(), "GeneralUpdate", "bowl-locks", $"{instanceKey}.lock");
+
+    /// <summary>
+    ///     Full mutex name the watchdog registers for a target
+    ///     (<c>Global\GeneralUpdate.Bowl.{key}</c>) — byte-identical to the watchdog console's
+    ///     <c>SingleInstanceLock.Acquire</c>. One half of the probe contract: the launcher only
+    ///     ever OPENS this name; the watchdog is its creator.
+    /// </summary>
+    internal static string BuildMutexName(string instanceKey) =>
+        $"Global\\GeneralUpdate.Bowl.{instanceKey}";
 }
