@@ -498,7 +498,7 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         /// <param name="appName">The name of the executable to launch.</param>
         /// <exception cref="FileNotFoundException">Thrown when the executable cannot be resolved.</exception>
-        internal Process StartProcessForVerification(string appName)
+        internal virtual Process StartProcessForVerification(string appName)
         {
             var appPath = ResolveAppPath(appName);
             if (string.IsNullOrEmpty(appPath))

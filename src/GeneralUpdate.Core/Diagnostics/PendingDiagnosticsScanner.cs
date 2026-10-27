@@ -139,10 +139,17 @@ public sealed class PendingDiagnosticsScanner
                 return;
             }
 
+            // The outbox manifest's guid travels to the server: it is the idempotency key, so a
+            // retried upload of the same evidence directory deduplicates instead of duplicating.
             var bundle = new DiagnosticsBundle(packed.Value.ZipPath, new DiagnosticsManifest
             {
+                Guid = manifest.Guid,
                 Kind = manifest.Kind,
+                TargetName = manifest.TargetName,
                 Version = manifest.Version,
+                AppKey = _options.AppKey,
+                ProductId = _options.ProductId,
+                Platform = _options.Platform,
                 Reason = $"crash outbox {manifest.Guid}, exitCode={manifest.ExitCode?.ToString() ?? "n/a"}",
                 Files = packed.Value.Entries,
             });

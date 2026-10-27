@@ -3,10 +3,8 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Network;
 
 namespace GeneralUpdate.Core.Diagnostics;
@@ -31,10 +29,13 @@ public interface IDiagnosticsUploader
 /// </summary>
 /// <remarks>
 ///     <para>
-///         Wire format: the zip archive as the request body (octet-stream) plus the declared
-///         <see cref="DiagnosticsManifest"/> in the <c>X-Diagnostics-Manifest</c> header so the
-///         server can audit the contents. Requests carry the global authentication provider and
-///         extra headers (same convention as <c>HttpUpdateReporter</c>).
+///         Wire format: <c>multipart/form-data</c> per the GeneralSpace
+///         <c>POST /Fault/UploadArtifact</c> contract — the zip archive as the <c>file</c> part
+///         plus the <see cref="DiagnosticsManifest"/> fields as form fields. The <c>guid</c>
+///         field is the server-side idempotency key: replaying the same bundle returns 2xx
+///         without storing a duplicate, which makes the outbox "delete after 2xx" rule safe.
+///         The same manifest is also embedded inside the archive as <c>manifest.json</c> so the
+///         server can audit contents without trusting the form (privacy/audit requirement).
 ///     </para>
 ///     <para>
 ///         Failure handling follows the reporter convention: upload failures are logged and
@@ -67,7 +68,8 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
     }
 
     /// <summary>
-    ///     Uploads a bundle (archive + manifest). Deletes the temporary archive afterwards.
+    ///     Uploads a bundle (archive + manifest) as multipart form data.
+    ///     Deletes the temporary archive afterwards.
     /// </summary>
     /// <returns><c>true</c> when the server accepted the bundle with a 2xx response.</returns>
     public async Task<bool> UploadAsync(DiagnosticsBundle bundle, CancellationToken ct)
@@ -82,13 +84,14 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
 
         try
         {
+            var manifest = bundle.Manifest ?? new DiagnosticsManifest();
             using var stream = File.OpenRead(bundle.ZipPath);
+            using var content = BuildMultipartContent(manifest, stream);
+
             using var request = new HttpRequestMessage(HttpMethod.Post, _options.Url)
             {
-                Content = new StreamContent(stream)
+                Content = content
             };
-            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            request.Headers.Add("X-Diagnostics-Manifest", SerializeManifest(bundle.Manifest));
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(RequestTimeout);
@@ -96,7 +99,8 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
 
             if (response.IsSuccessStatusCode)
             {
-                GeneralTracer.Info($"DiagnosticsUploader: bundle uploaded ({bundle.Manifest.Files.Count} file(s)).");
+                GeneralTracer.Info(
+                    $"DiagnosticsUploader: bundle {manifest.Guid} ({manifest.Kind}, {manifest.Files.Count} file(s)) uploaded.");
                 return true;
             }
 
@@ -120,17 +124,48 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
         }
     }
 
-    private static string SerializeManifest(DiagnosticsManifest manifest)
+    /// <summary>
+    ///     Builds the <c>/Fault/UploadArtifact</c> multipart body: the <c>file</c> part plus one
+    ///     form field per manifest attribute. Optional attributes are omitted (not sent empty) —
+    ///     the server treats them as "not provided".
+    /// </summary>
+    internal static MultipartFormDataContent BuildMultipartContent(DiagnosticsManifest manifest, Stream zipStream)
     {
-        try
-        {
-            return JsonSerializer.Serialize(manifest, DiagnosticsJsonContext.Default.DiagnosticsManifest);
-        }
-        catch
-        {
-            // A manifest is metadata; an upload without it is still worth attempting.
-            return "{}";
-        }
+        var guid = string.IsNullOrWhiteSpace(manifest.Guid)
+            ? Guid.NewGuid().ToString("D") // Defensive: the server needs a guid; collection normally provides it.
+            : manifest.Guid;
+
+        var content = new MultipartFormDataContent();
+
+        var fileContent = new StreamContent(zipStream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+        content.Add(fileContent, "file", $"{guid}.zip");
+
+        // Required contract fields.
+        content.Add(new StringContent(guid), "guid");
+        content.Add(new StringContent(manifest.Kind ?? DiagnosticsKinds.Manual), "kind");
+        content.Add(new StringContent(manifest.Schema.ToString()), "schema");
+
+        // Optional attribution fields — present only when known.
+        AddIfNotEmpty(content, "appKey", manifest.AppKey);
+        AddIfNotEmpty(content, "version", manifest.Version);
+        AddIfNotEmpty(content, "targetName", manifest.TargetName);
+        AddIfNotEmpty(content, "productId", manifest.ProductId);
+        AddIfNotEmpty(content, "reason", manifest.Reason);
+        if (manifest.Platform.HasValue)
+            content.Add(new StringContent(manifest.Platform.Value.ToString()), "platform");
+        if (manifest.RecordId is > 0)
+            content.Add(new StringContent(manifest.RecordId.Value.ToString()), "recordId");
+        if (manifest.RecordType is > 0)
+            content.Add(new StringContent(manifest.RecordType.Value.ToString()), "recordType");
+
+        return content;
+    }
+
+    private static void AddIfNotEmpty(MultipartFormDataContent content, string name, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            content.Add(new StringContent(value), name);
     }
 
     private static void TryDelete(string path)

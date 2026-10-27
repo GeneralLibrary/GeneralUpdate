@@ -74,6 +74,49 @@ public sealed class BowlLauncherTests
         Assert.Equal(expected, BowlLauncher.BuildInstanceKey(target, install));
     }
 
+    [Fact]
+    public void BuildMutexName_MatchesWatchdogContract()
+    {
+        // The watchdog console creates `Global\GeneralUpdate.Bowl.{key}`
+        // (SingleInstanceLock.Acquire) — the probe must open exactly this name.
+        var key = BowlLauncher.BuildInstanceKey("MyApp", @"D:\apps\MyApp");
+
+        Assert.Equal($"Global\\GeneralUpdate.Bowl.{key}", BowlLauncher.BuildMutexName(key));
+    }
+
+    [Fact]
+    public void IsAlreadyRunning_FlipsWithTheWatchdogMutex()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var key = BowlLauncher.BuildInstanceKey("MyApp", @"D:\apps\MyApp");
+        var mutexName = BowlLauncher.BuildMutexName(key);
+
+        // Not held → not running.
+        Assert.False(BowlLauncher.IsAlreadyRunning(key));
+
+        // Held under the watchdog's exact name → running (this is the handshake the
+        // probe exists for; a bare-key probe here would always report false).
+        var watchdogMutex = new Mutex(initiallyOwned: true, mutexName, out var createdNew);
+        try
+        {
+            if (!createdNew)
+                return; // A real watchdog owns the name on this machine — probe semantics unchanged.
+
+            Assert.True(BowlLauncher.IsAlreadyRunning(key));
+            watchdogMutex.ReleaseMutex();
+        }
+        finally
+        {
+            // Closing the last handle destroys the unowned named mutex — the kernel makes
+            // the name disappear only then, so this MUST precede the final assertion.
+            watchdogMutex.Dispose();
+        }
+
+        Assert.False(BowlLauncher.IsAlreadyRunning(key));
+    }
+
     private static string AssemblyLocation() =>
         System.Reflection.Assembly.GetExecutingAssembly().Location;
 }

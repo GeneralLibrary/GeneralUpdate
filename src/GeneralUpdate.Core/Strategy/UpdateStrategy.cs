@@ -59,7 +59,7 @@ public class UpdateStrategy : IStrategy
     private IStrategy? _customOsStrategy;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
     private IReadOnlyList<ISelfCheckRule> _selfCheckRules = Array.Empty<ISelfCheckRule>();
-    private IDiagnosticsUploader? _diagnosticsUploader;
+    private DiagnosticsChannel? _diagnostics;
 
     /// <summary>
     /// Gets or sets the lifecycle hooks. Injected by the bootstrap to execute custom logic at key points in the update flow.
@@ -90,11 +90,11 @@ public class UpdateStrategy : IStrategy
     }
 
     /// <summary>
-    ///     Sets the optional diagnostics uploader used by <see cref="RollbackManager"/> for the
-    ///     real-time upload after a self-check failure. Injected by the bootstrap when
-    ///     <see cref="Option.DiagnosticsUploadEnabled"/> is on.
+    ///     Sets the optional diagnostics channel used after a self-check failure: the rollback
+    ///     executor uploads a real-time bundle through it (uploader + options + privacy filter).
+    ///     Injected by the bootstrap when <see cref="Option.DiagnosticsUploadEnabled"/> is on.
     /// </summary>
-    public void SetDiagnosticsUploader(IDiagnosticsUploader? uploader) => _diagnosticsUploader = uploader;
+    public void SetDiagnosticsChannel(DiagnosticsChannel? channel) => _diagnostics = channel;
 
     /// <summary>
     /// Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
@@ -456,7 +456,12 @@ public class UpdateStrategy : IStrategy
                 new InvalidOperationException(report.FirstFailureReason ?? "self-check failed"),
                 "healthCheckFailure");
 
-            var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnosticsUploader);
+            // Server-facing judgment report (phase=Startup, design §4 mapping): distinct from the
+            // rollback report RollbackManager sends (phase=Rollback) — the judgment moment and the
+            // recovery moment are two evidence points of the same incident.
+            await ReportSelfCheckFailureAsync(config, report).ConfigureAwait(false);
+
+            var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnostics);
             var result = await rollback.RollbackAsync(new RollbackRequest(
                 FailedVersion: targetVersion ?? "unknown",
                 PreviousVersion: previousVersion,
@@ -465,6 +470,16 @@ public class UpdateStrategy : IStrategy
                 ReportType: _reportType,
                 Reason: report.FirstFailureReason ?? "self-check failed"),
                 CancellationToken.None).ConfigureAwait(false);
+
+            // Marker lifecycle (design §6.3): the rollback consumes the recovery material recorded
+            // in the marker, so a COMPLETED rollback deletes it — otherwise the client's orphan
+            // check would re-rollback the same incident on the next start. An incomplete rollback
+            // keeps the marker: the orphan path then retries the recovery with the same material.
+            if (!string.IsNullOrEmpty(result.ActiveVersion))
+            {
+                UpdateVerificationMarker.Delete(config.InstallPath);
+                UpdateVerificationMarker.DeleteAckFiles(config.InstallPath);
+            }
 
             // Hook + event on top of the report RollbackManager already sent.
             var failEx = new InvalidOperationException(
@@ -487,6 +502,34 @@ public class UpdateStrategy : IStrategy
         catch (Exception ex)
         {
             GeneralTracer.Error("UpdateStrategy: failed-verification handling errored.", ex);
+        }
+    }
+
+    /// <summary>
+    ///     Reports the self-check verdict itself (phase=Startup) — best-effort: the rollback
+    ///     report RollbackManager sends afterwards is the reliable one; this adds the server-side
+    ///     "failed at startup" attribution even when the rollback path degrades.
+    /// </summary>
+    private async Task ReportSelfCheckFailureAsync(UpdateContext config, SelfCheckReport report)
+    {
+        try
+        {
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0,
+                (int)Download.Reporting.UpdateStatus.Failure,
+                _reportType)
+            {
+                Phase = Download.Reporting.UpdatePhases.Startup,
+                Error = new Download.Reporting.UpdateFailure
+                {
+                    Category = "healthCheckFailure",
+                    Message = report.FirstFailureReason,
+                }
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"UpdateStrategy: self-check failure report failed: {ex.Message}");
         }
     }
 
