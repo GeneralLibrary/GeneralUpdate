@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core.JsonContext;
 
 namespace GeneralUpdate.Core.Diagnostics;
 
@@ -77,10 +79,14 @@ internal static class DiagnosticsPackager
     /// <summary>
     ///     Packs a real-time bundle from in-memory text payloads plus the standard
     ///     install-directory artifacts (manifest snapshot, trace-log tail) into a staging directory,
-    ///     then archives it.
+    ///     then archives it. A schema-2 <c>manifest.json</c> (same disk contract as the Bowl
+    ///     outbox) is written into the archive so the server can identify the bundle and treat
+    ///     it as parsed evidence — real-time bundles are first-class outbox citizens.
     /// </summary>
+    /// <param name="bundleGuid">Canonical bundle id; the server deduplicates uploads on it.</param>
     public static (string ZipPath, List<string> Entries)? PackBundle(
-        DiagnosticsCollectRequest request, DiagnosticsOptions options, IBlackMatcher? privacyFilter = null)
+        DiagnosticsCollectRequest request, DiagnosticsOptions options, string bundleGuid,
+        IBlackMatcher? privacyFilter = null)
     {
         var stagingRoot = Path.Combine(Path.GetTempPath(), $"generalupdate-diagnostics-{Guid.NewGuid():N}");
         try
@@ -99,12 +105,34 @@ internal static class DiagnosticsPackager
             var logTail = ReadLogTail(request.InstallPath);
             WriteIfAny(Path.Combine(stagingRoot, "update-log-tail.txt"), logTail);
 
+            WriteIfAny(Path.Combine(stagingRoot, "manifest.json"), BuildManifestJson(request, options, bundleGuid));
+
             return PackDirectory(stagingRoot, options, privacyFilter);
         }
         finally
         {
             TryDeleteDirectory(stagingRoot);
         }
+    }
+
+    /// <summary>
+    ///     In-archive manifest (schema 2 disk contract): identity + kind + file list. Written
+    ///     before packing so <see cref="PackDirectory"/> includes it in the audit list.
+    /// </summary>
+    private static string BuildManifestJson(
+        DiagnosticsCollectRequest request, DiagnosticsOptions options, string bundleGuid)
+    {
+        var manifest = new OutboxManifest
+        {
+            Schema = OutboxManifest.SupportedSchema,
+            Guid = bundleGuid,
+            Kind = request.Kind,
+            TargetName = options.TargetName,
+            Version = request.TargetVersion,
+            CreatedAtUtc = DateTime.UtcNow,
+            State = OutboxStates.Pending,
+        };
+        return JsonSerializer.Serialize(manifest, DiagnosticsJsonContext.Default.OutboxManifest);
     }
 
     private static List<string> WriteArchive(

@@ -25,6 +25,12 @@ public sealed class DiagnosticsChannel
     /// <summary>Scanner delivering the Bowl crash-evidence outbox.</summary>
     public PendingDiagnosticsScanner Scanner { get; }
 
+    /// <summary>
+    ///     Blacklist filter applied when packaging evidence. Exposed so real-time collectors
+    ///     (rollback / self-check) pack under the same privacy gate as the outbox scanner.
+    /// </summary>
+    public IBlackMatcher? PrivacyFilter { get; }
+
     /// <param name="installPath">Application install root (locates the <c>fail/</c> outbox).</param>
     /// <param name="options">Runtime options. Must be enabled and carry a URL — see <see cref="IsUsable"/>.</param>
     /// <param name="privacyFilter">Optional blacklist filter applied when packaging evidence.</param>
@@ -33,6 +39,7 @@ public sealed class DiagnosticsChannel
         if (string.IsNullOrWhiteSpace(installPath))
             throw new ArgumentNullException(nameof(installPath));
         Options = options ?? throw new ArgumentNullException(nameof(options));
+        PrivacyFilter = privacyFilter;
         Uploader = new DiagnosticsUploader(options);
         Scanner = new PendingDiagnosticsScanner(installPath, options, Uploader, privacyFilter);
     }

@@ -218,7 +218,7 @@ public sealed class UpdateReportingTests : IDisposable
 
     /// <summary>A non-2xx leaves redacted evidence pending; retry sends only the legacy allowlisted HTTP fields.</summary>
     [Fact]
-    public async Task FailedHttpDelivery_RemainsPendingAndRetriesLegacyPayloadOnly()
+    public async Task FailedHttpDelivery_RemainsPendingAndRetriesAllowlistedPayload()
     {
         var config = Config(launch: true);
         config.Token = "private-token";
@@ -229,8 +229,14 @@ public sealed class UpdateReportingTests : IDisposable
         var pending = Assert.Single(Directory.GetFiles(Path.Combine(directory, "pending")));
         Assert.Contains("[REDACTED]", File.ReadAllText(pending));
         Assert.DoesNotContain("private-token", File.ReadAllText(pending));
+        // Wire allowlist: the identity trio leads; the optional attribution fields carry only the
+        // redacted evidence (GeneralSpace ReportDTO extension — legacy servers skip unknown members).
         var payload = JsonNode.Parse(handler.Body!)!.AsObject();
-        Assert.Equal(new[] { "recordId", "status", "type" }, payload.Select(p => p.Key));
+        Assert.Equal(new[] { "recordId", "status", "type", "phase", "errorCode", "message" }, payload.Select(p => p.Key));
+        Assert.Equal(UpdatePhases.Startup, (string?)payload["phase"]);
+        Assert.Equal("System.InvalidOperationException", (string?)payload["errorCode"]);
+        Assert.Equal("[REDACTED] must stay local", (string?)payload["message"]);
+        Assert.DoesNotContain("private-token", handler.Body!);
         handler.Status = HttpStatusCode.OK;
         await UpdateAttempt.RetryPendingReportsAsync(directory, reporter);
         Assert.Empty(Directory.GetFiles(Path.Combine(directory, "pending")));

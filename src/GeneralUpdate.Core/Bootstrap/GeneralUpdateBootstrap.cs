@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text;
 using System.Text.Json;
@@ -564,7 +565,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 us.SetReportType(_configInfo.ReportType);
                 us.SetSelfCheckRules(ResolveSelfCheckRules());
                 us.LaunchBowl = GetOption(Option.LaunchBowl);
-                us.SetDiagnosticsUploader(diagnostics?.Uploader);
+                us.SetDiagnosticsChannel(diagnostics);
                 break;
         }
 
@@ -595,9 +596,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     }
 
     /// <summary>
-    ///     Builds the client diagnostics channel when the upload switch is on and a report URL
-    ///     is configured; <c>null</c> otherwise, keeping every diagnostics path inert.
+    ///     Builds the client diagnostics channel when the upload switch is on; <c>null</c>
+    ///     otherwise, keeping every diagnostics path inert.
     /// </summary>
+    /// <remarks>
+    ///     Endpoint resolution: an explicit <see cref="Option.DiagnosticsReportUrl"/> wins; when it
+    ///     is empty the GeneralSpace artifact endpoint is derived from the status report URL's
+    ///     origin (<c>{origin}/Fault/UploadArtifact</c>) — the reporter and the diagnostics
+    ///     channel always target the same server in a GeneralSpace deployment.
+    /// </remarks>
     private Diagnostics.DiagnosticsChannel? BuildDiagnosticsChannel()
     {
         if (!GetOption(Option.DiagnosticsUploadEnabled))
@@ -606,15 +613,46 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var url = GetOption(Option.DiagnosticsReportUrl);
         if (string.IsNullOrWhiteSpace(url))
         {
-            GeneralTracer.Warn("GeneralUpdateBootstrap: DiagnosticsUploadEnabled without DiagnosticsReportUrl — diagnostics channel disabled.");
-            return null;
+            url = DeriveDiagnosticsReportUrl(_configInfo.ReportUrl);
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                GeneralTracer.Warn(
+                    "GeneralUpdateBootstrap: DiagnosticsUploadEnabled without DiagnosticsReportUrl (and no ReportUrl origin to derive it from) — diagnostics channel disabled.");
+                return null;
+            }
+
+            GeneralTracer.Info($"GeneralUpdateBootstrap: DiagnosticsReportUrl derived from the report origin: {url}");
         }
 
         return new Diagnostics.DiagnosticsChannel(_configInfo.InstallPath, new Diagnostics.DiagnosticsOptions
         {
             Enabled = true,
-            Url = url
+            Url = url,
+            AppKey = _configInfo.AppSecretKey,
+            ProductId = _configInfo.ProductId,
+            Platform = ResolveDiagnosticsPlatform(),
+            TargetName = _configInfo.MainAppName,
         }, FileSystem.StorageManager.BlackMatcher);
+    }
+
+    /// <summary>Composes the GeneralSpace artifact endpoint from the report URL's origin.</summary>
+    private static string? DeriveDiagnosticsReportUrl(string? reportUrl)
+    {
+        if (string.IsNullOrWhiteSpace(reportUrl) ||
+            !Uri.TryCreate(reportUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            return null;
+
+        return $"{uri.Scheme}://{uri.Authority}/Fault/UploadArtifact";
+    }
+
+    /// <summary>Platform code per the GeneralSpace convention (1 = Windows, 2 = Linux, 3 = macOS).</summary>
+    private static int ResolveDiagnosticsPlatform()
+    {
+        // netstandard2.0 target: OperatingSystem.Is* guards are .NET 5+ only.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return 1;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return 2;
+        return 3;
     }
 
     private static Format ParseFormat(string? compressFormat)

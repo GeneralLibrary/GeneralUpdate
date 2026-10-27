@@ -980,7 +980,7 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Warn(
             $"ClientStrategy: orphan verify marker (target={marker.TargetVersion}) — updater never rendered a verdict, rolling back to {marker.PreviousVersion}.");
 
-        var rollback = new RollbackManager(installPath, Reporter, _diagnostics?.Uploader);
+        var rollback = new RollbackManager(installPath, Reporter, _diagnostics);
         var result = await rollback.RollbackAsync(new RollbackRequest(
             FailedVersion: marker.TargetVersion ?? "unknown",
             PreviousVersion: marker.PreviousVersion,
