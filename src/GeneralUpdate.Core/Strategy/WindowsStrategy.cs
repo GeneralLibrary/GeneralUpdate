@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
@@ -105,10 +106,10 @@ namespace GeneralUpdate.Core.Strategy
                 var appName = LaunchAppName ?? throw new InvalidOperationException("LaunchAppName must be set before calling StartAppAsync.");
                 var appPath = ResolveAppPath(appName, UseUpdatePath);
                 if (string.IsNullOrEmpty(appPath))
-                    throw new Exception($"Can't find the app {appName}!");
+                    throw new FileNotFoundException($"Can't find the app {appName}!", appName);
 
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
-                using var appProcess = Process.Start(appPath);
+                using var appProcess = ProcessLauncher.Start(appPath);
                 if (appProcess == null)
                     throw new InvalidOperationException($"Failed to start application: {appPath}");
                 // Do NOT check appProcess.HasExited here — a fast-starting app may
@@ -132,7 +133,7 @@ namespace GeneralUpdate.Core.Strategy
                     if (!string.IsNullOrEmpty(bowlAppPath))
                     {
                         GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching Bowl process={bowlAppPath}");
-                        using var bowlProcess = Process.Start(bowlAppPath);
+                        using var bowlProcess = ProcessLauncher.Start(bowlAppPath);
                         if (bowlProcess != null)
                             GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: Bowl process started (PID: {bowlProcess.Id}).");
                     }

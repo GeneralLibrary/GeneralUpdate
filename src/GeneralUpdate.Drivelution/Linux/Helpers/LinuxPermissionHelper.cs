@@ -36,7 +36,7 @@ public static class LinuxPermissionHelper
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 var output = process.StandardOutput.ReadToEnd().Trim();
@@ -72,7 +72,7 @@ public static class LinuxPermissionHelper
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 await process.WaitForExitAsync();
@@ -144,7 +144,7 @@ public static class LinuxPermissionHelper
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 var output = await process.StandardOutput.ReadToEndAsync();

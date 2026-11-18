@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
@@ -170,9 +171,9 @@ namespace CoreTest.Bootstrap
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 InstallPath = _testDir,
-                AppSecretKey = "secret-key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.Token("matrix")
             };
 
             config.Validate();
@@ -185,7 +186,7 @@ namespace CoreTest.Bootstrap
             {
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key"
+                AppSecretKey = FixtureValues.Secret("matrix")
             };
 
             Assert.Throws<ArgumentException>(() => config.Validate());
@@ -199,7 +200,7 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 MainAppName = null!
             };
 
@@ -215,7 +216,7 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 ClientVersion = null!
             };
 
@@ -224,10 +225,10 @@ namespace CoreTest.Bootstrap
         }
 
         [Theory]
-        [InlineData("Bearer", "jwt-token")]
-        [InlineData("ApiKey", "api-key-12345")]
-        [InlineData("Basic", "base64-credentials")]
-        [InlineData("HMAC", "hmac-secret")]
+        [InlineData("Bearer", "v1")]
+        [InlineData("ApiKey", "v2")]
+        [InlineData("Basic", "v3")]
+        [InlineData("HMAC", "v4")]
         public void Configinfo_Validate_VariousAuthSchemes_Passes(string scheme, string token)
         {
             var config = new UpdateRequest
@@ -235,7 +236,7 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 Scheme = scheme,
                 Token = token
             };
@@ -251,9 +252,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 Scheme = "https",
-                Token = "token",
+                Token = FixtureValues.Token("matrix"),
                 Files = new List<string> { "*.pdb", "*.config" },
                 Formats = new List<string> { ".log", ".tmp" },
                 Directories = new List<string> { "logs", "temp" }
@@ -505,12 +506,12 @@ namespace CoreTest.Bootstrap
                 ClientVersion = "4.2.1-beta",
                 UpgradeClientVersion = "1.5.0",
                 InstallPath = @"C:\Program Files\EnterpriseApp",
-                AppSecretKey = "enterprise-secret-key-2026",
+                AppSecretKey = FixtureValues.Secret("enterprise"),
                 ProductId = "enterprise-app-pro",
                 UpdateLogUrl = "https://mycompany.com/releases",
                 ReportUrl = "https://telemetry.mycompany.com/api/v1/reports",
                 Scheme = "HMAC",
-                Token = "hmac-secret-key",
+                Token = FixtureValues.Token("enterprise"),
                 Bowl = "Bowl.exe",
                 DriverDirectory = @"C:\Program Files\EnterpriseApp\drivers",
                 Files = new List<string> { "*.pdb", "*.config", "*.Development.json" },
@@ -536,9 +537,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = version,
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.Token("matrix")
             };
 
             config.Validate();
@@ -556,9 +557,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = url,
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.Secret("matrix"),
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.Token("matrix")
             };
 
             config.Validate();

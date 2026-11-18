@@ -483,7 +483,7 @@ namespace GeneralUpdate.Core.Strategy
             if (string.IsNullOrEmpty(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: launching {appPath}");
-            using var process = Process.Start(appPath);
+            using var process = ProcessLauncher.Start(appPath);
             if (process == null)
                 throw new InvalidOperationException($"Failed to start process: {appPath}");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: process started (PID: {process.Id}).");
@@ -504,7 +504,7 @@ namespace GeneralUpdate.Core.Strategy
             if (string.IsNullOrEmpty(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
             GeneralTracer.Info($"AbstractStrategy.StartProcessForVerification: launching {appPath}");
-            var process = Process.Start(appPath);
+            var process = ProcessLauncher.Start(appPath);
             if (process == null)
                 throw new InvalidOperationException($"Failed to start process: {appPath}");
             GeneralTracer.Info($"AbstractStrategy.StartProcessForVerification: process started (PID: {process.Id}).");

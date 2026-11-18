@@ -75,7 +75,7 @@ public static class WindowsPermissionHelper
                 startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             }
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 process.WaitForExit();

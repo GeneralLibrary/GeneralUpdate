@@ -146,7 +146,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             var (downloaded, elapsed) = await StreamDownloadAsync(stream, fs, totalBytes, existingBytes,
-                destPath, progress, sw, token, asset.VersionContext).ConfigureAwait(false);
+                destPath, progress, sw, token, asset.VersionContext, cts, _timeout).ConfigureAwait(false);
 
             progress?.Report(new DownloadProgress(
                 Path.GetFileName(destPath), downloaded,
@@ -178,21 +178,27 @@ public class HttpDownloadExecutor : IDownloadExecutor
     /// <returns>A tuple containing the actual bytes downloaded and the elapsed duration.</returns>
     /// <remarks>
     /// <para>
-    /// The download loop uses an 8192-byte (8 KB) buffer for chunked reading to avoid
-    /// excessive memory consumption.
+    /// The download loop uses a 64 KB buffer for chunked reading to balance memory
+    /// consumption and throughput on high-bandwidth links.
     /// </para>
     /// <para>
     /// Progress is reported every 250 milliseconds, or immediately upon download completion.
     /// Progress information includes the file name, bytes downloaded, total bytes (if known),
     /// and completion percentage.
     /// </para>
+    /// <para>
+    /// When <paramref name="idleCts"/> is supplied, <paramref name="idleTimeout"/> is re-armed
+    /// after every successful read, so the timeout bounds <em>inactivity</em> (a stalled
+    /// connection) rather than the total duration of the download. Slow-but-alive
+    /// transfers of arbitrarily large files therefore keep making progress.
+    /// </para>
     /// </remarks>
     internal static async Task<(long Downloaded, TimeSpan Elapsed)> StreamDownloadAsync(
         Stream source, Stream dest, long totalBytes, long existingBytes,
         string destPath, IProgress<DownloadProgress>? progress, Stopwatch sw, CancellationToken token,
-        object? versionContext = null)
+        object? versionContext = null, CancellationTokenSource? idleCts = null, TimeSpan idleTimeout = default)
     {
-        var buffer = new byte[8192];
+        var buffer = new byte[65536];
         long downloaded = existingBytes;
         long lastReport = 0;
         int read;
@@ -201,6 +207,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
         {
             await dest.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
             downloaded += read;
+            idleCts?.CancelAfter(idleTimeout);
 
             var now = sw.ElapsedMilliseconds;
             if (now - lastReport >= 250 || downloaded == totalBytes + existingBytes)

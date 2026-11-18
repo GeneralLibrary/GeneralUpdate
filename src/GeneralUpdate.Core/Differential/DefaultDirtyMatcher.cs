@@ -37,16 +37,42 @@ public class DefaultDirtyMatcher : IDirtyMatcher
         if (oldFile is null) throw new ArgumentNullException(nameof(oldFile));
         if (patchFiles is null) throw new ArgumentNullException(nameof(patchFiles));
 
-        var findFile = patchFiles.FirstOrDefault(f =>
+        var candidates = patchFiles.Where(f =>
         {
+            if (!Path.GetExtension(f.FullName).Equals(PatchFormat, System.StringComparison.OrdinalIgnoreCase))
+                return false;
             var name = Path.GetFileNameWithoutExtension(f.Name);
             return name.Equals(oldFile.Name, System.StringComparison.OrdinalIgnoreCase);
-        });
+        }).ToList();
 
-        if (findFile != null &&
-            Path.GetExtension(findFile.FullName).Equals(PatchFormat, System.StringComparison.OrdinalIgnoreCase))
-            return findFile;
+        if (candidates.Count == 0) return null;
+        if (candidates.Count == 1) return candidates[0];
 
-        return null;
+        // Same file name exists in multiple patch directories: prefer the candidate whose
+        // directory structure aligns most closely with the application file's directory,
+        // so identical names in different subdirectories receive their own patch instead
+        // of whichever candidate happened to enumerate first.
+        return candidates
+            .OrderByDescending(c => CommonSuffixSegments(oldFile.DirectoryName, c.DirectoryName))
+            .First();
+    }
+
+    /// <summary>
+    /// Counts the trailing directory segments shared by the two paths (case-insensitive).
+    /// </summary>
+    private static int CommonSuffixSegments(string? dirA, string? dirB)
+    {
+        if (string.IsNullOrEmpty(dirA) || string.IsNullOrEmpty(dirB)) return 0;
+        var a = dirA.TrimEnd('\\', '/').Split('\\', '/');
+        var b = dirB.TrimEnd('\\', '/').Split('\\', '/');
+        int i = a.Length - 1, j = b.Length - 1, shared = 0;
+        while (i >= 0 && j >= 0 &&
+               string.Equals(a[i], b[j], System.StringComparison.OrdinalIgnoreCase))
+        {
+            shared++;
+            i--;
+            j--;
+        }
+        return shared;
     }
 }

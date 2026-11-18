@@ -215,7 +215,7 @@ public static class DownloadPlanBuilder
         }
 
         // ── Chain plan with fallback fulls ──
-        if (fullCandidates.Count > 0)
+        if (chainCandidates.Count > 0 && fullCandidates.Count > 0)
         {
             var fallbackFulls = new List<DownloadAsset>();
 
@@ -253,6 +253,19 @@ public static class DownloadPlanBuilder
             {
                 FallbackFulls = fallbackFulls
             };
+        }
+
+        // ── Full-only plan: the latest full replacement package is the plan itself.
+        // Without this branch a server offering only Full packages produced an empty
+        // plan while HasUpdate still reported an update, which crashed the client
+        // strategy downstream (SendProcessIpc with a null last version).
+        if (fullCandidates.Count > 0)
+        {
+            var bestFull = fullCandidates
+                .OrderByDescending(a => Lookup(a))
+                .First();
+            GeneralTracer.Info($"DownloadPlanBuilder: no chain candidates, using full package {bestFull.Name} (v{bestFull.Version}, {bestFull.Size} bytes).");
+            return new DownloadPlan(new List<DownloadAsset> { bestFull }, isForcibly);
         }
 
         return new DownloadPlan(chainCandidates, isForcibly);

@@ -282,7 +282,7 @@ public sealed class UpdateAttempt : IDisposable
                 WorkingDirectory = Path.GetDirectoryName(options.ExecutablePath)!,
                 Arguments = "--attempt " + _config.UpdateAttemptId + " --state-root " + QuoteArgument(_config.DiagnosticsDirectory!)
             };
-            _host = Process.Start(info) ?? throw new InvalidOperationException("Bowl host did not start.");
+            _host = ProcessLauncher.Start(info) ?? throw new InvalidOperationException("Bowl host did not start.");
             var expected = ProcessIdentity.From(_host);
             var watch = Stopwatch.StartNew();
             var readyPath = Path.Combine(DirectoryPath, "ready.json");

@@ -100,7 +100,7 @@ public static class BowlLauncher
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process == null)
             {
                 GeneralTracer.Warn("BowlLauncher: process start returned null — watchdog not started.");

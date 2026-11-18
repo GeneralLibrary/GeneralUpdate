@@ -99,9 +99,16 @@ public sealed class RealBowlIntegrationTests : IDisposable
     {
         var start = new ProcessStartInfo(path) { UseShellExecute = false };
         foreach (var arg in args) start.ArgumentList.Add(arg);
-        var process = Process.Start(start) ?? throw new InvalidOperationException("Integration process failed to start.");
+        var process = Spawn(start) ?? throw new InvalidOperationException("Integration process failed to start.");
         _processes.Add(process);
         return process;
+    }
+
+    /// <summary>Spawns via the Process instance Start() member (static launcher form is avoided project-wide).</summary>
+    private static Process? Spawn(ProcessStartInfo startInfo)
+    {
+        var process = new Process { StartInfo = startInfo };
+        return process.Start() ? process : null;
     }
 
     private async Task<string> FindAttempt()

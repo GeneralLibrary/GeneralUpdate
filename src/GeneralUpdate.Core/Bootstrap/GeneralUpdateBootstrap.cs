@@ -137,11 +137,14 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return appType switch
         {
-            AppType.Client => await LaunchWithStrategy(new ClientStrategy()),
-            AppType.Upgrade => await LaunchWithStrategy(new UpdateStrategy()),
-            AppType.OssClient => await LaunchWithStrategy(new OssStrategy(AppType.OssClient)),
-            AppType.OssUpgrade => await LaunchWithStrategy(new OssStrategy(AppType.OssUpgrade)),
-            _ => await LaunchWithStrategy(new ClientStrategy())
+            // Library entry points must not hop back to a host SynchronizationContext
+            // (a UI host blocking with .Result would deadlock) — ConfigureAwait(false)
+            // consistently on the library side.
+            AppType.Client => await LaunchWithStrategy(new ClientStrategy()).ConfigureAwait(false),
+            AppType.Upgrade => await LaunchWithStrategy(new UpdateStrategy()).ConfigureAwait(false),
+            AppType.OssClient => await LaunchWithStrategy(new OssStrategy(AppType.OssClient)).ConfigureAwait(false),
+            AppType.OssUpgrade => await LaunchWithStrategy(new OssStrategy(AppType.OssUpgrade)).ConfigureAwait(false),
+            _ => await LaunchWithStrategy(new ClientStrategy()).ConfigureAwait(false)
         };
     }
 
@@ -167,7 +170,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
             roleStrategy.Create(_configInfo);
 
-            await roleStrategy.ExecuteAsync();
+            await roleStrategy.ExecuteAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {

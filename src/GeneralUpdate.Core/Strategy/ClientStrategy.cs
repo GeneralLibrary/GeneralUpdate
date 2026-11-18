@@ -586,6 +586,10 @@ public class ClientStrategy : IStrategy
 
         InitBlackPolicy();
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
+        // Silent-mode polling creates a fresh temp dir every cycle; a failed cycle left
+        // residue behind until the one-shot 24h cleanup in SetConfig ran. Sweeping here
+        // (cheap + idempotent, other-PID dirs only) bounds the leak window to one cycle.
+        StorageManager.CleanupOldTempDirectories();
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, StorageManager.BackupRootDirectory,
             StorageManager.GetBackupDirectoryName());
         Download.Reporting.UpdateAttempt.ValidateExternalPath(_configInfo.DiagnosticsDirectory!, _configInfo);
@@ -602,7 +606,7 @@ public class ClientStrategy : IStrategy
         if (_configInfo.BackupEnabled != false)
         {
             _configInfo.Attempt?.Record("backup");
-            Backup();
+            await BackupAsync().ConfigureAwait(false);
         }
         else
         {
@@ -936,7 +940,7 @@ public class ClientStrategy : IStrategy
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Upgrade application not found: {appPath}");
         GeneralTracer.Info($"ClientStrategy: launching upgrade process {appPath}");
-        using var process = Process.Start(appPath);
+        using var process = ProcessLauncher.Start(appPath);
         if (process == null)
             throw new InvalidOperationException($"Failed to start upgrade process: {appPath}");
         GeneralTracer.Info($"ClientStrategy: upgrade process launched (PID: {process.Id}).");
@@ -1190,19 +1194,21 @@ public class ClientStrategy : IStrategy
     /// Backs up the current installation directory to the specified backup directory for rollback on update failure.
     /// </summary>
     /// <remarks>
-    /// The backup operation is performed via <c>StorageManager.Backup</c>, excluding directories configured in the blacklist.
+    /// The backup runs on the thread pool via <c>StorageManager.BackupAsync</c> (the
+    /// synchronous version blocked the caller for the entire install-tree copy),
+    /// excluding directories configured in the blacklist.
     /// The backup directory path format is: {InstallPath}/.backups/backup-{yyyyMMddHHmmss}.
     /// This step can be skipped by setting <c>UpdateContext.BackupEnabled</c> to <c>false</c>.
     /// After a successful backup, old backups are cleaned up, retaining only the most recent 3.
     /// </remarks>
-    private void Backup()
+    private async Task BackupAsync()
     {
         GeneralTracer.Info(
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
-        StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            _configInfo.Directories ?? BlackDefaults.DefaultDirectories);
+        await StorageManager.BackupAsync(_configInfo.InstallPath, _configInfo.BackupDirectory,
+            _configInfo.Directories ?? BlackDefaults.DefaultDirectories).ConfigureAwait(false);
         // Retain only the most recent 3 backups to prevent disk accumulation
-        StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
+        await StorageManager.CleanBackupAsync(_configInfo.InstallPath, keepVersions: 3).ConfigureAwait(false);
     }
 
     /// <summary>

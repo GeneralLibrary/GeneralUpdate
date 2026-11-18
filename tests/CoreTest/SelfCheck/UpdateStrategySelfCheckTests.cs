@@ -115,7 +115,7 @@ public sealed class UpdateStrategySelfCheckTests : IDisposable
     public async Task SelfCheckOn_VerificationFails_RollsBackAndReportsBothPhases()
     {
         var os = CreateOs();
-        os.Verdict = ProcessLaunchRuleTests.ImmediateExit(3);   // start-and-die → unusable version
+        os.Verdict = StubVerdict.Unusable;              // start-and-die → unusable version
         var config = Config(selfCheck: true);
 
         var reporter = await RunAsync(config, os);
@@ -154,7 +154,7 @@ public sealed class UpdateStrategySelfCheckTests : IDisposable
         public bool Launched { get; private set; }
         public bool VerificationStarted { get; private set; }
         public bool FailPipeline { get; init; }
-        public (string FileName, string Arguments) Verdict { get; set; } = ProcessLaunchRuleTests.StayAlive();
+        public StubVerdict Verdict { get; set; } = StubVerdict.Healthy;
 
         protected override PipelineBuilder BuildPipeline(PipelineContext context)
         {
@@ -183,7 +183,7 @@ public sealed class UpdateStrategySelfCheckTests : IDisposable
         internal override Process StartProcessForVerification(string appName)
         {
             VerificationStarted = true;
-            var process = ProcessLaunchRuleTests.StartStub(Verdict);
+            var process = StubProcesses.Launch(Verdict)!;
             processes.Add(process);
             return process;
         }

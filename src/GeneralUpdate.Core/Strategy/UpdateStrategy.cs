@@ -405,7 +405,7 @@ public class UpdateStrategy : IStrategy
         var appPath = Path.Combine(_configInfo!.InstallPath, appName);
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Can't find the app {appName}!");
-        var process = Process.Start(appPath);
+        var process = ProcessLauncher.Start(appPath);
         if (process == null)
             throw new InvalidOperationException($"Failed to start process: {appPath}");
         GeneralTracer.Info($"UpdateStrategy: verification target started: {appPath} (PID: {process.Id}).");
@@ -548,7 +548,7 @@ public class UpdateStrategy : IStrategy
             var appPath = Path.Combine(_configInfo!.InstallPath, appName);
             if (!File.Exists(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
-            using var process = Process.Start(appPath);
+            using var process = ProcessLauncher.Start(appPath);
             GeneralTracer.Info($"UpdateStrategy: previous version relaunched: {appPath}.");
         }
         catch (Exception ex)
@@ -571,7 +571,7 @@ public class UpdateStrategy : IStrategy
             if (string.IsNullOrWhiteSpace(bowlName)) return;
             var bowlPath = Path.Combine(_configInfo.InstallPath, bowlName);
             if (!File.Exists(bowlPath)) return;
-            using var bowlProcess = Process.Start(bowlPath);
+            using var bowlProcess = ProcessLauncher.Start(bowlPath);
             GeneralTracer.Info($"UpdateStrategy: Bowl launched (PID: {bowlProcess?.Id}).");
         }
         catch (Exception ex)

@@ -225,23 +225,48 @@ public class DiffPipeline
         int completed = 0;
         using var semaphore = new SemaphoreSlim(_options.MaxDegreeOfParallelism);
 
+        // O(1) old-version lookup by relative path: Match() used to scan the whole
+        // left-node list for every changed file (O(n²) string comparisons on large trees).
+        // The injected matcher stays as the fallback so custom matcher semantics survive.
+        var leftIndex = new Dictionary<string, FileNode>(leftNodes.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var node in leftNodes)
+        {
+            // First writer wins on duplicate relative paths (Dictionary.TryAdd is
+            // unavailable on netstandard2.0).
+            if (!string.IsNullOrWhiteSpace(node.RelativePath) &&
+                !leftIndex.ContainsKey(NormalizeRelative(node.RelativePath)))
+                leftIndex[NormalizeRelative(node.RelativePath)] = node;
+        }
+
         var tasks = differentFiles.Select(file => Task.Run(async () =>
         {
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var tempDir = GetTempDirectory(file, targetPath, patchPath);
-                var oldFile = _cleanMatcher.Match(file, leftNodes);
+                var oldFile = (file.RelativePath != null &&
+                               leftIndex.TryGetValue(NormalizeRelative(file.RelativePath), out var indexed))
+                    ? indexed
+                    : _cleanMatcher.Match(file, leftNodes);
 
                 if (oldFile != null)
                 {
-                    if (!StorageManager.HashEquals(oldFile.FullName, file.FullName))
+                    // Decide from the hashes Compare already computed (in-memory string
+                    // compare, zero I/O); HashEquals re-read BOTH files in full and was
+                    // the dominant cost of patch generation on large directories. Fall
+                    // back to the full comparison only when a hash is missing.
+                    var needsPatch = !string.IsNullOrEmpty(oldFile.Hash) && !string.IsNullOrEmpty(file.Hash)
+                        ? !string.Equals(oldFile.Hash, file.Hash, StringComparison.OrdinalIgnoreCase)
+                        : !StorageManager.HashEquals(oldFile.FullName, file.FullName);
+
+                    if (needsPatch)
                     {
                         ValidateFileSize(oldFile.FullName, file.FullName);
                         var tempPatchPath = Path.Combine(tempDir, $"{file.Name}{PatchExtension}");
-                        await _binaryDiffer.CleanAsync(oldFile.FullName, file.FullName, tempPatchPath, cancellationToken);
+                        await _binaryDiffer.CleanAsync(oldFile.FullName, file.FullName, tempPatchPath, cancellationToken)
+                            .ConfigureAwait(false);
                     }
                 }
                 else
@@ -267,7 +292,7 @@ public class DiffPipeline
             }
         }, cancellationToken));
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
 
         var exceptFiles = _cleanMatcher.Except(sourcePath, targetPath)?.ToList();
         if (exceptFiles is { Count: > 0 })
@@ -332,14 +357,14 @@ public class DiffPipeline
         var patchFiles = StorageManager.GetAllFiles(patchPath, skipDirectory).ToList();
         var oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory).ToList();
 
-        HandleDeleteList(patchFiles, oldFiles);
+        HandleDeleteList(patchFiles, oldFiles, appPath);
         oldFiles = StorageManager.GetAllFiles(appPath, skipDirectory).ToList();
 
         int total = oldFiles.Count;
         if (total == 0)
         {
             reporter?.Report(DiffProgress.Complete(0));
-            await CopyUnknownFiles(appPath, patchPath);
+            await CopyUnknownFiles(appPath, patchPath).ConfigureAwait(false);
             return;
         }
 
@@ -356,11 +381,11 @@ public class DiffPipeline
 
         var tasks = matchedPairs.Select(pair => Task.Run(async () =>
         {
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await ApplyPatch(pair.OldFile.FullName, pair.PatchFile.FullName, cancellationToken);
+                await ApplyPatch(pair.OldFile.FullName, pair.PatchFile.FullName, cancellationToken).ConfigureAwait(false);
 
                 int done = Interlocked.Increment(ref completed);
                 reporter?.Report(new DiffProgress(done, total, pair.OldFile.Name));
@@ -380,7 +405,7 @@ public class DiffPipeline
             }
         }, cancellationToken));
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
         reporter?.Report(DiffProgress.Complete(total));
         await CopyUnknownFiles(appPath, patchPath);
     }
@@ -417,7 +442,7 @@ public class DiffPipeline
             Path.GetDirectoryName(appFilePath)!,
             $"{Path.GetRandomFileName()}_{Path.GetFileName(appFilePath)}");
 
-        await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
+        await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct).ConfigureAwait(false);
 
         if (File.Exists(tempPath))
         {
@@ -447,23 +472,13 @@ public class DiffPipeline
     /// deletion failures caused by read-only attributes.
     /// </para>
     /// </remarks>
-    private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, List<FileInfo> oldFiles)
+    private static void HandleDeleteList(IEnumerable<FileInfo> patchFiles, List<FileInfo> oldFiles, string appPath)
     {
         var json = patchFiles.FirstOrDefault(i => i.Name.Equals(DeleteListFileName, StringComparison.OrdinalIgnoreCase));
         if (json == null) return;
 
         var deleteFiles = StorageManager.GetJson<List<FileNode>>(json.FullName, FileNodesJsonContext.Default.ListFileNode);
         if (deleteFiles == null) return;
-
-        // Build a HashSet of delete-manifest hashes (hex strings from FileNode.Hash)
-        // so each oldFile is checked in O(1) instead of O(n × m).
-        var deleteHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var del in deleteFiles)
-        {
-            if (!string.IsNullOrEmpty(del.Hash))
-                deleteHashes.Add(del.Hash);
-        }
-        if (deleteHashes.Count == 0) return;
 
         // Exclude .patch files from oldFiles — they are patch input, not app files.
         var appFiles = oldFiles
@@ -472,18 +487,59 @@ public class DiffPipeline
             .ToList();
         if (appFiles.Count == 0) return;
 
+        // Match by relative path first: hashing every app file is expensive, and hash-only
+        // matching deletes EVERY copy of duplicated content (e.g. the same DLL shipped in
+        // two directories) even when the manifest only asked to remove one of them.
+        var deleteRelativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var deleteHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var del in deleteFiles)
+        {
+            if (!string.IsNullOrWhiteSpace(del.RelativePath))
+                deleteRelativePaths.Add(NormalizeRelativePath(del.RelativePath));
+            if (!string.IsNullOrEmpty(del.Hash))
+                deleteHashes.Add(del.Hash);
+        }
+
         var hashAlgorithm = new Sha256HashAlgorithm();
         foreach (var file in appFiles)
         {
             if (!File.Exists(file.FullName)) continue;
 
-            var fileHash = hashAlgorithm.ComputeHash(file.FullName);
-            if (fileHash != null && deleteHashes.Contains(fileHash))
+            var relative = NormalizeRelativePath(
+                ComputeRelativePath(appPath, file.FullName));
+            var delete = deleteRelativePaths.Contains(relative);
+            if (!delete && !deleteRelativePaths.Any())
+            {
+                // Manifest without relative paths (legacy) — fall back to content hash.
+                var fileHash = hashAlgorithm.ComputeHash(file.FullName);
+                delete = fileHash != null && deleteHashes.Contains(fileHash);
+            }
+            if (delete)
             {
                 File.SetAttributes(file.FullName, FileAttributes.Normal);
                 File.Delete(file.FullName);
             }
         }
+    }
+
+    private static string NormalizeRelativePath(string path)
+        => path.Trim().Replace('\\', '/').TrimStart('/');
+
+    /// <summary>Clean-side alias of the normalizer (shared by the left-node index).</summary>
+    private static string NormalizeRelative(string path) => NormalizeRelativePath(path);
+
+    /// <summary>
+    /// Path.GetRelativePath is unavailable on netstandard2.0; strip the app directory
+    /// prefix directly (falling back to the file name when the file sits outside it).
+    /// </summary>
+    private static string ComputeRelativePath(string basePath, string fullPath)
+    {
+        var baseTrimmed = basePath.TrimEnd('\\', '/');
+        if (fullPath.Length > baseTrimmed.Length &&
+            fullPath.StartsWith(baseTrimmed, StringComparison.OrdinalIgnoreCase) &&
+            (fullPath[baseTrimmed.Length] == '\\' || fullPath[baseTrimmed.Length] == '/'))
+            return fullPath.Substring(baseTrimmed.Length + 1);
+        return Path.GetFileName(fullPath);
     }
 
     /// <summary>

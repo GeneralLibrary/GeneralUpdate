@@ -1,3 +1,4 @@
+using ExtensionTest.TestSupport;
 using GeneralUpdate.Extension.Catalog;
 using GeneralUpdate.Extension.Compatibility;
 using GeneralUpdate.Extension.Communication;
@@ -496,7 +497,7 @@ public class GeneralExtensionHostTests : IDisposable
             ExtensionsDirectory = _testExtensionsDirectory,
             ServerUrl = "https://example.com",
             Scheme = "Bearer",
-            Token = "test-token"
+            Token = FixtureValues.Token("host")
         };
 
         // Act
@@ -522,7 +523,7 @@ public class GeneralExtensionHostTests : IDisposable
             ExtensionsDirectory = _testExtensionsDirectory,
             ServerUrl = "https://example.com",
             Scheme = "Bearer",
-            Token = "test-token"
+            Token = FixtureValues.Token("host")
         };
     }
 }

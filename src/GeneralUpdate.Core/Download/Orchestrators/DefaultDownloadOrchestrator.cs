@@ -183,7 +183,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
     public async Task<DownloadReport> ExecuteAsync(
         DownloadPlan plan,
         string destDir,
-        int maxConcurrency = 3,
+        int maxConcurrency = 0,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken token = default)
     {
@@ -193,8 +193,9 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
         Directory.CreateDirectory(destDir);
 
         // Resolve effective concurrency: Serial mode forces 1.
-        // Uses _options.MaxConcurrency as primary value; the method parameter
-        // maxConcurrency acts as an override (default 3).
+        // _options.MaxConcurrency is the primary value; the method parameter acts as
+        // an explicit override only (0 = "use options" so the default argument no
+        // longer silently masks a user-configured concurrency).
         var baseConcurrency = maxConcurrency > 0 ? maxConcurrency : _options.MaxConcurrency;
         var effectiveConcurrency = _options.DiffMode == DiffMode.Serial
             ? 1

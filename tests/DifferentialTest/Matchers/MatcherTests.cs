@@ -305,6 +305,58 @@ namespace DifferentialTest.Matchers
             Assert.Null(result);
         }
 
+        [Fact]
+        public void DefaultDirtyMatcher_SameNameInDifferentDirectories_PrefersDirectoryAffinity()
+        {
+            // Regression: the matcher used to return the FIRST same-named patch, so a file
+            // in a subdirectory could receive the patch generated for a same-named file in
+            // another directory (corrupting the applied file). When several same-named
+            // patches exist, the one sharing the most trailing directory segments with the
+            // application file must win.
+            // Arrange — two same-named patches in mirrored subdirectories. Patch naming
+            // contract: "<target>.patch" (e.g. "engine.dll.patch" patches "engine.dll").
+            var appSub = Path.Combine(_testDirectory, "app", "plugins");
+            var patchSubA = Path.Combine(_testDirectory, "patch", "plugins");
+            var patchSubB = Path.Combine(_testDirectory, "patch", "other");
+            Directory.CreateDirectory(appSub);
+            Directory.CreateDirectory(patchSubA);
+            Directory.CreateDirectory(patchSubB);
+
+            var patchA = new FileInfo(Path.Combine(patchSubA, "engine.dll.patch"));
+            var patchB = new FileInfo(Path.Combine(patchSubB, "engine.dll.patch"));
+            File.WriteAllBytes(patchA.FullName, new byte[] { 1 });
+            File.WriteAllBytes(patchB.FullName, new byte[] { 2 });
+
+            var oldFile = new FileInfo(Path.Combine(appSub, "engine.dll"));
+            var matcher = new DefaultDirtyMatcher();
+
+            // Act
+            var result = matcher.Match(oldFile, new[] { patchA, patchB });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(patchA.FullName, result.FullName);
+        }
+
+        [Fact]
+        public void DefaultDirtyMatcher_SingleCandidate_RegardlessOfDirectory_ReturnsIt()
+        {
+            // A lone same-named patch must still match even when the directory structure
+            // does not line up (older patch packages are flat).
+            // Arrange
+            var oldFile = new FileInfo(Path.Combine(_testDirectory, "deep", "nested", "app.dll"));
+            var patch = new FileInfo(Path.Combine(_testDirectory, "flat", "app.dll.patch"));
+            Directory.CreateDirectory(patch.DirectoryName!);
+            File.WriteAllBytes(patch.FullName, new byte[] { 1 });
+            var matcher = new DefaultDirtyMatcher();
+
+            // Act
+            var result = matcher.Match(oldFile, new[] { patch });
+
+            // Assert
+            Assert.Same(patch, result);
+        }
+
         #endregion
 
         #region Helper types

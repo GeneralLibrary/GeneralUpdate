@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.JsonContext;
 
@@ -20,7 +21,7 @@ public sealed class ProcessContractSelfCheckTests
         Encoding = System.Text.Encoding.UTF8,
         Format = Format.Zip,
         DownloadTimeOut = 30,
-        AppSecretKey = "secret",
+        AppSecretKey = FixtureValues.Secret("selfcheck"),
         BackupDirectory = AppContext.BaseDirectory,
         SelfCheckEnabled = true,
         SelfCheckStartupWindowSeconds = 60,

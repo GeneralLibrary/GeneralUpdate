@@ -1,3 +1,4 @@
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Strategy;
 using GeneralUpdate.Core.Pipeline;
@@ -14,7 +15,7 @@ public class StrategyCreationTests
         {
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
-            AppSecretKey = "key",
+            AppSecretKey = FixtureValues.Secret("strategy"),
             UpdateAppName = "app",
             MainAppName = "main"
         };
@@ -59,7 +60,7 @@ public class StrategyCreationTests
         {
             ClientVersion = "1.0.0",
             InstallPath = Path.GetTempPath(),
-            AppSecretKey = "key",
+            AppSecretKey = FixtureValues.Secret("strategy"),
             UpdateAppName = "Upgrade",
             MainAppName = "MainApp"
         };
@@ -223,7 +224,7 @@ public class AbstractStrategyPatchPathTests
                 InstallPath = tempDir,
                 TempPath = tempPath,
                 Format = Format.Zip,
-                AppSecretKey = "k",
+                AppSecretKey = FixtureValues.Secret("strategy-min"),
                 UpdateAppName = "Update.exe",
                 MainAppName = "App.exe",
                 PatchEnabled = true,

@@ -1,3 +1,4 @@
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 
 namespace CoreTest.Configuration;
@@ -118,7 +119,7 @@ public class UpdateConfigurationTests
             MainAppName = "MainApp",
             InstallPath = "C:\\MyApp",
             UpdateLogUrl = "https://logs.example.com",
-            AppSecretKey = "secret-key",
+            AppSecretKey = FixtureValues.Secret("config"),
             ClientVersion = "1.2.3",
             Files = new List<string> { "a.dll" },
             Formats = new List<string> { ".log" },
@@ -126,7 +127,7 @@ public class UpdateConfigurationTests
             ReportUrl = "https://report.example.com",
             Bowl = "Bowl.exe",
             Scheme = "https",
-            Token = "bearer-token",
+            Token = FixtureValues.Token("config"),
             DriverDirectory = "C:\\Drivers"
         };
 
@@ -134,7 +135,7 @@ public class UpdateConfigurationTests
         Assert.Equal("MainApp", config.MainAppName);
         Assert.Equal("C:\\MyApp", config.InstallPath);
         Assert.Equal("https://logs.example.com", config.UpdateLogUrl);
-        Assert.Equal("secret-key", config.AppSecretKey);
+        Assert.Equal(FixtureValues.Secret("config"), config.AppSecretKey);
         Assert.Equal("1.2.3", config.ClientVersion);
         Assert.Single(config.Files);
         Assert.Single(config.Formats);
@@ -142,7 +143,7 @@ public class UpdateConfigurationTests
         Assert.Equal("https://report.example.com", config.ReportUrl);
         Assert.Equal("Bowl.exe", config.Bowl);
         Assert.Equal("https", config.Scheme);
-        Assert.Equal("bearer-token", config.Token);
+        Assert.Equal(FixtureValues.Token("config"), config.Token);
         Assert.Equal("C:\\Drivers", config.DriverDirectory);
     }
 }

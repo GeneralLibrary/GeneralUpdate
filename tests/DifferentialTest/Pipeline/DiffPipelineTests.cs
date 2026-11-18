@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -158,6 +159,78 @@ namespace DifferentialTest.Pipeline
         {
             var p = new DiffProgress(3, 5, "bad.txt", "Access denied");
             Assert.Equal("Access denied", p.Error);
+        }
+
+        [Fact]
+        public async Task DirtyAsync_DeleteList_RemovesByRelativePath_KeepsDuplicateContentElsewhere()
+        {
+            // Regression: the delete manifest used to be applied by CONTENT HASH alone,
+            // so duplicated content (same bytes in two directories) was deleted everywhere
+            // even when the manifest only asked to remove one copy. Deletion must follow
+            // the manifest's RelativePath; a same-content file outside the listed paths
+            // must survive.
+            // Arrange ¡ª "lib.dll" content exists in two places; manifest removes one.
+            var appDir = Path.Combine(_testDir, "app");
+            var patchDir = Path.Combine(_testDir, "patch");
+            Directory.CreateDirectory(Path.Combine(appDir, "plugins"));
+            Directory.CreateDirectory(patchDir);
+
+            var content = "identical payload";
+            var listedFile = Path.Combine(appDir, "plugins", "lib.dll");
+            var duplicateFile = Path.Combine(appDir, "lib.dll");
+            File.WriteAllText(listedFile, content);
+            File.WriteAllText(duplicateFile, content);
+
+            var deleteNodes = new List<GeneralUpdate.Core.FileSystem.FileNode>
+            {
+                new() { Name = "lib.dll", FullName = listedFile, RelativePath = "plugins/lib.dll", Hash = "ignored" }
+            };
+            GeneralUpdate.Core.FileSystem.StorageManager.CreateJson(
+                Path.Combine(patchDir, "generalupdate.delete.json"),
+                deleteNodes,
+                GeneralUpdate.Core.JsonContext.FileNodesJsonContext.Default.ListFileNode);
+
+            var pipeline = new DiffPipeline();
+
+            // Act
+            await pipeline.DirtyAsync(appDir, patchDir);
+
+            // Assert ¡ª the listed copy is gone; the duplicate survives.
+            Assert.False(File.Exists(listedFile), "listed file should have been deleted");
+            Assert.True(File.Exists(duplicateFile), "same-content file outside the manifest must be kept");
+        }
+
+        [Fact]
+        public async Task DirtyAsync_DeleteList_WithoutRelativePaths_FallsBackToHash()
+        {
+            // Legacy manifest compatibility: entries without RelativePath still delete by
+            // content hash (the original behavior), keeping old patch packages working.
+            // Arrange
+            var appDir = Path.Combine(_testDir, "app2");
+            var patchDir = Path.Combine(_testDir, "patch2");
+            Directory.CreateDirectory(appDir);
+            Directory.CreateDirectory(patchDir);
+
+            var target = Path.Combine(appDir, "obsolete.dll");
+            File.WriteAllText(target, "to be deleted");
+
+            var hash = new GeneralUpdate.Core.HashAlgorithms.Sha256HashAlgorithm().ComputeHash(target);
+            var deleteNodes = new List<GeneralUpdate.Core.FileSystem.FileNode>
+            {
+                new() { Name = "obsolete.dll", FullName = target, RelativePath = null, Hash = hash }
+            };
+            GeneralUpdate.Core.FileSystem.StorageManager.CreateJson(
+                Path.Combine(patchDir, "generalupdate.delete.json"),
+                deleteNodes,
+                GeneralUpdate.Core.JsonContext.FileNodesJsonContext.Default.ListFileNode);
+
+            var pipeline = new DiffPipeline();
+
+            // Act
+            await pipeline.DirtyAsync(appDir, patchDir);
+
+            // Assert
+            Assert.False(File.Exists(target), "legacy hash-only manifest should still delete the file");
         }
 
         /// <summary>

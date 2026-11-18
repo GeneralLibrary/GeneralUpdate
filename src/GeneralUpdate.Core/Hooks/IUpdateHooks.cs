@@ -61,20 +61,20 @@ public class UnixPermissionHooks : IUpdateHooks
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
-        using var proc = Process.Start(psi);
+        using var proc = ProcessLauncher.Start(psi);
         if (proc == null)
         {
             GeneralTracer.Warn($"UnixPermissionHooks: chmod process could not be started for {mainApp}.");
             return;
         }
-        await Task.Run(() => proc.WaitForExit());
+        await Task.Run(() => proc.WaitForExit()).ConfigureAwait(false);
         exitCode = proc.ExitCode;
 #else
         // netstandard2.0 fallback: path is double-quoted to mitigate injection risk.
         // ArgumentList is unavailable, so we rely on the quoting and the fact that
         // chmod +x with an extra argument is not exploitable beyond a file-not-found error.
-        using var proc = Process.Start("chmod", $"+x \"{mainApp}\"");
-        await Task.Run(() => proc.WaitForExit());
+        using var proc = ProcessLauncher.Start("chmod", $"+x \"{mainApp}\"");
+        await Task.Run(() => proc.WaitForExit()).ConfigureAwait(false);
         exitCode = proc.ExitCode;
 #endif
         if (exitCode != 0)
@@ -99,8 +99,8 @@ public class CustomPermissionHooks : IUpdateHooks
         {
             RedirectStandardOutput = true, RedirectStandardError = true
         };
-        using var proc = Process.Start(psi)!;
-        await Task.Run(() => proc.WaitForExit());
+        using var proc = ProcessLauncher.Start(psi)!;
+        await Task.Run(() => proc.WaitForExit()).ConfigureAwait(false);
         if (proc.ExitCode != 0)
             throw new InvalidOperationException(
                 $"Permission script '{_scriptPath}' failed (exit {proc.ExitCode})");

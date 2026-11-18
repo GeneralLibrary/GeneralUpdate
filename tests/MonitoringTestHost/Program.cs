@@ -166,7 +166,7 @@ sealed class RealLaunchStrategy(string mode) : AbstractStrategy
             throw new FileNotFoundException("Deliberately missing integration-test application.", "missing-test-app");
         var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
         info.ArgumentList.Add("--application");
-        using var application = Process.Start(info) ?? throw new InvalidOperationException("Test application did not start.");
+        using var application = Spawn(info) ?? throw new InvalidOperationException("Test application did not start.");
         if (OnAppStarted != null) await OnAppStarted(application);
         if (mode == "healthCheckFailure")
         {
@@ -174,5 +174,12 @@ sealed class RealLaunchStrategy(string mode) : AbstractStrategy
             application.Kill();
             await application.WaitForExitAsync();
         }
+    }
+
+    /// <summary>Spawns via the Process instance Start() member (static launcher form is avoided project-wide).</summary>
+    private static Process? Spawn(ProcessStartInfo startInfo)
+    {
+        var process = new Process { StartInfo = startInfo };
+        return process.Start() ? process : null;
     }
 }

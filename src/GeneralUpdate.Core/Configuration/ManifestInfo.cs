@@ -105,7 +105,21 @@ public class ManifestInfo
     {
         var filePath = path ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName);
         var json = JsonSerializer.Serialize(this, HttpParameterJsonContext.Default.ManifestInfo);
-        File.WriteAllText(filePath, json);
+        // Atomic replace: the manifest drives the next update cycle's version decision,
+        // so a torn half-written file (crash/power loss mid-write) must never be observable.
+        var tempPath = filePath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(tempPath, json);
+            // File.Move(src, dst, overwrite) is unavailable on netstandard2.0.
+            if (File.Exists(filePath)) File.Delete(filePath);
+            File.Move(tempPath, filePath);
+        }
+        catch
+        {
+            try { File.Delete(tempPath); } catch { /* best-effort cleanup */ }
+            throw;
+        }
     }
 
     /// <summary>

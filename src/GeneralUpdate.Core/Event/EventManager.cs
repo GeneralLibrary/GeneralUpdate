@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace GeneralUpdate.Core.Event
 {
@@ -91,13 +92,25 @@ namespace GeneralUpdate.Core.Event
         {
             if (listener == null) throw new ArgumentNullException(nameof(listener));
             var type = typeof(Action<object, TEventArgs>);
-            if (_dicDelegates.TryGetValue(type, out var existing))
+            // CAS retry loop: TryGetValue → TryUpdate is not atomic — a concurrent
+            // AddListener combining onto the same delegate between the two steps made the
+            // removal vanish. Retry until our removal lands on a current value or the
+            // entry disappears.
+            while (_dicDelegates.TryGetValue(type, out var existing))
             {
                 var updated = Delegate.Remove(existing, listener);
                 if (updated == null)
-                    _dicDelegates.TryRemove(type, out _);
-                else
-                    _dicDelegates.TryUpdate(type, updated, existing);
+                {
+                    // Entry is empty only if no writer raced us; on race, retry from the
+                    // fresh value (the entry now holds a combined delegate again).
+                    // ICollection<KVP>.Remove on ConcurrentDictionary is an atomic
+                    // value-comparing remove.
+                    if (((ICollection<KeyValuePair<Type, Delegate>>)_dicDelegates)
+                        .Remove(new KeyValuePair<Type, Delegate>(type, existing)))
+                        return;
+                }
+                else if (_dicDelegates.TryUpdate(type, updated, existing))
+                    return;
             }
         }
 

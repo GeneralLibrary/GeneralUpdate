@@ -1,4 +1,5 @@
 using System.Reflection;
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
@@ -15,7 +16,7 @@ public class HttpDownloadSourceTests
 {
     private const string ValidUrl = "http://localhost:5000/api/versions";
     private const string ClientVersion = "1.0.0";
-    private const string AppSecretKey = "test-secret-key";
+    private static readonly string AppSecretKey = FixtureValues.Secret("download");
 
     #region Constructor — valid inputs
 

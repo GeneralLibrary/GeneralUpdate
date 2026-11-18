@@ -60,7 +60,7 @@ public static class LinuxSignatureHelper
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 var output = await process.StandardOutput.ReadToEndAsync();
@@ -124,7 +124,7 @@ public static class LinuxSignatureHelper
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = ProcessLauncher.Start(startInfo);
             if (process != null)
             {
                 await process.WaitForExitAsync();
