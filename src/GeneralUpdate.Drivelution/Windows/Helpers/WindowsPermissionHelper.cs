@@ -31,9 +31,12 @@ public static class WindowsPermissionHelper
             var principal = new WindowsPrincipal(identity);
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Failed to check administrator privileges - return false
+            // Trace the failure: it is not the same as "not an administrator", and the
+            // pipeline would otherwise tell the user to restart as admin for no reason.
+            GeneralTracer.Warn($"WindowsPermissionHelper.IsAdministrator: privilege check failed, assuming not elevated. {ex.Message}");
             return false;
         }
     }
@@ -89,9 +92,11 @@ public static class WindowsPermissionHelper
             // User cancelled UAC prompt
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Failed to elevate privileges
+            // Failed to elevate privileges (machinery failure — distinct from the
+            // user-declined UAC handled above). Trace it so it is not mistaken for a decline.
+            GeneralTracer.Warn($"WindowsPermissionHelper.TryElevatePrivileges: elevation attempt failed unexpectedly. {ex.Message}");
             return false;
         }
     }

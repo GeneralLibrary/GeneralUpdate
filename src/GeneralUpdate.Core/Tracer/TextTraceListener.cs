@@ -32,9 +32,15 @@ public class TextTraceListener : TraceListener, IDisposable
 
     private void QueueMessage(string? message)
     {
-        if (!_isDisposed && message != null)
+        if (_isDisposed || message == null) return;
+        try
         {
             _messageQueue.Add(message);
+        }
+        catch (InvalidOperationException)
+        {
+            // Raced with CompleteAdding() during dispose — the message is dropped, which
+            // is the correct outcome for a listener that is being torn down.
         }
     }
 
@@ -42,10 +48,18 @@ public class TextTraceListener : TraceListener, IDisposable
     {
         foreach (var message in _messageQueue.GetConsumingEnumerable())
         {
-            using (var fileStream = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-            using (var writer = new StreamWriter(fileStream))
+            try
             {
-                writer.Write(message);
+                using (var fileStream = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                using (var writer = new StreamWriter(fileStream))
+                {
+                    writer.Write(message);
+                }
+            }
+            catch
+            {
+                // A transient log-write failure (locked/rotated file, full disk) must never
+                // kill the logging thread — the host process depends on it staying alive.
             }
         }
     }

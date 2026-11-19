@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
+using CoreTest.Shared;
 
 namespace CoreTest.Configuration;
 
@@ -57,7 +58,7 @@ public class VersionModelTests
             Format = ".zip",
             Size = 104857600,
             AuthScheme = "Bearer",
-            AuthToken = "token-xyz",
+            AuthToken = FixtureValues.TokenXyz,
             UpdateLog = "Bug fixes and performance improvements"
         };
 
@@ -98,7 +99,7 @@ public class VersionModelTests
             Format = ".zip",
             Size = 5000000,
             AuthScheme = "Bearer",
-            AuthToken = "tok",
+            AuthToken = FixtureValues.Tok,
             UpdateLog = "v1 release"
         };
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -144,7 +145,7 @@ public class VersionModelTests
             Format = ".zip",
             Size = 100,
             AuthScheme = "Basic",
-            AuthToken = "t",
+            AuthToken = FixtureValues.T,
             UpdateLog = "log"
         };
 

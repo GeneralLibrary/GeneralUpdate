@@ -263,7 +263,10 @@ namespace GeneralUpdate.Core.FileSystem
                             }
                         }
                     }
-                    catch (UnauthorizedAccessException) { /* skip */ }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        GeneralTracer.Debug($"StorageManager.CleanupOldTempDirectories: access denied, skipping '{dir}'. {ex.Message}");
+                    }
                     catch (DirectoryNotFoundException) { /* raced away */ }
                 }
             }

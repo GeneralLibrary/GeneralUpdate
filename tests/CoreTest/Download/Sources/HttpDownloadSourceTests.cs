@@ -4,6 +4,7 @@ using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Download.Sources;
 using GeneralUpdate.Core.Security;
+using CoreTest.Shared;
 
 namespace CoreTest.Download.Sources;
 
@@ -15,7 +16,6 @@ public class HttpDownloadSourceTests
 {
     private const string ValidUrl = "http://localhost:5000/api/versions";
     private const string ClientVersion = "1.0.0";
-    private const string AppSecretKey = "test-secret-key";
 
     #region Constructor — valid inputs
 
@@ -23,7 +23,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithAllRequiredParams_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, null, AppSecretKey,
+            ValidUrl, ClientVersion, null, FixtureValues.SharedAppKey,
             PlatformType.Windows, null, null, null,
             AuthScheme.Hmac, null, null);
 
@@ -34,7 +34,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithAllOptionalParams_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, "2.0.0", AppSecretKey,
+            ValidUrl, ClientVersion, "2.0.0", FixtureValues.SharedAppKey,
             PlatformType.Linux, "product-1", "Bearer", "token-abc",
             AuthScheme.Bearer, null, null);
 
@@ -45,7 +45,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithUpgradeClientVersion_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, "1.5.0", AppSecretKey,
+            ValidUrl, ClientVersion, "1.5.0", FixtureValues.SharedAppKey,
             PlatformType.Windows, null, null, null,
             AuthScheme.Hmac, null, null);
 
@@ -56,7 +56,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithMacOSPlatform_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, null, AppSecretKey,
+            ValidUrl, ClientVersion, null, FixtureValues.SharedAppKey,
             PlatformType.MacOS, null, null, null,
             AuthScheme.Hmac, null, null);
 
@@ -71,7 +71,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithEmptyClientVersion_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, string.Empty, null, AppSecretKey,
+            ValidUrl, string.Empty, null, FixtureValues.SharedAppKey,
             PlatformType.Windows, null, null, null,
             AuthScheme.Hmac, null, null);
 
@@ -82,7 +82,7 @@ public class HttpDownloadSourceTests
     public void Ctor_WithEmptyProductId_CreatesInstance()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, null, AppSecretKey,
+            ValidUrl, ClientVersion, null, FixtureValues.SharedAppKey,
             PlatformType.Windows, string.Empty, null, null,
             AuthScheme.Hmac, null, null);
 
@@ -97,7 +97,7 @@ public class HttpDownloadSourceTests
     public void Implements_IDownloadSource()
     {
         var source = new HttpDownloadSource(
-            ValidUrl, ClientVersion, null, AppSecretKey,
+            ValidUrl, ClientVersion, null, FixtureValues.SharedAppKey,
             PlatformType.Windows, null, null, null,
             AuthScheme.Hmac, null, null);
 

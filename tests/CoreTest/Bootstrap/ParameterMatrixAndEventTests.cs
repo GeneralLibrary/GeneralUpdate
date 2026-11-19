@@ -8,6 +8,7 @@ using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core;
+using CoreTest.Shared;
 using Xunit;
 
 namespace CoreTest.Bootstrap
@@ -170,9 +171,9 @@ namespace CoreTest.Bootstrap
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 InstallPath = _testDir,
-                AppSecretKey = "secret-key",
+                AppSecretKey = FixtureValues.SecretKeySimple,
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.SingleToken
             };
 
             config.Validate();
@@ -185,7 +186,7 @@ namespace CoreTest.Bootstrap
             {
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key"
+                AppSecretKey = FixtureValues.SingleKey
             };
 
             Assert.Throws<ArgumentException>(() => config.Validate());
@@ -199,7 +200,7 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 MainAppName = null!
             };
 
@@ -215,7 +216,7 @@ namespace CoreTest.Bootstrap
             {
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 ClientVersion = null!
             };
 
@@ -235,7 +236,7 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 Scheme = scheme,
                 Token = token
             };
@@ -251,9 +252,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 Scheme = "https",
-                Token = "token",
+                Token = FixtureValues.SingleToken,
                 Files = new List<string> { "*.pdb", "*.config" },
                 Formats = new List<string> { ".log", ".tmp" },
                 Directories = new List<string> { "logs", "temp" }
@@ -505,12 +506,12 @@ namespace CoreTest.Bootstrap
                 ClientVersion = "4.2.1-beta",
                 UpgradeClientVersion = "1.5.0",
                 InstallPath = @"C:\Program Files\EnterpriseApp",
-                AppSecretKey = "enterprise-secret-key-2026",
+                AppSecretKey = FixtureValues.EnterpriseSecretKey,
                 ProductId = "enterprise-app-pro",
                 UpdateLogUrl = "https://mycompany.com/releases",
                 ReportUrl = "https://telemetry.mycompany.com/api/v1/reports",
                 Scheme = "HMAC",
-                Token = "hmac-secret-key",
+                Token = FixtureValues.HmacSecretKey,
                 Bowl = "Bowl.exe",
                 DriverDirectory = @"C:\Program Files\EnterpriseApp\drivers",
                 Files = new List<string> { "*.pdb", "*.config", "*.Development.json" },
@@ -536,9 +537,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://api.example.com",
                 MainAppName = "MyApp.exe",
                 ClientVersion = version,
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.SingleToken
             };
 
             config.Validate();
@@ -556,9 +557,9 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = url,
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.SingleToken
             };
 
             config.Validate();

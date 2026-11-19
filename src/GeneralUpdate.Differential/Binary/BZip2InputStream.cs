@@ -324,9 +324,11 @@ namespace GeneralUpdate.Differential.Binary
             {
                 num = baseStream.ReadByte();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                CompressedStreamEOF();
+                // An I/O failure while reading must not be misreported as a truncated
+                // stream — preserve the original exception for diagnosis.
+                CompressedStreamEOF(ex);
             }
 
             if (num == -1)
@@ -827,6 +829,11 @@ namespace GeneralUpdate.Differential.Binary
         private static void CompressedStreamEOF()
         {
             throw new Exception("BZip2 input stream end of compressed stream");
+        }
+
+        private static void CompressedStreamEOF(Exception inner)
+        {
+            throw new Exception("BZip2 input stream end of compressed stream", inner);
         }
 
         private static void BlockOverrun()

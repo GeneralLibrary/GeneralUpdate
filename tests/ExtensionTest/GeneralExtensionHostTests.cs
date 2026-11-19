@@ -496,7 +496,7 @@ public class GeneralExtensionHostTests : IDisposable
             ExtensionsDirectory = _testExtensionsDirectory,
             ServerUrl = "https://example.com",
             Scheme = "Bearer",
-            Token = "test-token"
+            Token = FixtureValues.SharedToken
         };
 
         // Act
@@ -522,7 +522,7 @@ public class GeneralExtensionHostTests : IDisposable
             ExtensionsDirectory = _testExtensionsDirectory,
             ServerUrl = "https://example.com",
             Scheme = "Bearer",
-            Token = "test-token"
+            Token = FixtureValues.SharedToken
         };
     }
 }

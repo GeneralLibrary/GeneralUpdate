@@ -153,6 +153,10 @@ public class HttpUpdateReporter : IUpdateReporter
 
             await _client.SendAsync(request, token).ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            // Caller cancelled — not a report failure; the best-effort contract stays silent.
+        }
         catch (Exception ex)
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");

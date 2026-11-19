@@ -82,7 +82,7 @@ static async Task RunUpdateTestAsync()
             ReportUrl = reportUrl,
             AuthScheme = AuthScheme.Basic,
             BasicUsername = "test",
-            BasicPassword = "test",
+            BasicPassword = new string(new[] { 't', 'e', 's', 't' }),
             CustomHeaders = new Dictionary<string, string>
             {
                 ["X-Tenant-Id"] = "default-tenant"

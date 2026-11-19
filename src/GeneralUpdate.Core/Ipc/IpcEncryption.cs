@@ -45,7 +45,11 @@ public static class IpcEncryption
                 using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read,
                     FileShare.ReadWrite | FileShare.Delete);
                 // Guard against files > 2 GB — IPC payloads should never be that large.
-                if (fs.Length > int.MaxValue) return null;
+                if (fs.Length > int.MaxValue)
+                {
+                    GeneralTracer.Warn($"IpcEncryption: '{filePath}' exceeds the 2 GB IPC payload guard, ignoring it.");
+                    return null;
+                }
                 cipher = new byte[(int)fs.Length];
                 int offset = 0, remaining = cipher.Length;
                 while (remaining > 0)
@@ -56,10 +60,11 @@ public static class IpcEncryption
                     remaining -= n;
                 }
             }
-            catch (IOException)
+            catch (IOException ex)
             {
                 // File is locked by another process (e.g. parallel test runs) — gracefully
                 // treat as "no IPC data available" instead of crashing.
+                GeneralTracer.Warn($"IpcEncryption: '{filePath}' is locked or unreadable, treating as no IPC data available. {ex.Message}");
                 return null;
             }
 
@@ -71,7 +76,12 @@ public static class IpcEncryption
         }
         finally
         {
-            try { File.Delete(filePath); } catch { /* best-effort cleanup */ }
+            try { File.Delete(filePath); }
+            catch (Exception ex)
+            {
+                // Best-effort cleanup — a locked/stale file is worth a trace line, not a crash.
+                GeneralTracer.Debug($"IpcEncryption: failed to delete '{filePath}' after decryption, it may be reused or left behind. {ex.Message}");
+            }
         }
     }
 }

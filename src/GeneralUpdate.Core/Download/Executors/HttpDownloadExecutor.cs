@@ -109,6 +109,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
 
         try
         {
+            GeneralTracer.Debug($"HttpDownloadExecutor: start '{asset.Url}' -> '{destPath}' (resume from {existingBytes} bytes, timeout {_timeout.TotalSeconds:0}s).");
             using var request = new HttpRequestMessage(HttpMethod.Get, asset.Url);
             if (_enableResume && existingBytes > 0)
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
@@ -134,6 +135,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
 
             if (_enableResume && existingBytes > 0 && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
             {
+                GeneralTracer.Debug($"HttpDownloadExecutor: server returned {response.StatusCode} (expected 206) for '{destPath}', restarting the download from scratch.");
                 existingBytes = 0;
                 File.Delete(destPath);
             }
@@ -157,6 +159,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeneralTracer.Error($"HttpDownloadExecutor: download failed '{asset.Url}' -> '{destPath}' after {sw.Elapsed}. {ex.Message}", ex);
             sw.Stop();
             return new DownloadResult(asset, destPath, existingBytes, sw.Elapsed, retries, false, ex.Message);
         }

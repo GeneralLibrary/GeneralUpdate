@@ -247,7 +247,7 @@ namespace GeneralUpdate.Core.Network
             for (int attempt = 0; ; attempt++)
             {
                 try { return await SendAsync<T>(url, p, ti, t).ConfigureAwait(false); }
-                catch (Exception ex) when (attempt < _maxRetryAttempts - 1 && ShouldRetry(ex))
+                catch (Exception ex) when (attempt < _maxRetryAttempts - 1 && ShouldRetry(ex, t))
                 {
                     GeneralTracer.Warn($"HTTP attempt {attempt + 1}/{_maxRetryAttempts} failed, retrying. {ex.Message}");
                     await Task.Delay(TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 1000), t).ConfigureAwait(false);
@@ -320,12 +320,15 @@ namespace GeneralUpdate.Core.Network
         /// Determines whether an exception should be retried.
         /// </summary>
         /// <param name="ex">The exception to evaluate.</param>
+        /// <param name="callerToken">The caller's cancellation token, used to distinguish
+        /// caller-initiated cancellation from an HttpClient timeout.</param>
         /// <returns><c>true</c> if the exception is retryable; otherwise <c>false</c>.</returns>
         /// <remarks>
         /// <para>
         /// Retryable exceptions:
         /// <list type="bullet">
-        ///   <item><description><see cref="TaskCanceledException"/></description></item>
+        ///   <item><description><see cref="TaskCanceledException"/> (HttpClient timeout surfaces as this type —
+        ///   it derives from <see cref="OperationCanceledException"/>, so it must be checked first)</description></item>
         ///   <item><description><see cref="TimeoutException"/></description></item>
         ///   <item><description><see cref="System.IO.IOException"/></description></item>
         ///   <item><description><see cref="HttpRequestException"/> with a message containing "timeout"</description></item>
@@ -334,14 +337,20 @@ namespace GeneralUpdate.Core.Network
         /// <para>
         /// Non-retryable exceptions:
         /// <list type="bullet">
-        ///   <item><description><see cref="OperationCanceledException"/></description></item>
+        ///   <item><description>Caller-initiated cancellation (the <paramref name="callerToken"/> is cancelled)</description></item>
+        ///   <item><description>Any other <see cref="OperationCanceledException"/></description></item>
         /// </list>
         /// </para>
         /// </remarks>
-        private static bool ShouldRetry(Exception ex)
+        private static bool ShouldRetry(Exception ex, CancellationToken callerToken)
         {
-            if (ex is OperationCanceledException) return false;
+            // Caller-initiated cancellation must never be retried.
+            if (callerToken.IsCancellationRequested) return false;
+            // HttpClient timeout surfaces as TaskCanceledException, which derives from
+            // OperationCanceledException — it must be classified before the OCE guard
+            // below, otherwise the documented timeout retry never fires.
             if (ex is TaskCanceledException or TimeoutException or System.IO.IOException) return true;
+            if (ex is OperationCanceledException) return false;
             if (ex is HttpRequestException h && (h.Message ?? "").Contains("timeout", StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }

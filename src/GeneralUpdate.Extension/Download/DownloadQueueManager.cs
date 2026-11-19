@@ -117,6 +117,13 @@ public class DownloadQueueManager : IDownloadQueueManager
                 }
             }
         }
+        catch (Exception ex)
+        {
+            // Fire-and-forget task — without this catch a loop failure (e.g. a disposed
+            // semaphore during shutdown) would vanish into an unobserved task and the
+            // queue would silently stop processing.
+            GeneralTracer.Error("DownloadQueueManager.ProcessQueueAsync: queue processing stopped by an unexpected error.", ex);
+        }
         finally
         {
             _isProcessing = false;
@@ -178,7 +185,11 @@ public class DownloadQueueManager : IDownloadQueueManager
         }
         finally
         {
-            _semaphore.Release();
+            try { _semaphore.Release(); }
+            catch (ObjectDisposedException)
+            {
+                // Dispose() raced with the in-flight task — nothing left to release.
+            }
             
             if (task.Status == ExtensionUpdateStatus.UpdateSuccessful ||
                 task.Status == ExtensionUpdateStatus.UpdateFailed)
@@ -201,7 +212,16 @@ public class DownloadQueueManager : IDownloadQueueManager
     private void OnDownloadStatusChanged(DownloadTask task)
     {
         GeneralTracer.Debug($"DownloadQueueManager.OnDownloadStatusChanged: ExtensionId={task.Extension.Id}, Status={task.Status}, Progress={task.Progress}");
-        DownloadStatusChanged?.Invoke(this, new DownloadTaskEventArgs { Task = task });
+        try
+        {
+            DownloadStatusChanged?.Invoke(this, new DownloadTaskEventArgs { Task = task });
+        }
+        catch (Exception ex)
+        {
+            // A misbehaving subscriber must not turn a successful download into a failed
+            // one, nor escape into an unobserved task from a failure path.
+            GeneralTracer.Warn($"DownloadQueueManager: DownloadStatusChanged subscriber threw. ExtensionId={task.Extension.Id}. {ex.Message}");
+        }
     }
 
     /// <inheritdoc/>

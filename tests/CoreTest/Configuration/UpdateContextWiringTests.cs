@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using GeneralUpdate.Core;
 using GeneralUpdate.Core.Configuration;
+using CoreTest.Shared;
 using Xunit;
 
 namespace CoreTest.Configuration;
@@ -231,9 +232,9 @@ public class UpdateContextWiringTests
             MainAppName = "MyApp.exe",
             ClientVersion = "1.0.0",
             InstallPath = testDir,
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.WordSecret,
             Scheme = "https",
-            Token = "token",
+            Token = FixtureValues.SingleToken,
         });
     }
 

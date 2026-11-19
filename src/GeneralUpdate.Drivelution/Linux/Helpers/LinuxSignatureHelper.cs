@@ -133,9 +133,11 @@ public static class LinuxSignatureHelper
 
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Failed to import GPG key
+            // Trace the failure: downstream validation would otherwise misreport a
+            // missing key as an "invalid signature".
+            GeneralTracer.Warn($"LinuxSignatureHelper.ImportGpgKeyAsync: GPG key import failed. {ex.Message}");
             return false;
         }
     }

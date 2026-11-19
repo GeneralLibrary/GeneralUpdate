@@ -10,6 +10,7 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.Hooks;
+using CoreTest.Shared;
 using Xunit;
 
 namespace CoreTest.Bootstrap
@@ -41,9 +42,9 @@ namespace CoreTest.Bootstrap
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 InstallPath = _testDir,
-                AppSecretKey = "key",
+                AppSecretKey = FixtureValues.SingleKey,
                 Scheme = "https",
-                Token = "token"
+                Token = FixtureValues.SingleToken
             });
 
         #region Core
@@ -199,9 +200,9 @@ namespace CoreTest.Bootstrap
                     MainAppName = "MyProduct.exe",
                     ClientVersion = "1.0.0",
                     InstallPath = _testDir,
-                    AppSecretKey = "secret-key-2026",
+                    AppSecretKey = FixtureValues.MatrixKey2026,
                     Scheme = "Bearer",
-                    Token = "jwt-token-xyz"
+                    Token = FixtureValues.JwtXyz
                 });
             Assert.NotNull(b);
         }
@@ -212,7 +213,7 @@ namespace CoreTest.Bootstrap
                 .SetOption(Option.AppType, AppType.Client)
                 .SetOption(Option.Silent, true)
                 .SetOption(Option.SilentPollIntervalMinutes, 15)
-                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = FixtureValues.SingleKey, Scheme = "https", Token = FixtureValues.SingleToken });
             Assert.NotNull(b);
         }
 
@@ -220,7 +221,7 @@ namespace CoreTest.Bootstrap
         {
             var b = new GeneralUpdateBootstrap()
                 .SetOption(Option.DiffMode, DiffMode.Parallel).SetOption(Option.MaxConcurrency, 8)
-                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = FixtureValues.SingleKey, Scheme = "https", Token = FixtureValues.SingleToken });
             Assert.NotNull(b);
         }
 
@@ -229,7 +230,7 @@ namespace CoreTest.Bootstrap
             var b = new GeneralUpdateBootstrap()
                 .SetOption(Option.AppType, AppType.Upgrade).SetOption(Option.BackupEnabled, false)
                 .SetOption(Option.PatchEnabled, true).SetOption(Option.VerifyChecksum, true)
-                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = "key", Scheme = "https", Token = "token" });
+                .SetConfig(new UpdateRequest { UpdateUrl = "https://api.example.com", MainAppName = "MyApp.exe", ClientVersion = "1.0.0", InstallPath = _testDir, AppSecretKey = FixtureValues.SingleKey, Scheme = "https", Token = FixtureValues.SingleToken });
             Assert.NotNull(b);
         }
 
@@ -240,11 +241,11 @@ namespace CoreTest.Bootstrap
                 UpdateUrl = "https://update.enterprise.com/api/v2",
                 UpdateAppName = "Update.exe", MainAppName = "EnterpriseApp.exe",
                 ClientVersion = "4.2.1", UpgradeClientVersion = "2.0.0",
-                InstallPath = _testDir, AppSecretKey = "enterprise-prod-key-2026",
+                InstallPath = _testDir, AppSecretKey = FixtureValues.EnterpriseProdKey,
                 ProductId = "enterprise-app-v4",
                 UpdateLogUrl = "https://enterprise.com/releases",
                 ReportUrl = "https://telemetry.enterprise.com/api/report",
-                Scheme = "HMAC", Token = "hmac-prod-secret", Bowl = "Bowl.exe",
+                Scheme = "HMAC", Token = FixtureValues.HmacProdSecret, Bowl = "Bowl.exe",
                 Files = new List<string> { "*.pdb" },
                 Formats = new List<string> { ".log", ".tmp" },
                 Directories = new List<string> { "logs", "temp" }

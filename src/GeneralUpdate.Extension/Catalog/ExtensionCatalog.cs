@@ -140,10 +140,12 @@ public class ExtensionCatalog : IExtensionCatalog
                         Directory.Delete(extensionDir, true);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Silently ignore directory cleanup failures
-                    // The extension is already removed from the in-memory catalog
+                    // The extension is already removed from the in-memory catalog,
+                    // but trace the failure — stale files may collide with a reinstall.
+                    GeneralTracer.Warn($"ExtensionCatalog: failed to delete extension directory for '{extensionId}'. {ex.Message}");
                 }
             }
         }

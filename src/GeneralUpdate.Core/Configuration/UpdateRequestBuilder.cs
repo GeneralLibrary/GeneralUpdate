@@ -129,9 +129,9 @@ namespace GeneralUpdate.Core.Configuration
         /// </returns>
         private static UpdateRequestBuilder LoadFromConfigFile()
         {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
             try
             {
-                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_config.json");
                 if (!File.Exists(configPath))
                 {
                     return null;
@@ -142,6 +142,7 @@ namespace GeneralUpdate.Core.Configuration
 
                 if (config == null)
                 {
+                    GeneralTracer.Debug($"UpdateRequestBuilder: '{configPath}' deserialized to null, falling back to parameter-based configuration.");
                     return null;
                 }
 
@@ -192,24 +193,28 @@ namespace GeneralUpdate.Core.Configuration
                 builder.SetInstallPath(string.IsNullOrWhiteSpace(config.InstallPath) ? AppDomain.CurrentDomain.BaseDirectory : config.InstallPath);
                 return builder;
             }
-            catch (System.Text.Json.JsonException)
+            catch (System.Text.Json.JsonException ex)
             {
                 // JSON format is invalid, fall back to parameter-based approach
+                GeneralTracer.Warn($"UpdateRequestBuilder: '{configPath}' contains invalid JSON, falling back to parameter-based configuration. {ex.Message}");
                 return null;
             }
-            catch (IOException)
+            catch (IOException ex)
             {
                 // File read error, fall back to parameter-based approach
+                GeneralTracer.Warn($"UpdateRequestBuilder: failed to read '{configPath}', falling back to parameter-based configuration. {ex.Message}");
                 return null;
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
                 // Insufficient permissions, fall back to parameter-based approach
+                GeneralTracer.Warn($"UpdateRequestBuilder: access denied reading '{configPath}', falling back to parameter-based configuration. {ex.Message}");
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
                 // Any other unexpected error, fall back to parameter-based approach
+                GeneralTracer.Error($"UpdateRequestBuilder: unexpected error loading '{configPath}', falling back to parameter-based configuration.", ex);
                 return null;
             }
         }

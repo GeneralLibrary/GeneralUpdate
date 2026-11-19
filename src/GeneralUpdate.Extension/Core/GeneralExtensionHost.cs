@@ -247,7 +247,14 @@ public class GeneralExtensionHost : IExtensionHost
                     if (missingDeps.Contains(dep))
                     {
                         GeneralTracer.Info($"GeneralExtensionHost.UpdateExtensionAsync: installing missing dependency dep={dep}");
-                        await UpdateExtensionAsync(dep);
+                        var depInstalled = await UpdateExtensionAsync(dep);
+                        if (!depInstalled)
+                        {
+                            // The dependency's failure is already logged and evented by the
+                            // recursive call. Installing the parent without it would leave a
+                            // broken extension in the catalog.
+                            throw new InvalidOperationException($"Dependency '{dep}' failed to install; aborting installation of extension '{extensionId}'.");
+                        }
                     }
                     else
                     {

@@ -14,7 +14,6 @@ namespace CoreTest.Shared
     public class UpdateRequestBuilderTests
     {
         private const string TestUpdateUrl = "https://example.com/api/update";
-        private const string TestToken = "test-token-12345";
         private const string TestScheme = "https";
 
         /// <summary>
@@ -26,12 +25,12 @@ namespace CoreTest.Shared
             var testConfig = new
             {
                 UpdateUrl = TestUpdateUrl,
-                Token = TestToken,
+                Token = FixtureValues.TestToken12345,
                 Scheme = TestScheme,
                 UpdateAppName = "Update.exe",
                 MainAppName = "TestApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "test-secret-key",
+                AppSecretKey = FixtureValues.SharedAppKey,
                 InstallPath = AppDomain.CurrentDomain.BaseDirectory
             };
             File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(testConfig));
@@ -164,7 +163,7 @@ namespace CoreTest.Shared
                 var incompleteConfig = new
                 {
                     UpdateUrl = TestUpdateUrl,
-                    Token = TestToken,
+                    Token = FixtureValues.TestToken12345,
                     Scheme = TestScheme
                     // Missing MainAppName, ClientVersion, AppSecretKey
                 };
@@ -202,7 +201,7 @@ namespace CoreTest.Shared
                 // Assert
                 Assert.NotNull(config);
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
-                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(FixtureValues.TestToken12345, config.Token);
                 Assert.Equal(TestScheme, config.Scheme);
                 Assert.NotNull(config.UpdateAppName);
                 Assert.NotNull(config.MainAppName);
@@ -382,7 +381,7 @@ namespace CoreTest.Shared
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
-            var customSecretKey = "my-secret-key-123";
+            var customSecretKey = FixtureValues.MyKey;
 
             // Act
             var config = builder.SetAppSecretKey(customSecretKey).Build();
@@ -756,13 +755,13 @@ namespace CoreTest.Shared
                 var completeConfig = new
                 {
                     UpdateUrl = "https://api.example.com/updates",
-                    Token = "Bearer abc123xyz",
+                    Token = FixtureValues.BearerPair,
                     Scheme = "https",
                     UpdateAppName = "MyApplication.exe",
                     MainAppName = "MyApplication.exe",
                     ClientVersion = "1.5.2",
                     UpgradeClientVersion = "1.0.0",
-                    AppSecretKey = "super-secret-key-456",
+                    AppSecretKey = FixtureValues.SuperKey,
                     ProductId = "my-product-001",
                     InstallPath = "/opt/myapp",
                     UpdateLogUrl = "https://example.com/changelog",
@@ -808,12 +807,12 @@ namespace CoreTest.Shared
             var testConfig = new
             {
                 UpdateUrl = "https://config-file.example.com/updates",
-                Token = "config-file-token",
+                Token = FixtureValues.CfgToken,
                 Scheme = "https",
                 UpdateAppName = "ConfigFileApp.exe",
                 MainAppName = "ConfigFileMain.exe",
                 ClientVersion = "9.9.9",
-                AppSecretKey = "config-file-secret",
+                AppSecretKey = FixtureValues.CfgSecret,
                 InstallPath = "/config/file/path"
             };
             
@@ -864,7 +863,7 @@ namespace CoreTest.Shared
 
                 // Assert - Values should come from parameters and defaults
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
-                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(FixtureValues.TestToken12345, config.Token);
                 Assert.Equal(TestScheme, config.Scheme);
                 Assert.Equal("Update.exe", config.UpdateAppName); // Default value
             }
@@ -893,7 +892,7 @@ namespace CoreTest.Shared
 
                 // Assert - Values should come from parameters (fallback)
                 Assert.Equal(TestUpdateUrl, config.UpdateUrl);
-                Assert.Equal(TestToken, config.Token);
+                Assert.Equal(FixtureValues.TestToken12345, config.Token);
                 Assert.Equal(TestScheme, config.Scheme);
             }
             finally

@@ -243,10 +243,12 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
             await _commandRunner.RunOrThrowAsync("insmod", new[] { modulePath }, cancellationToken);
             GeneralTracer.Info("Module loaded via insmod");
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Fallback: modprobe with the module name
-            GeneralTracer.Info("insmod failed, trying modprobe...");
+            // Fallback: modprobe with the module name. Keep the insmod failure reason —
+            // if modprobe also fails, the root cause must not be lost. Cancellation
+            // propagates instead of triggering the fallback.
+            GeneralTracer.Warn($"InstallKernelModuleAsync: insmod failed ({ex.Message}), falling back to modprobe.");
             var moduleName = Path.GetFileNameWithoutExtension(modulePath);
             await _commandRunner.RunOrThrowAsync("modprobe", new[] { moduleName }, cancellationToken);
             GeneralTracer.Info("Module loaded via modprobe");
@@ -272,9 +274,12 @@ public class LinuxGeneralDrivelution : BaseDriverUpdater
         {
             await _commandRunner.RunOrThrowAsync("rpm", new[] { "-ivh", packagePath }, cancellationToken);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Fallback to dnf/yum
+            // Fallback to dnf/yum. Log the rpm failure first — if dnf also fails the
+            // propagated dnf exception would otherwise mask the original cause.
+            // Cancellation propagates instead of triggering the fallback.
+            GeneralTracer.Warn($"InstallRpmPackageAsync: rpm -ivh failed ({ex.Message}), falling back to dnf.");
             await _commandRunner.RunOrThrowAsync("dnf", new[] { "install", "-y", packagePath }, cancellationToken);
         }
 

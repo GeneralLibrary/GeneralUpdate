@@ -373,7 +373,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             return;
         }
 
-        if (processInfo == null) return;
+        if (processInfo == null)
+        {
+            // Normal when running standalone (no update in progress). A locked IPC file
+            // also surfaces here as null — the Warn inside IpcEncryption distinguishes it.
+            GeneralTracer.Debug("InitializeFromEnvironment: no IPC process contract found, nothing to do.");
+            return;
+        }
 
         try
         {

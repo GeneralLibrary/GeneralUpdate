@@ -63,6 +63,11 @@ public class CommandRunner : ICommandRunner
             await process.WaitForExitAsync(cancellationToken);
         }
 
+        // The kill-vs-exit observation is racy: WaitForExitAsync can return normally
+        // for a process that was just killed by cancellation. A cancelled wait always
+        // means "preempted" — surface it as OperationCanceledException deterministically.
+        cancellationToken.ThrowIfCancellationRequested();
+
         return new CommandResult
         {
             ExitCode = process.ExitCode,

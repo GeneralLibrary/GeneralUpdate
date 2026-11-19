@@ -170,8 +170,11 @@ internal sealed class LinuxBowlStrategy : IBowlStrategy
             }
             return process.ExitCode == 0;
         }
-        catch
+        catch (Exception ex)
         {
+            // A probe failure is not the same as "procdump is not installed" — trace it
+            // so the subsequent auto-install decision can be diagnosed.
+            GeneralTracer.Warn($"LinuxBowlStrategy: procdump probe failed, treating as not installed. {ex.Message}");
             return false;
         }
     }

@@ -46,9 +46,11 @@ public static class LinuxPermissionHelper
 
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Failed to check root privileges
+            // Failed to check root privileges — not the same as "not root". Trace it so
+            // the pipeline does not tell the user to "run with sudo" for a broken check.
+            GeneralTracer.Warn($"LinuxPermissionHelper.IsRoot: privilege check failed, assuming not root. {ex.Message}");
             return false;
         }
     }
@@ -81,9 +83,11 @@ public static class LinuxPermissionHelper
 
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Failed to check sudo privileges
+            // Failed to check sudo privileges — not the same as "no sudo". Trace it so
+            // the pipeline does not tell the user to "run with sudo" for a broken check.
+            GeneralTracer.Warn($"LinuxPermissionHelper.CanUseSudoAsync: sudo check failed, assuming no sudo. {ex.Message}");
             return false;
         }
     }

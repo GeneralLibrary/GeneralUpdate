@@ -108,7 +108,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         catch (Exception exception)
         {
             GeneralTracer.Error("The Compress method in the ZipCompressionStrategy class throws an exception." , exception);
-            throw new Exception($"Failed to compress archive: {exception.Message}");
+            throw new Exception($"Failed to compress archive: {exception.Message}", exception);
         }
     }
 
@@ -134,6 +134,10 @@ public class ZipCompressionStrategy : ICompressionStrategy
             var fileInfo = new FileInfo(zipFilePath);
             if (!fileInfo.Exists)
             {
+                // Documented contract (see ZipCompressionStrategyTests.Decompress_ZipFileNotFound_ReturnsWithoutError):
+                // a missing archive is a no-op, not an exception. Trace it so the
+                // "nothing extracted" outcome is diagnosable.
+                GeneralTracer.Warn($"ZipCompressionStrategy.Decompress: archive '{zipFilePath}' does not exist, skipping extraction.");
                 return;
             }
 
@@ -180,7 +184,7 @@ public class ZipCompressionStrategy : ICompressionStrategy
         catch (Exception exception)
         {
             GeneralTracer.Error("The Decompress method in the ZipCompressionStrategy class throws an exception." , exception);
-            throw new Exception($"Failed to decompress archive: {exception.Message}");
+            throw new Exception($"Failed to decompress archive: {exception.Message}", exception);
         }
     }
 

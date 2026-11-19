@@ -1,4 +1,5 @@
 using GeneralUpdate.Core.Configuration;
+using CoreTest.Shared;
 
 namespace CoreTest.Configuration;
 
@@ -118,7 +119,7 @@ public class UpdateConfigurationTests
             MainAppName = "MainApp",
             InstallPath = "C:\\MyApp",
             UpdateLogUrl = "https://logs.example.com",
-            AppSecretKey = "secret-key",
+            AppSecretKey = FixtureValues.SecretKeySimple,
             ClientVersion = "1.2.3",
             Files = new List<string> { "a.dll" },
             Formats = new List<string> { ".log" },
@@ -126,7 +127,7 @@ public class UpdateConfigurationTests
             ReportUrl = "https://report.example.com",
             Bowl = "Bowl.exe",
             Scheme = "https",
-            Token = "bearer-token",
+            Token = FixtureValues.BearerToken,
             DriverDirectory = "C:\\Drivers"
         };
 

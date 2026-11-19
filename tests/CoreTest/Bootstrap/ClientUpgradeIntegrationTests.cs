@@ -3,6 +3,7 @@ using System.Text.Json;
 using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core;
+using CoreTest.Shared;
 
 namespace CoreTest.Bootstrap
 {
@@ -53,10 +54,10 @@ namespace CoreTest.Bootstrap
                 ClientVersion = "1.0.0",
                 UpgradeClientVersion = "0.5.0",
                 InstallPath = _testBaseDir,
-                AppSecretKey = "test-secret-key",
+                AppSecretKey = FixtureValues.SharedAppKey,
                 ProductId = "test-product",
                 Scheme = "https",
-                Token = "test-token"
+                Token = FixtureValues.SharedToken
             };
 
             var bootstrap = new GeneralUpdateBootstrap();
@@ -86,9 +87,9 @@ namespace CoreTest.Bootstrap
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 InstallPath = _testBaseDir,
-                AppSecretKey = "test-key",
+                AppSecretKey = FixtureValues.ShortKey,
                 Scheme = "https",
-                Token = "test-token"
+                Token = FixtureValues.SharedToken
             };
 
             var bootstrap = new GeneralUpdateBootstrap();
@@ -113,9 +114,9 @@ namespace CoreTest.Bootstrap
                 MainAppName = "MyApp.exe",
                 ClientVersion = "1.0.0",
                 InstallPath = _testBaseDir,
-                AppSecretKey = "test-key",
+                AppSecretKey = FixtureValues.ShortKey,
                 Scheme = "https",
-                Token = "test-token"
+                Token = FixtureValues.SharedToken
             };
 
             var skipCalled = false;
@@ -153,7 +154,7 @@ namespace CoreTest.Bootstrap
                 Format = "ZIP",
                 Size = 1024 * 1024 * 50L,
                 AuthScheme = "Bearer",
-                AuthToken = "jwt-token-here",
+                AuthToken = FixtureValues.JwtHere,
                 UpdateLog = "# Release Notes\n- Bug fixes\n- New features"
             };
 
@@ -222,7 +223,7 @@ namespace CoreTest.Bootstrap
                 CompressEncoding = "UTF-8",
                 CompressFormat = "ZIP",
                 DownloadTimeOut = 60,
-                AppSecretKey = "secret-key-123",
+                AppSecretKey = FixtureValues.LegacyKey,
                 UpdateVersions = new List<VersionEntry>
                 {
                     new() { Version = "2.0.0", Url = "https://cdn.example.com/update.zip", Hash = "sha256hash", Size = 50 * 1024 * 1024L, Format = "ZIP", ReleaseDate = DateTime.UtcNow }
@@ -234,7 +235,7 @@ namespace CoreTest.Bootstrap
                 Formats = new List<string> { ".pdb", ".xml" },
                 Directories = new List<string> { "logs", "cache", "__backups__" },
                 Scheme = "Bearer",
-                Token = "jwt-token-xyz",
+                Token = FixtureValues.JwtXyz,
                 DriverDirectory = @"C:\drivers"
             };
 
@@ -392,12 +393,12 @@ namespace CoreTest.Bootstrap
                 ClientVersion = "1.0.0",
                 UpgradeClientVersion = "0.5.0",
                 InstallPath = _testBaseDir,
-                AppSecretKey = "test-secret-key",
+                AppSecretKey = FixtureValues.SharedAppKey,
                 ProductId = "test-product",
                 UpdateLogUrl = "https://myapp.com/changelog",
                 ReportUrl = "https://api.example.com/reports",
                 Scheme = "Bearer",
-                Token = "jwt-token",
+                Token = FixtureValues.JwtOnly,
                 Bowl = "Bowl.exe",
                 DriverDirectory = @"C:\drivers",
                 Files = new List<string> { "*.pdb" },
@@ -450,9 +451,9 @@ namespace CoreTest.Bootstrap
                     MainAppName = "TestApp.exe",
                     ClientVersion = "1.0.0",
                     InstallPath = _testBaseDir,
-                    AppSecretKey = "key",
+                    AppSecretKey = FixtureValues.SingleKey,
                     Scheme = "https",
-                    Token = "token"
+                    Token = FixtureValues.SingleToken
                 });
 
             var result = bootstrap
@@ -515,12 +516,12 @@ namespace CoreTest.Bootstrap
                     ClientVersion = "3.2.1",
                     UpgradeClientVersion = "1.0.0",
                     InstallPath = @"C:\Program Files\MyProduct",
-                    AppSecretKey = "prod-secret-key-2026",
+                    AppSecretKey = FixtureValues.ProdKey,
                     ProductId = "my-product-v2",
                     UpdateLogUrl = "https://myproduct.com/changelog",
                     ReportUrl = "https://telemetry.mycompany.com/report",
                     Scheme = "Bearer",
-                    Token = "eyJhbGciOiJIUzI1NiIs...",
+                    Token = FixtureValues.EyJwtSample,
                     Bowl = "Bowl.exe",
                     DriverDirectory = @"C:\Program Files\MyProduct\drivers",
                     Files = new List<string> { "*.pdb", "*.config", "appsettings.Development.json" },
@@ -553,9 +554,9 @@ namespace CoreTest.Bootstrap
                     MainAppName = "MyApp.exe",
                     ClientVersion = "1.0.0",
                     InstallPath = _testBaseDir,
-                    AppSecretKey = "key",
+                    AppSecretKey = FixtureValues.SingleKey,
                     Scheme = "https",
-                    Token = "token"
+                    Token = FixtureValues.SingleToken
                 });
 
             Assert.NotNull(bootstrap);

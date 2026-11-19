@@ -204,7 +204,8 @@ namespace GeneralUpdate.Core.Strategy
                         status = ReportType.Success;
                     }
                     catch (Exception e) when (version.PackageType == (int)PackageType.Chain
-                        && !string.IsNullOrEmpty(version.FallbackFullName))
+                        && !string.IsNullOrEmpty(version.FallbackFullName)
+                        && e is not OperationCanceledException)
                     {
                         GeneralTracer.Warn($"AbstractStrategy.ExecuteAsync: chain patch failed for {version.Version}, falling back to full package {version.FallbackFullName}. Error: {e.Message}");
 
@@ -242,10 +243,15 @@ namespace GeneralUpdate.Core.Strategy
                         catch (Exception fallbackEx)
                         {
                             // Fallback itself failed (e.g. missing full zip, decompression error).
-                            // Downgrade to normal failure handling so the loop can continue
-                            // processing remaining versions.
+                            // Mirror the normal failure path below: mark the batch as failed and
+                            // surface the exception, so the version is NOT recorded as upgraded.
                             GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
+                            AllPackagesSucceeded = false;
+                            HandleExecuteException(fallbackEx);
                             status = ReportType.Failure;
+                            // Only rollback when NO version has succeeded yet in this batch.
+                            if (!_appliedAnyVersion)
+                                TryRollback();
                         }
                     }
                     catch (Exception e)

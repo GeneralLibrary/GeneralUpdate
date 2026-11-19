@@ -4,6 +4,7 @@ using GeneralUpdate.Core.Download;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Strategy;
+using CoreTest.Shared;
 
 namespace CoreTest.Strategy;
 
@@ -37,7 +38,7 @@ public class ClientStrategyUpdateLogTests
         {
             UpdateUrl = "https://api.example.com/update",
             ClientVersion = "1.0.0",
-            AppSecretKey = "key",
+            AppSecretKey = FixtureValues.SingleKey,
             MainAppName = "MainApp",
             InstallPath = Path.GetTempPath()
         });

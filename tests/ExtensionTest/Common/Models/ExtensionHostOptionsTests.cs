@@ -4,6 +4,8 @@
 /// - CatalogPath 默认为 null
 /// - 所有属性赋值和读取
 /// </summary>
+using ExtensionTest;
+
 namespace GeneralUpdate.Extension.Common.Models.Tests;
 
 public class ExtensionHostOptionsTests
@@ -39,7 +41,7 @@ public class ExtensionHostOptionsTests
         {
             ServerUrl = "https://api.example.com",
             Scheme = "Bearer",
-            Token = "abc123",
+            Token = FixtureValues.Abc123,
             HostVersion = "2.0.0",
             ExtensionsDirectory = @"C:\extensions",
             CatalogPath = @"C:\catalog"

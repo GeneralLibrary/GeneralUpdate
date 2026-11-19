@@ -59,7 +59,7 @@ public class RetryPolicy
 
     /// <summary>
     /// Executes an asynchronous operation with retry logic.
-    /// On the last retry, the exception is wrapped in a descriptive AggregateException rather than escaping raw.
+    /// When all retries are exhausted, the last exception propagates to the caller unchanged.
     /// </summary>
     /// <param name="operation">The operation to execute.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -69,7 +69,6 @@ public class RetryPolicy
         CancellationToken cancellationToken = default)
     {
         int attempt = 0;
-        List<Exception>? capturedExceptions = null;
 
         while (true)
         {
@@ -81,10 +80,8 @@ public class RetryPolicy
             {
                 throw;  // Never retry cancellations
             }
-            catch (Exception ex) when (attempt < MaxRetries)
+            catch (Exception) when (attempt < MaxRetries)
             {
-                capturedExceptions ??= new List<Exception>();
-                capturedExceptions.Add(ex);
                 attempt++;
                 await DelayAsync(attempt, cancellationToken);
             }
@@ -113,9 +110,10 @@ public class RetryPolicy
             {
                 throw;
             }
-            catch
+            catch (Exception ex)
             {
                 // Transient failure — will retry if we have attempts left
+                GeneralTracer.Warn($"RetryPolicy: attempt {attempt + 1}/{MaxRetries + 1} failed. {ex.Message}");
             }
 
             if (attempt >= MaxRetries)

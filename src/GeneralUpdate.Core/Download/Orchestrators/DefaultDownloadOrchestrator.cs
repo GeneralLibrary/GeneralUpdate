@@ -250,7 +250,7 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                     {
                         await pipeline.ProcessAsync(destPath, ct).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         return new DownloadResult(asset, destPath,
                             downloadResult.DownloadedBytes, downloadResult.Duration,
@@ -326,8 +326,13 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
             var name = Path.GetFileName(new Uri(asset.Url).AbsolutePath);
             if (!string.IsNullOrEmpty(name)) return name;
         }
-        catch { }
-        return $"{asset.Name}.{asset.Version}";
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"GetFileName: failed to resolve a file name from URL '{asset.Url}', falling back to the asset version. {ex.Message}");
+        }
+        // asset.Name is empty here — never build the name from it (that produced names
+        // like ".{Version}", a hidden file on Unix). Use the version with the proper extension.
+        return $"{asset.Version}{_options.Format.ToExtension()}";
     }
 
     /// <summary>Wraps progress reporting to include the asset name.</summary>

@@ -135,9 +135,11 @@ public static class WindowsSignatureHelper
                 return false;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Failed to check if file is signed
+            // Machinery failure while probing the signature — distinct from the
+            // "not signed" CryptographicException handled above. Trace it.
+            GeneralTracer.Warn($"WindowsSignatureHelper.IsFileSigned: signature probe failed for '{filePath}'. {ex.Message}");
             return false;
         }
     }

@@ -258,6 +258,7 @@ public class DiffPipeline
             }
             catch (Exception ex) when (!_options.StopOnFirstError)
             {
+                GeneralTracer.Warn($"DiffPipeline: failed to generate clean diff for '{file.FullName}', the file is skipped in this patch. {ex.Message}");
                 int done = Interlocked.Increment(ref completed);
                 reporter?.Report(new DiffProgress(done, total, file.Name, ex.Message));
             }
@@ -371,6 +372,8 @@ public class DiffPipeline
             }
             catch (Exception ex) when (!_options.StopOnFirstError)
             {
+                // Dirty-side failures modify user files and are more severe than clean-side skips.
+                GeneralTracer.Error($"DiffPipeline: failed to apply patch '{pair.PatchFile.FullName}' to '{pair.OldFile.FullName}', the file keeps its old version. {ex.Message}", ex);
                 int done = Interlocked.Increment(ref completed);
                 reporter?.Report(new DiffProgress(done, total, pair.OldFile.Name, ex.Message));
             }
@@ -417,16 +420,45 @@ public class DiffPipeline
             Path.GetDirectoryName(appFilePath)!,
             $"{Path.GetRandomFileName()}_{Path.GetFileName(appFilePath)}");
 
-        await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
-
-        if (File.Exists(tempPath))
+        try
         {
-            if (File.Exists(appFilePath))
+            await _binaryDiffer.DirtyAsync(appFilePath, tempPath, patchFilePath, ct);
+
+            if (File.Exists(tempPath))
             {
-                File.SetAttributes(appFilePath, FileAttributes.Normal);
-                File.Delete(appFilePath);
+                if (File.Exists(appFilePath))
+                {
+                    File.SetAttributes(appFilePath, FileAttributes.Normal);
+                    try
+                    {
+                        // File.Replace swaps temp and original atomically — unlike
+                        // delete-then-move, a failure here can never leave the original lost.
+                        File.Replace(tempPath, appFilePath, null);
+                        return;
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // FAT32/exFAT and similar — fall through to an overwriting copy.
+                    }
+                }
+                else
+                {
+                    File.Move(tempPath, appFilePath);
+                    return;
+                }
+
+                // Overwriting copy never deletes the original first, so a mid-copy
+                // failure cannot lose the file (the temp file is cleaned up by the caller).
+                File.Copy(tempPath, appFilePath, overwrite: true);
+                File.Delete(tempPath);
             }
-            File.Move(tempPath, appFilePath);
+        }
+        catch
+        {
+            // Clean up the half-written temp file; the original stays intact
+            // (File.Replace is atomic, and failures before it never touch the original).
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* best-effort cleanup */ }
+            throw;
         }
     }
 

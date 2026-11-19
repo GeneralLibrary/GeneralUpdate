@@ -97,6 +97,7 @@ public class OssDownloadExecutor : IDownloadExecutor
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeneralTracer.Error($"OssDownloadExecutor: download failed '{asset.Url}' -> '{destPath}' after {sw.Elapsed}. {ex.Message}", ex);
             sw.Stop();
             return new DownloadResult(asset, destPath, 0, sw.Elapsed, 0, false, ex.Message);
         }

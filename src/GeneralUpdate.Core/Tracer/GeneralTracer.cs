@@ -123,28 +123,39 @@ public static class GeneralTracer
     {
         if(!IsTracingEnabled())
             return;
-        
-        InitializeFileListener();
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        var levelName = GetLevelName(level);
-        var fullMessage = string.Empty;
 
+        // Logging must never throw: this method runs inside callers' catch blocks, and a
+        // failing listener (locked/rotated log file, read-only directory) would otherwise
+        // replace the exception the caller is handling.
         try
         {
-            var stackFrame = new StackFrame(2, true);
-            var method = stackFrame.GetMethod();
-            var className = method.DeclaringType?.Name ?? "UnknownType";
-            var methodName = method.Name;
-            var lineNumber = stackFrame.GetFileLineNumber();
-            var lineInfo = lineNumber > 0 ? $"Line {lineNumber}" : "Line N/A (Line numbers may not be displayed in Release mode)";
-            fullMessage = $"[{timestamp}] [{levelName}] {className}.{methodName} ({lineInfo}): {message}";
+            InitializeFileListener();
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var levelName = GetLevelName(level);
+            var className = "UnknownType";
+            var methodName = "UnknownMethod";
+            var lineInfo = "Line N/A (Line numbers may not be displayed in Release mode)";
+
+            try
+            {
+                var stackFrame = new StackFrame(2, true);
+                var method = stackFrame.GetMethod();
+                className = method.DeclaringType?.Name ?? "UnknownType";
+                methodName = method.Name;
+                var lineNumber = stackFrame.GetFileLineNumber();
+                if (lineNumber > 0) lineInfo = $"Line {lineNumber}";
+            }
+            catch
+            {
+                // Stack introspection is best-effort — fall back to the generic header.
+            }
+
+            Trace.WriteLine($"[{timestamp}] [{levelName}] {className}.{methodName} ({lineInfo}): {message}");
         }
         catch
         {
-            fullMessage = $"[{timestamp}] [{levelName}] : {message}";
+            // Swallow all logging failures — never mask the caller's original exception.
         }
-
-        Trace.WriteLine(fullMessage);
     }
 
     private static string GetLevelName(TraceLevel level) => level switch
