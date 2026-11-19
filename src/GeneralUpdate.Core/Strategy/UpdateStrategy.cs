@@ -456,10 +456,16 @@ public class UpdateStrategy : IStrategy
                 new InvalidOperationException(report.FirstFailureReason ?? "self-check failed"),
                 "healthCheckFailure");
 
+            // Server-facing reason: redact configured credentials BEFORE it crosses the wire —
+            // the raw reason can be a custom rule exception or verify-fail acknowledgement that
+            // embeds a token/app secret/basic password, and both the Startup report and the
+            // rollback report send it verbatim (HttpUpdateReporter.ToWire).
+            var reason = UpdateAttempt.Redact(report.FirstFailureReason, config) ?? "self-check failed";
+
             // Server-facing judgment report (phase=Startup, design §4 mapping): distinct from the
             // rollback report RollbackManager sends (phase=Rollback) — the judgment moment and the
             // recovery moment are two evidence points of the same incident.
-            await ReportSelfCheckFailureAsync(config, report).ConfigureAwait(false);
+            await ReportSelfCheckFailureAsync(config, reason).ConfigureAwait(false);
 
             var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnostics);
             var result = await rollback.RollbackAsync(new RollbackRequest(
@@ -468,7 +474,7 @@ public class UpdateStrategy : IStrategy
                 BackupDirectory: config.BackupDirectory,
                 RecordId: config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0,
                 ReportType: _reportType,
-                Reason: report.FirstFailureReason ?? "self-check failed"),
+                Reason: reason),
                 CancellationToken.None).ConfigureAwait(false);
 
             // Marker lifecycle (design §6.3): the rollback consumes the recovery material recorded
@@ -510,10 +516,17 @@ public class UpdateStrategy : IStrategy
     ///     report RollbackManager sends afterwards is the reliable one; this adds the server-side
     ///     "failed at startup" attribution even when the rollback path degrades.
     /// </summary>
-    private async Task ReportSelfCheckFailureAsync(UpdateContext config, SelfCheckReport report)
+    /// <remarks>
+    ///     Bounded like <see cref="UpdateAttempt.ReportAsync"/> (5 s): the caller awaits this
+    ///     BEFORE <see cref="SelfCheck.RollbackManager"/> restores the installation, so an
+    ///     unreachable reporting server must not stall recovery (the failed version is still
+    ///     installed and the application is stopped while it waits).
+    /// </remarks>
+    private async Task ReportSelfCheckFailureAsync(UpdateContext config, string? reason)
     {
         try
         {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
                 config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0,
                 (int)Download.Reporting.UpdateStatus.Failure,
@@ -523,9 +536,13 @@ public class UpdateStrategy : IStrategy
                 Error = new Download.Reporting.UpdateFailure
                 {
                     Category = "healthCheckFailure",
-                    Message = report.FirstFailureReason,
+                    Message = reason,
                 }
-            }).ConfigureAwait(false);
+            }, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            GeneralTracer.Warn("UpdateStrategy: self-check failure report timed out (continuing rollback).");
         }
         catch (Exception ex)
         {

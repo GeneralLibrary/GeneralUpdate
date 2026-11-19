@@ -86,6 +86,74 @@ public sealed class DiagnosticsPackagerTests : IDisposable
         TryDelete(bundle.ZipPath);
     }
 
+    [Fact]
+    public async Task CollectAsync_InZipManifestListsRetainedEntries()
+    {
+        // The server audits archive contents via the in-zip manifest — its files list must
+        // declare the entries ACTUALLY retained, not an empty list.
+        Directory.CreateDirectory(_installPath);
+        File.WriteAllText(Path.Combine(_installPath, GeneralUpdate.Core.Configuration.ManifestInfo.FileName), "{}");
+        var collector = new DiagnosticsCollector(CreateOptions());
+
+        var bundle = await collector.CollectAsync(new DiagnosticsCollectRequest(
+            _installPath,
+            DiagnosticsKinds.Rollback,
+            "1.0.2",
+            "reason",
+            RollbackResultJson: "{ \"filesRestored\": true }"), CancellationToken.None);
+
+        Assert.NotNull(bundle);
+        using (var archive = ZipFile.OpenRead(bundle!.ZipPath))
+        {
+            var entry = Assert.Single(archive.Entries, e => e.FullName == "manifest.json");
+            using var stream = entry.Open();
+            var manifest = JsonSerializer.Deserialize<OutboxManifest>(stream);
+            Assert.NotNull(manifest);
+            Assert.Contains("manifest.json", manifest!.Files);
+            Assert.Contains("rollback-result.json", manifest.Files);
+            Assert.Contains(GeneralUpdate.Core.Configuration.ManifestInfo.FileName, manifest.Files);
+            Assert.Equal(archive.Entries.Count, manifest.Files.Count);
+        }
+        TryDelete(bundle.ZipPath);
+    }
+
+    [Fact]
+    public async Task CollectAsync_JsonBlacklistedByPrivacyFilter_ProtocolMetadataStillShipped()
+    {
+        // Regression: the bootstrap passes the UPDATE blacklist (default formats include
+        // .json) as the diagnostics privacy filter — it stripped manifest.json and the
+        // rollback JSON evidence from every bundle. Protocol metadata is GeneralUpdate's
+        // own payload and must survive; other blacklisted artifacts stay excluded.
+        Directory.CreateDirectory(_installPath);
+        Directory.CreateDirectory(Path.Combine(_installPath, "Logs"));
+        File.WriteAllText(Path.Combine(_installPath, GeneralUpdate.Core.Configuration.ManifestInfo.FileName), "{}");
+        File.WriteAllText(Path.Combine(_installPath, "Logs", "generalupdate-trace.log"), "log line");
+
+        // ".txt" blacklists the log tail artifact; ".json" blacklists every protocol payload.
+        var filter = new GeneralUpdate.Core.FileSystem.BlackMatcher(new GeneralUpdate.Core.Configuration.BlackPolicy(
+            null, new[] { ".txt", ".json" }, null));
+        var collector = new DiagnosticsCollector(CreateOptions(), filter);
+
+        var bundle = await collector.CollectAsync(new DiagnosticsCollectRequest(
+            _installPath,
+            DiagnosticsKinds.Rollback,
+            "1.0.2",
+            "reason",
+            RollbackResultJson: "{}"), CancellationToken.None);
+
+        Assert.NotNull(bundle);
+        using (var archive = ZipFile.OpenRead(bundle!.ZipPath))
+        {
+            // Mandatory protocol metadata survives the privacy filter.
+            Assert.Contains(archive.Entries, e => e.FullName == "manifest.json");
+            Assert.Contains(archive.Entries, e => e.FullName == "rollback-result.json");
+            Assert.Contains(archive.Entries, e => e.FullName == GeneralUpdate.Core.Configuration.ManifestInfo.FileName);
+            // Collected artifacts still honor the privacy exclusions (log tail is .txt).
+            Assert.DoesNotContain(archive.Entries, e => e.FullName == "update-log-tail.txt");
+        }
+        TryDelete(bundle.ZipPath);
+    }
+
     private static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch { /* best effort */ }

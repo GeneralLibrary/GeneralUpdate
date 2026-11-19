@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
@@ -34,6 +35,7 @@ namespace GeneralUpdate.Core.Diagnostics;
 internal static class DiagnosticsPackager
 {
     private const string DumpExtension = ".dmp";
+    private const string ManifestEntryName = "manifest.json";
     private const long LogTailBytes = 64 * 1024;
 
     /// <summary>Packs a directory. Returns the archive path and the list of included file names.</summary>
@@ -73,7 +75,53 @@ internal static class DiagnosticsPackager
             return null;
         }
 
+        // Size-cap processing has settled: sync the in-archive schema-2 manifest.json with the
+        // entries ACTUALLY retained (after privacy filtering and dump stripping) so the server's
+        // audit list declares the real archive contents.
+        UpdateEmbeddedManifest(zipPath, sourceDirectory, included);
+
         return (zipPath, included);
+    }
+
+    /// <summary>
+    ///     Rewrites the <c>manifest.json</c> entry inside a finished archive with the retained
+    ///     entry list. Only schema-2 manifests (our own disk contract) are touched; an unknown
+    ///     dialect is left as written. Best-effort: a failure here must not lose the bundle.
+    /// </summary>
+    private static void UpdateEmbeddedManifest(string zipPath, string sourceDirectory, List<string> included)
+    {
+        try
+        {
+            var manifestPath = Path.Combine(sourceDirectory, ManifestEntryName);
+            if (!File.Exists(manifestPath)) return;
+
+            OutboxManifest? manifest;
+            try
+            {
+                manifest = JsonSerializer.Deserialize(
+                    File.ReadAllText(manifestPath), DiagnosticsJsonContext.Default.OutboxManifest);
+            }
+            catch
+            {
+                return; // Unknown manifest dialect — leave the embedded copy untouched.
+            }
+            if (manifest == null || manifest.Schema != OutboxManifest.SupportedSchema) return;
+
+            manifest.Files = included;
+            using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Update);
+            var entry = archive.GetEntry(ManifestEntryName);
+            if (entry == null) return;
+            entry.Delete();
+            var updated = archive.CreateEntry(ManifestEntryName);
+            using (var writer = new StreamWriter(updated.Open(), new UTF8Encoding(false)))
+            {
+                writer.Write(JsonSerializer.Serialize(manifest, DiagnosticsJsonContext.Default.OutboxManifest));
+            }
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"DiagnosticsPackager: embedded manifest file list update failed: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -105,7 +153,7 @@ internal static class DiagnosticsPackager
             var logTail = ReadLogTail(request.InstallPath);
             WriteIfAny(Path.Combine(stagingRoot, "update-log-tail.txt"), logTail);
 
-            WriteIfAny(Path.Combine(stagingRoot, "manifest.json"), BuildManifestJson(request, options, bundleGuid));
+            WriteIfAny(Path.Combine(stagingRoot, ManifestEntryName), BuildManifestJson(request, options, bundleGuid));
 
             return PackDirectory(stagingRoot, options, privacyFilter);
         }
@@ -146,7 +194,12 @@ internal static class DiagnosticsPackager
             foreach (var file in files)
             {
                 if (stripDumps && IsDump(file)) continue;
-                if (privacyFilter != null && privacyFilter.IsBlacklisted(file))
+                // Protocol metadata is written by GeneralUpdate itself (no user content, no
+                // credentials) and is REQUIRED by the upload contract — the update blacklist
+                // the bootstrap passes as the privacy filter excludes ".json" by default,
+                // which would strip every mandatory payload from the bundle. Everything else
+                // (log tails, collected artifacts) still honors the privacy exclusions.
+                if (privacyFilter != null && !IsProtocolMetadata(file) && privacyFilter.IsBlacklisted(file))
                 {
                     GeneralTracer.Info($"DiagnosticsPackager: blacklisted file excluded: {Path.GetFileName(file)}.");
                     continue;
@@ -227,6 +280,20 @@ internal static class DiagnosticsPackager
 
     private static bool IsDump(string path) =>
         Path.GetExtension(path).Equals(DumpExtension, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     The fixed protocol-metadata file names the packager and the rollback/self-check
+    ///     collectors stage themselves (plus Bowl's outbox manifest). These must reach the
+    ///     server regardless of the host's exclusion lists.
+    /// </summary>
+    private static bool IsProtocolMetadata(string path)
+    {
+        var name = Path.GetFileName(path);
+        return name.Equals(ManifestEntryName, StringComparison.OrdinalIgnoreCase)
+            || name.Equals("self-check-report.json", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("rollback-result.json", StringComparison.OrdinalIgnoreCase)
+            || name.Equals(Configuration.ManifestInfo.FileName, StringComparison.OrdinalIgnoreCase);
+    }
 
     private static void WriteIfAny(string path, string? content)
     {

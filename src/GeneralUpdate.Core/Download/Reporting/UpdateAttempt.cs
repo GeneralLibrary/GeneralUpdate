@@ -467,10 +467,18 @@ public sealed class UpdateAttempt : IDisposable
 
     /// <summary>Remove known configured credentials from the new journal, not arbitrary secrets embedded in user exceptions.</summary>
     /// <remarks>Local diagnostics still require restricted access; this is not an authorization to upload stack traces.</remarks>
-    private string? Redact(string? value)
+    private string? Redact(string? value) => Redact(value, _config);
+
+    /// <summary>
+    ///     Shared credential redaction for server-facing evidence built outside this journal —
+    ///     e.g. the self-check verdict reason that both the Startup report and the
+    ///     <see cref="SelfCheck.RollbackManager"/> rollback report embed on the wire.
+    /// </summary>
+    /// <remarks>Remove known configured credentials, not arbitrary secrets embedded in user exceptions.</remarks>
+    internal static string? Redact(string? value, UpdateContext config)
     {
         if (value == null) return null;
-        foreach (var secret in new[] { _config.Token, _config.AppSecretKey, _config.BasicPassword })
+        foreach (var secret in new[] { config.Token, config.AppSecretKey, config.BasicPassword })
             if (!string.IsNullOrEmpty(secret)) value = value.Replace(secret, "[REDACTED]");
         return value;
     }

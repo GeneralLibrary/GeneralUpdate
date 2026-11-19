@@ -233,6 +233,127 @@ namespace DifferentialTest.Pipeline
             Assert.False(File.Exists(target), "legacy hash-only manifest should still delete the file");
         }
 
+        [Fact]
+        public async Task DirtyAsync_DeleteList_UriEscapedRelativePath_MatchesLiteralFile()
+        {
+            // Regression: StorageManager-relative paths are URI-escaped (Uri.MakeRelativeUri,
+            // e.g. "lib#1.dll" stored as "lib%231.dll") while paths computed from the file
+            // system are literal. Because relative paths were present, hash fallback was
+            // disabled and the obsolete file silently stayed installed.
+            // Arrange
+            var appDir = Path.Combine(_testDir, "app-escaped");
+            var patchDir = Path.Combine(_testDir, "patch-escaped");
+            Directory.CreateDirectory(Path.Combine(appDir, "plugins"));
+            Directory.CreateDirectory(patchDir);
+
+            var target = Path.Combine(appDir, "plugins", "lib#1.dll");
+            File.WriteAllText(target, "obsolete plugin");
+
+            var deleteNodes = new List<GeneralUpdate.Core.FileSystem.FileNode>
+            {
+                new() { Name = "lib%231.dll", FullName = target, RelativePath = "plugins/lib%231.dll" }
+            };
+            GeneralUpdate.Core.FileSystem.StorageManager.CreateJson(
+                Path.Combine(patchDir, "generalupdate.delete.json"),
+                deleteNodes,
+                GeneralUpdate.Core.JsonContext.FileNodesJsonContext.Default.ListFileNode);
+
+            var pipeline = new DiffPipeline();
+
+            // Act
+            await pipeline.DirtyAsync(appDir, patchDir);
+
+            // Assert
+            Assert.False(File.Exists(target), "URI-escaped manifest path should match the literal file name");
+        }
+
+        [Fact]
+        public async Task DirtyAsync_NonCanonicalAppPath_StripsPrefixBeforeMatching()
+        {
+            // Regression: the app path arrives as given (may be relative or contain "."
+            // segments) while enumerated FullName values are absolute ¡ª a non-canonical base
+            // failed the prefix test and reduced every path to a bare file name, which never
+            // matched the deletion manifest.
+            // Arrange
+            var appDir = Path.Combine(_testDir, "app-dot");
+            Directory.CreateDirectory(Path.Combine(appDir, "sub"));
+            var patchDir = Path.Combine(_testDir, "patch-dot");
+            Directory.CreateDirectory(patchDir);
+
+            var target = Path.Combine(appDir, "sub", "gone.txt");
+            File.WriteAllText(target, "obsolete");
+
+            var nonCanonicalApp = Path.Combine(_testDir, ".", "app-dot");
+
+            var deleteNodes = new List<GeneralUpdate.Core.FileSystem.FileNode>
+            {
+                new() { Name = "gone.txt", FullName = target, RelativePath = "sub/gone.txt" }
+            };
+            GeneralUpdate.Core.FileSystem.StorageManager.CreateJson(
+                Path.Combine(patchDir, "generalupdate.delete.json"),
+                deleteNodes,
+                GeneralUpdate.Core.JsonContext.FileNodesJsonContext.Default.ListFileNode);
+
+            var pipeline = new DiffPipeline();
+
+            // Act
+            await pipeline.DirtyAsync(nonCanonicalApp, patchDir);
+
+            // Assert
+            Assert.False(File.Exists(target), "non-canonical app path should still strip the prefix correctly");
+        }
+
+        [Fact]
+        public async Task CleanAsync_CustomCleanMatcher_ReturnsNullMatch_PackagesFileWhole()
+        {
+            // Regression: the relative-path index shortcut bypassed the injected matcher, so
+            // a custom ICleanMatcher whose Match deliberately returns null (package the file
+            // whole / select a different baseline) got a patch against the indexed file
+            // anyway. Only the EXACT default matcher may use the index shortcut.
+            // Arrange
+            var src = Path.Combine(_testDir, "src-custom");
+            var tgt = Path.Combine(_testDir, "tgt-custom");
+            var patch = Path.Combine(_testDir, "patch-custom");
+            Directory.CreateDirectory(src);
+            Directory.CreateDirectory(tgt);
+            Directory.CreateDirectory(patch);
+
+            File.WriteAllText(Path.Combine(src, "a.txt"), "old");
+            File.WriteAllText(Path.Combine(tgt, "a.txt"), "new");
+
+            var pipeline = new DiffPipeline(
+                new DiffPipelineOptions(),
+                new StreamingHdiffDiffer(),
+                cleanMatcher: new NullCleanMatcher());
+
+            // Act
+            await pipeline.CleanAsync(src, tgt, patch);
+
+            // Assert ¡ª Match() returned null ¡ú the new file is copied WHOLE, no patch emitted.
+            Assert.True(File.Exists(Path.Combine(patch, "a.txt")), "custom matcher's null match must package the file whole");
+            Assert.False(File.Exists(Path.Combine(patch, "a.txt.patch")), "custom matcher must not be bypassed by the relative-path index");
+        }
+
+        /// <summary>
+        /// A custom matcher that deliberately never matches ¡ª the pipeline must respect its
+        /// null verdicts (package files whole), not bypass it with the relative-path index.
+        /// </summary>
+        private sealed class NullCleanMatcher : GeneralUpdate.Core.Differential.ICleanMatcher
+        {
+            private readonly GeneralUpdate.Core.FileSystem.StorageManager _storage = new();
+
+            public GeneralUpdate.Core.FileSystem.ComparisonResult Compare(string sourcePath, string targetPath)
+                => _storage.Compare(sourcePath, targetPath);
+
+            public IEnumerable<GeneralUpdate.Core.FileSystem.FileNode>? Except(string sourcePath, string targetPath)
+                => _storage.Except(sourcePath, targetPath);
+
+            public GeneralUpdate.Core.FileSystem.FileNode? Match(
+                GeneralUpdate.Core.FileSystem.FileNode newFile,
+                IEnumerable<GeneralUpdate.Core.FileSystem.FileNode> leftNodes)
+                => null;
+        }
+
         /// <summary>
         /// Synchronous IProgress implementation for deterministic test assertions.
         /// Unlike System.Progress, callbacks fire immediately during Report().

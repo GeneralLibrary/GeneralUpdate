@@ -90,6 +90,29 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
+    public void Build_FullOnlyBothAppTypes_RetainsLatestPerTrack()
+    {
+        // Regression: a combined Client+Upgrade release publishes one full package per
+        // AppType track. Picking ONE global latest dropped the other track's required
+        // package while ClientStrategy still expected the Both scenario.
+        var assets = new[]
+        {
+            AssetWithType("client-full", "2.0.0", packageType: (int)PackageType.Full, appType: (int)AppType.Client),
+            AssetWithType("client-full-old", "1.5.0", packageType: (int)PackageType.Full, appType: (int)AppType.Client),
+            AssetWithType("upgrade-full", "2.5.0", packageType: (int)PackageType.Full, appType: (int)AppType.Upgrade)
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0", "1.0.0");
+
+        Assert.True(result.HasAssets);
+        Assert.Equal(2, result.Assets.Count);
+        Assert.Equal("2.0.0", result.Assets.Single(a => a.AppType == (int)AppType.Client).Version);
+        Assert.Equal("2.5.0", result.Assets.Single(a => a.AppType == (int)AppType.Upgrade).Version);
+        // Retained in version order.
+        Assert.Equal("2.0.0", result.Assets[0].Version);
+        Assert.Equal("2.5.0", result.Assets[1].Version);
+    }
+
+    [Fact]
     public void Build_FrozenFullPackageOnly_ReturnsEmpty()
     {
         var assets = new[] { Asset("full", "2.0.0", isFreeze: true, packageType: (int)PackageType.Full) };

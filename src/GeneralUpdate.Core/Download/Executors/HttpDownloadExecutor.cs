@@ -145,8 +145,13 @@ public class HttpDownloadExecutor : IDownloadExecutor
             using var fs = new FileStream(destPath, mode, FileAccess.Write, FileShare.None);
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
+            // Pass the linked timeout token, NOT the caller's token: with
+            // HttpCompletionOption.ResponseHeadersRead, SendAsync has already completed and
+            // its cancellation registration does not bound subsequent response-stream reads.
+            // The re-armed idle timer (idleCts) is what interrupts inactivity — a stalled
+            // connection after the headers would otherwise occupy a download slot indefinitely.
             var (downloaded, elapsed) = await StreamDownloadAsync(stream, fs, totalBytes, existingBytes,
-                destPath, progress, sw, token, asset.VersionContext, cts, _timeout).ConfigureAwait(false);
+                destPath, progress, sw, cts.Token, asset.VersionContext, cts, _timeout).ConfigureAwait(false);
 
             progress?.Report(new DownloadProgress(
                 Path.GetFileName(destPath), downloaded,

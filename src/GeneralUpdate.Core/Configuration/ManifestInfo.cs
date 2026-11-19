@@ -106,14 +106,17 @@ public class ManifestInfo
         var filePath = path ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName);
         var json = JsonSerializer.Serialize(this, HttpParameterJsonContext.Default.ManifestInfo);
         // Atomic replace: the manifest drives the next update cycle's version decision,
-        // so a torn half-written file (crash/power loss mid-write) must never be observable.
+        // so neither a torn half-written file nor a missing one (crash between delete and
+        // move) may ever be observable. File.Replace swaps in one OS operation when the
+        // destination exists; File.Move covers initial creation (same pattern as
+        // UpdateAttempt.WriteAtomic — File.Move(src, dst, overwrite) is unavailable on
+        // netstandard2.0).
         var tempPath = filePath + ".tmp-" + Guid.NewGuid().ToString("N");
         try
         {
             File.WriteAllText(tempPath, json);
-            // File.Move(src, dst, overwrite) is unavailable on netstandard2.0.
-            if (File.Exists(filePath)) File.Delete(filePath);
-            File.Move(tempPath, filePath);
+            if (File.Exists(filePath)) File.Replace(tempPath, filePath, null);
+            else File.Move(tempPath, filePath);
         }
         catch
         {

@@ -227,15 +227,23 @@ public class DiffPipeline
 
         // O(1) old-version lookup by relative path: Match() used to scan the whole
         // left-node list for every changed file (O(n²) string comparisons on large trees).
-        // The injected matcher stays as the fallback so custom matcher semantics survive.
-        var leftIndex = new Dictionary<string, FileNode>(leftNodes.Count, StringComparer.OrdinalIgnoreCase);
-        foreach (var node in leftNodes)
+        // Restricted to the EXACT default matcher — custom implementations and subclasses
+        // remain authoritative (a custom Match may deliberately return null to package a
+        // file whole or select a different baseline, and must not be bypassed by an index hit).
+        var useRelativeIndex = _cleanMatcher.GetType() == typeof(DefaultCleanMatcher);
+        var leftIndex = useRelativeIndex
+            ? new Dictionary<string, FileNode>(leftNodes.Count, StringComparer.OrdinalIgnoreCase)
+            : null;
+        if (leftIndex != null)
         {
-            // First writer wins on duplicate relative paths (Dictionary.TryAdd is
-            // unavailable on netstandard2.0).
-            if (!string.IsNullOrWhiteSpace(node.RelativePath) &&
-                !leftIndex.ContainsKey(NormalizeRelative(node.RelativePath)))
-                leftIndex[NormalizeRelative(node.RelativePath)] = node;
+            foreach (var node in leftNodes)
+            {
+                // First writer wins on duplicate relative paths (Dictionary.TryAdd is
+                // unavailable on netstandard2.0).
+                if (!string.IsNullOrWhiteSpace(node.RelativePath) &&
+                    !leftIndex.ContainsKey(NormalizeRelative(node.RelativePath)))
+                    leftIndex[NormalizeRelative(node.RelativePath)] = node;
+            }
         }
 
         var tasks = differentFiles.Select(file => Task.Run(async () =>
@@ -246,7 +254,8 @@ public class DiffPipeline
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var tempDir = GetTempDirectory(file, targetPath, patchPath);
-                var oldFile = (file.RelativePath != null &&
+                var oldFile = (leftIndex != null &&
+                               file.RelativePath != null &&
                                leftIndex.TryGetValue(NormalizeRelative(file.RelativePath), out var indexed))
                     ? indexed
                     : _cleanMatcher.Match(file, leftNodes);
@@ -490,12 +499,29 @@ public class DiffPipeline
         // Match by relative path first: hashing every app file is expensive, and hash-only
         // matching deletes EVERY copy of duplicated content (e.g. the same DLL shipped in
         // two directories) even when the manifest only asked to remove one of them.
-        var deleteRelativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Relative paths are file identities, not content — on Linux "Foo.dll" and
+        // "foo.dll" are distinct files, so the delete set must be case-sensitive there
+        // (hashes stay case-insensitive: they are hex text of the same digest).
+        var pathComparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var deleteRelativePaths = new HashSet<string>(pathComparer);
         var deleteHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var del in deleteFiles)
         {
             if (!string.IsNullOrWhiteSpace(del.RelativePath))
-                deleteRelativePaths.Add(NormalizeRelativePath(del.RelativePath));
+            {
+                var raw = NormalizeRelativePath(del.RelativePath);
+                deleteRelativePaths.Add(raw);
+                // StorageManager-relative paths are URI-escaped (Uri.MakeRelativeUri), e.g.
+                // "plugins/lib#1.dll" stored as "plugins/lib%231.dll", while paths computed
+                // from the file system are literal. Index the decoded form as well so both
+                // representations match; keeping the raw form preserves compatibility with
+                // manifests that already hold literal paths and names containing '%' themselves.
+                var decoded = Uri.UnescapeDataString(raw);
+                if (!string.Equals(decoded, raw, StringComparison.Ordinal))
+                    deleteRelativePaths.Add(decoded);
+            }
             if (!string.IsNullOrEmpty(del.Hash))
                 deleteHashes.Add(del.Hash);
         }
@@ -531,14 +557,19 @@ public class DiffPipeline
     /// <summary>
     /// Path.GetRelativePath is unavailable on netstandard2.0; strip the app directory
     /// prefix directly (falling back to the file name when the file sits outside it).
+    /// Both paths are canonicalized first: <c>DirtyAsync</c> accepts relative app paths
+    /// (or ones containing "." segments) while the enumerated FullName values are
+    /// absolute — a non-canonical base fails the prefix test and reduces every path to
+    /// a bare file name, which then never matches the deletion manifest.
     /// </summary>
     private static string ComputeRelativePath(string basePath, string fullPath)
     {
-        var baseTrimmed = basePath.TrimEnd('\\', '/');
-        if (fullPath.Length > baseTrimmed.Length &&
-            fullPath.StartsWith(baseTrimmed, StringComparison.OrdinalIgnoreCase) &&
-            (fullPath[baseTrimmed.Length] == '\\' || fullPath[baseTrimmed.Length] == '/'))
-            return fullPath.Substring(baseTrimmed.Length + 1);
+        var baseTrimmed = Path.GetFullPath(basePath).TrimEnd('\\', '/');
+        var canonicalPath = Path.GetFullPath(fullPath);
+        if (canonicalPath.Length > baseTrimmed.Length &&
+            canonicalPath.StartsWith(baseTrimmed, StringComparison.OrdinalIgnoreCase) &&
+            (canonicalPath[baseTrimmed.Length] == '\\' || canonicalPath[baseTrimmed.Length] == '/'))
+            return canonicalPath.Substring(baseTrimmed.Length + 1);
         return Path.GetFileName(fullPath);
     }
 
