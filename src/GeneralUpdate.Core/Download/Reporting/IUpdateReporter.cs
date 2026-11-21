@@ -62,8 +62,10 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// <param name="Type">The update type: 1 = Upgrade, 2 = Push. Defaults to 1 (Upgrade).</param>
 /// <remarks>
 /// Local persistence and custom reporters receive the diagnostic fields below.
-/// HttpUpdateReporter deliberately projects only {"recordId":123,"status":1,"type":1};
-/// local paths and exception details are not automatically uploaded.
+/// HttpUpdateReporter projects the legacy three-field payload plus the optional failure
+/// attribution fields (<see cref="Phase"/>, error code and message) per the GeneralSpace
+/// Investigate extension of the ReportDTO — legacy servers ignore unknown JSON members,
+/// so the extension is grayscale-safe.
 /// </remarks>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
 {
@@ -81,6 +83,12 @@ public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
     public string? Role { get; init; }
     /// <summary>Workflow stage at capture time; Error.Stage retains the originating failure stage.</summary>
     public string? Stage { get; init; }
+    /// <summary>
+    ///     Server-facing failure phase (<see cref="UpdatePhases"/>: Download/Verify/Extract/Apply/
+    ///     Startup/Rollback). Unlike <see cref="Stage"/> this value crosses the wire — set it only
+    ///     where the phase is unambiguous (self-check verdict, rollback executor, distribution points).
+    /// </summary>
+    public string? Phase { get; init; }
     /// <summary>Explicit local meaning such as filesApplied, updateFailed or monitorUnavailable; not business health.</summary>
     public string? Outcome { get; init; }
     /// <summary>Application version before this attempt.</summary>
@@ -93,8 +101,31 @@ public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
     public UpdateFailure? Error { get; init; }
 }
 
-/// <summary>Explicit wire allowlist: adding local diagnostic fields cannot silently change the server API.</summary>
-internal record LegacyUpdateReport(int RecordId, int Status, int Type);
+/// <summary>
+///     Well-known values for <see cref="UpdateReport.Phase"/> — the server-facing failure-phase
+///     vocabulary of the GeneralSpace ReportDTO (升级故障归因与修复闭环设计方案 §3).
+/// </summary>
+public static class UpdatePhases
+{
+    public const string Download = "Download";
+    public const string Verify = "Verify";
+    public const string Extract = "Extract";
+    public const string Apply = "Apply";
+    /// <summary>Post-update launch verification failed (self-check judged the new version unusable).</summary>
+    public const string Startup = "Startup";
+    /// <summary>Rolling back to the previous version (after a failed verification or an orphan marker).</summary>
+    public const string Rollback = "Rollback";
+}
+
+/// <summary>
+///     Explicit wire allowlist. The three legacy fields are the baseline ReportDTO; the optional
+///     attribution trio (phase/errorCode/message) is accepted by the Investigate-enabled
+///     GeneralSpace server and ignored by legacy servers (unknown JSON members are skipped),
+///     so adding local diagnostic fields still cannot silently change the server API.
+/// </summary>
+internal record LegacyUpdateReport(
+    int RecordId, int Status, int Type,
+    string? Phase = null, string? ErrorCode = null, string? Message = null);
 
 /// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
@@ -165,8 +196,15 @@ public class HttpUpdateReporter : IUpdateReporter
         _reportUrl = reportUrl ?? string.Empty;
     }
 
-    /// <summary>Sends the legacy payload; only a 2xx response acknowledges delivery.</summary>
-    /// <remarks>An empty URL remains a no-op for direct callers; UpdateAttempt retains such reports as pending.</remarks>
+    /// <summary>
+    ///     Sends the wire payload (legacy trio + optional failure attribution); only a 2xx
+    ///     response acknowledges delivery.
+    /// </summary>
+    /// <remarks>
+    ///     An empty URL remains a no-op for direct callers; UpdateAttempt retains such reports as
+    ///     pending. The attribution trio maps from <see cref="UpdateReport.Phase"/> and
+    ///     <see cref="UpdateReport.Error"/> — legacy servers skip the unknown members.
+    /// </remarks>
     /// <exception cref="HttpRequestException">The request fails or returns a non-success HTTP status.</exception>
     public async Task ReportAsync(UpdateReport report, CancellationToken token = default)
     {
@@ -174,8 +212,8 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
-            
-            var json = JsonSerializer.Serialize(new LegacyUpdateReport(report.RecordId, report.Status, report.Type),
+
+            var json = JsonSerializer.Serialize(ToWire(report),
                 AttemptJsonContext.Default.LegacyUpdateReport);
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -194,4 +232,15 @@ public class HttpUpdateReporter : IUpdateReporter
             throw;
         }
     }
+
+    /// <summary>
+    ///     Wire projection: the server receives the record identity plus the failure attribution
+    ///     (phase, exception type as the error code, redacted message). Everything else in
+    ///     <see cref="UpdateReport"/> stays local evidence.
+    /// </summary>
+    internal static LegacyUpdateReport ToWire(UpdateReport report) => new(
+        report.RecordId, report.Status, report.Type,
+        Phase: string.IsNullOrWhiteSpace(report.Phase) ? null : report.Phase,
+        ErrorCode: string.IsNullOrWhiteSpace(report.Error?.ExceptionType) ? null : report.Error.ExceptionType,
+        Message: string.IsNullOrWhiteSpace(report.Error?.Message) ? null : report.Error.Message);
 }

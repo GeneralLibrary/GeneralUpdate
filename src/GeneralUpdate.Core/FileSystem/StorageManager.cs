@@ -762,7 +762,12 @@ namespace GeneralUpdate.Core.FileSystem
                 .Skip(keepVersions);
 
             foreach (var dir in dirs)
-                dir.Delete(true);
+            {
+                // Use the fault-tolerant delete (attribute reset + per-entry retry) rather
+                // than DirectoryInfo.Delete(true): a single read-only/locked file inside an
+                // old backup must not fail the surrounding update flow.
+                DeleteDirectory(dir.FullName);
+            }
         }
 
         /// <summary>

@@ -64,7 +64,7 @@ public sealed class ProcessLaunchRule : ISelfCheckRule
 
             try
             {
-                process = Process.Start(new ProcessStartInfo(appPath) { UseShellExecute = true });
+                process = ProcessLauncher.Start(new ProcessStartInfo(appPath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {

@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.FileSystem;
@@ -45,7 +46,10 @@ public sealed class DiagnosticsCollector : IDiagnosticsCollector
     /// <inheritdoc />
     public Task<DiagnosticsBundle?> CollectAsync(DiagnosticsCollectRequest request, CancellationToken ct)
     {
-        var bundle = DiagnosticsPackager.PackBundle(request, _options, _privacyFilter);
+        // The GUID is generated once here and embedded both in the archive manifest and in the
+        // upload metadata — the server deduplicates on it, so a retry re-sends the same id.
+        var bundleGuid = Guid.NewGuid().ToString("D");
+        var bundle = DiagnosticsPackager.PackBundle(request, _options, bundleGuid, _privacyFilter);
         if (bundle == null)
         {
             GeneralTracer.Info("DiagnosticsCollector: nothing to collect for this request.");
@@ -55,8 +59,15 @@ public sealed class DiagnosticsCollector : IDiagnosticsCollector
         var zip = bundle.Value.ZipPath;
         var manifest = new DiagnosticsManifest
         {
+            Guid = bundleGuid,
             Kind = request.Kind,
             Version = request.TargetVersion,
+            TargetName = _options.TargetName,
+            AppKey = _options.AppKey,
+            ProductId = _options.ProductId,
+            Platform = _options.Platform,
+            RecordId = request.RecordId > 0 ? request.RecordId : null,
+            RecordType = request.RecordType > 0 ? request.RecordType : null,
             Reason = request.Reason,
             Files = bundle.Value.Entries,
         };

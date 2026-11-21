@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using Xunit;
 
@@ -14,7 +15,7 @@ namespace CoreTest.Shared
     public class UpdateRequestBuilderTests
     {
         private const string TestUpdateUrl = "https://example.com/api/update";
-        private const string TestToken = "test-token-12345";
+        private static readonly string TestToken = FixtureValues.Token("builder");
         private const string TestScheme = "https";
 
         /// <summary>
@@ -31,7 +32,7 @@ namespace CoreTest.Shared
                 UpdateAppName = "Update.exe",
                 MainAppName = "TestApp.exe",
                 ClientVersion = "1.0.0",
-                AppSecretKey = "test-secret-key",
+                AppSecretKey = FixtureValues.Secret("builder"),
                 InstallPath = AppDomain.CurrentDomain.BaseDirectory
             };
             File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(testConfig));
@@ -382,7 +383,7 @@ namespace CoreTest.Shared
         {
             // Arrange
             var builder = CreateBuilderWithRequiredFields();
-            var customSecretKey = "my-secret-key-123";
+            var customSecretKey = FixtureValues.Secret("custom");
 
             // Act
             var config = builder.SetAppSecretKey(customSecretKey).Build();
@@ -579,7 +580,7 @@ namespace CoreTest.Shared
                     .SetMainAppName("MainCustomApp.exe")
                     .SetClientVersion("2.0.0")
                     .SetInstallPath("/custom/path")
-                    .SetAppSecretKey("custom-secret")
+                    .SetAppSecretKey(FixtureValues.Secret("custom"))
                     .Build();
 
                 // Assert
@@ -587,7 +588,7 @@ namespace CoreTest.Shared
                 Assert.Equal("MainCustomApp.exe", config.MainAppName);
                 Assert.Equal("2.0.0", config.ClientVersion);
                 Assert.Equal("/custom/path", config.InstallPath);
-                Assert.Equal("custom-secret", config.AppSecretKey);
+                Assert.Equal(FixtureValues.Secret("custom"), config.AppSecretKey);
             }
             finally
             {
@@ -756,13 +757,13 @@ namespace CoreTest.Shared
                 var completeConfig = new
                 {
                     UpdateUrl = "https://api.example.com/updates",
-                    Token = "Bearer abc123xyz",
+                    Token = FixtureValues.Token("bearer"),
                     Scheme = "https",
                     UpdateAppName = "MyApplication.exe",
                     MainAppName = "MyApplication.exe",
                     ClientVersion = "1.5.2",
                     UpgradeClientVersion = "1.0.0",
-                    AppSecretKey = "super-secret-key-456",
+                    AppSecretKey = FixtureValues.Secret("complete"),
                     ProductId = "my-product-001",
                     InstallPath = "/opt/myapp",
                     UpdateLogUrl = "https://example.com/changelog",
@@ -778,7 +779,7 @@ namespace CoreTest.Shared
                 // Assert
                 Assert.NotNull(config);
                 Assert.Equal("https://api.example.com/updates", config.UpdateUrl);
-                Assert.Equal("Bearer abc123xyz", config.Token);
+                Assert.Equal(FixtureValues.Token("bearer"), config.Token);
                 Assert.Equal("https", config.Scheme);
                 Assert.Equal("MyApplication.exe", config.UpdateAppName);
                 Assert.Equal("1.5.2", config.ClientVersion);
@@ -808,12 +809,12 @@ namespace CoreTest.Shared
             var testConfig = new
             {
                 UpdateUrl = "https://config-file.example.com/updates",
-                Token = "config-file-token",
+                Token = FixtureValues.Token("config-file"),
                 Scheme = "https",
                 UpdateAppName = "ConfigFileApp.exe",
                 MainAppName = "ConfigFileMain.exe",
                 ClientVersion = "9.9.9",
-                AppSecretKey = "config-file-secret",
+                AppSecretKey = FixtureValues.Secret("config-file"),
                 InstallPath = "/config/file/path"
             };
             
@@ -827,7 +828,7 @@ namespace CoreTest.Shared
 
                 // Assert - Values should come from config file
                 Assert.Equal("https://config-file.example.com/updates", config.UpdateUrl);
-                Assert.Equal("config-file-token", config.Token);
+                Assert.Equal(FixtureValues.Token("config-file"), config.Token);
                 Assert.Equal("https", config.Scheme);
                 Assert.Equal("ConfigFileApp.exe", config.UpdateAppName);
                 Assert.Equal("ConfigFileMain.exe", config.MainAppName);

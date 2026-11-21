@@ -139,7 +139,10 @@ public class ZipCompressionStrategy : ICompressionStrategy
 
             var extractionRoot = Path.GetFullPath(unZipDir);
 
-            using var zipToOpen = new FileStream(zipFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            // Read-only access: ReadWrite made read-only files on disk fail to open (the
+            // archive is only ever read here), and required unnecessary write permissions
+            // on the source package.
+            using var zipToOpen = new FileStream(zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read, false, encoding);
             for (int i = 0; i < archive.Entries.Count; i++)
             {
@@ -199,8 +202,10 @@ public class ZipCompressionStrategy : ICompressionStrategy
         var directoryInfo = new DirectoryInfo(strBaseDir);
         var directories = directoryInfo.GetDirectories();
         var fileInfos = directoryInfo.GetFiles();
+        // Zip entry names always use "/" (PKZIP spec); a platform-specific separator here
+        // produced malformed entries ("a\\b.txt") when compressing on Linux/macOS.
         if (includeBaseDirectory)
-            namePrefix += directoryInfo.Name + "\\";
+            namePrefix += directoryInfo.Name + "/";
         foreach (var directory in directories)
             resultDictionary = resultDictionary.Concat(GetAllDirList(directory.FullName, true, namePrefix))
                 .ToDictionary(k => k.Key, k => k.Value);

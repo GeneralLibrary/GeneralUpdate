@@ -121,7 +121,10 @@ public sealed class UpdateProducerState
 }
 
 // Source-generated metadata keeps the disk/HTTP contracts usable under trimming and Native AOT.
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+// WhenWritingNull keeps the wire payload of a report without attribution byte-identical to the
+// legacy {"recordId","status","type"} shape — the optional fields only appear when populated.
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(BowlRequest))]
 [JsonSerializable(typeof(BowlReady))]
 [JsonSerializable(typeof(UpdateProducerState))]
@@ -279,7 +282,7 @@ public sealed class UpdateAttempt : IDisposable
                 WorkingDirectory = Path.GetDirectoryName(options.ExecutablePath)!,
                 Arguments = "--attempt " + _config.UpdateAttemptId + " --state-root " + QuoteArgument(_config.DiagnosticsDirectory!)
             };
-            _host = Process.Start(info) ?? throw new InvalidOperationException("Bowl host did not start.");
+            _host = ProcessLauncher.Start(info) ?? throw new InvalidOperationException("Bowl host did not start.");
             var expected = ProcessIdentity.From(_host);
             var watch = Stopwatch.StartNew();
             var readyPath = Path.Combine(DirectoryPath, "ready.json");
@@ -404,6 +407,12 @@ public sealed class UpdateAttempt : IDisposable
         new(recordId, status, type)
         {
             UpdateAttemptId = _config.UpdateAttemptId, Stage = Stage,
+            // Server-facing attribution (failure reports only): the originating failed operation
+            // (Error.Stage — pipeline middleware or stage tag) maps onto the ReportDTO phase;
+            // success reports carry no phase.
+            Phase = status == (int)UpdateStatus.Failure
+                ? UpdatePhaseMapper.FromStage(_lastError?.Stage) ?? UpdatePhaseMapper.FromStage(Stage)
+                : null,
             CurrentVersion = _config.ClientVersion, TargetVersion = _config.LastVersion,
             Error = _lastError, Role = _role, TimestampUtc = DateTimeOffset.UtcNow,
             EventId = Guid.NewGuid().ToString("D"), PackageName = _package?.Name, PackageVersion = _package?.Version,
@@ -458,10 +467,18 @@ public sealed class UpdateAttempt : IDisposable
 
     /// <summary>Remove known configured credentials from the new journal, not arbitrary secrets embedded in user exceptions.</summary>
     /// <remarks>Local diagnostics still require restricted access; this is not an authorization to upload stack traces.</remarks>
-    private string? Redact(string? value)
+    private string? Redact(string? value) => Redact(value, _config);
+
+    /// <summary>
+    ///     Shared credential redaction for server-facing evidence built outside this journal —
+    ///     e.g. the self-check verdict reason that both the Startup report and the
+    ///     <see cref="SelfCheck.RollbackManager"/> rollback report embed on the wire.
+    /// </summary>
+    /// <remarks>Remove known configured credentials, not arbitrary secrets embedded in user exceptions.</remarks>
+    internal static string? Redact(string? value, UpdateContext config)
     {
         if (value == null) return null;
-        foreach (var secret in new[] { _config.Token, _config.AppSecretKey, _config.BasicPassword })
+        foreach (var secret in new[] { config.Token, config.AppSecretKey, config.BasicPassword })
             if (!string.IsNullOrEmpty(secret)) value = value.Replace(secret, "[REDACTED]");
         return value;
     }

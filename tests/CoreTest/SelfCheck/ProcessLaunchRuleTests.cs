@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using GeneralUpdate.Core.SelfCheck;
 
 namespace CoreTest.SelfCheck;
@@ -25,21 +24,10 @@ public sealed class ProcessLaunchRuleTests : IDisposable
         try { Directory.Delete(_installPath, true); } catch { /* best effort */ }
     }
 
-    private static (string FileName, string Arguments) ImmediateExit(int code) =>
-        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? ("cmd.exe", $"/c exit {code}")
-            : ("/bin/sh", $"-c \"exit {code}\"");
-
-    private static (string FileName, string Arguments) StayAlive() =>
-        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? ("cmd.exe", "/c ping -n 60 127.0.0.1 > nul")
-            : ("/bin/sh", "-c \"sleep 60\"");
-
     [Fact]
     public async Task ImmediateNonZeroExit_Fails()
     {
-        var (fileName, arguments) = ImmediateExit(3);
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = false })!;
+        using var process = StubProcesses.ImmediateFail()!;
         var rule = new ProcessLaunchRule(process, TimeSpan.FromSeconds(15), requireAck: false);
 
         var result = await rule.CheckAsync(NewContext(), CancellationToken.None);
@@ -51,8 +39,7 @@ public sealed class ProcessLaunchRuleTests : IDisposable
     [Fact]
     public async Task ImmediateZeroExit_PassesWithDetail()
     {
-        var (fileName, arguments) = ImmediateExit(0);
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = false })!;
+        using var process = StubProcesses.ImmediateOk()!;
         var rule = new ProcessLaunchRule(process, TimeSpan.FromSeconds(15), requireAck: false);
 
         var result = await rule.CheckAsync(NewContext(), CancellationToken.None);
@@ -64,8 +51,7 @@ public sealed class ProcessLaunchRuleTests : IDisposable
     [Fact]
     public async Task AlivePastWindow_PassesLeniently()
     {
-        var (fileName, arguments) = StayAlive();
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = false })!;
+        using var process = StubProcesses.StayAlive()!;
         var rule = new ProcessLaunchRule(process, TimeSpan.FromSeconds(1), requireAck: false);
 
         try
@@ -95,8 +81,7 @@ public sealed class ProcessLaunchRuleTests : IDisposable
     [Fact]
     public async Task RequireAck_VerifyFailFailsImmediately()
     {
-        var (fileName, arguments) = StayAlive();
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = false })!;
+        using var process = StubProcesses.StayAlive()!;
         UpdateVerificationMarker.WriteAck(_installPath, healthy: false, "db down");
         var rule = new ProcessLaunchRule(process, TimeSpan.FromSeconds(15), requireAck: true);
 
@@ -119,8 +104,7 @@ public sealed class ProcessLaunchRuleTests : IDisposable
     [Fact]
     public async Task RequireAck_VerifyOkPassesBeforeWindowElapses()
     {
-        var (fileName, arguments) = StayAlive();
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = false })!;
+        using var process = StubProcesses.StayAlive()!;
         var rule = new ProcessLaunchRule(process, TimeSpan.FromSeconds(30), requireAck: true);
 
         try

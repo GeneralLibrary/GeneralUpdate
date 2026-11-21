@@ -33,8 +33,12 @@ public interface IDownloadOrchestrator
     /// <param name="plan">The download plan containing the list of assets to download. Must not be null.</param>
     /// <param name="destDir">The destination directory path where files will be saved.</param>
     /// <param name="maxConcurrency">
-    /// The maximum number of concurrent downloads. Defaults to 3.
-    /// When set to 0 or a negative value, falls back to the value configured in options.
+    /// The maximum number of concurrent downloads. Defaults to 0 — "use the value configured
+    /// in options" (mirrors the <c>DefaultDownloadOrchestrator</c> implementation; optional
+    /// arguments are substituted from the compile-time type, so an interface default that
+    /// differs from the implementation silently overrides the configured concurrency on
+    /// interface-typed calls).
+    /// When set to a positive value, overrides the configured concurrency.
     /// </param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiver for per-asset download progress notifications.</param>
     /// <param name="token">A <see cref="CancellationToken"/> to cancel the operation.</param>
@@ -50,7 +54,7 @@ public interface IDownloadOrchestrator
     Task<DownloadReport> ExecuteAsync(
         DownloadPlan plan,
         string destDir,
-        int maxConcurrency = 3,
+        int maxConcurrency = 0,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken token = default);
 }

@@ -53,6 +53,74 @@ public class DownloadPlanBuilderTests
     }
 
     [Fact]
+    public void Build_FullOnlyPackage_ReturnsFullPlan()
+    {
+        var assets = new[] { Asset("full", "2.0.0", packageType: (int)PackageType.Full) };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
+        Assert.True(result.HasAssets);
+        var asset = Assert.Single(result.Assets);
+        Assert.Equal((int)PackageType.Full, asset.PackageType);
+        Assert.Equal("2.0.0", asset.Version);
+    }
+
+    [Fact]
+    public void Build_FullOnlyPackage_AgreesWithHasUpdate()
+    {
+        // Regression: with only a Full package the plan used to come back empty
+        // while HasUpdate still reported an update, crashing the client strategy
+        // (SendProcessIpc with a null last version).
+        var assets = new[] { Asset("full", "2.0.0", packageType: (int)PackageType.Full) };
+        var hasUpdate = DownloadPlanBuilder.HasUpdate(assets, AppType.Client, "1.0.0");
+        var plan = DownloadPlanBuilder.Build(assets, "1.0.0");
+        Assert.True(hasUpdate);
+        Assert.True(plan.HasAssets);
+    }
+
+    [Fact]
+    public void Build_MultipleFullPackages_PicksLatest()
+    {
+        var assets = new[]
+        {
+            Asset("full-2", "2.0.0", packageType: (int)PackageType.Full),
+            Asset("full-3", "3.0.0", packageType: (int)PackageType.Full)
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
+        var asset = Assert.Single(result.Assets);
+        Assert.Equal("3.0.0", asset.Version);
+    }
+
+    [Fact]
+    public void Build_FullOnlyBothAppTypes_RetainsLatestPerTrack()
+    {
+        // Regression: a combined Client+Upgrade release publishes one full package per
+        // AppType track. Picking ONE global latest dropped the other track's required
+        // package while ClientStrategy still expected the Both scenario.
+        var assets = new[]
+        {
+            AssetWithType("client-full", "2.0.0", packageType: (int)PackageType.Full, appType: (int)AppType.Client),
+            AssetWithType("client-full-old", "1.5.0", packageType: (int)PackageType.Full, appType: (int)AppType.Client),
+            AssetWithType("upgrade-full", "2.5.0", packageType: (int)PackageType.Full, appType: (int)AppType.Upgrade)
+        };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0", "1.0.0");
+
+        Assert.True(result.HasAssets);
+        Assert.Equal(2, result.Assets.Count);
+        Assert.Equal("2.0.0", result.Assets.Single(a => a.AppType == (int)AppType.Client).Version);
+        Assert.Equal("2.5.0", result.Assets.Single(a => a.AppType == (int)AppType.Upgrade).Version);
+        // Retained in version order.
+        Assert.Equal("2.0.0", result.Assets[0].Version);
+        Assert.Equal("2.5.0", result.Assets[1].Version);
+    }
+
+    [Fact]
+    public void Build_FrozenFullPackageOnly_ReturnsEmpty()
+    {
+        var assets = new[] { Asset("full", "2.0.0", isFreeze: true, packageType: (int)PackageType.Full) };
+        var result = DownloadPlanBuilder.Build(assets, "1.0.0");
+        Assert.False(result.HasAssets);
+    }
+
+    [Fact]
     public void Build_AllVersionsBelowOrEqual_ReturnsEmpty()
     {
         var assets = new[] { Asset("old", "1.0.0"), Asset("older", "0.9.0") };

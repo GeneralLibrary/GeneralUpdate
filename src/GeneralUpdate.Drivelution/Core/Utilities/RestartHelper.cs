@@ -105,7 +105,7 @@ public static class RestartHelper
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(startInfo);
+        using var process = ProcessLauncher.Start(startInfo);
         if (process != null)
         {
             await process.WaitForExitAsync();
@@ -129,7 +129,7 @@ public static class RestartHelper
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(startInfo);
+        using var process = ProcessLauncher.Start(startInfo);
         if (process != null)
         {
             await process.WaitForExitAsync();
@@ -153,7 +153,7 @@ public static class RestartHelper
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(startInfo);
+        using var process = ProcessLauncher.Start(startInfo);
         if (process != null)
         {
             await process.WaitForExitAsync();
@@ -176,7 +176,7 @@ public static class RestartHelper
             UseShellExecute = true
         };
 
-        Process.Start(startInfo);
+        ProcessLauncher.Start(startInfo);
         Environment.Exit(0);
     }
 

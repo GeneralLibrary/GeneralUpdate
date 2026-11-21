@@ -59,7 +59,7 @@ public class UpdateStrategy : IStrategy
     private IStrategy? _customOsStrategy;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
     private IReadOnlyList<ISelfCheckRule> _selfCheckRules = Array.Empty<ISelfCheckRule>();
-    private IDiagnosticsUploader? _diagnosticsUploader;
+    private DiagnosticsChannel? _diagnostics;
 
     /// <summary>
     /// Gets or sets the lifecycle hooks. Injected by the bootstrap to execute custom logic at key points in the update flow.
@@ -90,11 +90,11 @@ public class UpdateStrategy : IStrategy
     }
 
     /// <summary>
-    ///     Sets the optional diagnostics uploader used by <see cref="RollbackManager"/> for the
-    ///     real-time upload after a self-check failure. Injected by the bootstrap when
-    ///     <see cref="Option.DiagnosticsUploadEnabled"/> is on.
+    ///     Sets the optional diagnostics channel used after a self-check failure: the rollback
+    ///     executor uploads a real-time bundle through it (uploader + options + privacy filter).
+    ///     Injected by the bootstrap when <see cref="Option.DiagnosticsUploadEnabled"/> is on.
     /// </summary>
-    public void SetDiagnosticsUploader(IDiagnosticsUploader? uploader) => _diagnosticsUploader = uploader;
+    public void SetDiagnosticsChannel(DiagnosticsChannel? channel) => _diagnostics = channel;
 
     /// <summary>
     /// Sets a custom OS-level strategy (injected via <c>.Strategy&lt;T&gt;()</c>).
@@ -405,7 +405,7 @@ public class UpdateStrategy : IStrategy
         var appPath = Path.Combine(_configInfo!.InstallPath, appName);
         if (!File.Exists(appPath))
             throw new FileNotFoundException($"Can't find the app {appName}!");
-        var process = Process.Start(appPath);
+        var process = ProcessLauncher.Start(appPath);
         if (process == null)
             throw new InvalidOperationException($"Failed to start process: {appPath}");
         GeneralTracer.Info($"UpdateStrategy: verification target started: {appPath} (PID: {process.Id}).");
@@ -456,15 +456,36 @@ public class UpdateStrategy : IStrategy
                 new InvalidOperationException(report.FirstFailureReason ?? "self-check failed"),
                 "healthCheckFailure");
 
-            var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnosticsUploader);
+            // Server-facing reason: redact configured credentials BEFORE it crosses the wire —
+            // the raw reason can be a custom rule exception or verify-fail acknowledgement that
+            // embeds a token/app secret/basic password, and both the Startup report and the
+            // rollback report send it verbatim (HttpUpdateReporter.ToWire).
+            var reason = UpdateAttempt.Redact(report.FirstFailureReason, config) ?? "self-check failed";
+
+            // Server-facing judgment report (phase=Startup, design §4 mapping): distinct from the
+            // rollback report RollbackManager sends (phase=Rollback) — the judgment moment and the
+            // recovery moment are two evidence points of the same incident.
+            await ReportSelfCheckFailureAsync(config, reason).ConfigureAwait(false);
+
+            var rollback = new RollbackManager(config.InstallPath, Reporter, _diagnostics);
             var result = await rollback.RollbackAsync(new RollbackRequest(
                 FailedVersion: targetVersion ?? "unknown",
                 PreviousVersion: previousVersion,
                 BackupDirectory: config.BackupDirectory,
                 RecordId: config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0,
                 ReportType: _reportType,
-                Reason: report.FirstFailureReason ?? "self-check failed"),
+                Reason: reason),
                 CancellationToken.None).ConfigureAwait(false);
+
+            // Marker lifecycle (design §6.3): the rollback consumes the recovery material recorded
+            // in the marker, so a COMPLETED rollback deletes it — otherwise the client's orphan
+            // check would re-rollback the same incident on the next start. An incomplete rollback
+            // keeps the marker: the orphan path then retries the recovery with the same material.
+            if (!string.IsNullOrEmpty(result.ActiveVersion))
+            {
+                UpdateVerificationMarker.Delete(config.InstallPath);
+                UpdateVerificationMarker.DeleteAckFiles(config.InstallPath);
+            }
 
             // Hook + event on top of the report RollbackManager already sent.
             var failEx = new InvalidOperationException(
@@ -490,6 +511,45 @@ public class UpdateStrategy : IStrategy
         }
     }
 
+    /// <summary>
+    ///     Reports the self-check verdict itself (phase=Startup) — best-effort: the rollback
+    ///     report RollbackManager sends afterwards is the reliable one; this adds the server-side
+    ///     "failed at startup" attribution even when the rollback path degrades.
+    /// </summary>
+    /// <remarks>
+    ///     Bounded like <see cref="UpdateAttempt.ReportAsync"/> (5 s): the caller awaits this
+    ///     BEFORE <see cref="SelfCheck.RollbackManager"/> restores the installation, so an
+    ///     unreachable reporting server must not stall recovery (the failed version is still
+    ///     installed and the application is stopped while it waits).
+    /// </remarks>
+    private async Task ReportSelfCheckFailureAsync(UpdateContext config, string? reason)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await Reporter.ReportAsync(new Download.Reporting.UpdateReport(
+                config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0,
+                (int)Download.Reporting.UpdateStatus.Failure,
+                _reportType)
+            {
+                Phase = Download.Reporting.UpdatePhases.Startup,
+                Error = new Download.Reporting.UpdateFailure
+                {
+                    Category = "healthCheckFailure",
+                    Message = reason,
+                }
+            }, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            GeneralTracer.Warn("UpdateStrategy: self-check failure report timed out (continuing rollback).");
+        }
+        catch (Exception ex)
+        {
+            GeneralTracer.Warn($"UpdateStrategy: self-check failure report failed: {ex.Message}");
+        }
+    }
+
     /// <summary>Relaunches the application after the tree was restored to the previous version.</summary>
     private void StartPreviousVersion(string appName)
     {
@@ -505,7 +565,7 @@ public class UpdateStrategy : IStrategy
             var appPath = Path.Combine(_configInfo!.InstallPath, appName);
             if (!File.Exists(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
-            using var process = Process.Start(appPath);
+            using var process = ProcessLauncher.Start(appPath);
             GeneralTracer.Info($"UpdateStrategy: previous version relaunched: {appPath}.");
         }
         catch (Exception ex)
@@ -528,7 +588,7 @@ public class UpdateStrategy : IStrategy
             if (string.IsNullOrWhiteSpace(bowlName)) return;
             var bowlPath = Path.Combine(_configInfo.InstallPath, bowlName);
             if (!File.Exists(bowlPath)) return;
-            using var bowlProcess = Process.Start(bowlPath);
+            using var bowlProcess = ProcessLauncher.Start(bowlPath);
             GeneralTracer.Info($"UpdateStrategy: Bowl launched (PID: {bowlProcess?.Id}).");
         }
         catch (Exception ex)

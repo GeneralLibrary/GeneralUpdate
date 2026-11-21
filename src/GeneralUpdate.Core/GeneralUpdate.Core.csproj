@@ -20,6 +20,11 @@
 
     </PropertyGroup>
 
+    <!-- Self-check switch-matrix tests drive the verified-launch flow through an OS-strategy test double. -->
+    <ItemGroup>
+        <InternalsVisibleTo Include="CoreTest" />
+    </ItemGroup>
+
     <!-- Compatibility packages for netstandard2.0 -->
     <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.1" />

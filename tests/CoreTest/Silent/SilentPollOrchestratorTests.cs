@@ -1,3 +1,4 @@
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Silent;
 using GeneralUpdate.Core.Strategy;
@@ -12,7 +13,7 @@ public class SilentPollOrchestratorTests
         {
             UpdateUrl = "https://api.example.com/update",
             ClientVersion = "1.0.0",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("silent"),
             UpdateAppName = "Update.exe",
             MainAppName = "MainApp",
             InstallPath = Path.GetTempPath()

@@ -4,13 +4,29 @@ namespace GeneralUpdate.Core.Diagnostics;
 ///     Well-known values for <see cref="DiagnosticsCollectRequest.Kind"/> and
 ///     <see cref="DiagnosticsManifest.Kind"/>.
 /// </summary>
+/// <remarks>
+///     The vocabulary is the server contract of GeneralSpace <c>/Fault/UploadArtifact</c>
+///     (docs/自检与Bowl诊断联动服务端适配方案 §3.2): <c>crash</c> / <c>update</c> / <c>selfcheck</c>.
+///     The server stores any non-empty kind verbatim (only <c>crash</c> opens a StartupFail
+///     fault ticket), so <see cref="Manual"/> stays a distinct, honest value instead of
+///     masquerading as an update-failure diagnostic.
+/// </remarks>
 public static class DiagnosticsKinds
 {
-    /// <summary>Real-time bundle produced by <see cref="SelfCheck.RollbackManager"/> after a rollback.</summary>
-    public const string Rollback = "rollback";
+    /// <summary>
+    ///     Real-time bundle produced by <see cref="SelfCheck.RollbackManager"/> after a rollback.
+    ///     Per the server adaptation design the rollback evidence is a self-check failure
+    ///     diagnostic (kind=selfcheck + recordId), so it shares the self-check bucket.
+    /// </summary>
+    public const string Rollback = SelfCheck;
 
-    /// <summary>Real-time bundle produced after a failed self-check session (without rollback).</summary>
-    public const string SelfCheck = "self-check";
+    /// <summary>
+    ///     Real-time bundle produced after a failed self-check session (with or without rollback).
+    /// </summary>
+    public const string SelfCheck = "selfcheck";
+
+    /// <summary>Update-failure diagnostic (pipeline failure evidence); also the crash-outbox sibling bucket.</summary>
+    public const string Update = "update";
 
     /// <summary>Crash evidence outbox written by the Bowl watchdog (schema 2 disk contract).</summary>
     public const string Crash = "crash";
@@ -61,4 +77,20 @@ public sealed class DiagnosticsOptions
 
     /// <summary>Upload attempts per outbox directory before it is marked giveup. Default 5.</summary>
     public int MaxRetry { get; set; } = 5;
+
+    // ---- Server attribution identity (GeneralSpace /Fault/UploadArtifact form fields) ----
+    // Populated by the bootstrap from the verification configuration so every bundle —
+    // real-time and outbox — carries the same client identity without call-site plumbing.
+
+    /// <summary>Client identity used for verification (<c>AppSecretKey</c>); empty when unknown.</summary>
+    public string? AppKey { get; set; }
+
+    /// <summary>Product the diagnostics belong to; empty when unknown.</summary>
+    public string? ProductId { get; set; }
+
+    /// <summary>Target platform per the GeneralSpace convention (1 = Windows, 2 = Linux); null when unknown.</summary>
+    public int? Platform { get; set; }
+
+    /// <summary>Monitored / verified process name (manifest <c>targetName</c>); empty when unknown.</summary>
+    public string? TargetName { get; set; }
 }

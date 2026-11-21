@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GeneralUpdate.Core;
@@ -26,16 +27,13 @@ public static class GracefulExit
     public static async Task ShutdownAsync(Process? process, int timeoutMs = 3000)
     {
         if (process == null || process.HasExited) return;
-        if (process.CloseMainWindow())
-        {
-            // CloseMainWindow sent a WM_CLOSE — give the process time to shut down.
-            await Task.Delay(timeoutMs).ConfigureAwait(false);
-        }
-        else
-        {
-            // Process has no main window (e.g. console app) — still give it time.
-            await Task.Delay(timeoutMs).ConfigureAwait(false);
-        }
+        // CloseMainWindow works only for GUI processes with a main window; for console
+        // apps it is a no-op. Either way, poll instead of sleeping the full timeout so a
+        // prompt exit is not penalized with the whole grace period on every update cycle.
+        process.CloseMainWindow();
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (!process.HasExited && DateTime.UtcNow < deadline)
+            await Task.Delay(100, CancellationToken.None).ConfigureAwait(false);
         if (!process.HasExited)
             process.Kill(); // Last resort
     }

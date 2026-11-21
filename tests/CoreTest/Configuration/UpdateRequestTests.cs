@@ -1,3 +1,4 @@
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 
 namespace CoreTest.Configuration;
@@ -17,7 +18,7 @@ public class ConfiginfoTests
             UpdateUrl = updateUrl,
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -33,7 +34,7 @@ public class ConfiginfoTests
             UpdateUrl = "not_a_valid_uri!!!",
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -50,7 +51,7 @@ public class ConfiginfoTests
             UpdateUrl = url,
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -67,7 +68,7 @@ public class ConfiginfoTests
             UpdateLogUrl = null,
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -84,7 +85,7 @@ public class ConfiginfoTests
             UpdateLogUrl = "not_a_uri!!!",
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -103,7 +104,7 @@ public class ConfiginfoTests
             UpdateUrl = "https://api.example.com",
             UpdateAppName = appName,
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -123,7 +124,7 @@ public class ConfiginfoTests
             UpdateUrl = "https://api.example.com",
             UpdateAppName = "TestApp",
             MainAppName = mainUpgradeAppName,
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };
@@ -161,7 +162,7 @@ public class ConfiginfoTests
             UpdateUrl = "https://api.example.com",
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = clientVersion,
             InstallPath = "C:\\app"
         };
@@ -180,7 +181,7 @@ public class ConfiginfoTests
             UpdateUrl = "https://api.example.com",
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret",
+            AppSecretKey = FixtureValues.Secret("request"),
             ClientVersion = "1.0.0",
             InstallPath = installPath
         };
@@ -197,7 +198,7 @@ public class ConfiginfoTests
             UpdateLogUrl = "https://api.example.com/log",
             UpdateAppName = "TestApp",
             MainAppName = "MainApp",
-            AppSecretKey = "secret123",
+            AppSecretKey = FixtureValues.Secret("request2"),
             ClientVersion = "1.0.0",
             InstallPath = "C:\\app"
         };

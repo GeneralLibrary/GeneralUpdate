@@ -123,12 +123,12 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
         var mainResp = await VersionService.Validate(
             _updateUrl, _clientVersion, AppType.Client,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token).ConfigureAwait(false);
 
         var upgradeResp = await VersionService.Validate(
             _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token).ConfigureAwait(false);
 
         // Check that returned VersionEntry items' AppType matches the requested type,
         // rather than just checking Count > 0. The server may return items whose

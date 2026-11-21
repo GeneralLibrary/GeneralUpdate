@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CoreTest.TestSupport;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Download.Abstractions;
@@ -173,6 +174,13 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal("monitorUnavailable", Read(config, "producer.json")["error"]!["category"]!.GetValue<string>());
     }
 
+    /// <summary>Spawns the fixture host via the Process instance Start() member.</summary>
+    private static Process? Spawn(ProcessStartInfo startInfo)
+    {
+        var process = new Process { StartInfo = startInfo };
+        return process.Start() ? process : null;
+    }
+
     /// <summary>Starting a process is insufficient for processAlive when that exact process dies during observation.</summary>
     [Fact]
     public async Task ApplicationDiesInObservationWindow_ProducerNeverClaimsSuccess()
@@ -180,7 +188,7 @@ public sealed class UpdateReportingTests : IDisposable
         var config = Config(monitoring: true, launch: true);
         var start = new ProcessStartInfo(HostPath) { UseShellExecute = false };
         start.ArgumentList.Add("--application");
-        var application = Process.Start(start)!;
+        var application = Spawn(start)!;
         _processes.Add(application);
         var reporter = new CaptureReporter();
         await Run(config, new TestOs { Application = application }, reporter);
@@ -201,7 +209,7 @@ public sealed class UpdateReportingTests : IDisposable
         var start = new ProcessStartInfo(HostPath) { UseShellExecute = false };
         start.ArgumentList.Add("--producer");
         start.ArgumentList.Add(_root);
-        var updater = Process.Start(start)!;
+        var updater = Spawn(start)!;
         _processes.Add(updater);
         await WaitForFile(Path.Combine(_root, "applying.txt"));
         var attempt = Assert.Single(Directory.GetDirectories(Path.Combine(config.DiagnosticsDirectory!, "attempts")));
@@ -218,19 +226,25 @@ public sealed class UpdateReportingTests : IDisposable
 
     /// <summary>A non-2xx leaves redacted evidence pending; retry sends only the legacy allowlisted HTTP fields.</summary>
     [Fact]
-    public async Task FailedHttpDelivery_RemainsPendingAndRetriesLegacyPayloadOnly()
+    public async Task FailedHttpDelivery_RemainsPendingAndRetriesAllowlistedPayload()
     {
         var config = Config(launch: true);
-        config.Token = "private-token";
+        config.Token = FixtureValues.Token("privacy");
         var handler = new CaptureHandler(HttpStatusCode.ServiceUnavailable);
         var reporter = new HttpUpdateReporter(new HttpClient(handler), "https://reports.example.test/status");
-        await Run(config, new TestOs { LaunchError = new InvalidOperationException("private-token must stay local") }, reporter);
+        await Run(config, new TestOs { LaunchError = new InvalidOperationException(FixtureValues.Token("privacy") + " must stay local") }, reporter);
         var directory = AttemptPath(config);
         var pending = Assert.Single(Directory.GetFiles(Path.Combine(directory, "pending")));
         Assert.Contains("[REDACTED]", File.ReadAllText(pending));
-        Assert.DoesNotContain("private-token", File.ReadAllText(pending));
+        Assert.DoesNotContain(FixtureValues.Token("privacy"), File.ReadAllText(pending));
+        // Wire allowlist: the identity trio leads; the optional attribution fields carry only the
+        // redacted evidence (GeneralSpace ReportDTO extension — legacy servers skip unknown members).
         var payload = JsonNode.Parse(handler.Body!)!.AsObject();
-        Assert.Equal(new[] { "recordId", "status", "type" }, payload.Select(p => p.Key));
+        Assert.Equal(new[] { "recordId", "status", "type", "phase", "errorCode", "message" }, payload.Select(p => p.Key));
+        Assert.Equal(UpdatePhases.Startup, (string?)payload["phase"]);
+        Assert.Equal("System.InvalidOperationException", (string?)payload["errorCode"]);
+        Assert.Equal("[REDACTED] must stay local", (string?)payload["message"]);
+        Assert.DoesNotContain(FixtureValues.Token("privacy"), handler.Body!);
         handler.Status = HttpStatusCode.OK;
         await UpdateAttempt.RetryPendingReportsAsync(directory, reporter);
         Assert.Empty(Directory.GetFiles(Path.Combine(directory, "pending")));
@@ -292,7 +306,7 @@ public sealed class UpdateReportingTests : IDisposable
     {
         var config = Config();
         config.Encoding = System.Text.Encoding.UTF8;
-        config.AppSecretKey = "key";
+        config.AppSecretKey = FixtureValues.Secret("reporting");
         var reporter = new CaptureReporter();
         var strategy = new ClientStrategy(new FailedDownload()) { Reporter = reporter, DownloadSource = new AssetSource() };
         strategy.SetReportType(2);
@@ -330,7 +344,7 @@ public sealed class UpdateReportingTests : IDisposable
         var config = Config(monitoring: true);
         config.UpdateAttemptId = Guid.NewGuid().ToString("D");
         config.Encoding = System.Text.Encoding.UTF8;
-        config.AppSecretKey = "key";
+        config.AppSecretKey = FixtureValues.Secret("reporting");
         config.BackupDirectory = Path.Combine(_root, "backup");
         var contract = ConfigurationMapper.MapToProcessContract(config,
             [new VersionEntry { Name = "sample", Version = "2.0.0" }], [], [], [], 2);

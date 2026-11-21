@@ -7,6 +7,8 @@ using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Diagnostics;
 using GeneralUpdate.Core.FileSystem;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
+using UpdateFailure = GeneralUpdate.Core.Download.Reporting.UpdateFailure;
+using UpdatePhases = GeneralUpdate.Core.Download.Reporting.UpdatePhases;
 using UpdateReport = GeneralUpdate.Core.Download.Reporting.UpdateReport;
 using UpdateStatus = GeneralUpdate.Core.Download.Reporting.UpdateStatus;
 
@@ -68,19 +70,21 @@ public sealed class RollbackManager
 {
     private readonly string _installPath;
     private readonly IUpdateReporter _reporter;
-    private readonly IDiagnosticsUploader? _diagnosticsUploader;
+    private readonly DiagnosticsChannel? _diagnostics;
 
     /// <param name="installPath">Installation root the rollback restores into.</param>
     /// <param name="reporter">Status reporter used for the Failure report.</param>
-    /// <param name="diagnosticsUploader">
+    /// <param name="diagnostics">
     ///     Optional diagnostics channel; when set, a rollback diagnostic bundle is collected and
-    ///     uploaded in real time. Failures are logged, never propagated.
+    ///     uploaded in real time. The channel carries the uploader AND the runtime options +
+    ///     privacy filter, so real-time bundles pack under the same size cap and blacklist as
+    ///     outbox evidence. Failures are logged, never propagated.
     /// </param>
-    public RollbackManager(string installPath, IUpdateReporter reporter, IDiagnosticsUploader? diagnosticsUploader = null)
+    public RollbackManager(string installPath, IUpdateReporter reporter, DiagnosticsChannel? diagnostics = null)
     {
         _installPath = installPath ?? throw new ArgumentNullException(nameof(installPath));
         _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
-        _diagnosticsUploader = diagnosticsUploader;
+        _diagnostics = diagnostics;
     }
 
     /// <summary>Executes the rollback sequence. Never throws for step failures; returns the aggregate outcome.</summary>
@@ -193,8 +197,18 @@ public sealed class RollbackManager
     {
         try
         {
-            await _reporter.ReportAsync(
-                new UpdateReport(req.RecordId, (int)UpdateStatus.Failure, req.ReportType)).ConfigureAwait(false);
+            // Server-facing attribution: the rollback IS the failure evidence of the startup
+            // phase it rolled back (GeneralSpace ReportDTO optional fields — phase="Rollback",
+            // message=first self-check failure). Legacy servers ignore the extra JSON members.
+            await _reporter.ReportAsync(new UpdateReport(req.RecordId, (int)UpdateStatus.Failure, req.ReportType)
+            {
+                Phase = UpdatePhases.Rollback,
+                Error = new UpdateFailure
+                {
+                    Category = "healthCheckFailure",
+                    Message = TruncateReason(req.Reason),
+                }
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -205,12 +219,13 @@ public sealed class RollbackManager
     private async Task UploadDiagnosticsAsync(
         RollbackRequest req, bool filesRestored, bool manifestReverted, CancellationToken ct)
     {
-        if (_diagnosticsUploader == null || !_diagnosticsUploader.IsConfigured)
+        if (_diagnostics == null || !_diagnostics.IsUsable)
             return;
 
         try
         {
-            var collector = new DiagnosticsCollector();
+            // Pack under the channel's size cap and privacy blacklist (not a default collector).
+            var collector = new DiagnosticsCollector(_diagnostics.Options, _diagnostics.PrivacyFilter);
             var result = new RollbackResult(filesRestored, manifestReverted,
                 filesRestored && manifestReverted ? req.PreviousVersion : null);
             var resultJson = JsonSerializer.Serialize(result, JsonContext.DiagnosticsJsonContext.Default.RollbackResult);
@@ -219,15 +234,28 @@ public sealed class RollbackManager
                 DiagnosticsKinds.Rollback,
                 req.FailedVersion,
                 req.Reason,
-                SelfCheckReportJson: null,
+                RecordId: req.RecordId,
+                RecordType: req.ReportType,
                 RollbackResultJson: resultJson), ct).ConfigureAwait(false);
+            if (bundle == null)
+                return;
 
-            var uploaded = await _diagnosticsUploader.UploadAsync(bundle, ct).ConfigureAwait(false);
+            var uploaded = await _diagnostics.Uploader.UploadAsync(bundle, ct).ConfigureAwait(false);
             GeneralTracer.Info($"RollbackManager: rollback diagnostics upload={(uploaded ? "succeeded" : "failed (kept local)")}");
         }
         catch (Exception ex)
         {
             GeneralTracer.Warn($"RollbackManager: rollback diagnostics upload failed: {ex.Message}");
         }
+    }
+
+    /// <summary>The server truncates inline messages; keep the reason within the 8 KB contract.</summary>
+    private static string? TruncateReason(string? reason)
+    {
+        if (string.IsNullOrEmpty(reason)) return reason;
+        const int maxBytes = 8 * 1024;
+        return System.Text.Encoding.UTF8.GetByteCount(reason) <= maxBytes
+            ? reason
+            : System.Text.Encoding.UTF8.GetString(System.Text.Encoding.UTF8.GetBytes(reason), 0, maxBytes);
     }
 }

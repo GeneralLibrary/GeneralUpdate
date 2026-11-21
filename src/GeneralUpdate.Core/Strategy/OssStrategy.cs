@@ -322,7 +322,7 @@ public class OssStrategy : IStrategy
         if (_configInfo.Monitoring != null)
             start.Environment["GENERALUPDATE_MONITORING_OPTIONS"] =
                 JsonSerializer.Serialize(_configInfo.Monitoring, AttemptJsonContext.Default.BowlOptions);
-        using var updater = Process.Start(start) ?? throw new InvalidOperationException("The OSS updater did not start.");
+        using var updater = ProcessLauncher.Start(start) ?? throw new InvalidOperationException("The OSS updater did not start.");
         _configInfo.Attempt?.Record("handedOff");
         GeneralTracer.Info("[OssClient] Upgrade launched, exiting.");
         await GracefulExit.CurrentProcessAsync().ConfigureAwait(false);
@@ -515,7 +515,7 @@ public class OssStrategy : IStrategy
             throw new FileNotFoundException($"Application not found: {appPath}");
 
         _configInfo?.Attempt?.EnsureMonitorAlive();
-        using var application = Process.Start(new ProcessStartInfo(appPath)
+        using var application = ProcessLauncher.Start(new ProcessStartInfo(appPath)
         {
             UseShellExecute = false, WorkingDirectory = targetDir
         }) ?? throw new InvalidOperationException("The application did not start.");

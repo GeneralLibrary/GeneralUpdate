@@ -40,6 +40,83 @@ public class IpcEncryptionTests
     }
 
     [Fact]
+    public void DecryptFromFile_CorruptedCiphertext_ReturnsNull_DoesNotThrow()
+    {
+        // Regression: a truncated or otherwise corrupted IPC file (crash mid-write of the
+        // old non-atomic writer, or a leftover file from another product) used to escape
+        // as CryptographicException from TransformFinalBlock; callers then misread the
+        // throw as "no IPC data" only by accident. It must degrade to null instead.
+        var tempFile = Path.Combine(Path.GetTempPath(), $"corrupt_{Guid.NewGuid():N}.enc");
+        try
+        {
+            // Valid magic-free garbage: wrong length for an AES-CBC block, wrong key —
+            // either way TransformFinalBlock must fail.
+            File.WriteAllBytes(tempFile, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+            var result = IpcEncryption.DecryptFromFile(tempFile, TestKey, TestIV);
+            Assert.Null(result);
+
+            // Also: a full-length ciphertext encrypted with a DIFFERENT key must return
+            // null (padding check fails) rather than throw.
+            var otherKey = System.Security.Cryptography.SHA256.HashData("SomeOtherKey_9876543210"u8.ToArray());
+            IpcEncryption.EncryptToFile("payload"u8.ToArray(), tempFile, otherKey, TestIV);
+            Assert.Null(IpcEncryption.DecryptFromFile(tempFile, TestKey, TestIV));
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void EncryptToFile_AtomicWrite_LeavesNoTempResidue()
+    {
+        // Regression: the writer used to create the target file in place; a crash
+        // mid-write left a half-written ciphertext for the reader to choke on. The
+        // writer now publishes via a sibling temp file + move, so after the call the
+        // target is complete and no ".tmp-*" sibling remains.
+        var tempFile = Path.Combine(Path.GetTempPath(), $"atomic_{Guid.NewGuid():N}.enc");
+        try
+        {
+            IpcEncryption.EncryptToFile("stable payload"u8.ToArray(), tempFile, TestKey, TestIV);
+
+            Assert.True(File.Exists(tempFile));
+            var siblings = Directory.GetFiles(Path.GetDirectoryName(tempFile)!,
+                Path.GetFileName(tempFile) + ".tmp-*");
+            Assert.Empty(siblings);
+
+            // And the published file round-trips cleanly.
+            var decrypted = IpcEncryption.DecryptFromFile(tempFile, TestKey, TestIV);
+            Assert.NotNull(decrypted);
+            Assert.Equal("stable payload"u8.ToArray(), decrypted);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void EncryptToFile_OverwritesExistingFile()
+    {
+        // The IPC file name is shared across launches; a second contract write must
+        // replace the first one rather than fail.
+        var tempFile = Path.Combine(Path.GetTempPath(), $"overwrite_{Guid.NewGuid():N}.enc");
+        try
+        {
+            IpcEncryption.EncryptToFile("first"u8.ToArray(), tempFile, TestKey, TestIV);
+            IpcEncryption.EncryptToFile("second"u8.ToArray(), tempFile, TestKey, TestIV);
+
+            var decrypted = IpcEncryption.DecryptFromFile(tempFile, TestKey, TestIV);
+            Assert.NotNull(decrypted);
+            Assert.Equal("second"u8.ToArray(), decrypted);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
     public void DecryptFromFile_FileDeletedAfterDecryption()
     {
         var tempFile = Path.GetTempFileName();

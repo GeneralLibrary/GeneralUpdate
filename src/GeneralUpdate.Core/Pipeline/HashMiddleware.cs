@@ -60,7 +60,7 @@ public class HashMiddleware : IMiddleware
         GeneralTracer.Info($"HashMiddleware.InvokeAsync: verifying hash for file={path}, expectedHash={hash}");
         try
         {
-            var isVerify = await VerifyFileHash(path, hash);
+            var isVerify = await VerifyFileHash(path, hash).ConfigureAwait(false);
             if (!isVerify)
             {
                 GeneralTracer.Error($"HashMiddleware.InvokeAsync: hash verification failed for file={path}.");

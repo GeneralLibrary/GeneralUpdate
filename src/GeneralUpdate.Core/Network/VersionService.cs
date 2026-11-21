@@ -340,8 +340,14 @@ namespace GeneralUpdate.Core.Network
         /// </remarks>
         private static bool ShouldRetry(Exception ex)
         {
+            // TaskCanceledException derives from OperationCanceledException, so it must be
+            // tested before the cancellation check: a request timeout surfaces as
+            // TaskCanceledException wrapping a TimeoutException and IS retryable, while a
+            // caller-initiated cancellation has no inner exception and is not.
+            if (ex is TaskCanceledException tce)
+                return tce.InnerException is TimeoutException;
+            if (ex is TimeoutException or System.IO.IOException) return true;
             if (ex is OperationCanceledException) return false;
-            if (ex is TaskCanceledException or TimeoutException or System.IO.IOException) return true;
             if (ex is HttpRequestException h && (h.Message ?? "").Contains("timeout", StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
