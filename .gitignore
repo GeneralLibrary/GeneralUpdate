@@ -194,3 +194,6 @@ FakesAssemblies/
 src/.vs
 src/.idea
 src/global.json
+
+# Mimosa security scan local state
+.mimosa/
