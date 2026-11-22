@@ -80,9 +80,10 @@ The lock is `{fail}/.locks/{first two lowercase GUID hex characters}.lock`,
 opened with `FileShare.None` and never deleted. It remains held through snapshot,
 upload and cleanup. The required upload timeout is at most two minutes; the HTTP
 handler must honor cancellation. Even with a timeout, a slow upload can prevent
-Bowl from acquiring the same stripe and force it to degrade to exit-code-only
-monitoring, losing crash evidence. Choose a short timeout appropriate for the
-deployment and monitor this failure.
+Bowl from acquiring the same stripe. Bowl tries another GUID; exhausted
+admission or lock retries can degrade monitoring to exit-code-only, losing
+crash evidence. Choose a short timeout appropriate for the deployment and
+monitor this failure.
 
 This contract requires a local filesystem, compatible .NET processes running
 with matching permissions, and a private outbox protected by OS permissions.
