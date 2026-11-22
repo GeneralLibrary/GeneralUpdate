@@ -59,10 +59,15 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// </summary>
 /// <param name="RecordId">The record ID returned from version validation, used to identify this update record.</param>
 /// <param name="Status">The update status code: 1 = Updating, 2 = Success, 3 = Failure. Defaults to 1 (Updating).</param>
-/// <param name="Type">The update type: 1 = Upgrade, 2 = Push. Defaults to 1 (Upgrade).</param>
+/// <param name="Type">The record source: 1 = polled upgrade record, 2 = push record. This is not the package AppType. Defaults to 1.</param>
 /// <remarks>
 /// This record is serialized to JSON using camelCase naming policy.
 /// Example JSON: {"recordId": 123, "status": 1, "type": 1}
+/// The client reports Updating while downloading and does not report Success for a staged main
+/// application. After application, the platform reports one result per record for its package batch;
+/// a failure in any package sharing that record takes precedence. The role strategy may report
+/// the same result again, or report Failure if a later launch operation throws.
+/// Success means package application completed; it does not attest that the restarted application is healthy.
 /// </remarks>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
 

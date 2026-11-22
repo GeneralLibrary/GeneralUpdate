@@ -247,8 +247,8 @@ flowchart TB
         UO2 -- Yes --> UO3["OnAfterUpdate 钩子\nReport UpdateApplied"]
         UO2 -- No --> UO_FAIL["Report UpdateFailed"]
 
-        CS19 -- "MainOnly" --> MO1["SendProcessIpc()\n写加密 IPC 文件\nHasPreparedClientUpdate = true"]
-        MO1 --> MO2["OnAfterUpdate 钩子\nReport UpdateApplied"]
+        CS19 -- "MainOnly" --> MO1["SendProcessIpcAsync()\n写加密 IPC 文件\nHasPreparedClientUpdate = true"]
+        MO1 --> MO2["OnAfterUpdate 钩子\n等待升级进程应用"]
         MO2 --> MO3["OnBeforeStartApp 钩子"]
         MO3 --> MO4["LaunchUpgradeProcessAsync()\n拉起 Upgrade 进程"]
 
@@ -256,7 +256,7 @@ flowchart TB
         BOTH1 --> BOTH2{"AllPackagesSucceeded?"}
         BOTH2 -- No --> BOTH_FAIL["中止！\n不发送 IPC\n不拉起 Upgrade\n防止循环更新"]
         BOTH2 -- Yes --> BOTH3["OnAfterUpdate 钩子"]
-        BOTH3 --> BOTH4["SendProcessIpc()"]
+        BOTH3 --> BOTH4["SendProcessIpcAsync()"]
         BOTH4 --> BOTH5["LaunchUpgradeProcessAsync()"]
     end
 ```
@@ -387,7 +387,7 @@ if (downloadReport.FailedCount > 0)
 ┌─────────────────────────────────────────────────────────────────┐
 │ MainOnly                                                         │
 │                                                                  │
-│  SendProcessIpc()                                                │
+│  SendProcessIpcAsync()                                           │
 │    ↓                                                             │
 │  写 AES 加密 IPC 文件到 %TEMP%/GeneralUpdate/ipc/process_info.enc│
 │    ↓                                                             │
@@ -401,7 +401,7 @@ if (downloadReport.FailedCount > 0)
 │                                                                  │
 │  ApplyUpgradePackagesAsync()  ─── 先升级自身                      │
 │    ↓ 失败则中止                                                   │
-│  SendProcessIpc()              ─── 再写 IPC                      │
+│  SendProcessIpcAsync()         ─── 再写 IPC                      │
 │    ↓                                                             │
 │  LaunchUpgradeProcessAsync()   ─── 最后拉起 Upgrade 进程          │
 └─────────────────────────────────────────────────────────────────┘
@@ -1116,6 +1116,8 @@ public static void EncryptToFile(byte[] plainBytes, string filePath, byte[] key,
 | `LaunchClientAfterUpdate` | `_configInfo.LaunchClientAfterUpdate` | 更新后是否自动启动主程序 | UpdateStrategy |
 | `ReportType` | 1 或 2 | 1=主动轮询 2=推送通知 | 上报区分 |
 
+`ReportType` 选择服务器记录表，与包的 `AppType` 无关。下载阶段上报 Updating；主程序暂存后不报告成功，升级进程完成应用后才报告结果。同一批次中共享记录 ID 的包按记录汇总，任何失败优先；角色策略可能重复上报结果，启动抛错时也可能在成功后上报失败。成功仅表示文件应用完成，不代表重启后的健康检查通过。推送上报还需要调用方提供服务器分配的对应推送记录 ID，不能复用轮询记录 ID。
+
 ---
 
 ## 10. UpdateStrategy：Upgrade 进程的执行流程
@@ -1366,7 +1368,7 @@ private void TryRollback()
 | 场景判定 | `Strategy/ClientStrategy.cs` | Scenario switch @L452-458 |
 | 一次性下载 | `Strategy/ClientStrategy.cs` | `DownloadAndApplyAsync()` @L589-597 |
 | 原地升级 Upgrade 包 | `Strategy/ClientStrategy.cs` | `ApplyUpgradePackagesAsync()` @L723-737 |
-| IPC 写文件 | `Strategy/ClientStrategy.cs` | `SendProcessIpc()` @L751-765 |
+| IPC 写文件 | `Strategy/ClientStrategy.cs` | `SendProcessIpcAsync()` |
 | 拉起 Upgrade 进程 | `Strategy/ClientStrategy.cs` | `LaunchUpgradeProcessAsync()` @L777-789 |
 | 下载计划构建 | `Download/DownloadPlanBuilder.cs` | `Build()` @L111 |
 | Chain vs Full 阈值决策 | `Download/DownloadPlanBuilder.cs` | @L174-196 |

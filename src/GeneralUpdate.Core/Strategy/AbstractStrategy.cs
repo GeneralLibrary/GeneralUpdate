@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -131,7 +132,7 @@ namespace GeneralUpdate.Core.Strategy
         ///   <item><description><b>Execute Pipeline:</b> Calls <c>PipelineBuilder.Build()</c> to execute all registered middleware
         ///   in FIFO order.</description></item>
         ///   <item><description><b>Report Status:</b> Reports the current version's update result (success or failure) to the server
-        ///   via <see cref="VersionService.Report"/>.</description></item>
+        ///   via <see cref="Reporter"/> after the batch completes.</description></item>
         ///   <item><description><b>Clean Up Resources:</b> Calls <c>DeleteVersionZip</c> to remove the processed archive file for the current version.</description></item>
         /// </list>
         /// </para>
@@ -160,7 +161,7 @@ namespace GeneralUpdate.Core.Strategy
             {
                 AllPackagesSucceeded = true;
                 _appliedAnyVersion = false;
-                var status = ReportType.None;
+                var recordStatuses = new Dictionary<int, int>();
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
 
                 // Track the highest version already applied via full-package fallback,
@@ -179,8 +180,11 @@ namespace GeneralUpdate.Core.Strategy
                         && versionSv <= fallbackEffectiveVersion)
                     {
                         GeneralTracer.Info($"AbstractStrategy.ExecuteAsync: skipping {version.Version} ({version.Name}) — already covered by fallback full package v{fallbackEffectiveVersion}.");
+                        if (!recordStatuses.ContainsKey(version.RecordId))
+                            recordStatuses.Add(version.RecordId, ReportType.Success);
                         continue;
                     }
+                    var status = ReportType.None;
                     try
                     {
                         // Use a version-specific subdirectory under patchRoot so that
@@ -268,11 +272,25 @@ namespace GeneralUpdate.Core.Strategy
                     }
                     finally
                     {
-                        await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, version.AppType ?? 1));
+                        if (!recordStatuses.TryGetValue(version.RecordId, out var previousStatus)
+                            || previousStatus != ReportType.Failure)
+                            recordStatuses[version.RecordId] = status;
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
                         DeleteVersionZip(version);
+                    }
+                }
+
+                foreach (var record in recordStatuses)
+                {
+                    try
+                    {
+                        await Reporter.ReportAsync(new UpdateReport(record.Key, record.Value, _configinfo.ReportType)).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        GeneralTracer.Warn($"Report package result failed: {ex.Message}");
                     }
                 }
 
