@@ -99,7 +99,11 @@ public class OssDownloadExecutor : IDownloadExecutor
         {
             GeneralTracer.Error($"OssDownloadExecutor: download failed '{asset.Url}' -> '{destPath}' after {sw.Elapsed}. {ex.Message}", ex);
             sw.Stop();
-            return new DownloadResult(asset, destPath, 0, sw.Elapsed, 0, false, ex.Message);
+            return new DownloadResult(asset, destPath, 0, sw.Elapsed, 0, false, ex.Message)
+            {
+                Error = ex,
+                FailureCategory = Reporting.FailureCategory.Download
+            };
         }
     }
 }

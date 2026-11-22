@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.JsonContext;
@@ -69,7 +70,55 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// the same result again, or report Failure if a later launch operation throws.
 /// Success means package application completed; it does not attest that the restarted application is healthy.
 /// </remarks>
-public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
+public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
+{
+    /// <summary>Optional failure category, matching the server's diagnostic contract.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FailureCategory? Category { get; init; }
+
+    /// <summary>Optional name of the operation that failed.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Phase { get; init; }
+
+    /// <summary>Optional stable, non-sensitive diagnostic code.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ErrorCode { get; init; }
+
+    /// <summary>Optional sanitized diagnostic message.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; init; }
+}
+
+/// <summary>Failure categories understood by the reporting service.</summary>
+public enum FailureCategory
+{
+    Download = 0, Verify = 1, Extract = 2, Apply = 3, Compat = 4,
+    Startup = 5, Rollback = 6, Timeout = 7, Unknown = 8
+}
+
+internal static class FailureReports
+{
+    internal static UpdateReport Create(int recordId, int type, FailureCategory? category)
+    {
+        var phase = category switch
+        {
+            FailureCategory.Download => "Download",
+            FailureCategory.Verify => "Verify",
+            FailureCategory.Extract => "Extract",
+            FailureCategory.Apply => "Apply",
+            FailureCategory.Rollback => "Rollback",
+            FailureCategory.Timeout => "Download",
+            _ => null
+        };
+        return new UpdateReport(recordId, (int)UpdateStatus.Failure, type)
+        {
+            Category = category,
+            Phase = phase,
+            ErrorCode = category?.ToString().ToUpperInvariant(),
+            Message = phase == null ? null : phase + " failed."
+        };
+    }
+}
 
 /// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON

@@ -14,6 +14,7 @@ using GeneralUpdate.Core.Utilities;
 using GeneralUpdate.Core.Hooks;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
 using UpdateReport = GeneralUpdate.Core.Download.Reporting.UpdateReport;
+using GeneralUpdate.Core.Download.Reporting;
 
 namespace GeneralUpdate.Core.Strategy
 {
@@ -54,6 +55,8 @@ namespace GeneralUpdate.Core.Strategy
 
         /// <summary>Tracks whether at least one version was applied successfully in the current batch.</summary>
         private bool _appliedAnyVersion;
+        private int? _failureRecordId;
+        private FailureCategory? _failureCategory;
 
         /// <summary>
         /// Global configuration information containing parameters such as update package path, temporary directory, report URL, and version list.
@@ -103,6 +106,9 @@ namespace GeneralUpdate.Core.Strategy
         /// as fully successful (e.g. before writing updated version numbers to the manifest).
         /// </summary>
         public bool AllPackagesSucceeded { get; private set; }
+
+        /// <summary>Whether this execution produced a per-record package failure report.</summary>
+        public bool HasReportedPackageFailures { get; private set; }
 
         /// <summary>
         /// Starts the main application. Virtual method, overridden by subclasses to provide platform-specific application launch implementations.
@@ -160,8 +166,10 @@ namespace GeneralUpdate.Core.Strategy
             try
             {
                 AllPackagesSucceeded = true;
+                HasReportedPackageFailures = false;
                 _appliedAnyVersion = false;
-                var recordStatuses = new Dictionary<int, int>();
+                var recordStatuses = new Dictionary<int, UpdateReport>();
+                var rollbackFailures = new HashSet<int>();
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
 
                 // Track the highest version already applied via full-package fallback,
@@ -181,10 +189,12 @@ namespace GeneralUpdate.Core.Strategy
                     {
                         GeneralTracer.Info($"AbstractStrategy.ExecuteAsync: skipping {version.Version} ({version.Name}) — already covered by fallback full package v{fallbackEffectiveVersion}.");
                         if (!recordStatuses.ContainsKey(version.RecordId))
-                            recordStatuses.Add(version.RecordId, ReportType.Success);
+                            recordStatuses.Add(version.RecordId, new UpdateReport(version.RecordId, ReportType.Success, _configinfo.ReportType));
                         continue;
                     }
                     var status = ReportType.None;
+                    PipelineContext? context = null;
+                    FailureCategory? failureCategory = null;
                     try
                     {
                         // Use a version-specific subdirectory under patchRoot so that
@@ -201,7 +211,7 @@ namespace GeneralUpdate.Core.Strategy
                             ? $"version_{(version.Version ?? rawName).GetHashCode():X8}"
                             : safeDir;
                         var patchPath = Path.Combine(patchRoot, versionName);
-                        var context = CreatePipelineContext(version, patchPath);
+                        context = CreatePipelineContext(version, patchPath);
                         var pipelineBuilder = BuildPipeline(context);
                         await pipelineBuilder.Build();
                         _appliedAnyVersion = true;
@@ -212,6 +222,10 @@ namespace GeneralUpdate.Core.Strategy
                         && e is not OperationCanceledException)
                     {
                         GeneralTracer.Warn($"AbstractStrategy.ExecuteAsync: chain patch failed for {version.Version}, falling back to full package {version.FallbackFullName}. Error: {e.Message}");
+                        EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message)
+                        {
+                            RecordId = version.RecordId, Category = context?.FailureCategory
+                        });
 
                         // Rebuild pipeline context with the fallback full zip.
                         // CompressMiddleware will extract directly to SourcePath,
@@ -251,30 +265,40 @@ namespace GeneralUpdate.Core.Strategy
                             // surface the exception, so the version is NOT recorded as upgraded.
                             GeneralTracer.Error($"AbstractStrategy.ExecuteAsync: fallback full package also failed for {version.Version}. Error: {fallbackEx.Message}");
                             AllPackagesSucceeded = false;
-                            HandleExecuteException(fallbackEx);
                             status = ReportType.Failure;
+                            failureCategory = fallbackContext.FailureCategory;
+                            _failureRecordId = version.RecordId;
+                            _failureCategory = failureCategory;
+                            HandleExecuteException(fallbackEx);
                             // Only rollback when NO version has succeeded yet in this batch.
                             if (!_appliedAnyVersion)
-                                TryRollback();
+                                if (!TryRollback(version.RecordId)) rollbackFailures.Add(version.RecordId);
                         }
                     }
                     catch (Exception e)
                     {
                         status = ReportType.Failure;
                         AllPackagesSucceeded = false;
+                        failureCategory = context?.FailureCategory;
+                        _failureRecordId = version.RecordId;
+                        _failureCategory = failureCategory;
                         HandleExecuteException(e);
                         // Only rollback when NO version has succeeded yet in this batch.
                         // If a previous version was already applied successfully,
                         // rolling back would undo valid work and leave the app in
                         // a downgraded state across version boundaries.
                         if (!_appliedAnyVersion)
-                            TryRollback();
+                            if (!TryRollback(version.RecordId)) rollbackFailures.Add(version.RecordId);
                     }
                     finally
                     {
+                        _failureRecordId = null;
+                        _failureCategory = null;
                         if (!recordStatuses.TryGetValue(version.RecordId, out var previousStatus)
-                            || previousStatus != ReportType.Failure)
-                            recordStatuses[version.RecordId] = status;
+                            || previousStatus.Status != ReportType.Failure)
+                            recordStatuses[version.RecordId] = status == ReportType.Failure
+                                ? FailureReports.Create(version.RecordId, _configinfo.ReportType, failureCategory)
+                                : new UpdateReport(version.RecordId, status, _configinfo.ReportType);
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
@@ -284,9 +308,13 @@ namespace GeneralUpdate.Core.Strategy
 
                 foreach (var record in recordStatuses)
                 {
+                    if (record.Value.Status == ReportType.Failure)
+                        HasReportedPackageFailures = true;
                     try
                     {
-                        await Reporter.ReportAsync(new UpdateReport(record.Key, record.Value, _configinfo.ReportType)).ConfigureAwait(false);
+                        await Reporter.ReportAsync(record.Value).ConfigureAwait(false);
+                        if (rollbackFailures.Contains(record.Key))
+                            await Reporter.ReportAsync(FailureReports.Create(record.Key, _configinfo.ReportType, FailureCategory.Rollback)).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -421,7 +449,10 @@ namespace GeneralUpdate.Core.Strategy
         protected virtual void HandleExecuteException(Exception e)
         {
             GeneralTracer.Error($"Strategy execution exception.", e);
-            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message));
+            EventManager.Instance.Dispatch(this, new ExceptionEventArgs(e, e.Message)
+            {
+                RecordId = _failureRecordId, Category = _failureCategory
+            });
         }
 
         /// <summary>
@@ -525,7 +556,7 @@ namespace GeneralUpdate.Core.Strategy
         /// Tries the specific backup directory for this update first;
         /// falls back to the most recent backup if the specific one is unavailable.
         /// </summary>
-        private void TryRollback()
+        private bool TryRollback(int recordId)
         {
             try
             {
@@ -548,10 +579,16 @@ namespace GeneralUpdate.Core.Strategy
                 {
                     GeneralTracer.Warn("AbstractStrategy.TryRollback: no backup found, rollback skipped.");
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 GeneralTracer.Error("AbstractStrategy.TryRollback: rollback failed.", ex);
+                EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message)
+                {
+                    RecordId = recordId, Category = FailureCategory.Rollback
+                });
+                return false;
             }
         }
 

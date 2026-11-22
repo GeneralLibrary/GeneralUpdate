@@ -31,4 +31,10 @@ public class ExceptionEventArgs(Exception? exception = null, string? message = n
     /// </summary>
     /// <value>May be <c>null</c> if no custom message was provided.</value>
     public string Message { get; private set; } = message;
+
+    /// <summary>The affected record, when the failure can be associated with a package.</summary>
+    public int? RecordId { get; init; }
+
+    /// <summary>The known failure category; null when the operation is not identifiable.</summary>
+    public Download.Reporting.FailureCategory? Category { get; init; }
 }
