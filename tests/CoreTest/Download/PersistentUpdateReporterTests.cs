@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Reporting;
+using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Strategy;
 
 namespace CoreTest.Download;
@@ -44,6 +45,59 @@ public sealed class PersistentUpdateReporterTests : IDisposable
         Assert.Equal(new[] { 3, 2 }, handler.Statuses);
         await Create(handler).ReplayAsync();
         Assert.Equal(new[] { 3, 2 }, handler.Statuses);
+    }
+
+    [Fact]
+    public async Task FailureDetailsSurviveRestartAndReplayInOrder()
+    {
+        var reports = new[]
+        {
+            new UpdateReport(41, (int)UpdateStatus.Failure, 2)
+            {
+                Category = FailureCategory.Download,
+                Phase = "Download",
+                ErrorCode = "DOWNLOAD",
+                Message = "Download failed."
+            },
+            new UpdateReport(42, (int)UpdateStatus.Failure, 1)
+            {
+                Category = FailureCategory.Apply,
+                Phase = "Apply",
+                ErrorCode = "APPLY",
+                Message = "Apply failed."
+            }
+        };
+        var handler = new Handler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => Create(handler).ReportAsync(reports[0]));
+        await Assert.ThrowsAsync<HttpRequestException>(() => Create(handler).ReportAsync(reports[1]));
+
+        var queuedJson = string.Join("", Directory.GetFiles(_directory, "*.json").Select(File.ReadAllText));
+        Assert.DoesNotContain("example.test", queuedJson);
+        Assert.DoesNotContain("secret", queuedJson);
+        Assert.Equal(reports, Directory.GetFiles(_directory, "*.json")
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .Select(path => JsonSerializer.Deserialize(File.ReadAllText(path), UpdateReportJsonContext.Default.UpdateReport)));
+
+        handler.Bodies.Clear();
+        handler.Statuses.Clear();
+        handler.Respond = _ => Success();
+
+        await Create(handler).ReplayAsync();
+
+        Assert.Empty(Directory.GetFiles(_directory, "*.json"));
+        Assert.Equal(reports.Select(report => report.Status), handler.Statuses);
+        Assert.Equal(reports.Length, handler.Bodies.Count);
+        for (var index = 0; index < reports.Length; index++)
+        {
+            var json = handler.Bodies[index];
+            var replayed = JsonSerializer.Deserialize(json, UpdateReportJsonContext.Default.UpdateReport);
+            Assert.Equal(reports[index], replayed);
+
+            var legacy = JsonSerializer.Deserialize<LegacyReport>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.Equal((reports[index].RecordId, reports[index].Status, reports[index].Type),
+                (legacy!.RecordId, legacy.Status, legacy.Type));
+        }
     }
 
     [Fact]
@@ -140,12 +194,22 @@ public sealed class PersistentUpdateReporterTests : IDisposable
     {
         public Func<HttpRequestMessage, HttpResponseMessage> Respond { get; set; } = respond;
         public List<int> Statuses { get; } = [];
+        public List<string> Bodies { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
+            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Bodies.Add(body);
+            using var json = JsonDocument.Parse(body);
             Statuses.Add(json.RootElement.GetProperty("status").GetInt32());
             return Respond(request);
         }
+    }
+
+    private sealed class LegacyReport
+    {
+        public int RecordId { get; set; }
+        public int Status { get; set; }
+        public int Type { get; set; }
     }
 }
