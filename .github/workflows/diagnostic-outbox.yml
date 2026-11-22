@@ -25,6 +25,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
       - name: Test cross-process outbox
         run: dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter FullyQualifiedName~Diagnostics
+      - name: Build integration harness
+        run: dotnet build tests/OutboxConsumerHarness/OutboxConsumerHarness.csproj -c Release
       - name: Publish Native AOT smoke
         run: dotnet publish tests/OutboxAotSmoke/OutboxAotSmoke.csproj -c Release -r ${{ matrix.rid }} -o outbox-aot
       - name: Run Native AOT smoke (Windows)

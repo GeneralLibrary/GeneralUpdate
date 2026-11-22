@@ -99,3 +99,23 @@ Legacy schema 2 cases without `outboxProtocol` are skipped by default. Set
 collectors are stopped; this is an operational prerequisite, not something the
 consumer can verify. GeneralSpace must provide hash-confirmed acknowledgments
 before cleanup; older servers without `contentSha256` retain every case.
+
+## Local integration harness
+
+`tests/OutboxConsumerHarness` invokes the real consumer once against a loopback
+HTTPS service. Supply the server's PEM certificate to pin its exact bytes;
+hostname validation remains enabled. It disables proxies and redirects. For
+example, with a test certificate valid for `localhost`:
+
+```powershell
+$env:OUTBOX_TEST_TENANT = 'test-tenant'
+$env:OUTBOX_TEST_APP_KEY = 'test-app'
+dotnet run --project tests\OutboxConsumerHarness -- `
+  'C:\fixture\fail' '1.0.2' '<case-guid>' `
+  'https://localhost:5001/Fault/UploadArtifact' 'C:\fixture\server.pem'
+```
+
+Exit code 0 means hash-confirmed deletion, 2 means skipped or not confirmed,
+and 1 means an error. This test harness does not schedule retries: invoke it
+again to exercise persisted snapshots. Never use its certificate pinning to
+disable certificate validation in production.
