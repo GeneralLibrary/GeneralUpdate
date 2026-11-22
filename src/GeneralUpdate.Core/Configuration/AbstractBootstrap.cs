@@ -117,8 +117,18 @@ namespace GeneralUpdate.Core.Configuration
         /// </remarks>
         public TBootstrap UpdateReporter<T>() where T : Download.Reporting.IUpdateReporter, new()
         {
+            _instances.Remove(typeof(Download.Reporting.IUpdateReporter));
             _extensions[typeof(Download.Reporting.IUpdateReporter)] = typeof(T);
             _extensionFactories[typeof(Download.Reporting.IUpdateReporter)] = () => new T();
+            return (TBootstrap)this;
+        }
+
+        /// <summary>Registers a configured reporter instance for the update workflow.</summary>
+        public TBootstrap UpdateReporter(Download.Reporting.IUpdateReporter reporter)
+        {
+            if (reporter == null) throw new ArgumentNullException(nameof(reporter));
+            _instances[typeof(Download.Reporting.IUpdateReporter)] = reporter;
+            _extensions[typeof(Download.Reporting.IUpdateReporter)] = reporter.GetType();
             return (TBootstrap)this;
         }
 
