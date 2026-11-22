@@ -8,7 +8,7 @@ if (args.Length != 5 || !int.TryParse(args[4], out var recordId))
     throw new ArgumentException("Expected mode, outbox, report URL, certificate, record ID.");
 
 var mode = args[0];
-using var root = X509Certificate2.CreateFromPemFile(args[3]);
+using var root = X509Certificate2.CreateFromPem(File.ReadAllText(args[3]));
 using var transport = new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false };
 transport.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
 {
@@ -20,8 +20,14 @@ transport.ServerCertificateCustomValidationCallback = (_, certificate, _, errors
     chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
     return chain.Build(certificate);
 };
-using var client = new HttpClient(new LostResponseHandler(transport, mode == "lost"));
+using var client = new HttpClient(new TestHandler(transport, mode));
 client.DefaultRequestHeaders.Add("X-Tenant-Id", "ordered-report-ci");
+if (mode == "legacy")
+{
+    await new HttpUpdateReporter(client, args[2]).SendAsync(new UpdateReport(recordId, 2));
+    return;
+}
+
 var reporter = new OrderedUpdateReporter(args[1], client, args[2], "ordered-report-ci/test-database", true);
 switch (mode)
 {
@@ -51,12 +57,19 @@ switch (mode)
 
 sealed class LostResponseException : HttpRequestException;
 
-sealed class LostResponseHandler(HttpMessageHandler inner, bool drop) : DelegatingHandler(inner)
+sealed class TestHandler(HttpMessageHandler inner, string mode) : DelegatingHandler(inner)
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
+        if (mode == "legacy")
+        {
+            using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
+            if (payload.RootElement.TryGetProperty("eventId", out _) ||
+                payload.RootElement.TryGetProperty("sequence", out _))
+                throw new InvalidDataException("Legacy report included ordered protocol fields.");
+        }
         var response = await base.SendAsync(request, token);
-        if (!drop) return response;
+        if (mode != "lost") return response;
         using (response)
         {
             if (response.StatusCode != HttpStatusCode.OK)

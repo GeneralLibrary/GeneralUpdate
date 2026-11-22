@@ -31,5 +31,8 @@ It creates an upgrade record through the actual API, drops a confirmed response
 after the server commits, and starts a second client process to replay the
 persisted payload. It checks MySQL event and fault-log counts, record status,
 duplicate success, late delivery and both kinds of conflict, including global
-event ID reuse across records. The TLS connection is validated against the
-temporary test CA; redirects and proxies are disabled.
+event ID reuse across records. It also sends a legacy `HttpUpdateReporter`
+report with no ordered fields to the pinned server's legacy path and verifies
+the record changed without creating an event. This does not test an older
+server revision. The TLS connection is validated against the temporary test
+CA; redirects and proxies are disabled.

@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 
 import pymysql
@@ -181,8 +182,15 @@ def main():
                         assert len(packages) == 1 and packages[0]["hash"] == hashlib.sha256(payload).hexdigest()
                         return packages[0]["recordId"]
 
-                    record, other_record = new_record(), new_record()
-                    assert record != other_record
+                    record, other_record, legacy_record = new_record(), new_record(), new_record()
+                    assert len({record, other_record, legacy_record}) == 3
+                    worker("legacy", legacy_record)
+                    with db.cursor() as cursor:
+                        cursor.execute("SELECT status FROM tb_upgrade_record WHERE id=%s", (legacy_record,))
+                        assert cursor.fetchone()[0] == 2
+                        cursor.execute("SELECT COUNT(*) FROM tb_report_event WHERE record_type=1 AND record_id=%s",
+                                       (legacy_record,))
+                        assert cursor.fetchone()[0] == 0
 
                     def snapshot():
                         with db.cursor() as cursor:
@@ -197,7 +205,7 @@ def main():
                         return events, status, count
 
                     worker("lost", record)
-                    with sqlite3.connect(work / "outbox" / "ordered-reports.db") as queue:
+                    with closing(sqlite3.connect(work / "outbox" / "ordered-reports.db")) as queue:
                         rows = queue.execute("SELECT payload FROM outbox").fetchall()
                     assert len(rows) == 1
                     original = json.loads(rows[0][0])
@@ -207,7 +215,7 @@ def main():
                     assert len(events) == 1 and events[0][1] == 1 and status == 3 and count == 1
 
                     worker("replay", record)  # A separate process opens the same durable outbox.
-                    with sqlite3.connect(work / "outbox" / "ordered-reports.db") as queue:
+                    with closing(sqlite3.connect(work / "outbox" / "ordered-reports.db")) as queue:
                         assert queue.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 0
                     assert snapshot() == (events, status, count)
                     assert success(request("/Upgrade/Report", "POST", original)) is True
@@ -233,7 +241,7 @@ def main():
                         assert http == 200 and result["code"] == 400
                         assert result["errorCode"] == "Conflict" and result["body"] is False
                         assert snapshot() == (events, status, count)
-                    print("Real API: lost response, process restart, deduplication, ordering and conflicts passed.")
+                    print("Real API: legacy report, lost response, process restart, deduplication, ordering and conflicts passed.")
             finally:
                 process.terminate()
                 try:
