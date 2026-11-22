@@ -48,6 +48,8 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     private readonly Security.AuthScheme _authScheme;
     private readonly string? _basicUsername;
     private readonly string? _basicPassword;
+    /// <summary>Stable installation identity for server-side distinct-device failure counting.</summary>
+    public string? DeviceId { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpDownloadSource"/> class
@@ -120,15 +122,15 @@ public class HttpDownloadSource : Abstractions.IDownloadSource
     /// </remarks>
     public async Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
     {
-        var mainResp = await VersionService.Validate(
+        var mainResp = await VersionService.ValidateWithDeviceId(
             _updateUrl, _clientVersion, AppType.Client,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token).ConfigureAwait(false);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token, DeviceId).ConfigureAwait(false);
 
-        var upgradeResp = await VersionService.Validate(
+        var upgradeResp = await VersionService.ValidateWithDeviceId(
             _updateUrl, _upgradeClientVersion ?? _clientVersion, AppType.Upgrade,
             _appSecretKey, _platform, _productId,
-            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token).ConfigureAwait(false);
+            _scheme, _token, _authScheme, _basicUsername, _basicPassword, token, DeviceId).ConfigureAwait(false);
 
         // Check that returned VersionEntry items' AppType matches the requested type,
         // rather than just checking Count > 0. The server may return items whose

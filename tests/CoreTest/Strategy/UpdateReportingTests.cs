@@ -8,6 +8,7 @@ using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
 using GeneralUpdate.Core.Pipeline;
+using GeneralUpdate.Core.SelfCheck;
 using GeneralUpdate.Core.Strategy;
 
 namespace CoreTest.Strategy;
@@ -151,6 +152,40 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.False(File.Exists(Path.Combine(AttemptPath(config), "result.json")));
     }
 
+    [Fact]
+    public async Task MonitorRequest_ContainsOnlyAppKeyVariableName()
+    {
+        var config = Config(monitoring: true);
+        config.AppSecretKey = "secret-that-must-not-be-persisted";
+        config.Monitoring!.AppKeyEnvironmentVariable = "TEST_BOWL_APP_KEY";
+        await Run(config, new TestOs(), new CaptureReporter());
+        TrackHost(config);
+        var request = File.ReadAllText(Path.Combine(AttemptPath(config), "request.json"));
+        Assert.DoesNotContain(config.AppSecretKey, request);
+        Assert.Equal("TEST_BOWL_APP_KEY", (string?)JsonNode.Parse(request)!["report"]!["appKeyEnvironmentVariable"]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AutomaticRollbackWithoutPlan_StopsBeforeFileChanges(bool backupExists)
+    {
+        var config = Config(monitoring: true);
+        config.Monitoring!.AutoRollback = true;
+        if (backupExists)
+        {
+            config.BackupEnabled = true;
+            config.BackupDirectory = Path.Combine(_root, "backup");
+            Directory.CreateDirectory(config.BackupDirectory);
+        }
+        var os = new TestOs();
+        await Run(config, os, new CaptureReporter());
+        Assert.False(os.Applied);
+        Assert.False(File.Exists(Path.Combine(AttemptPath(config), "request.json")));
+        Assert.Contains(Directory.GetFiles(Path.Combine(AttemptPath(config), "events")), file =>
+            File.ReadAllText(file).Contains("monitorUnavailable"));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -284,6 +319,29 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Empty(Directory.GetFiles(Path.Combine(directory, "pending")));
     }
 
+    [Fact]
+    public async Task BusinessFailure_RetainsPendingAndRetriesWithoutPersistingAppKey()
+    {
+        var config = Config(launch: true);
+        config.AppSecretKey = "report-test-secret";
+        var handler = new CaptureHandler(HttpStatusCode.OK) { ResponseBody = "{\"code\":400,\"isSuccess\":false,\"body\":false}" };
+        var reporter = new HttpUpdateReporter(new HttpClient(handler), "https://reports.example.test/status") { AppKey = config.AppSecretKey };
+        await Run(config, new TestOs { LaunchError = new InvalidOperationException("failed") }, reporter);
+        var directory = AttemptPath(config);
+        var pending = Assert.Single(Directory.GetFiles(Path.Combine(directory, "pending")));
+        Assert.DoesNotContain(config.AppSecretKey, File.ReadAllText(pending));
+        Assert.Equal(config.AppSecretKey, (string?)JsonNode.Parse(handler.Body!)!["appKey"]);
+        await Assert.ThrowsAsync<HttpRequestException>(() => UpdateAttempt.RetryPendingReportsAsync(directory, reporter));
+        Assert.True(File.Exists(pending));
+        reporter.AppKey = null;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => UpdateAttempt.RetryPendingReportsAsync(directory, reporter));
+        Assert.True(File.Exists(pending));
+        reporter.AppKey = config.AppSecretKey;
+        handler.ResponseBody = "{\"code\":200,\"isSuccess\":true,\"body\":true}";
+        await UpdateAttempt.RetryPendingReportsAsync(directory, reporter);
+        Assert.False(File.Exists(pending));
+    }
+
     /// <summary>Direct callers also need an error signal, otherwise a durable queue would falsely delete unsent records.</summary>
     [Fact]
     public async Task HttpNonSuccess_ThrowsRatherThanAcknowledgingDelivery()
@@ -332,6 +390,13 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal("2.0.0", failure.PackageVersion);
         Assert.Equal(nameof(FailingMiddleware), failure.Error!.Stage);
         Assert.Contains("original pipeline failure", failure.Error.StackTrace);
+        var installationId = InstallationIdentity.GetOrCreate(config);
+        var caseDir = Assert.Single(Directory.GetDirectories(
+            Path.Combine(config.DiagnosticsDirectory!, "update-outbox", installationId)));
+        var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(caseDir, "manifest.json")))!;
+        Assert.Equal(42, (int?)manifest["recordId"]);
+        Assert.Equal("update", (string?)manifest["kind"]);
+        Assert.DoesNotContain("original pipeline failure", File.ReadAllText(Path.Combine(caseDir, "diagnostic.txt")));
     }
 
     /// <summary>Preparation failures retain the known download path and push trigger rather than substituting package AppType.</summary>
@@ -353,6 +418,80 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal("downloading", failure.Error!.Stage);
         Assert.EndsWith("sample.zip", failure.Error.FailedPath);
         Assert.Contains("simulated download error", failure.Error.StackTrace);
+        var id = InstallationIdentity.GetOrCreate(config);
+        var caseDir = Assert.Single(Directory.GetDirectories(Path.Combine(config.DiagnosticsDirectory!, "update-outbox", id)));
+        var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(caseDir, "manifest.json")))!;
+        Assert.Equal(42, (int?)manifest["recordId"]);
+        Assert.Equal(2, (int?)manifest["recordType"]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AutoRollbackRejectsUpdaterPackageBeforeAnyApply(bool includesMain)
+    {
+        var config = Config(monitoring: true);
+        config.Monitoring!.AutoRollback = true;
+        var reporter = new CaptureReporter();
+        var os = new TestOs();
+        var strategy = new ClientStrategy(new FailedDownload())
+        {
+            Reporter = reporter, DownloadSource = new UpgradeAssetSource(includesMain)
+        };
+        strategy.SetOsStrategy(os);
+        strategy.Create(config);
+
+        await strategy.ExecuteAsync();
+
+        Assert.False(os.Applied);
+        var failure = Assert.Single(reporter.Reports, report => report.Status == 3);
+        Assert.Equal(43, failure.RecordId);
+        Assert.Contains("host-owned installation lease", failure.Error!.Message);
+    }
+
+    [Fact]
+    public async Task AutoRollbackRejectsMainPackageBeforeBackupAndDownload()
+    {
+        var config = Config(monitoring: true);
+        config.Monitoring!.AutoRollback = true;
+        config.BackupEnabled = true;
+        var reporter = new CaptureReporter();
+        var os = new TestOs();
+        var strategy = new ClientStrategy(new FailedDownload()) { Reporter = reporter, DownloadSource = new AssetSource() };
+        strategy.SetOsStrategy(os);
+        strategy.Create(config);
+
+        await strategy.ExecuteAsync();
+
+        Assert.False(os.Applied);
+        Assert.False(Directory.Exists(Path.Combine(config.InstallPath, ".backups")));
+        var failure = Assert.Single(reporter.Reports, report => report.Status == 3);
+        Assert.Equal(42, failure.RecordId);
+        Assert.Contains("host-owned installation lease", failure.Error!.Message);
+    }
+
+    [Fact]
+    public async Task AutoRollbackDoesNotRunOrphanRecoveryOutsideHostLease()
+    {
+        var config = Config(monitoring: true);
+        config.Monitoring!.AutoRollback = true;
+        config.SelfCheckEnabled = true;
+        var backup = Path.Combine(_root, "backup");
+        Directory.CreateDirectory(backup);
+        var target = Path.Combine(config.InstallPath, "app.txt");
+        File.WriteAllText(target, "new");
+        File.WriteAllText(Path.Combine(backup, "app.txt"), "old");
+        UpdateVerificationMarker.Write(config.InstallPath, "2.0.0", "1.0.0", backup);
+        var reporter = new CaptureReporter();
+        var strategy = new ClientStrategy(new FailedDownload()) { Reporter = reporter, DownloadSource = new AssetSource() };
+        strategy.Create(config);
+
+        await strategy.ExecuteAsync();
+
+        Assert.Equal("new", File.ReadAllText(target));
+        Assert.NotNull(UpdateVerificationMarker.TryRead(config.InstallPath));
+        Assert.Contains(reporter.Reports, report => report.Status == 3 &&
+            report.Error!.Message!.Contains("orphaned verification marker"));
     }
 
     /// <summary>OSS must inspect the orchestrator result instead of treating completion of its Task as download success.</summary>
@@ -471,6 +610,22 @@ public sealed class UpdateReportingTests : IDisposable
             });
     }
 
+    private sealed class UpgradeAssetSource(bool includesMain) : IDownloadSource
+    {
+        public Task<DownloadSourceResult> ListAsync(CancellationToken token = default)
+        {
+            var assets = new List<DownloadAsset>
+            {
+                new("updater.zip", "https://example.test/updater.zip", 1, "hash", "2.0.0",
+                    AppType: (int)AppType.Upgrade) { RecordId = 43 }
+            };
+            if (includesMain)
+                assets.Add(new DownloadAsset("sample.zip", "https://example.test/sample.zip", 1, "hash", "2.0.0",
+                    AppType: (int)AppType.Client) { RecordId = 42 });
+            return Task.FromResult(new DownloadSourceResult { Assets = assets });
+        }
+    }
+
     /// <summary>Return a failed batch rather than throwing, exercising the caller's required result inspection.</summary>
     private sealed class FailedDownload : IDownloadOrchestrator
     {
@@ -498,10 +653,11 @@ public sealed class UpdateReportingTests : IDisposable
     {
         public HttpStatusCode Status { get; set; } = status;
         public string? Body { get; private set; }
+        public string ResponseBody { get; set; } = "";
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(Status);
+            return new HttpResponseMessage(Status) { Content = new StringContent(ResponseBody) };
         }
     }
 }

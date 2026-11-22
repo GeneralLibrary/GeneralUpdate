@@ -59,4 +59,14 @@ public sealed class OutboxManifest
     /// <summary>Upload attempts already made; Core increments it after each failed upload.</summary>
     [JsonPropertyName("attempts")]
     public int Attempts { get; set; }
+
+    /// <summary>Associated server record for update-failure evidence.</summary>
+    [JsonPropertyName("recordId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RecordId { get; set; }
+
+    /// <summary>Record type for update-failure evidence.</summary>
+    [JsonPropertyName("recordType")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RecordType { get; set; }
 }

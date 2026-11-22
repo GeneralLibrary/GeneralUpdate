@@ -462,7 +462,10 @@ public class ClientStrategy : IStrategy
             _configInfo.Token,
             _configInfo.AuthScheme,
             _configInfo.BasicUsername,
-            _configInfo.BasicPassword);
+            _configInfo.BasicPassword)
+        {
+            DeviceId = InstallationIdentity.GetOrCreate(_configInfo)
+        };
 
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
@@ -564,6 +567,7 @@ public class ClientStrategy : IStrategy
         _upgradeRecordId = downloadPlan.Assets
             .FirstOrDefault(a => a.AppType == (int)AppType.Upgrade)?.RecordId ?? 0;
         _activeRecordId = _mainRecordId != 0 ? _mainRecordId : _upgradeRecordId;
+        _configInfo.Attempt?.SetReportIdentity(_activeRecordId, _reportType);
         EventManager.Instance.Dispatch(this, updateInfoArgs);
 
         var isForcibly = downloadPlan.IsForcibly;
@@ -571,6 +575,17 @@ public class ClientStrategy : IStrategy
         {
             GeneralTracer.Info("ClientStrategy: update skipped.");
             return;
+        }
+
+        if (_configInfo.Monitoring?.Enabled == true && _configInfo.Monitoring.AutoRollback)
+        {
+            if (scenario == UpdateScenario.UpgradeOnly || scenario == UpdateScenario.Both)
+            {
+                _activeRecordId = _upgradeRecordId;
+                _configInfo.Attempt?.SetReportIdentity(_activeRecordId, _reportType);
+            }
+            throw new InvalidOperationException(
+                "Monitored automatic rollback requires a controlled host-owned installation lease before preparation.");
         }
 
         // Hooks: allow cancellation before download
@@ -784,6 +799,7 @@ public class ClientStrategy : IStrategy
     {
         if (upgradeVersions.Count == 0) return;
         _activeRecordId = _upgradeRecordId;
+        _configInfo!.Attempt?.SetReportIdentity(_activeRecordId, _reportType);
         GeneralTracer.Info("ClientStrategy: applying Upgrade packages in place.");
         _configInfo!.UpdateVersions = upgradeVersions;
         _configInfo.Attempt?.Record("filesApplying");
@@ -817,6 +833,7 @@ public class ClientStrategy : IStrategy
     private void SendProcessIpc(List<VersionEntry> clientVersions)
     {
         _activeRecordId = _mainRecordId;
+        _configInfo!.Attempt?.SetReportIdentity(_activeRecordId, _reportType);
         var processInfo = ConfigurationMapper.MapToProcessContract(
             _configInfo!, clientVersions,
             _configInfo!.Formats ?? BlackDefaults.DefaultFormats,
@@ -971,6 +988,10 @@ public class ClientStrategy : IStrategy
         var installPath = _configInfo.InstallPath;
         var marker = UpdateVerificationMarker.TryRead(installPath);
         if (marker == null) return;
+
+        if (_configInfo.Monitoring?.Enabled == true && _configInfo.Monitoring.AutoRollback)
+            throw new InvalidOperationException(
+                "An orphaned verification marker requires recovery, but monitored automatic rollback has no controlled host-owned installation lease.");
 
         if (UpdateVerificationMarker.IsOrphanedBeyondWindow(marker))
         {

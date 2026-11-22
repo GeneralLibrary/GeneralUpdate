@@ -31,7 +31,7 @@ Client bootstrap:
 bootstrap.SetOption(Option.BowlCrashCollectionEnabled, true);
 ```
 
-It defaults off. When enabled it configures v1 monitoring and crash capture,
+It defaults off. When enabled it requests v1 monitoring and crash capture,
 using `C:\Bowl\Bowl.Host.exe` unless `Monitoring.ExecutablePath` is already
 set. Deploy a compatible Bowl host first; an unavailable host stops the update
 before application files are changed. This option does not change
@@ -39,6 +39,12 @@ before application files are changed. This option does not change
 updater but has no relaunched application to observe. Capture is Windows-only
 and limited to the v1 update/health-observation window, not a long-running
 watchdog. A valid target version is required.
+
+The current standalone Bowl.Host does not implement that crash capture request
+or produce `crash-outbox` cases. The separate `bowl.exe watch` diagnostic
+program produces legacy `<installPath>\fail` cases, but is not launched by this
+option and must be deployed and configured separately. Do not rely on this
+option alone to collect crashes with the current Bowl.Host.
 
 The Client uploads Bowl's completed crash cases from
 `<DiagnosticsDirectory>\crash-outbox\<version>\<guid>`; the legacy
@@ -51,6 +57,13 @@ run; no retry limit applies to this option. Evidence is removed only after the
 server returns HTTP success, JSON `code` 200 and a matching `body.artifactId`.
 Oversized or excluded dumps remain on disk. Existing separately enabled
 self-check/rollback diagnostics are unchanged.
+
+Ordinary update failures with a server record ID also publish a minimal,
+credential-free case under `<state-root>\update-outbox\<installation-id>\<guid>`.
+It contains only an allowlisted failure phase and record identifiers, not a
+stack trace or dump. A subsequent Client run with diagnostics enabled and the
+same installation identity uploads it; failed delivery remains pending without
+a retry limit. No case is created if the server record ID is unavailable.
 
 Configure `UpdateRequest.Monitoring` and `UpdateRequest.DiagnosticsDirectory`
 through `SetConfig`, JSON configuration, or `UpdateRequestBuilder`:
@@ -66,11 +79,26 @@ builder.SetDiagnosticsDirectory(@"C:\ProgramData\MyProduct\UpdateState")
            HealthTimeoutSeconds = 5,
            UpdateTimeoutSeconds = 600,
            AutoRollback = false,
-           CredentialEnvironmentVariable = "MYPRODUCT_REPORT_TOKEN"
+           CredentialEnvironmentVariable = "MYPRODUCT_REPORT_TOKEN",
+           AppKeyEnvironmentVariable = "MYPRODUCT_APP_KEY"
        });
 ```
 
 Only enable this after deploying a separately validated compatible production host.
+`AppKeyEnvironmentVariable` names a separately provisioned environment variable
+whose value must equal the verification `AppSecretKey`; it must be available to
+both the initial host and every `--retry` process. Only the name is persisted.
+App-key reporting requires HTTPS (or HTTP to a literal loopback IP for local
+testing). Missing credentials leave Bowl delivery pending.
+
+**Automatic monitored rollback is currently unavailable.** Setting `AutoRollback`
+to true aborts before application files are modified: the producer cannot yet
+provide Bowl's complete write-ahead rollback plan. In particular, do not use
+older mirror-rollback hosts against real installations: backup-excluded
+directories and newly created user data could otherwise be deleted.
+The Client rejects all update preparation when monitored automatic rollback
+is requested: backup and updater packages otherwise run before the monitor
+can hold a trusted installation lease.
 Timeouts must be positive and the update timeout must exceed the readiness
 timeout. Missing executables, malformed/mismatched ready records, host exit, or
 readiness timeout abort the update before application file operations.
@@ -89,6 +117,11 @@ including attempts launched by different users or schedulers. Bowl's persistent
 installation-owner lock is scoped to that root; choosing a fresh root per attempt
 would bypass cross-attempt coordination. Configure an explicit shared root when
 the default per-user directory does not provide this guarantee.
+The Client stores a random installation UUID under that root and sends it as
+`deviceId` in both version-verification calls; keep the root and installation
+path stable across upgrades and restarts. Clearing the root, relocating the
+installation, or using different roots creates a new identity. Custom download
+sources must provide their own stable identity when calling GeneralSpace.
 
 Client creates `UpdateAttemptId` once per workflow; standard/silent IPC carries
 it, the root and monitor options to Update. OSS transfers these through child
@@ -136,7 +169,8 @@ replaceable files must permit `FileShare.Delete` as well as reading.
     "url": "https://updates.example.test/report",
     "recordId": 42,
     "type": 1,
-    "credentialEnvironmentVariable": "MYPRODUCT_REPORT_TOKEN"
+    "credentialEnvironmentVariable": "MYPRODUCT_REPORT_TOKEN",
+    "appKeyEnvironmentVariable": "MYPRODUCT_APP_KEY"
   }
 }
 ```
@@ -248,7 +282,8 @@ Bowl.Host --retry 100 --state-root <shared-absolute-directory>
 ```
 
 The retry limit is 1 through 100. Failed HTTP delivery stays pending and follows
-the host's retry backoff; only 2xx acknowledges it. Provision reporting credentials
+the host's retry backoff; app-key reports require HTTP success and JSON
+`code=200`, `isSuccess=true`, `body=true`. Provision reporting credentials
 for that scheduled process as well as the initially launched host. The optional
 Bearer environment credential is only sent over HTTPS.
 
@@ -299,7 +334,13 @@ depend on a successful network call.
 
 Default HTTP serialization is deliberately still exactly
 `{"recordId":42,"status":2,"type":1}` (1 Updating / 2 Success / 3 Failure).
-The richer local shape is **not uploaded** and no server API is changed.
+When configured by the bootstrap, the in-memory app key is also sent in the
+HTTP body and never persisted in pending reports. A scheduler replaying pending
+reports must configure the reporter with the same app key and endpoint used by
+the original verification; a business rejection keeps the report pending.
+Credentialed reports require HTTPS or a literal loopback HTTP address and a
+confirmed GeneralSpace business response. Legacy uncredentialed endpoints may
+still acknowledge with an empty 2xx response. The richer local shape is **not uploaded**.
 Non-2xx responses now throw from `HttpUpdateReporter`; role-level wrappers
 log/isolate them so application/rollback work can proceed. Direct reporter
 callers must handle those exceptions. `monitorUnavailable` has no honest

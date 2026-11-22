@@ -16,12 +16,13 @@ public sealed class HttpUpdateReporterWireTests
     {
         public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
         public string? Body { get; private set; }
+        public string ResponseBody { get; set; } = "";
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            return new HttpResponseMessage(Status);
+            return new HttpResponseMessage(Status) { Content = new StringContent(ResponseBody) };
         }
     }
 
@@ -93,5 +94,36 @@ public sealed class HttpUpdateReporterWireTests
         });
 
         Assert.Null(handler.Body);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("{\"code\":400,\"isSuccess\":false,\"body\":false}")]
+    [InlineData("{\"code\":200,\"body\":true}")]
+    [InlineData("{\"code\":200,\"isSuccess\":true,\"body\":false}")]
+    public async Task CredentialedReports_RejectUnconfirmedBusinessResponses(string response)
+    {
+        var handler = new CaptureHandler { ResponseBody = response };
+        var reporter = new HttpUpdateReporter(new HttpClient(handler), "https://reports.example.test/status")
+        {
+            AppKey = "test-credential"
+        };
+        await Assert.ThrowsAnyAsync<Exception>(() => reporter.ReportAsync(new UpdateReport(7)));
+        Assert.Equal("test-credential", (string?)JsonNode.Parse(handler.Body!)!["appKey"]);
+    }
+
+    [Fact]
+    public async Task CredentialedReport_AcceptsConfirmedResponseAndRejectsRemoteHttp()
+    {
+        var handler = new CaptureHandler { ResponseBody = "{\"code\":200,\"isSuccess\":true,\"body\":true}" };
+        var reporter = new HttpUpdateReporter(new HttpClient(handler), "https://reports.example.test/status")
+        {
+            AppKey = "test-credential"
+        };
+        await reporter.ReportAsync(new UpdateReport(7));
+        reporter.ReportUrl = "http://reports.example.test/status";
+        await Assert.ThrowsAsync<InvalidOperationException>(() => reporter.ReportAsync(new UpdateReport(7)));
+        reporter.ReportUrl = "http://127.0.0.1/status";
+        await reporter.ReportAsync(new UpdateReport(7));
     }
 }

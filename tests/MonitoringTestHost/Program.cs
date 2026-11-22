@@ -1,11 +1,53 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using GeneralUpdate.Core.Compress;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Strategy;
 
+if (args.Length > 0 && args[0] == "test-controlled-worker")
+{
+    try { await ControlledTestWorker.RunAsync(args); }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine("CONTROLLED_TEST_WORKER_FAILED: " + error);
+        Environment.ExitCode = 2;
+    }
+    return;
+}
+
 // A protocol test peer, not a Bowl implementation: no repair, result.json or network delivery.
+if (args.Length == 5 && args[0] == "--controlled-apply-fixture")
+{
+    if (!Guid.TryParseExact(args[1], "D", out var fixtureId) || args[1] != fixtureId.ToString("D"))
+        throw new ArgumentException("Expected a canonical fixture GUID.");
+    if (!int.TryParse(args[2], out var stopAfter) || stopAfter is < 0 or > 1)
+        throw new ArgumentException("Expected a fixture write index of 0 or 1.");
+    var root = Path.Combine(Path.GetTempPath(), "BowlControlledIntegration", args[1]);
+    var install = Path.Combine(root, "install");
+    var state = Path.Combine(root, "state");
+    var backup = Path.Combine(root, "backup");
+    var stage = Path.Combine(root, "stage");
+    var packageUri = new Uri(args[3], UriKind.Absolute);
+    if (packageUri.Scheme != "http" || packageUri.Host != "127.0.0.1")
+        throw new ArgumentException("The fixture only downloads from IPv4 loopback.");
+    using var client = new HttpClient();
+    var bytes = await client.GetByteArrayAsync(packageUri);
+    var archivePath = Path.Combine(root, "download.zip");
+    await File.WriteAllBytesAsync(archivePath, bytes);
+    using var stagedZip = FullZipStager.Stage(archivePath, stage, args[4], 10, 1024 * 1024, 2 * 1024 * 1024);
+    var plan = ControlledFullZipPrepare.Prepare(stagedZip, install, state, backup, ["data"]);
+    ControlledFullZipApply.Apply(plan, afterIntent: stagedZip.RetainForRecovery, afterWrite: i =>
+    {
+        if (i != stopAfter) return;
+        File.WriteAllText(Path.Combine(root, "first-write-complete"), "ready");
+        Thread.Sleep(Timeout.Infinite);
+    });
+    throw new InvalidOperationException("The fault-injection process unexpectedly completed.");
+}
+
 if (args[0] == "--application")
 {
     // The test terminates this exact process during the observation window; no GUI or application installation is needed.
@@ -96,9 +138,18 @@ while (DateTime.UtcNow < deadline)
 {
     if (File.Exists(Path.Combine(stateRoot, "exit-host"))) return;
     // The producer uses atomic replacement; denying delete-sharing here would create an artificial Windows file-lock failure.
-    using var stateStream = new FileStream(Path.Combine(directory, "producer.json"), FileMode.Open,
-        FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-    var state = JsonNode.Parse(stateStream)!;
+    JsonNode state;
+    try
+    {
+        using var stateStream = new FileStream(Path.Combine(directory, "producer.json"), FileMode.Open,
+            FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        state = JsonNode.Parse(stateStream)!;
+    }
+    catch (IOException)
+    {
+        await Task.Delay(20);
+        continue;
+    }
     if (state["protocolVersion"]!.GetValue<int>() != 1 || state["attemptId"]!.GetValue<string>() != id)
         throw new InvalidDataException("Invalid producer.");
     var stage = state["stage"]!.GetValue<string>();

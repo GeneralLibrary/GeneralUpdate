@@ -143,9 +143,14 @@ namespace GeneralUpdate.Core.Network
         public static Task<VersionRespDTO> Validate(string url, string version,
             AppType appType, string appKey, PlatformType platform, string productId,
             string scheme = null, string token = null, Security.AuthScheme authScheme = Security.AuthScheme.Hmac, string basicUsername = null, string basicPassword = null, CancellationToken ct = default)
+            => ValidateWithDeviceId(url, version, appType, appKey, platform, productId, scheme, token, authScheme, basicUsername, basicPassword, ct, null);
+
+        internal static Task<VersionRespDTO> ValidateWithDeviceId(string url, string version,
+            AppType appType, string appKey, PlatformType platform, string productId,
+            string scheme, string token, Security.AuthScheme authScheme, string basicUsername, string basicPassword, CancellationToken ct, string deviceId)
         {
             var auth = HttpClientProvider.DefaultAuthProvider ?? HttpAuthProviderFactory.Create(scheme, token, appKey, authScheme, basicUsername, basicPassword);
-            return new VersionService(auth).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct);
+            return new VersionService(auth).ValidateAsync(url, version, (int)appType, appKey, (int)platform, productId, ct, deviceId);
         }
 
         /// <summary>
@@ -200,9 +205,10 @@ namespace GeneralUpdate.Core.Network
         /// <param name="t">A <see cref="CancellationToken"/> for cancelling the operation.</param>
         /// <returns>A <see cref="VersionRespDTO"/> containing the version validation result.</returns>
         private async Task<VersionRespDTO> ValidateAsync(string url, string v, int at, string appKey, int pf, string pid,
-            CancellationToken t = default)
+            CancellationToken t = default, string deviceId = null)
         {
             var p = new Dictionary<string, object> { ["version"] = v, ["appType"] = at, ["appKey"] = appKey, ["platform"] = pf, ["productId"] = pid };
+            if (!string.IsNullOrEmpty(deviceId)) p["deviceId"] = deviceId;
             return await PostAsync<VersionRespDTO>(url, p, VersionRespJsonContext.Default.VersionRespDTO, t);
         }
 

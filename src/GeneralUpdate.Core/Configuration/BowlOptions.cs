@@ -21,4 +21,6 @@ public sealed class BowlOptions
     public bool AutoRollback { get; set; }
     /// <summary>Name of a host-provisioned environment variable; never the credential itself.</summary>
     public string? CredentialEnvironmentVariable { get; set; }
+    /// <summary>Name of the environment variable containing the GeneralSpace app key, available to Host and retry processes.</summary>
+    public string? AppKeyEnvironmentVariable { get; set; }
 }

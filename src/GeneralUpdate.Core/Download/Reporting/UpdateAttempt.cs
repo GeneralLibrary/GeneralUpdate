@@ -9,6 +9,8 @@ using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Diagnostics;
+using GeneralUpdate.Core.JsonContext;
 
 namespace GeneralUpdate.Core.Download.Reporting;
 
@@ -59,6 +61,8 @@ public sealed class BowlReportConfiguration
     public int Type { get; set; } = 1;
     /// <summary>Name of an independently provisioned host credential environment variable, not its value.</summary>
     public string? CredentialEnvironmentVariable { get; set; }
+    /// <summary>Name of the environment variable containing the app key, never its value.</summary>
+    public string? AppKeyEnvironmentVariable { get; set; }
 }
 
 /// <summary>Immutable v1 request published before host startup; recovery must not depend on live IPC.</summary>
@@ -153,7 +157,10 @@ public sealed class UpdateAttempt : IDisposable
     // Publication of request.json transfers delivery ownership before the host can observe the attempt.
     private bool _ownsProducer;
     private UpdateFailure? _lastError;
+    private int _activeRecordId;
+    private int _activeReportType;
     private bool _failurePersisted;
+    private readonly string _diagnosticId = Guid.NewGuid().ToString("D");
     private VersionEntry? _package;
     /// <summary>Attempt-specific directory containing immutable events and, when monitored, protocol files.</summary>
     public string DirectoryPath { get; }
@@ -248,12 +255,25 @@ public sealed class UpdateAttempt : IDisposable
                 throw new ArgumentOutOfRangeException(nameof(options), "Monitor timeouts must be positive; update timeout must exceed ready timeout.");
             if (options.CrashCollectionEnabled && !IsSafeCrashVersion(_config.LastVersion))
                 throw new ArgumentException("Crash collection requires a nonempty target version that is a safe directory name.");
+            if (options.AutoRollback && (_config.BackupEnabled == false ||
+                string.IsNullOrWhiteSpace(_config.BackupDirectory) || !Directory.Exists(_config.BackupDirectory)))
+                throw new InvalidOperationException("Automatic monitored rollback requires an existing enabled backup.");
+            if (options.AutoRollback)
+                throw new InvalidOperationException("Automatic monitored rollback requires a verified write-ahead rollback plan, which this producer cannot yet provide.");
             if (!string.IsNullOrWhiteSpace(_config.ReportUrl))
             {
                 var uri = new Uri(_config.ReportUrl, UriKind.Absolute);
                 if ((uri.Scheme != "http" && uri.Scheme != "https") ||
                     !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
                     throw new ArgumentException("Bowl reporting URL must be HTTP(S), without credentials, query or fragment.");
+                if (!string.IsNullOrEmpty(options.AppKeyEnvironmentVariable) && !HttpUpdateReporter.IsSecureReportUri(uri))
+                    throw new ArgumentException("Bowl app key reporting requires HTTPS or an IP loopback HTTP endpoint.");
+            }
+            if (!string.IsNullOrEmpty(options.AppKeyEnvironmentVariable))
+            {
+                var configuredKey = Environment.GetEnvironmentVariable(options.AppKeyEnvironmentVariable);
+                if (!string.IsNullOrEmpty(configuredKey) && !string.Equals(configuredKey, _config.AppSecretKey, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Bowl app key environment variable does not match the verification credential.");
             }
 
             using var current = Process.GetCurrentProcess();
@@ -268,13 +288,13 @@ public sealed class UpdateAttempt : IDisposable
                 LaunchMode = options.VerifyLaunch && _config.LaunchClientAfterUpdate ? "processAlive" : "filesOnly",
                 HealthTimeoutSeconds = options.HealthTimeoutSeconds,
                 UpdateTimeoutSeconds = options.UpdateTimeoutSeconds,
-                AutoRollback = options.AutoRollback && _config.BackupEnabled != false &&
-                               Directory.Exists(_config.BackupDirectory),
+                AutoRollback = options.AutoRollback,
                 CrashCollectionEnabled = options.CrashCollectionEnabled,
                 Report = new BowlReportConfiguration
                 {
                     Url = _config.ReportUrl, RecordId = recordId, Type = reportType,
-                    CredentialEnvironmentVariable = options.CredentialEnvironmentVariable
+                    CredentialEnvironmentVariable = options.CredentialEnvironmentVariable,
+                    AppKeyEnvironmentVariable = options.AppKeyEnvironmentVariable
                 }
             };
             // Never replace a prior request: reusing an armed attempt must fail rather than adopt stale readiness.
@@ -422,6 +442,8 @@ public sealed class UpdateAttempt : IDisposable
         try
         {
             Record("failed", preserveError ? null : error, category, failedPath);
+            if (_lastError?.Category == "updateFailure")
+                PublishFailureDiagnostics();
             _failurePersisted = true;
         }
         catch (Exception persistenceError)
@@ -430,11 +452,44 @@ public sealed class UpdateAttempt : IDisposable
         }
     }
 
+    private void PublishFailureDiagnostics()
+    {
+        var recordId = _package?.RecordId ?? 0;
+        if (recordId <= 0) recordId = _activeRecordId;
+        if (recordId <= 0) recordId = _config.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
+        if (recordId <= 0) return;
+        var root = Path.Combine(_config.DiagnosticsDirectory!, "update-outbox",
+            InstallationIdentity.GetOrCreate(_config));
+        ValidateExternalPath(root, _config);
+        Directory.CreateDirectory(root);
+        var destination = Path.Combine(root, _diagnosticId);
+        if (Directory.Exists(destination)) return;
+        var temporary = Path.Combine(root, "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            Directory.CreateDirectory(temporary);
+            var phase = UpdatePhaseMapper.FromStage(_lastError?.Stage) ?? "Unknown";
+            File.WriteAllText(Path.Combine(temporary, "diagnostic.txt"),
+                "Update failure\nPhase: " + phase + "\n");
+            var manifest = new OutboxManifest
+            {
+                Schema = OutboxManifest.SupportedSchema, Guid = _diagnosticId,
+                Kind = DiagnosticsKinds.Update, CreatedAtUtc = DateTime.UtcNow,
+                RecordId = recordId, RecordType = _activeReportType == 0 ? _config.ReportType : _activeReportType,
+                Files = new System.Collections.Generic.List<string> { "manifest.json", "diagnostic.txt" }
+            };
+            WriteAtomic(Path.Combine(temporary, "manifest.json"), manifest, DiagnosticsJsonContext.Default.OutboxManifest, false);
+            Directory.Move(temporary, destination);
+        }
+        finally { if (Directory.Exists(temporary)) Directory.Delete(temporary, true); }
+    }
+
     /// <summary>Snapshot known context; generate event identity once here, never during pending-report retries.</summary>
     internal UpdateReport CreateReport(int recordId, int status, int type) =>
         new(recordId, status, type)
         {
             UpdateAttemptId = _config.UpdateAttemptId, Stage = Stage,
+            RequiresAppKey = !string.IsNullOrWhiteSpace(_config.AppSecretKey),
             // Server-facing attribution (failure reports only): the originating failed operation
             // (Error.Stage — pipeline middleware or stage tag) maps onto the ReportDTO phase;
             // success reports carry no phase.
@@ -451,6 +506,13 @@ public sealed class UpdateAttempt : IDisposable
 
     /// <summary>Capture which chain package is active before middleware can fail.</summary>
     internal void SetPackage(VersionEntry package) => _package = package;
+
+    internal void SetReportIdentity(int recordId, int reportType)
+    {
+        _package = null;
+        _activeRecordId = recordId;
+        _activeReportType = reportType;
+    }
 
     /// <summary>Queue an unmonitored report durably before attempting its bounded, best-effort delivery.</summary>
     /// <remarks>Monitored terminals belong to Bowl. Older pending events block immediate later sends to preserve ordering.</remarks>

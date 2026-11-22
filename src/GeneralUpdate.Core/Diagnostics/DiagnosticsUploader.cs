@@ -89,6 +89,13 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
         try
         {
             var manifest = bundle.Manifest ?? new DiagnosticsManifest();
+            if (!string.IsNullOrWhiteSpace(manifest.AppKey) &&
+                (!Uri.TryCreate(_options.Url, UriKind.Absolute, out var uri) ||
+                 !Download.Reporting.HttpUpdateReporter.IsSecureReportUri(uri)))
+            {
+                GeneralTracer.Warn("DiagnosticsUploader: app key upload requires HTTPS or an IP loopback HTTP endpoint.");
+                return false;
+            }
             if (!Guid.TryParse(manifest.Guid, out _))
             {
                 GeneralTracer.Warn("DiagnosticsUploader: bundle has no valid GUID.");

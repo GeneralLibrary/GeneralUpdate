@@ -23,6 +23,7 @@
     <!-- Self-check switch-matrix tests drive the verified-launch flow through an OS-strategy test double. -->
     <ItemGroup>
         <InternalsVisibleTo Include="CoreTest" />
+        <InternalsVisibleTo Include="MonitoringTestHost" />
     </ItemGroup>
 
     <!-- Compatibility packages for netstandard2.0 -->

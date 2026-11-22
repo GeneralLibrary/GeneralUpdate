@@ -38,6 +38,7 @@ public sealed class PendingDiagnosticsScanner
     /// <summary>Root of the outbox: <c>{installPath}/fail</c>.</summary>
     private readonly string _failRoot;
     private readonly string? _crashOutboxRoot;
+    private readonly string? _updateOutboxRoot;
     private readonly DiagnosticsOptions _options;
     private readonly IDiagnosticsUploader _uploader;
     private readonly IBlackMatcher? _privacyFilter;
@@ -50,12 +51,15 @@ public sealed class PendingDiagnosticsScanner
     ///     the ambient static) so the scan behaves deterministically regardless of other state.
     /// </param>
     public PendingDiagnosticsScanner(string installPath, DiagnosticsOptions options,
-        IDiagnosticsUploader uploader, IBlackMatcher? privacyFilter = null, string? stateRoot = null)
+        IDiagnosticsUploader uploader, IBlackMatcher? privacyFilter = null, string? stateRoot = null,
+        string? installationId = null)
     {
         if (string.IsNullOrWhiteSpace(installPath))
             throw new ArgumentNullException(nameof(installPath));
         _failRoot = Path.Combine(installPath, "fail");
         _crashOutboxRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.Combine(stateRoot, "crash-outbox");
+        if (!string.IsNullOrWhiteSpace(stateRoot) && Guid.TryParseExact(installationId, "D", out _))
+            _updateOutboxRoot = Path.Combine(stateRoot, "update-outbox", installationId);
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _uploader = uploader ?? throw new ArgumentNullException(nameof(uploader));
         _privacyFilter = privacyFilter;
@@ -93,7 +97,10 @@ public sealed class PendingDiagnosticsScanner
             await ScanRootAsync(_failRoot, false, ct).ConfigureAwait(false);
             if (_crashOutboxRoot != null)
                 await ScanRootAsync(_crashOutboxRoot, true, ct).ConfigureAwait(false);
+            if (_updateOutboxRoot != null)
+                await ScanUpdateOutboxAsync(ct).ConfigureAwait(false);
         }
+
         catch (OperationCanceledException)
         {
             throw;
@@ -101,6 +108,24 @@ public sealed class PendingDiagnosticsScanner
         catch (Exception ex)
         {
             GeneralTracer.Warn($"PendingDiagnosticsScanner: scan aborted: {ex.Message}");
+        }
+    }
+
+    private async Task ScanUpdateOutboxAsync(CancellationToken ct)
+    {
+        var root = _updateOutboxRoot!;
+        if (!Directory.Exists(root)) return;
+        for (var directory = new DirectoryInfo(root); directory != null; directory = directory.Parent)
+            if (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Update diagnostics outbox cannot traverse symbolic links.");
+        using var scanLock = new FileStream(Path.Combine(root, ".scan.lock"), FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None);
+        foreach (var caseDir in Directory.EnumerateDirectories(root))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!Guid.TryParseExact(Path.GetFileName(caseDir), "D", out _) ||
+                (File.GetAttributes(caseDir) & FileAttributes.ReparsePoint) != 0) continue;
+            await ProcessCaseAsync(caseDir, false, ct, DiagnosticsKinds.Update).ConfigureAwait(false);
         }
     }
 
@@ -130,7 +155,8 @@ public sealed class PendingDiagnosticsScanner
         }
     }
 
-    private async Task ProcessCaseAsync(string caseDir, bool requireDump, CancellationToken ct)
+    private async Task ProcessCaseAsync(string caseDir, bool requireDump, CancellationToken ct,
+        string expectedKind = DiagnosticsKinds.Crash)
     {
         try
         {
@@ -138,6 +164,11 @@ public sealed class PendingDiagnosticsScanner
             if (!File.Exists(manifestPath))
             {
                 GeneralTracer.Warn($"PendingDiagnosticsScanner: skipping {caseDir} — no manifest.json.");
+                return;
+            }
+            if (expectedKind == DiagnosticsKinds.Update && !IsSafeUpdateCase(caseDir))
+            {
+                GeneralTracer.Warn($"PendingDiagnosticsScanner: invalid update diagnostic case; retaining {caseDir}.");
                 return;
             }
 
@@ -152,7 +183,11 @@ public sealed class PendingDiagnosticsScanner
             if (!Guid.TryParseExact(manifest.Guid, "D", out var manifestGuid) ||
                 !Guid.TryParseExact(Path.GetFileName(caseDir), "D", out var directoryGuid) ||
                 manifestGuid != directoryGuid ||
-                !string.Equals(manifest.Kind, DiagnosticsKinds.Crash, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(manifest.Kind, expectedKind, StringComparison.OrdinalIgnoreCase) ||
+                (expectedKind == DiagnosticsKinds.Update && (manifest.RecordId is null or <= 0 ||
+                    manifest.RecordType is not (1 or 2) || !string.IsNullOrEmpty(manifest.TargetName) ||
+                    !string.IsNullOrEmpty(manifest.Version) || string.IsNullOrWhiteSpace(_options.AppKey) ||
+                    !string.Equals(manifest.State, OutboxStates.Pending, StringComparison.Ordinal))))
             {
                 GeneralTracer.Warn($"PendingDiagnosticsScanner: skipping {caseDir} — invalid crash manifest identity.");
                 return;
@@ -170,6 +205,14 @@ public sealed class PendingDiagnosticsScanner
             var packed = DiagnosticsPackager.PackDirectory(caseDir, _options, _privacyFilter);
             if (packed == null)
             {
+                RecordFailure(manifestPath, manifest);
+                return;
+            }
+            if (expectedKind == DiagnosticsKinds.Update &&
+                !packed.Value.Entries.Contains("diagnostic.txt", StringComparer.Ordinal))
+            {
+                File.Delete(packed.Value.ZipPath);
+                GeneralTracer.Warn($"PendingDiagnosticsScanner: update diagnostic was excluded; retaining {caseDir}.");
                 RecordFailure(manifestPath, manifest);
                 return;
             }
@@ -193,7 +236,10 @@ public sealed class PendingDiagnosticsScanner
                 AppKey = _options.AppKey,
                 ProductId = _options.ProductId,
                 Platform = _options.Platform,
-                Reason = $"crash outbox {manifest.Guid}, exitCode={manifest.ExitCode?.ToString() ?? "n/a"}",
+                RecordId = manifest.RecordId,
+                RecordType = manifest.RecordType,
+                Reason = expectedKind == DiagnosticsKinds.Update ? "Update failed" :
+                    $"crash outbox {manifest.Guid}, exitCode={manifest.ExitCode?.ToString() ?? "n/a"}",
                 Files = packed.Value.Entries,
             });
 
@@ -243,7 +289,7 @@ public sealed class PendingDiagnosticsScanner
         try
         {
             manifest.Attempts++;
-            if (_options.MaxRetry > 0 && manifest.Attempts >= _options.MaxRetry)
+            if (manifest.Kind != DiagnosticsKinds.Update && _options.MaxRetry > 0 && manifest.Attempts >= _options.MaxRetry)
             {
                 manifest.State = OutboxStates.Giveup;
                 GeneralTracer.Warn($"PendingDiagnosticsScanner: {manifest.Guid} marked giveup after {manifest.Attempts} attempts.");
@@ -264,5 +310,20 @@ public sealed class PendingDiagnosticsScanner
         {
             GeneralTracer.Warn($"PendingDiagnosticsScanner: could not persist retry state for {manifest.Guid}: {ex.Message}");
         }
+    }
+
+    private static bool IsSafeUpdateCase(string caseDir)
+    {
+        var files = Directory.GetFileSystemEntries(caseDir);
+        if (files.Length != 2) return false;
+        var manifest = Path.Combine(caseDir, "manifest.json");
+        var diagnostic = Path.Combine(caseDir, "diagnostic.txt");
+        if (!File.Exists(manifest) || !File.Exists(diagnostic)) return false;
+        foreach (var file in files)
+            if ((File.GetAttributes(file) & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0 ||
+                new FileInfo(file).Length > 4096) return false;
+        var text = File.ReadAllText(diagnostic);
+        return new[] { "Download", "Verify", "Extract", "Apply", "Startup", "Rollback", "Unknown" }
+            .Any(phase => text == "Update failure\nPhase: " + phase + "\n");
     }
 }

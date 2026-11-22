@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -75,6 +76,8 @@ public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
     public string? UpdateAttemptId { get; init; }
     /// <summary>Stable identifier once persisted; retries reuse it, but the legacy server does not receive it.</summary>
     public string? EventId { get; init; }
+    /// <summary>Whether HTTP delivery must have an app key; this flag is safe to persist for retries.</summary>
+    public bool RequiresAppKey { get; init; }
     /// <summary>Name of the package being applied when this evidence was captured, if known.</summary>
     public string? PackageName { get; init; }
     /// <summary>That package's version, which may differ from the whole attempt's target version.</summary>
@@ -125,7 +128,7 @@ public static class UpdatePhases
 /// </summary>
 internal record LegacyUpdateReport(
     int RecordId, int Status, int Type,
-    string? Phase = null, string? ErrorCode = null, string? Message = null);
+    string? Phase = null, string? ErrorCode = null, string? Message = null, string? AppKey = null);
 
 /// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
@@ -151,6 +154,9 @@ public class HttpUpdateReporter : IUpdateReporter
 {
     private HttpClient _client;
     private string _reportUrl;
+
+    /// <summary>In-memory application credential; never stored in pending reports.</summary>
+    public string? AppKey { get; set; }
 
     /// <summary>
     /// Gets or sets the report URL for update status reporting.
@@ -213,7 +219,12 @@ public class HttpUpdateReporter : IUpdateReporter
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
 
-            var json = JsonSerializer.Serialize(ToWire(report),
+            if (report.RequiresAppKey && string.IsNullOrWhiteSpace(AppKey))
+                throw new InvalidOperationException("The pending report requires an app key.");
+            if (!string.IsNullOrEmpty(AppKey) &&
+                (!Uri.TryCreate(_reportUrl, UriKind.Absolute, out var reportUri) || !IsSecureReportUri(reportUri)))
+                throw new InvalidOperationException("App key reporting requires HTTPS or an IP loopback HTTP endpoint.");
+            var json = JsonSerializer.Serialize(ToWire(report) with { AppKey = AppKey },
                 AttemptJsonContext.Default.LegacyUpdateReport);
             using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -225,13 +236,30 @@ public class HttpUpdateReporter : IUpdateReporter
 
             using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(body) && string.IsNullOrEmpty(AppKey)) return;
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("code", out var code) || code.ValueKind != JsonValueKind.Number ||
+                !code.TryGetInt32(out var codeValue) || codeValue != 200 ||
+                !root.TryGetProperty("body", out var result) || result.ValueKind != JsonValueKind.True ||
+                (root.TryGetProperty("isSuccess", out var success)
+                    ? success.ValueKind != JsonValueKind.True
+                    : !string.IsNullOrEmpty(AppKey)))
+                throw new HttpRequestException("Report endpoint did not acknowledge the update.");
         }
+
         catch (Exception ex)
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");
             throw;
         }
     }
+
+    internal static bool IsSecureReportUri(Uri uri) =>
+        uri.Scheme == Uri.UriSchemeHttps ||
+        (uri.Scheme == Uri.UriSchemeHttp && IPAddress.TryParse(uri.Host, out var address) && IPAddress.IsLoopback(address));
 
     /// <summary>
     ///     Wire projection: the server receives the record identity plus the failure attribution

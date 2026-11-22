@@ -543,7 +543,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
                        new Download.Reporting.HttpUpdateReporter();
         if (reporter is Download.Reporting.HttpUpdateReporter httpReporter)
+        {
             httpReporter.ReportUrl = _configInfo.ReportUrl;
+            httpReporter.AppKey = _configInfo.AppSecretKey;
+        }
         roleStrategy.Reporter = reporter;
 
         var diffPipeline = BuildDiffPipeline();
@@ -649,7 +652,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             MaxSizeBytes = 19 * 1024 * 1024,
         }, FileSystem.StorageManager.BlackMatcher,
             _configInfo.DiagnosticsDirectory ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GeneralUpdate", "state"));
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GeneralUpdate", "state"),
+            clientRole ? Configuration.InstallationIdentity.GetOrCreate(_configInfo) : null);
     }
 
     /// <summary>Composes the GeneralSpace artifact endpoint from the report URL's origin.</summary>
