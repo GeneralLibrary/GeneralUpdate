@@ -1,0 +1,78 @@
+name: Real ordered report protocol
+
+on:
+  push:
+    branches: [justerzhu-real-report-protocol-integration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-api:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.0.42
+        env:
+          MYSQL_ROOT_PASSWORD: ordered-report-disposable-ci
+          MYSQL_DATABASE: ordered_report_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pordered-report-disposable-ci"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require read-only server repository credential
+        env:
+          SERVER_TOKEN: ${{ secrets.GENERALSPACE_READ_TOKEN }}
+        run: |
+          if [ -z "$SERVER_TOKEN" ]; then
+            echo "::error::Configure GENERALSPACE_READ_TOKEN with read-only access to TSLH-Technology/GeneralSpace."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: TSLH-Technology/GeneralSpace
+          ref: 896920c04423705fc8813818b495dfd51526e6b2
+          path: .integration/server
+          token: ${{ secrets.GENERALSPACE_READ_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Verify and record exact revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          server=896920c04423705fc8813818b495dfd51526e6b2
+          client_base=1bbc64e02d30385af5b08e07cc464dccdeda6aa5
+          test "$(git -C .integration/server rev-parse HEAD)" = "$server"
+          git merge-base --is-ancestor "$client_base" HEAD
+          echo "Server: $server"
+          echo "Client: $(git rev-parse HEAD)"
+          echo "Client PR #550 base: $client_base"
+          {
+            echo "Server SHA: $server"
+            echo "Client SHA: $(git rev-parse HEAD)"
+            echo "Client PR #550 base SHA: $client_base"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Install test dependencies
+        run: python3 -m pip install PyMySQL==1.1.1 cryptography==44.0.3
+      - name: Publish real API and client
+        run: |
+          dotnet publish .integration/server/src_api/GeneralSpace.Api -c Release -r linux-x64 --self-contained true -p:Edition=SaaS -o .integration/api
+          dotnet publish tests/RealReportHarness/RealReportHarness.csproj -c Release -o .integration/client
+      - name: Exercise durable retry against SaaS and MySQL
+        env:
+          ORDERED_REPORT_DB_PORT: '3306'
+          ORDERED_REPORT_DB_USER: root
+          ORDERED_REPORT_DB_PASSWORD: ordered-report-disposable-ci
+        run: python3 eng/real-ordered-report.py
