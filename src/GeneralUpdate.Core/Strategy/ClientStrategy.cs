@@ -433,6 +433,12 @@ public class ClientStrategy : IStrategy
             _configInfo.BasicUsername,
             _configInfo.BasicPassword);
 
+        if (downloadSource is Download.Sources.PushDownloadSource)
+        {
+            _reportType = 2;
+            _configInfo.ReportType = 2;
+        }
+
         // Call server validation — returns assets from the two Validate calls
         var sourceResult = await downloadSource.ListAsync().ConfigureAwait(false);
 
@@ -1130,6 +1136,7 @@ public class ClientStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateStartedAsync(Hooks.HookContext ctx)
     {
+        if (_reportType == 2 && _mainRecordId <= 0 && _upgradeRecordId <= 0) return;
         try
         {
             await Reporter
@@ -1148,6 +1155,7 @@ public class ClientStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportDownloadCompletedAsync(Hooks.HookContext ctx)
     {
+        if (_reportType == 2 && _mainRecordId <= 0 && _upgradeRecordId <= 0) return;
         try
         {
             await Reporter
@@ -1167,6 +1175,7 @@ public class ClientStrategy : IStrategy
     /// <param name="error">The exception that caused the update to fail.</param>
     private async Task SafeReportUpdateFailedAsync(Hooks.HookContext ctx, Exception error)
     {
+        if (_reportType == 2 && _mainRecordId <= 0 && _upgradeRecordId <= 0) return;
         try
         {
             await Reporter
@@ -1185,6 +1194,7 @@ public class ClientStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx, int recordId)
     {
+        if (_reportType == 2 && recordId <= 0) return;
         try
         {
             await Reporter

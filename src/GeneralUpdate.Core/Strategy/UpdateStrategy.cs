@@ -261,6 +261,7 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
+            if (_reportType == 2 && recordId <= 0) return;
             await Reporter
                 .ReportAsync(new Download.Reporting.UpdateReport(recordId,
                     (int)Download.Reporting.UpdateStatus.Success, _reportType)).ConfigureAwait(false);
@@ -276,6 +277,7 @@ public class UpdateStrategy : IStrategy
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
+            if (_reportType == 2 && recordId <= 0) return;
             await Reporter
                 .ReportAsync(new Download.Reporting.UpdateReport(recordId,
                     (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);

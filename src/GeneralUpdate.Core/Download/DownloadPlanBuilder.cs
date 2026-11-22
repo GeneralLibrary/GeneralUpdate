@@ -180,6 +180,16 @@ public static class DownloadPlanBuilder
             .Where(a => a.PackageType == (int)Configuration.PackageType.Full)
             .ToList();
 
+        if (chainCandidates.Count == 0 && fullCandidates.Count > 0)
+        {
+            var latestFulls = fullCandidates
+                .GroupBy(a => a.AppType)
+                .Select(g => g.OrderByDescending(a => Lookup(a)).First())
+                .OrderBy(a => Lookup(a))
+                .ToList();
+            return new DownloadPlan(latestFulls, isForcibly);
+        }
+
         // ── Chain vs Full: count-first heuristic ──
         if (chainCandidates.Count > 0 && fullCandidates.Count > 0)
         {

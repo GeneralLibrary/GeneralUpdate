@@ -284,6 +284,7 @@ namespace GeneralUpdate.Core.Strategy
 
                 foreach (var record in recordStatuses)
                 {
+                    if (_configinfo.ReportType == 2 && record.Key <= 0) continue;
                     try
                     {
                         await Reporter.ReportAsync(new UpdateReport(record.Key, record.Value, _configinfo.ReportType)).ConfigureAwait(false);
