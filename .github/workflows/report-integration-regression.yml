@@ -3,8 +3,6 @@ name: Report integration regression
 on:
   push:
     branches: [justerzhu-persistent-regression-integration]
-  pull_request:
-    branches: [justerzhu-upgrade-failure-stage-collection]
   workflow_dispatch:
 
 permissions:
