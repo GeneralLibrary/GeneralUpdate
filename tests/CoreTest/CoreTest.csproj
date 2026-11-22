@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+    <ProjectReference Include="..\StartupHealthProbe\StartupHealthProbe.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
