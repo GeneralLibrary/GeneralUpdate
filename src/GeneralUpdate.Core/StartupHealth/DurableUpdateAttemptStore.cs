@@ -14,6 +14,7 @@ namespace GeneralUpdate.Core.StartupHealth;
 public sealed class DurableUpdateAttemptStore
 {
     private const int FormatVersion = 1;
+    public const string RequiredAttemptIdEnvironmentVariable = "GENERALUPDATE_REQUIRED_DURABLE_ATTEMPT_ID";
     private readonly string _installPath;
     private readonly string _directory;
 

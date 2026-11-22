@@ -109,7 +109,7 @@ public class LinuxStrategy : AbstractStrategy
                 throw new Exception($"Can't find the app {appName}!");
 
             GeneralTracer.Info($"GeneralUpdate.Core.LinuxStrategy.StartApp: launching app={appPath}");
-            using var process = Process.Start(appPath);
+            using var process = StartProcess(new ProcessStartInfo(appPath) { UseShellExecute = false });
             if (process == null)
                 throw new InvalidOperationException($"Failed to start application: {appPath}");
             appLaunched = true;

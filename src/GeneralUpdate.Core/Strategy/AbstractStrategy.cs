@@ -9,6 +9,7 @@ using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Utilities;
+using GeneralUpdate.Core.StartupHealth;
 
 using GeneralUpdate.Core.Hooks;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
@@ -86,6 +87,8 @@ namespace GeneralUpdate.Core.Strategy
         /// Set by the upper-level strategy before calling <see cref="StartAppAsync"/>.
         /// </summary>
         public bool LaunchBowl { get; set; }
+
+        protected internal Guid? RequiredDurableUpdateAttemptId { get; set; }
 
         /// <summary>
         /// Gets or sets whether to prefer using the update path. When <c>true</c>, <see cref="StartAppAsync"/>
@@ -268,7 +271,8 @@ namespace GeneralUpdate.Core.Strategy
                     }
                     finally
                     {
-                        await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, version.AppType ?? 1));
+                        if (status != ReportType.Success || !_configinfo.DurableUpdateAttemptId.HasValue)
+                            await Reporter.ReportAsync(new UpdateReport(version.RecordId, status, version.AppType ?? 1));
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
@@ -451,10 +455,28 @@ namespace GeneralUpdate.Core.Strategy
             if (string.IsNullOrEmpty(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: launching {appPath}");
-            using var process = Process.Start(appPath);
+            using var process = StartProcess(new ProcessStartInfo(appPath) { UseShellExecute = false });
             if (process == null)
                 throw new InvalidOperationException($"Failed to start process: {appPath}");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: process started (PID: {process.Id}).");
+        }
+
+        protected Process? StartProcess(ProcessStartInfo startInfo)
+        {
+            if (startInfo == null) throw new ArgumentNullException(nameof(startInfo));
+            var inheritedAttemptMarker = Environment.GetEnvironmentVariable(
+                DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable);
+            if (!RequiredDurableUpdateAttemptId.HasValue && string.IsNullOrEmpty(inheritedAttemptMarker))
+                return Process.Start(startInfo.FileName);
+
+            startInfo.UseShellExecute = false;
+            startInfo.EnvironmentVariables.Remove(DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable);
+            if (RequiredDurableUpdateAttemptId.HasValue)
+            {
+                startInfo.EnvironmentVariables[DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable] =
+                    RequiredDurableUpdateAttemptId.Value.ToString("D");
+            }
+            return Process.Start(startInfo);
         }
 
         /// <summary>

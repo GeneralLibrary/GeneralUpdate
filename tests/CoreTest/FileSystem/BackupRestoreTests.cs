@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using GeneralUpdate.Core.FileSystem;
 using Xunit;
@@ -9,6 +10,39 @@ namespace CoreTest.Backup;
 
 public class BackupRestoreTests
 {
+    [Fact]
+    public void Backup_preserves_the_original_three_parameter_binary_signature()
+    {
+        var oldSignature = typeof(StorageManager).GetMethod(
+            nameof(StorageManager.Backup),
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: new[] { typeof(string), typeof(string), typeof(System.Collections.Generic.IReadOnlyList<string>) },
+            modifiers: null);
+        Assert.NotNull(oldSignature);
+
+        var root = Path.Combine(Path.GetTempPath(), "CoreTest.Backup.Api." + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "source");
+        var destination = Path.Combine(root, "backup");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "state.txt"), "legacy");
+        try
+        {
+            oldSignature!.Invoke(null, new object[] { source, destination, Array.Empty<string>() });
+            Assert.Equal("legacy", File.ReadAllText(Path.Combine(destination, "state.txt")));
+            Assert.NotNull(typeof(StorageManager).GetMethod(
+                nameof(StorageManager.Backup),
+                BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(System.Collections.Generic.IReadOnlyList<string>), typeof(bool) },
+                modifiers: null));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
     [Fact]
     public void Backup_And_Restore_Roundtrip()
     {

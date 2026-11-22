@@ -526,7 +526,10 @@ namespace GeneralUpdate.Core.FileSystem
         /// The default mode overwrites an existing destination. Use <paramref name="createOnly"/> for paths that must be unique.
         /// </para>
         /// </remarks>
-        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames, bool createOnly = false)
+        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames)
+            => Backup(sourcePath, backupPath, directoryNames, createOnly: false);
+
+        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames, bool createOnly)
         {
             // Merge default backup-exclusion prefixes with user-configured directories.
             // This ensures backup/legacy directories are ALWAYS skipped, preventing

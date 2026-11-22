@@ -98,6 +98,7 @@ public class UpdateStrategy : IStrategy
         var ctx = BuildUpdateContext();
         try
         {
+            EnsureDurableAttemptSupported();
             GeneralTracer.Debug("UpdateStrategy.ExecuteAsync start.");
 
             // Hooks: allow cancellation before applying updates
@@ -251,6 +252,12 @@ public class UpdateStrategy : IStrategy
 
     private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx)
     {
+        if (_configInfo?.DurableUpdateAttemptId.HasValue == true)
+        {
+            GeneralTracer.Info("UpdateStrategy: success report suppressed until application-owned readiness is confirmed.");
+            return;
+        }
+
         try
         {
             var recordId = _configInfo?.UpdateVersions?.FirstOrDefault()?.RecordId ?? 0;
@@ -262,6 +269,19 @@ public class UpdateStrategy : IStrategy
         {
             GeneralTracer.Warn($"Report UpdateApplied failed: {ex.Message}");
         }
+    }
+
+    private void EnsureDurableAttemptSupported()
+    {
+        if (!_configInfo!.DurableUpdateAttemptId.HasValue) return;
+        if (_configInfo.DurableUpdateAttemptId == Guid.Empty)
+            throw new InvalidOperationException("DurableUpdateAttemptId must be non-empty.");
+        if (!_configInfo.DisableLegacyRollback)
+            throw new InvalidOperationException("A durable update attempt must disable Core legacy rollback.");
+        if (!string.IsNullOrWhiteSpace(_configInfo.Bowl))
+            throw new InvalidOperationException("Durable update attempts cannot run with a configured Bowl process.");
+        if (_customOsStrategy != null)
+            throw new InvalidOperationException("Durable update attempts require the built-in OS strategy; custom strategies are not verified.");
     }
 
     private async Task SafeReportUpdateFailedAsync(Hooks.HookContext ctx, Exception error)

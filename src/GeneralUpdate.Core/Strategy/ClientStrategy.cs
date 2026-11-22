@@ -14,6 +14,7 @@ using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Utilities;
 using GeneralUpdate.Core.StartupHealth;
+using GeneralUpdate.Core.Ipc;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -75,6 +76,7 @@ public class ClientStrategy : IStrategy
     private int _mainRecordId;
     private int _upgradeRecordId;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
+    internal EncryptedFileProcessContractProvider? ProcessContractProvider { get; set; }
 
     /// <summary>
     /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
@@ -264,6 +266,7 @@ public class ClientStrategy : IStrategy
         try
         {
             GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
+            EnsureDurableAttemptSupported();
             await CallSmallBowlHomeAsync(_configInfo.Bowl);
             await ExecuteWorkflowAsync();
         }
@@ -396,6 +399,7 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     private async Task ExecuteStandardWorkflowAsync()
     {
+        EnsureDurableAttemptSupported();
         GeneralTracer.Info(
             $"ClientStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
@@ -788,7 +792,7 @@ public class ClientStrategy : IStrategy
 
         _configInfo.ProcessContract = JsonSerializer.Serialize(processInfo,
             ProcessContractJsonContext.Default.ProcessContract);
-        new EncryptedFileProcessContractProvider().Send(processInfo);
+        (ProcessContractProvider ?? new EncryptedFileProcessContractProvider()).Send(processInfo);
         HasPreparedClientUpdate = true;
         GeneralTracer.Info("ClientStrategy: ProcessContract sent with MainApp versions only.");
     }
@@ -810,6 +814,7 @@ public class ClientStrategy : IStrategy
             abs.LaunchAppName = _configInfo!.UpdateAppName;
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.RequiredDurableUpdateAttemptId = _configInfo.DurableUpdateAttemptId;
         }
 
         GeneralTracer.Info(
@@ -847,6 +852,7 @@ public class ClientStrategy : IStrategy
             abs.LaunchAppName = _configInfo!.UpdateAppName;
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.RequiredDurableUpdateAttemptId = _configInfo.DurableUpdateAttemptId;
             abs.StartProcess(abs.LaunchAppName!, abs.UseUpdatePath);
             return;
         }
@@ -904,6 +910,17 @@ public class ClientStrategy : IStrategy
                 _configInfo.Formats,
                 _configInfo.Directories
             ));
+    }
+
+    private void EnsureDurableAttemptSupported()
+    {
+        if (!_configInfo!.DurableUpdateAttemptId.HasValue) return;
+        if (_configInfo.DurableUpdateAttemptId == Guid.Empty)
+            throw new InvalidOperationException("DurableUpdateAttemptId must be non-empty.");
+        if (!string.IsNullOrWhiteSpace(_configInfo.Bowl))
+            throw new InvalidOperationException("Durable update attempts cannot run with a configured Bowl process.");
+        if (_customOsStrategy != null)
+            throw new InvalidOperationException("Durable update attempts require the built-in OS strategy; custom strategies are not verified.");
     }
 
     /// <summary>
@@ -1198,6 +1215,12 @@ public class ClientStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx, int recordId)
     {
+        if (_configInfo?.DurableUpdateAttemptId.HasValue == true)
+        {
+            GeneralTracer.Info("ClientStrategy: success report suppressed until application-owned readiness is confirmed.");
+            return;
+        }
+
         try
         {
             await Reporter

@@ -150,6 +150,15 @@ public class OssStrategy : IStrategy
     {
         if (_configInfo == null)
             throw new InvalidOperationException("OssStrategy not configured. Call Create() first.");
+        if (_configInfo.DurableUpdateAttemptId.HasValue)
+        {
+            var error = new InvalidOperationException(
+                "Durable update attempts are not supported by the OSS workflow.");
+            var context = BuildUpdateContext();
+            await SafeOnUpdateErrorAsync(context, error).ConfigureAwait(false);
+            await SafeReportUpdateFailedAsync(context, error).ConfigureAwait(false);
+            throw error;
+        }
 
         // Fill missing identity fields from generalupdate.manifest.json,
         // making the manifest the single source of configuration across
@@ -647,6 +656,12 @@ public class OssStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx)
     {
+        if (_configInfo?.DurableUpdateAttemptId.HasValue == true)
+        {
+            GeneralTracer.Info("OssStrategy: success report suppressed until application-owned readiness is confirmed.");
+            return;
+        }
+
         try
         {
             await Reporter.ReportAsync(new Download.Reporting.UpdateReport(0, (int)Download.Reporting.UpdateStatus.Success, 1)).ConfigureAwait(false);

@@ -1,6 +1,50 @@
 using GeneralUpdate.Core.StartupHealth;
 using GeneralUpdate.Core.FileSystem;
+using GeneralUpdate.Core;
+using GeneralUpdate.Core.Configuration;
+using GeneralUpdate.Core.Download.Reporting;
+using GeneralUpdate.Core.Strategy;
 using System.Diagnostics;
+using System.Reflection;
+
+if (args.Length == 1 && args[0] == "attempt-contract")
+{
+    try
+    {
+        var bootstrap = new GeneralUpdateBootstrap();
+        var context = (UpdateContext)typeof(GeneralUpdateBootstrap)
+            .GetField("_configInfo", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(bootstrap)!;
+        Console.WriteLine(context.DurableUpdateAttemptId?.ToString("D") ?? "legacy");
+    }
+    catch (InvalidDataException)
+    {
+        Console.WriteLine("rejected");
+    }
+    return;
+}
+
+if (args.Length == 1 && args[0] == "attempt-apply")
+{
+    try
+    {
+        var bootstrap = new GeneralUpdateBootstrap();
+        var context = (UpdateContext)typeof(GeneralUpdateBootstrap)
+            .GetField("_configInfo", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(bootstrap)!;
+        context.LaunchClientAfterUpdate = false;
+        var statuses = new List<int>();
+        var strategy = new UpdateStrategy { Reporter = new ProbeReporter(statuses) };
+        strategy.Create(context);
+        await strategy.ExecuteAsync();
+        Console.WriteLine($"{context.DurableUpdateAttemptId:D}|{string.Join(",", statuses)}");
+    }
+    catch (InvalidDataException)
+    {
+        Console.WriteLine("rejected");
+    }
+    return;
+}
 
 if (args.Length == 3 && args[0] == "attempt-read")
 {
@@ -161,4 +205,17 @@ else
         ? store.ConfirmHealthy(id)
         : store.ReportFailure(id, StartupHealthStatus.Failed);
     Console.WriteLine(changed ? "changed" : "unchanged");
+}
+
+sealed class ProbeReporter : IUpdateReporter
+{
+    private readonly List<int> _statuses;
+
+    public ProbeReporter(List<int> statuses) => _statuses = statuses;
+
+    public Task ReportAsync(UpdateReport report, CancellationToken token = default)
+    {
+        _statuses.Add(report.Status);
+        return Task.CompletedTask;
+    }
 }

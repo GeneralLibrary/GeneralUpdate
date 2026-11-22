@@ -1,12 +1,16 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Download.Abstractions;
 using GeneralUpdate.Core.Download.Models;
+using GeneralUpdate.Core.Download.Reporting;
 using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.FileSystem;
 using GeneralUpdate.Core.JsonContext;
+using GeneralUpdate.Core.Ipc;
+using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.StartupHealth;
 using GeneralUpdate.Core.Strategy;
 using Moq;
@@ -134,13 +138,19 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
                 It.IsAny<IProgress<DownloadProgress>>(), It.IsAny<CancellationToken>()))
             .Returns((DownloadAsset download, string path, IProgress<DownloadProgress>? _, CancellationToken _) =>
                 Task.FromResult(new DownloadResult(download, path, 10, TimeSpan.Zero, 0, true, null)));
+        var reports = new List<UpdateReport>();
+        var reporter = new Mock<IUpdateReporter>();
+        reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateReport, CancellationToken>((report, _) => reports.Add(report))
+            .Returns(Task.CompletedTask);
 
         var strategy = new ClientStrategy
         {
             DownloadSource = source.Object,
-            LaunchAfterPrepare = false
+            LaunchAfterPrepare = false,
+            Reporter = reporter.Object,
+            ProcessContractProvider = new EncryptedFileProcessContractProvider(Path.Combine(_root, "client-ipc"))
         };
-        strategy.SetOsStrategy(Mock.Of<IStrategy>());
         strategy.SetDownloadExecutor(executor.Object);
         strategy.Create(new UpdateContext
         {
@@ -162,11 +172,206 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
             Assert.NotNull(attempt.SnapshotPath);
             Assert.Contains(attemptId.ToString("N"), Path.GetFileName(attempt.SnapshotPath));
             Assert.Equal("before-update", File.ReadAllText(Path.Combine(attempt.SnapshotPath, "app-state.txt")));
+            Assert.DoesNotContain(reports, report => report.Status == (int)UpdateStatus.Success);
         }
         finally
         {
             EventManager.Instance.Clear();
         }
+    }
+
+    [Fact]
+    public async Task Durable_client_update_rejects_bowl_before_backup_and_preserves_failure_reporting()
+    {
+        var installPath = Path.Combine(_root, "install-with-bowl");
+        Directory.CreateDirectory(installPath);
+        var reports = new List<UpdateReport>();
+        var reporter = new Mock<IUpdateReporter>();
+        reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateReport, CancellationToken>((report, _) => reports.Add(report))
+            .Returns(Task.CompletedTask);
+
+        var strategy = new ClientStrategy { Reporter = reporter.Object };
+        strategy.Create(new UpdateContext
+        {
+            InstallPath = installPath,
+            UpdateUrl = "https://example.test/update",
+            AppSecretKey = "test-key",
+            DurableUpdateAttemptId = Guid.NewGuid(),
+            Bowl = "Bowl.exe"
+        });
+
+        try
+        {
+            await strategy.ExecuteAsync();
+            Assert.False(Directory.Exists(DurableUpdateAttemptStore.GetDirectory(installPath)));
+            Assert.DoesNotContain(Directory.Exists(Path.Combine(installPath, StorageManager.BackupRootDirectory))
+                ? Directory.GetDirectories(Path.Combine(installPath, StorageManager.BackupRootDirectory))
+                : Array.Empty<string>(), path => Path.GetFileName(path).StartsWith("backup-", StringComparison.Ordinal));
+            Assert.Contains(reports, report => report.Status == (int)UpdateStatus.Failure);
+            Assert.DoesNotContain(reports, report => report.Status == (int)UpdateStatus.Success);
+        }
+        finally
+        {
+            EventManager.Instance.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task Durable_pipeline_suppresses_success_for_each_package_role_but_keeps_failure_reports()
+    {
+        var tempPath = Path.Combine(_root, "packages");
+        Directory.CreateDirectory(tempPath);
+        var reports = new List<UpdateReport>();
+        var reporter = new Mock<IUpdateReporter>();
+        reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateReport, CancellationToken>((report, _) => reports.Add(report))
+            .Returns(Task.CompletedTask);
+        var strategy = new ReportOnlyStrategy { Reporter = reporter.Object };
+        strategy.Create(new UpdateContext
+        {
+            InstallPath = _root,
+            TempPath = tempPath,
+            Format = Format.Zip,
+            Encoding = Encoding.UTF8,
+            DurableUpdateAttemptId = Guid.NewGuid(),
+            DisableLegacyRollback = true,
+            UpdateVersions = new List<VersionEntry>
+            {
+                new() { Name = "client-full", Version = "2.0.0", AppType = (int)AppType.Client, PackageType = (int)PackageType.Full },
+                new() { Name = "upgrade-chain", Version = "2.0.0", AppType = (int)AppType.Upgrade, PackageType = (int)PackageType.Chain },
+                new() { Name = "client-failure", Version = "2.0.0", AppType = (int)AppType.Client, PackageType = (int)PackageType.Full }
+            }
+        });
+
+        try
+        {
+            await strategy.ExecuteAsync();
+            Assert.DoesNotContain(reports, report => report.Status == (int)UpdateStatus.Success);
+            Assert.Contains(reports, report => report.Status == (int)UpdateStatus.Failure);
+        }
+        finally
+        {
+            EventManager.Instance.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task Durable_update_strategy_suppresses_its_post_apply_success_report()
+    {
+        var reports = new List<UpdateReport>();
+        var reporter = new Mock<IUpdateReporter>();
+        reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateReport, CancellationToken>((report, _) => reports.Add(report))
+            .Returns(Task.CompletedTask);
+        var strategy = new UpdateStrategy { Reporter = reporter.Object };
+        strategy.Create(new UpdateContext
+        {
+            InstallPath = _root,
+            DurableUpdateAttemptId = Guid.NewGuid(),
+            DisableLegacyRollback = true,
+            UpdateVersions = new List<VersionEntry>(),
+            LaunchClientAfterUpdate = false
+        });
+
+        await strategy.ExecuteAsync();
+
+        Assert.DoesNotContain(reports, report => report.Status == (int)UpdateStatus.Success);
+    }
+
+    [Fact]
+    public async Task Legacy_update_strategy_keeps_its_success_report()
+    {
+        var reports = new List<UpdateReport>();
+        var reporter = new Mock<IUpdateReporter>();
+        reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateReport, CancellationToken>((report, _) => reports.Add(report))
+            .Returns(Task.CompletedTask);
+        var strategy = new UpdateStrategy { Reporter = reporter.Object };
+        strategy.Create(new UpdateContext
+        {
+            InstallPath = _root,
+            UpdateVersions = new List<VersionEntry>(),
+            LaunchClientAfterUpdate = false
+        });
+
+        await strategy.ExecuteAsync();
+
+        Assert.Contains(reports, report => report.Status == (int)UpdateStatus.Success);
+    }
+
+    [Fact]
+    public async Task Durable_client_update_rejects_custom_strategy_before_backup()
+    {
+        var installPath = Path.Combine(_root, "install-with-custom");
+        Directory.CreateDirectory(installPath);
+        var strategy = new ClientStrategy();
+        strategy.SetOsStrategy(Mock.Of<IStrategy>());
+        strategy.Create(new UpdateContext
+        {
+            InstallPath = installPath,
+            UpdateUrl = "https://example.test/update",
+            AppSecretKey = "test-key",
+            DurableUpdateAttemptId = Guid.NewGuid()
+        });
+
+        try
+        {
+            await strategy.ExecuteAsync();
+            Assert.False(Directory.Exists(DurableUpdateAttemptStore.GetDirectory(installPath)));
+            Assert.False(Directory.Exists(Path.Combine(installPath, StorageManager.BackupRootDirectory)));
+        }
+        finally
+        {
+            EventManager.Instance.Clear();
+        }
+    }
+
+    [Fact]
+    public void Child_process_requires_the_matching_attempt_contract_and_rejects_missing_or_corrupt_ipc()
+    {
+        var installPath = Path.Combine(_root, "install-ipc");
+        var sourcePath = Path.Combine(_root, "source-ipc");
+        var tempRoot = Path.Combine(_root, "ipc-temp");
+        var ipcDirectory = Path.Combine(tempRoot, "GeneralUpdate", "ipc");
+        Directory.CreateDirectory(installPath);
+        Directory.CreateDirectory(sourcePath);
+        Directory.CreateDirectory(ipcDirectory);
+        File.WriteAllText(Path.Combine(sourcePath, "file.txt"), "snapshot");
+        using (var archive = ZipFile.Open(Path.Combine(_root, "package.zip"), ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("updated.txt").Open()))
+            writer.Write("applied-in-child");
+        var store = CreateBoundAttempt(installPath, sourcePath, out var attemptId);
+        var contract = CreateAttemptContract(installPath, attemptId, store.GetAttempt(attemptId).SnapshotPath!);
+        var provider = new EncryptedFileProcessContractProvider(ipcDirectory);
+        var ipcPath = EncryptedFileProcessContractProvider.GetDefaultFilePath(ipcDirectory);
+
+        provider.Send(contract);
+        var validStart = CreateProbeStart("attempt-apply");
+        ConfigureProbeTemp(validStart, tempRoot);
+        using (var child = new ProcessStartStrategy().Launch(validStart, attemptId))
+        {
+            var appliedOutput = Finish(child).Split('|');
+            Assert.Equal(attemptId.ToString("D"), appliedOutput[0]);
+            Assert.DoesNotContain((int)UpdateStatus.Success, appliedOutput[1]
+                .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse));
+            Assert.Equal("applied-in-child", File.ReadAllText(Path.Combine(installPath, "updated.txt")));
+        }
+
+        File.Delete(ipcPath);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+
+        File.WriteAllBytes(ipcPath, new byte[] { 1, 2, 3, 4 });
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+
+        contract.DurableUpdateAttemptId = Guid.NewGuid();
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+
+        contract.DurableUpdateAttemptId = attemptId;
+        contract.Bowl = "Bowl.exe";
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
     }
 
     [Fact]
@@ -252,6 +457,52 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         Assert.Throws<InvalidDataException>(() => StorageManager.CleanBackup(installPath, keepVersions: 0));
     }
 
+    private ProcessContract CreateAttemptContract(string installPath, Guid attemptId, string snapshotPath, string bowl = "")
+    {
+        return ConfigurationMapper.MapToProcessContract(new UpdateContext
+        {
+            MainAppName = "App.exe",
+            InstallPath = installPath,
+            ClientVersion = "1.0.0",
+            LastVersion = "2.0.0",
+            AppSecretKey = "test-key",
+            BackupDirectory = snapshotPath,
+            TempPath = _root,
+            Encoding = Encoding.UTF8,
+            Format = Format.Zip,
+            PatchEnabled = false,
+            Bowl = bowl,
+            DurableUpdateAttemptId = attemptId
+        }, new List<VersionEntry>
+        {
+            new()
+            {
+                Name = "package",
+                Version = "2.0.0",
+                Hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    File.ReadAllBytes(Path.Combine(_root, "package.zip")))),
+                AppType = (int)AppType.Client,
+                PackageType = (int)PackageType.Full
+            }
+        },
+            BlackDefaults.DefaultFormats, BlackDefaults.DefaultFiles, BlackDefaults.DefaultDirectories);
+    }
+
+    private static string RunRequiredAttemptProbe(string tempRoot, Guid attemptId)
+    {
+        var start = CreateProbeStart("attempt-apply");
+        ConfigureProbeTemp(start, tempRoot);
+        start.EnvironmentVariables[DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable] = attemptId.ToString("D");
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start required-attempt probe.");
+        return Finish(process);
+    }
+
+    private static void ConfigureProbeTemp(ProcessStartInfo start, string tempRoot)
+    {
+        start.EnvironmentVariables["TEMP"] = tempRoot;
+        start.EnvironmentVariables["TMP"] = tempRoot;
+    }
+
     private DurableUpdateAttemptStore CreateBoundAttempt(string installPath, string sourcePath, out Guid attemptId)
     {
         attemptId = Guid.NewGuid();
@@ -273,13 +524,7 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         return Process.Start(start) ?? throw new InvalidOperationException("Failed to start durable-attempt probe.");
     }
 
-    private static string RunProbe(params string[] args)
-    {
-        using var process = StartProbe(args);
-        return Finish(process);
-    }
-
-    private static ProcessStartInfo CreateProbeStart(string[] args)
+    private static ProcessStartInfo CreateProbeStart(params string[] args)
     {
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false };
         start.ArgumentList.Add("exec");
@@ -289,7 +534,15 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "CoreTest.deps.json"));
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "StartupHealthProbe.dll"));
         foreach (var arg in args) start.ArgumentList.Add(arg);
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
         return start;
+    }
+
+    private static string RunProbe(params string[] args)
+    {
+        using var process = StartProbe(args);
+        return Finish(process);
     }
 
     private static string Finish(Process process)
@@ -298,11 +551,34 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         var stderr = process.StandardError.ReadToEnd();
         Assert.Equal(0, process.ExitCode);
         Assert.Empty(stderr);
-        return process.StandardOutput.ReadToEnd().Trim();
+        return process.StandardOutput.ReadToEnd()
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault()?.Trim() ?? string.Empty;
     }
 
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
+
+    private sealed class ReportOnlyStrategy : AbstractStrategy
+    {
+        protected override PipelineBuilder BuildPipeline(PipelineContext context)
+        {
+            if (context.Get<string>("ZipFilePath").Contains("client-failure", StringComparison.Ordinal))
+                throw new InvalidOperationException("Synthetic package failure.");
+            return new PipelineBuilder(context);
+        }
+    }
+
+    private sealed class ProcessStartStrategy : AbstractStrategy
+    {
+        protected override PipelineBuilder BuildPipeline(PipelineContext context) => new(context);
+
+        public Process Launch(ProcessStartInfo startInfo, Guid attemptId)
+        {
+            RequiredDurableUpdateAttemptId = attemptId;
+            return StartProcess(startInfo) ?? throw new InvalidOperationException("Failed to launch process probe.");
+        }
     }
 }
