@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using GeneralUpdate.Core.StartupHealth;
 
 namespace CoreTest.StartupHealth;
@@ -116,10 +115,13 @@ public class StartupHealthStoreTests : IDisposable
 
     private Process StartProbe(Guid id, string operation, string? extra = null)
     {
-        var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
-        var helper = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(SourcePath())!, "..", "..",
-            "StartupHealthProbe", "bin", configuration, "net10.0", "StartupHealthProbe.dll"));
+        var helper = Path.Combine(AppContext.BaseDirectory, "StartupHealthProbe.dll");
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        start.ArgumentList.Add("exec");
+        start.ArgumentList.Add("--runtimeconfig");
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "CoreTest.runtimeconfig.json"));
+        start.ArgumentList.Add("--depsfile");
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "CoreTest.deps.json"));
         start.ArgumentList.Add(helper);
         start.ArgumentList.Add(_root);
         start.ArgumentList.Add(id.ToString());
@@ -135,8 +137,6 @@ public class StartupHealthStoreTests : IDisposable
         Assert.True(process.ExitCode == 0, error);
         return process.StandardOutput.ReadToEnd().Trim();
     }
-
-    private static string SourcePath([CallerFilePath] string path = "") => path;
 
     public void Dispose()
     {
