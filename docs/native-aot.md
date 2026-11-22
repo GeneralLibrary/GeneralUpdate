@@ -29,4 +29,6 @@ Callers of `StorageManager` must supply suitable `JsonTypeInfo`; arbitrary
 application types require their own AOT-compatible metadata. The Differential
 and Bowl dependencies currently target netstandard2.0, so their compatibility
 cannot be inferred from Core's analyzer settings. Native publish warnings must
-be evaluated for the paths used by each application.
+be evaluated for the paths used by each application. The smoke publish reports
+IL2026 for Core and Bowl tracing: stack-frame method metadata may be unavailable
+after trimming, so diagnostic method names are best-effort.
