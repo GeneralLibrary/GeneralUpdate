@@ -72,6 +72,14 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// </remarks>
 public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
 {
+    /// <summary>Optional idempotency key, paired with <see cref="Sequence"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? EventId { get; init; }
+
+    /// <summary>Optional positive sequence for the record, paired with <see cref="EventId"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? Sequence { get; init; }
+
     /// <summary>Optional failure category, matching the server's diagnostic contract.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FailureCategory? Category { get; init; }
@@ -215,6 +223,13 @@ public class HttpUpdateReporter : IUpdateReporter
             throw new InvalidOperationException("A report URL is required.");
 
         var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
+        await SendJsonAsync(json, token).ConfigureAwait(false);
+    }
+
+    internal async Task SendJsonAsync(string json, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(_reportUrl))
+            throw new InvalidOperationException("A report URL is required.");
         using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
         request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
@@ -223,6 +238,11 @@ public class HttpUpdateReporter : IUpdateReporter
         var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         using var document = JsonDocument.Parse(content);
         var root = document.RootElement;
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("errorCode", out var errorCode) &&
+            errorCode.ValueKind == JsonValueKind.String &&
+            errorCode.GetString() == "Conflict")
+            throw new InvalidOperationException("The report endpoint reported an event or sequence conflict.");
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("code", out var code) || code.ValueKind != JsonValueKind.Number ||
             !code.TryGetInt32(out var value) || value != 200 ||
