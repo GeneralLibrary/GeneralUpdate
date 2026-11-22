@@ -63,6 +63,7 @@ namespace GeneralUpdate.Core.Configuration
         private List<string> _blackFiles;
         private List<string> _blackFormats;
         private List<string> _skipDirectorys;
+        private Guid? _durableUpdateAttemptId;
 
         /// <summary>
         ///     Creates a <see cref="UpdateRequestBuilder" /> instance by loading settings from the
@@ -189,6 +190,8 @@ namespace GeneralUpdate.Core.Configuration
                     builder.SetFormats(config.Formats);
                 if (config.Directories != null)
                     builder.SetDirectories(config.Directories);
+                if (config.DurableUpdateAttemptId.HasValue)
+                    builder.SetDurableUpdateAttemptId(config.DurableUpdateAttemptId.Value);
 
                 builder.SetInstallPath(string.IsNullOrWhiteSpace(config.InstallPath) ? AppDomain.CurrentDomain.BaseDirectory : config.InstallPath);
                 return builder;
@@ -217,6 +220,18 @@ namespace GeneralUpdate.Core.Configuration
                 GeneralTracer.Error($"UpdateRequestBuilder: unexpected error loading '{configPath}', falling back to parameter-based configuration.", ex);
                 return null;
             }
+        }
+
+        /// <summary>
+        ///     Enables durable update-attempt journaling for a caller-owned, pre-persisted ID.
+        ///     The ID must be unique and must never be reused.
+        /// </summary>
+        public UpdateRequestBuilder SetDurableUpdateAttemptId(Guid attemptId)
+        {
+            if (attemptId == Guid.Empty)
+                throw new ArgumentException("A non-empty durable update-attempt ID is required.", nameof(attemptId));
+            _durableUpdateAttemptId = attemptId;
+            return this;
         }
 
         /// <summary>
@@ -533,7 +548,8 @@ namespace GeneralUpdate.Core.Configuration
                 DriverDirectory = _driverDirectory,
                 Files = _blackFiles ?? new List<string>(),
                 Formats = _blackFormats ?? new List<string>(),
-                Directories = _skipDirectorys ?? new List<string>()
+                Directories = _skipDirectorys ?? new List<string>(),
+                DurableUpdateAttemptId = _durableUpdateAttemptId
             };
 
             // 校验构建的配置

@@ -1,5 +1,45 @@
 using GeneralUpdate.Core.StartupHealth;
+using GeneralUpdate.Core.FileSystem;
 using System.Diagnostics;
+
+if (args.Length == 3 && args[0] == "attempt-read")
+{
+    var record = new DurableUpdateAttemptStore(args[1]).GetAttempt(Guid.Parse(args[2]));
+    Console.WriteLine($"{record.Status}|{record.SnapshotPath}|{record.Fence}");
+    return;
+}
+
+if (args.Length == 4 && args[0] == "attempt-claim")
+{
+    try
+    {
+        var claim = new DurableUpdateAttemptStore(args[1]).ClaimRecovery(Guid.Parse(args[2]), long.Parse(args[3]));
+        Console.WriteLine($"claimed|{claim.Fence}|{claim.ClaimId}");
+    }
+    catch (InvalidOperationException)
+    {
+        Console.WriteLine("stale");
+    }
+    return;
+}
+
+if (args.Length == 5 && args[0] == "attempt-bind-hold")
+{
+    var installPath = args[1];
+    var attemptId = Guid.Parse(args[2]);
+    var sourcePath = args[3];
+    var readyPath = args[4];
+    var snapshotPath = Path.Combine(installPath, StorageManager.BackupRootDirectory,
+        StorageManager.GetBackupDirectoryName() + "-" + attemptId.ToString("N"));
+    var store = new DurableUpdateAttemptStore(installPath);
+    store.Begin(attemptId);
+    store.ReserveSnapshot(attemptId, snapshotPath);
+    StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true);
+    store.BindSnapshot(attemptId, snapshotPath);
+    File.WriteAllText(readyPath, "bound");
+    Thread.Sleep(Timeout.Infinite);
+    return;
+}
 
 if (args.Length == 3 && args[0] == "native-handoff")
 {

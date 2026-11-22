@@ -509,6 +509,12 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         private void TryRollback()
         {
+            if (_configinfo.DisableLegacyRollback)
+            {
+                GeneralTracer.Warn("AbstractStrategy.TryRollback: skipped because this durable attempt suppresses legacy automatic rollback.");
+                return;
+            }
+
             try
             {
                 var backupDir = _configinfo.BackupDirectory;

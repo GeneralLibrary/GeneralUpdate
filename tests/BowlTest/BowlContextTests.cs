@@ -228,6 +228,21 @@ public class BowlContextTests
     }
 
     [Fact]
+    public void Normalize_持久化attempt存在时禁用AutoRestore()
+    {
+        var ctx = new BowlContext
+        {
+            AutoRestore = true,
+            DurableUpdateAttemptId = Guid.NewGuid()
+        };
+
+        var result = ctx.Normalize();
+
+        Assert.False(result.AutoRestore);
+        Assert.Equal(ctx.DurableUpdateAttemptId, result.DurableUpdateAttemptId);
+    }
+
+    [Fact]
     public void Normalize_OnCrash回调_正确传递()
     {
         static Task handler(CrashInfo i, CancellationToken ct) => Task.CompletedTask;

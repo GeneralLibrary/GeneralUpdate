@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using GeneralUpdate.Core.StartupHealth;
 
 namespace GeneralUpdate.Core.Configuration
 {
@@ -104,6 +105,7 @@ namespace GeneralUpdate.Core.Configuration
             target.ProductId = source.ProductId;
             target.CustomHeaders = source.CustomHeaders;
             target.MaxChainBeforeFallback = source.MaxChainBeforeFallback;
+            target.DurableUpdateAttemptId = source.DurableUpdateAttemptId;
 
             return target;
         }
@@ -208,6 +210,12 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
+            processInfo.DurableUpdateAttemptId = source.DurableUpdateAttemptId;
+            if (source.DurableUpdateAttemptId.HasValue)
+            {
+                processInfo.AttemptJournalDirectory = DurableUpdateAttemptStore.GetDirectory(source.InstallPath);
+                processInfo.DisableLegacyRollback = true;
+            }
             return processInfo;
         }
     }

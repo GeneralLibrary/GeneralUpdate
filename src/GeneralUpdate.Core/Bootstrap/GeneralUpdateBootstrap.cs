@@ -15,6 +15,7 @@ using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.StartupHealth;
 using GeneralUpdate.Differential.Differ;
 
 namespace GeneralUpdate.Core;
@@ -411,15 +412,42 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 UpdatePath = processInfo.UpdatePath,
                 LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
                 ReportType = processInfo.ReportType,
+                DurableUpdateAttemptId = processInfo.DurableUpdateAttemptId,
+                AttemptJournalDirectory = processInfo.AttemptJournalDirectory,
+                DisableLegacyRollback = processInfo.DisableLegacyRollback,
                 Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
                 Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
                 Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
             };
 
+            if (processInfo.DurableUpdateAttemptId.HasValue)
+            {
+                if (processInfo.DurableUpdateAttemptId.Value == Guid.Empty)
+                    throw new InvalidDataException("The update process contract contains an empty durable attempt ID.");
+                var expectedJournal = DurableUpdateAttemptStore.GetDirectory(processInfo.InstallPath);
+                if (string.IsNullOrWhiteSpace(processInfo.AttemptJournalDirectory) ||
+                    !string.Equals(Path.GetFullPath(processInfo.AttemptJournalDirectory), expectedJournal,
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The update process contract has a mismatched attempt journal directory.");
+                if (!processInfo.DisableLegacyRollback)
+                    throw new InvalidDataException("A durable update attempt must disable the legacy Core rollback path.");
+                var attempt = new DurableUpdateAttemptStore(processInfo.InstallPath)
+                    .GetAttempt(processInfo.DurableUpdateAttemptId.Value);
+                if (attempt.Status != DurableUpdateAttemptStatus.SnapshotBound ||
+                    string.IsNullOrWhiteSpace(attempt.SnapshotPath) ||
+                    !string.Equals(Path.GetFullPath(attempt.SnapshotPath), Path.GetFullPath(processInfo.BackupDirectory),
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !Directory.Exists(attempt.SnapshotPath))
+                    throw new InvalidDataException("The update process contract does not match the journal's bound snapshot.");
+            }
+
             StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
         }
         catch (Exception ex)
         {
+            if (processInfo.DurableUpdateAttemptId.HasValue)
+                throw new InvalidDataException("Failed to validate the durable update attempt process contract.", ex);
+
             // Corrupted / incompatible IPC data (e.g. from a mismatched version
             // of the sender, or stale test data) — treat as "no IPC data".
             GeneralTracer.Warn($"Failed to map IPC process contract: {ex.Message}");

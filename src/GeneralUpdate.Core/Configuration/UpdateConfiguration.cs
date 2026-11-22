@@ -31,6 +31,12 @@ namespace GeneralUpdate.Core.Configuration
     public abstract class UpdateConfiguration
     {
         /// <summary>
+        /// Optional caller-owned durable update-attempt identifier. Null preserves legacy behavior.
+        /// The caller must persist a non-empty ID and never reuse it.
+        /// </summary>
+        public Guid? DurableUpdateAttemptId { get; set; }
+
+        /// <summary>
         ///     The executable file name of the updater application (e.g., "Update.exe").
         ///     When the client needs to launch the upgrade process, this name is used to locate and start the updater.
         /// </summary>

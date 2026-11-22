@@ -13,6 +13,7 @@ using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Utilities;
+using GeneralUpdate.Core.StartupHealth;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -543,6 +544,19 @@ public class ClientStrategy : IStrategy
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, StorageManager.BackupRootDirectory,
             StorageManager.GetBackupDirectoryName());
+        var attemptStore = (DurableUpdateAttemptStore?)null;
+        if (_configInfo.DurableUpdateAttemptId.HasValue)
+        {
+            if (_configInfo.DurableUpdateAttemptId.Value == Guid.Empty)
+                throw new InvalidOperationException("DurableUpdateAttemptId must be non-empty.");
+            if (_configInfo.BackupEnabled == false)
+                throw new InvalidOperationException("A durable update attempt requires backups to be enabled.");
+
+            _configInfo.BackupDirectory += "-" + _configInfo.DurableUpdateAttemptId.Value.ToString("N");
+            _configInfo.DisableLegacyRollback = true;
+            _configInfo.AttemptJournalDirectory = DurableUpdateAttemptStore.GetDirectory(_configInfo.InstallPath);
+            attemptStore = new DurableUpdateAttemptStore(_configInfo.InstallPath);
+        }
 
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
@@ -552,10 +566,22 @@ public class ClientStrategy : IStrategy
             return;
         }
 
+        // Create the durable attempt and reserve its exact snapshot before copying begins.
+        // The reservation also protects a partially-created path from concurrent retention.
+        if (attemptStore != null)
+        {
+            var attemptId = _configInfo.DurableUpdateAttemptId!.Value;
+            attemptStore.Begin(attemptId);
+            attemptStore.ReserveSnapshot(attemptId, _configInfo.BackupDirectory);
+        }
+
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
         {
             Backup();
+            if (attemptStore != null)
+                attemptStore.BindSnapshot(_configInfo.DurableUpdateAttemptId!.Value, _configInfo.BackupDirectory);
+            StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
         }
         else
         {
@@ -894,9 +920,8 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Info(
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            _configInfo.Directories ?? BlackDefaults.DefaultDirectories);
-        // Retain only the most recent 3 backups to prevent disk accumulation
-        StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
+            _configInfo.Directories ?? BlackDefaults.DefaultDirectories,
+            createOnly: _configInfo.DurableUpdateAttemptId.HasValue);
     }
 
     /// <summary>
