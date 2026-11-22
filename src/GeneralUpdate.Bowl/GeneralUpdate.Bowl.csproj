@@ -33,6 +33,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="BowlTest" />
+        <InternalsVisibleTo Include="AotSmoke" />
     </ItemGroup>
 
     <ItemGroup>

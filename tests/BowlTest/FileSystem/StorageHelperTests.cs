@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GeneralUpdate.Bowl.FileSystem;
+using GeneralUpdate.Bowl.Internal;
 
 namespace BowlTest.FileSystem;
 
@@ -32,9 +33,9 @@ public class StorageHelperTests : IDisposable
     public void CreateJson_WritesValidJsonFile()
     {
         var filePath = Path.Combine(_testBasePath, "test.json");
-        var obj = new { Name = "Test", Value = 42 };
+        var obj = new Crash { ProcessNameOrId = "Test", ExtendedField = "42" };
 
-        StorageHelper.CreateJson(filePath, obj);
+        StorageHelper.CreateJson(filePath, obj, CrashJsonContext.Default.Crash);
 
         Assert.True(System.IO.File.Exists(filePath));
         var content = System.IO.File.ReadAllText(filePath);
@@ -47,9 +48,9 @@ public class StorageHelperTests : IDisposable
     {
         var subDir = Path.Combine(_testBasePath, "nested", "deep");
         var filePath = Path.Combine(subDir, "data.json");
-        var obj = new { Key = "value" };
+        var obj = new Crash { ExtendedField = "value" };
 
-        StorageHelper.CreateJson(filePath, obj);
+        StorageHelper.CreateJson(filePath, obj, CrashJsonContext.Default.Crash);
 
         Assert.True(System.IO.File.Exists(filePath));
     }
@@ -58,16 +59,16 @@ public class StorageHelperTests : IDisposable
     public void CreateJson_ProducesDeserializableJson()
     {
         var filePath = Path.Combine(_testBasePath, "roundtrip.json");
-        var original = new TestModel { Id = 1, Name = "roundtrip" };
+        var original = new Crash { ProcessNameOrId = "roundtrip", ExtendedField = "1" };
 
-        StorageHelper.CreateJson(filePath, original);
+        StorageHelper.CreateJson(filePath, original, CrashJsonContext.Default.Crash);
 
         var json = System.IO.File.ReadAllText(filePath);
-        var deserialized = JsonSerializer.Deserialize<TestModel>(json);
+        var deserialized = JsonSerializer.Deserialize(json, CrashJsonContext.Default.Crash);
 
         Assert.NotNull(deserialized);
-        Assert.Equal(original.Id, deserialized.Id);
-        Assert.Equal(original.Name, deserialized.Name);
+        Assert.Equal(original.ProcessNameOrId, deserialized.ProcessNameOrId);
+        Assert.Equal(original.ExtendedField, deserialized.ExtendedField);
     }
 
     #endregion
@@ -168,13 +169,4 @@ public class StorageHelperTests : IDisposable
 
     #endregion
 
-    #region Helper model
-
-    private sealed class TestModel
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
-
-    #endregion
 }
