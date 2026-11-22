@@ -478,6 +478,15 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         _configInfo.RetryInterval = GetOption(Option.RetryInterval);
         _configInfo.VerifyChecksum = GetOption(Option.VerifyChecksum);
         _configInfo.DiffMode = GetOption(Option.DiffMode);
+
+        if (GetOption(Option.BowlCrashCollectionEnabled))
+        {
+            _configInfo.Monitoring ??= new Configuration.BowlOptions();
+            _configInfo.Monitoring.Enabled = true;
+            _configInfo.Monitoring.CrashCollectionEnabled = true;
+            if (string.IsNullOrWhiteSpace(_configInfo.Monitoring.ExecutablePath))
+                _configInfo.Monitoring.ExecutablePath = @"C:\Bowl\Bowl.Host.exe";
+        }
     }
 
     /// <summary>
@@ -549,7 +558,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         if (downloadPipeline != null)
             downloadPipelineFactory = _ => downloadPipeline;
 
-        var diagnostics = BuildDiagnosticsChannel();
+        var diagnostics = BuildDiagnosticsChannel(roleStrategy is ClientStrategy);
         switch (roleStrategy)
         {
             case ClientStrategy cs:
@@ -608,9 +617,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     ///     origin (<c>{origin}/Fault/UploadArtifact</c>) — the reporter and the diagnostics
     ///     channel always target the same server in a GeneralSpace deployment.
     /// </remarks>
-    private Diagnostics.DiagnosticsChannel? BuildDiagnosticsChannel()
+    private Diagnostics.DiagnosticsChannel? BuildDiagnosticsChannel(bool clientRole)
     {
-        if (!GetOption(Option.DiagnosticsUploadEnabled))
+        var crashCollection = clientRole && GetOption(Option.BowlCrashCollectionEnabled);
+        if (!GetOption(Option.DiagnosticsUploadEnabled) && !crashCollection)
             return null;
 
         var url = GetOption(Option.DiagnosticsReportUrl);
@@ -635,7 +645,11 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             ProductId = _configInfo.ProductId,
             Platform = ResolveDiagnosticsPlatform(),
             TargetName = _configInfo.MainAppName,
-        }, FileSystem.StorageManager.BlackMatcher);
+            MaxRetry = crashCollection ? 0 : 5,
+            MaxSizeBytes = 19 * 1024 * 1024,
+        }, FileSystem.StorageManager.BlackMatcher,
+            _configInfo.DiagnosticsDirectory ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GeneralUpdate", "state"));
     }
 
     /// <summary>Composes the GeneralSpace artifact endpoint from the report URL's origin.</summary>

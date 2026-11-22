@@ -88,6 +88,8 @@ public sealed class BowlRequest
     public int UpdateTimeoutSeconds { get; set; } = 600;
     /// <summary>Explicit permission for host-owned recovery from the existing backup snapshot.</summary>
     public bool AutoRollback { get; set; }
+    /// <summary>Opt-in crash evidence collection for the supervised application.</summary>
+    public bool CrashCollectionEnabled { get; set; }
     /// <summary>Optional legacy endpoint routing; the host owns monitored terminal delivery.</summary>
     public BowlReportConfiguration Report { get; set; } = new();
 }
@@ -244,6 +246,8 @@ public sealed class UpdateAttempt : IDisposable
             if (options.ReadyTimeoutSeconds <= 0 || options.UpdateTimeoutSeconds <= options.ReadyTimeoutSeconds ||
                 options.HealthTimeoutSeconds <= 0)
                 throw new ArgumentOutOfRangeException(nameof(options), "Monitor timeouts must be positive; update timeout must exceed ready timeout.");
+            if (options.CrashCollectionEnabled && !IsSafeCrashVersion(_config.LastVersion))
+                throw new ArgumentException("Crash collection requires a nonempty target version that is a safe directory name.");
             if (!string.IsNullOrWhiteSpace(_config.ReportUrl))
             {
                 var uri = new Uri(_config.ReportUrl, UriKind.Absolute);
@@ -266,6 +270,7 @@ public sealed class UpdateAttempt : IDisposable
                 UpdateTimeoutSeconds = options.UpdateTimeoutSeconds,
                 AutoRollback = options.AutoRollback && _config.BackupEnabled != false &&
                                Directory.Exists(_config.BackupDirectory),
+                CrashCollectionEnabled = options.CrashCollectionEnabled,
                 Report = new BowlReportConfiguration
                 {
                     Url = _config.ReportUrl, RecordId = recordId, Type = reportType,
@@ -320,6 +325,29 @@ public sealed class UpdateAttempt : IDisposable
             }
             throw;
         }
+    }
+
+    internal static bool IsSafeCrashVersion(string? version)
+    {
+        if (string.IsNullOrWhiteSpace(version) || version.Length > 128 || version == "." || version == ".." ||
+            version.EndsWith(".", StringComparison.Ordinal) || version.EndsWith(" ", StringComparison.Ordinal))
+            return false;
+        foreach (var character in version)
+            if (character < 32 || "<>:\"/\\|?*".IndexOf(character) >= 0)
+                return false;
+
+        var basename = version.Split('.')[0];
+        if (string.Equals(basename, "CON", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(basename, "PRN", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(basename, "AUX", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(basename, "NUL", StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (basename.Length == 4 && (basename.StartsWith("COM", StringComparison.OrdinalIgnoreCase) ||
+                                     basename.StartsWith("LPT", StringComparison.OrdinalIgnoreCase)) &&
+            ((basename[3] >= '1' && basename[3] <= '9') || basename[3] == '\u00b9' ||
+             basename[3] == '\u00b2' || basename[3] == '\u00b3'))
+            return false;
+        return true;
     }
 
     /// <summary>Fail closed at update boundaries if a required monitor is unavailable.</summary>

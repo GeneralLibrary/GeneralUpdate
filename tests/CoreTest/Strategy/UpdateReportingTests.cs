@@ -151,6 +151,40 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.False(File.Exists(Path.Combine(AttemptPath(config), "result.json")));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CrashCollection_IsIndependentOfApplicationRelaunch(bool launch)
+    {
+        var config = Config(monitoring: true, launch: launch);
+        config.Monitoring!.CrashCollectionEnabled = true;
+        await Run(config, new TestOs(), new CaptureReporter());
+        TrackHost(config);
+
+        var request = Read(config, "request.json");
+        Assert.True(request["crashCollectionEnabled"]!.GetValue<bool>());
+        Assert.Equal(launch ? "processAlive" : "filesOnly", request["launchMode"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("../bad")]
+    [InlineData("CON.txt")]
+    [InlineData("bad.")]
+    public async Task CrashCollection_UnsafeVersion_StopsBeforeFileChanges(string version)
+    {
+        var config = Config(monitoring: true);
+        config.Monitoring!.CrashCollectionEnabled = true;
+        config.LastVersion = version;
+        var os = new TestOs();
+        await Run(config, os, new CaptureReporter());
+
+        Assert.False(os.Applied);
+        Assert.False(File.Exists(Path.Combine(AttemptPath(config), "request.json")));
+        var events = Directory.GetFiles(Path.Combine(AttemptPath(config), "events"), "*.json");
+        Assert.Contains(events, file => File.ReadAllText(file).Contains("monitorUnavailable"));
+    }
+
     /// <summary>Ready is not a permanent health guarantee: loss of the peer must block subsequent apply/launch work.</summary>
     [Fact]
     public async Task MonitorExitsDuringApply_PreventsLaunch()
@@ -346,6 +380,7 @@ public sealed class UpdateReportingTests : IDisposable
         config.Encoding = System.Text.Encoding.UTF8;
         config.AppSecretKey = FixtureValues.Secret("reporting");
         config.BackupDirectory = Path.Combine(_root, "backup");
+        config.Monitoring!.CrashCollectionEnabled = true;
         var contract = ConfigurationMapper.MapToProcessContract(config,
             [new VersionEntry { Name = "sample", Version = "2.0.0" }], [], [], [], 2);
         var json = JsonSerializer.Serialize(contract, GeneralUpdate.Core.JsonContext.ProcessContractJsonContext.Default.ProcessContract);
@@ -353,6 +388,7 @@ public sealed class UpdateReportingTests : IDisposable
         Assert.Equal(config.UpdateAttemptId, roundtrip.UpdateAttemptId);
         Assert.Equal(config.DiagnosticsDirectory, roundtrip.DiagnosticsDirectory);
         Assert.True(roundtrip.Monitoring!.Enabled);
+        Assert.True(roundtrip.Monitoring.CrashCollectionEnabled);
         Assert.Equal(2, roundtrip.ReportType);
     }
 

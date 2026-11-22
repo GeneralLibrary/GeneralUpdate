@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Collections.Generic;
 using GeneralUpdate.Core.Diagnostics;
 using GeneralUpdate.Core.SelfCheck;
 
@@ -10,6 +11,7 @@ namespace GeneralUpdate.Core.JsonContext;
 ///     server, plus the serialized self-check / rollback results embedded in real-time bundles.
 /// </summary>
 [JsonSerializable(typeof(OutboxManifest))]
+[JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(DiagnosticsManifest))]
 [JsonSerializable(typeof(SelfCheckReport))]
 [JsonSerializable(typeof(RollbackResult))]

@@ -161,6 +161,13 @@ namespace GeneralUpdate.Core.Configuration
         public static Option<bool> LaunchBowl { get; } = ValueOf<bool>("LAUNCHBOWL", false);
 
         /// <summary>
+        ///     Enables the external Bowl.Host update monitor and crash collection. The host
+        ///     defaults to C:\Bowl\Bowl.Host.exe; this is independent of application relaunch.
+        ///     Existing Monitoring settings can override the host path and timeouts.
+        /// </summary>
+        public static Option<bool> BowlCrashCollectionEnabled { get; } = ValueOf<bool>("BOWLCRASHCOLLECTIONENABLED", false);
+
+        /// <summary>
         ///     诊断上报总开关。默认 <c>false</c>。开启后 Core 在主程序启动时后台扫描
         ///     fail 目录 outbox 补传崩溃采证，并在自检失败/回滚时实时上传诊断包。
         ///     Core 是唯一网络出口；Bowl 本身无网络依赖。
@@ -168,8 +175,8 @@ namespace GeneralUpdate.Core.Configuration
         public static Option<bool> DiagnosticsUploadEnabled { get; } = ValueOf<bool>("DIAGNOSTICSUPLOADENABLED", false);
 
         /// <summary>
-        ///     诊断上报服务端地址。独立于状态上报地址（<c>UpdateRequest.ReportUrl</c> 只承载
-        ///     UpdateStatus 状态上报，二者互不影响），为空时视为未配置诊断通道。
+        ///     诊断上报服务端地址。为空时从状态上报地址的 origin 推导 GeneralSpace 地址；
+        ///     两者都不可用时不启动诊断通道。
         /// </summary>
         public static Option<string> DiagnosticsReportUrl { get; } = ValueOf<string>("DIAGNOSTICSREPORTURL", string.Empty);
 

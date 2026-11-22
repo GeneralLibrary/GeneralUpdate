@@ -34,14 +34,15 @@ public sealed class DiagnosticsChannel
     /// <param name="installPath">Application install root (locates the <c>fail/</c> outbox).</param>
     /// <param name="options">Runtime options. Must be enabled and carry a URL — see <see cref="IsUsable"/>.</param>
     /// <param name="privacyFilter">Optional blacklist filter applied when packaging evidence.</param>
-    public DiagnosticsChannel(string installPath, DiagnosticsOptions options, IBlackMatcher? privacyFilter = null)
+    public DiagnosticsChannel(string installPath, DiagnosticsOptions options, IBlackMatcher? privacyFilter = null,
+        string? stateRoot = null)
     {
         if (string.IsNullOrWhiteSpace(installPath))
             throw new ArgumentNullException(nameof(installPath));
         Options = options ?? throw new ArgumentNullException(nameof(options));
         PrivacyFilter = privacyFilter;
         Uploader = new DiagnosticsUploader(options);
-        Scanner = new PendingDiagnosticsScanner(installPath, options, Uploader, privacyFilter);
+        Scanner = new PendingDiagnosticsScanner(installPath, options, Uploader, privacyFilter, stateRoot);
     }
 
     /// <summary><c>true</c> when the channel has a usable endpoint.</summary>

@@ -3,9 +3,11 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.JsonContext;
 
 namespace GeneralUpdate.Core.Diagnostics;
 
@@ -19,7 +21,7 @@ public interface IDiagnosticsUploader
     /// <summary><c>true</c> when the uploader has a usable endpoint (enabled + URL).</summary>
     bool IsConfigured { get; }
 
-    /// <summary>Uploads a bundle (archive + manifest). Returns <c>true</c> on a 2xx response.</summary>
+    /// <summary>Uploads a bundle and returns <c>true</c> only after the server acknowledges its GUID.</summary>
     Task<bool> UploadAsync(DiagnosticsBundle bundle, CancellationToken ct);
 }
 
@@ -32,8 +34,8 @@ public interface IDiagnosticsUploader
 ///         Wire format: <c>multipart/form-data</c> per the GeneralSpace
 ///         <c>POST /Fault/UploadArtifact</c> contract — the zip archive as the <c>file</c> part
 ///         plus the <see cref="DiagnosticsManifest"/> fields as form fields. The <c>guid</c>
-///         field is the server-side idempotency key: replaying the same bundle returns 2xx
-///         without storing a duplicate, which makes the outbox "delete after 2xx" rule safe.
+///         field is the server-side idempotency key: replaying the same bundle can return a
+///         duplicate acknowledgment without storing another copy.
 ///         The same manifest is also embedded inside the archive as <c>manifest.json</c> so the
 ///         server can audit contents without trusting the form (privacy/audit requirement).
 ///     </para>
@@ -46,6 +48,8 @@ public interface IDiagnosticsUploader
 public sealed class DiagnosticsUploader : IDiagnosticsUploader
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+    private const long MaxRequestBytes = 20 * 1024 * 1024;
+    private const int MaxResponseBytes = 64 * 1024;
 
     private readonly DiagnosticsOptions _options;
     private readonly HttpClient _client;
@@ -71,7 +75,7 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
     ///     Uploads a bundle (archive + manifest) as multipart form data.
     ///     Deletes the temporary archive afterwards.
     /// </summary>
-    /// <returns><c>true</c> when the server accepted the bundle with a 2xx response.</returns>
+    /// <returns><c>true</c> when the HTTP response and matching business acknowledgment succeed.</returns>
     public async Task<bool> UploadAsync(DiagnosticsBundle bundle, CancellationToken ct)
     {
         if (bundle == null) throw new ArgumentNullException(nameof(bundle));
@@ -85,6 +89,11 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
         try
         {
             var manifest = bundle.Manifest ?? new DiagnosticsManifest();
+            if (!Guid.TryParse(manifest.Guid, out _))
+            {
+                GeneralTracer.Warn("DiagnosticsUploader: bundle has no valid GUID.");
+                return false;
+            }
             using var stream = File.OpenRead(bundle.ZipPath);
             using var content = BuildMultipartContent(manifest, stream);
 
@@ -95,9 +104,15 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(RequestTimeout);
-            using var response = await _client.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
+            await HttpClientProvider.ApplyAuthAsync(request, timeoutCts.Token).ConfigureAwait(false);
+            if (content.Headers.ContentLength is long length && length > MaxRequestBytes)
+            {
+                GeneralTracer.Warn("DiagnosticsUploader: multipart request exceeds the server size limit.");
+                return false;
+            }
+            using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false);
 
-            if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode && await IsAcceptedAsync(response, manifest.Guid, timeoutCts.Token).ConfigureAwait(false))
             {
                 GeneralTracer.Info(
                     $"DiagnosticsUploader: bundle {manifest.Guid} ({manifest.Kind}, {manifest.Files.Count} file(s)) uploaded.");
@@ -105,13 +120,17 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
             }
 
             // Bounded, code-only failure record — response bodies are never read into logs.
-            GeneralTracer.Warn($"DiagnosticsUploader: upload rejected with HTTP {(int)response.StatusCode}.");
+            GeneralTracer.Warn($"DiagnosticsUploader: upload was not acknowledged (HTTP {(int)response.StatusCode}).");
             return false;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             GeneralTracer.Warn("DiagnosticsUploader: upload timed out.");
             return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -131,9 +150,7 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
     /// </summary>
     internal static MultipartFormDataContent BuildMultipartContent(DiagnosticsManifest manifest, Stream zipStream)
     {
-        var guid = string.IsNullOrWhiteSpace(manifest.Guid)
-            ? Guid.NewGuid().ToString("D") // Defensive: the server needs a guid; collection normally provides it.
-            : manifest.Guid;
+        var guid = manifest.Guid;
 
         var content = new MultipartFormDataContent();
 
@@ -152,6 +169,8 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
         AddIfNotEmpty(content, "targetName", manifest.TargetName);
         AddIfNotEmpty(content, "productId", manifest.ProductId);
         AddIfNotEmpty(content, "reason", manifest.Reason);
+        if (manifest.Files.Count > 0)
+            content.Add(new StringContent(JsonSerializer.Serialize(manifest.Files, DiagnosticsJsonContext.Default.ListString)), "files");
         if (manifest.Platform.HasValue)
             content.Add(new StringContent(manifest.Platform.Value.ToString()), "platform");
         if (manifest.RecordId is > 0)
@@ -160,6 +179,42 @@ public sealed class DiagnosticsUploader : IDiagnosticsUploader
             content.Add(new StringContent(manifest.RecordType.Value.ToString()), "recordType");
 
         return content;
+    }
+
+    private static async Task<bool> IsAcceptedAsync(HttpResponseMessage response, string guid, CancellationToken ct)
+    {
+        using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[4096];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, 0, chunk.Length, ct).ConfigureAwait(false)) > 0)
+        {
+            if (buffer.Length + read > MaxResponseBytes)
+                return false;
+            buffer.Write(chunk, 0, read);
+        }
+
+        buffer.Position = 0;
+        using var json = await JsonDocument.ParseAsync(buffer, cancellationToken: ct).ConfigureAwait(false);
+        return TryGetProperty(json.RootElement, "code", out var code) &&
+               code.ValueKind == JsonValueKind.Number && code.TryGetInt32(out var value) && value == 200 &&
+               TryGetProperty(json.RootElement, "body", out var body) &&
+               TryGetProperty(body, "artifactId", out var artifactId) &&
+               artifactId.ValueKind == JsonValueKind.String &&
+               string.Equals(artifactId.GetString(), guid, StringComparison.Ordinal);
+    }
+
+    private static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+            foreach (var property in element.EnumerateObject())
+                if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+        value = default;
+        return false;
     }
 
     private static void AddIfNotEmpty(MultipartFormDataContent content, string name, string? value)

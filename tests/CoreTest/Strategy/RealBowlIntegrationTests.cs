@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.IO.Compression;
+using GeneralUpdate.Core.Diagnostics;
 
 namespace CoreTest.Strategy;
 
@@ -87,6 +89,66 @@ public sealed class RealBowlIntegrationTests : IDisposable
         Assert.Equal(payload.ToJsonString(), retried.ToJsonString());
         await WaitUntil(() => Read(attempt, "outbox.json")["state"]!.GetValue<string>() == "acknowledged");
         Assert.Equal(eventId, Read(attempt, "outbox.json")["eventId"]!.GetValue<string>());
+    }
+
+    [RealBowlCrashFact]
+    public async Task RealCrash_IsUploadedByClientOnlyAfterBusinessAcknowledgment()
+    {
+        var producer = StartProducer("crash");
+        await producer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(20));
+        var attempt = await FindAttempt();
+        TrackIdentity(Read(attempt, "ready.json")["host"]);
+        Assert.True(Read(attempt, "request.json")["crashCollectionEnabled"]!.GetValue<bool>());
+        await WaitUntil(() => File.Exists(Path.Combine(attempt, "result.json")));
+        Assert.Equal("healthCheckFailure", Read(attempt, "result.json")["outcome"]!.GetValue<string>());
+        var outbox = Path.Combine(_root, "state", "crash-outbox", "2.0.0");
+        await WaitUntil(() => Directory.Exists(outbox) && Directory.GetDirectories(outbox)
+            .Any(dir => Guid.TryParseExact(Path.GetFileName(dir), "D", out _)));
+        var caseDir = Assert.Single(Directory.GetDirectories(outbox)
+            .Where(dir => Guid.TryParseExact(Path.GetFileName(dir), "D", out _)));
+        var guid = Path.GetFileName(caseDir);
+        Assert.Equal(guid, Read(caseDir, "manifest.json")["guid"]!.GetValue<string>());
+        Assert.Contains(Directory.GetFiles(caseDir, "*.dmp"), path => new FileInfo(path).Length > 0);
+
+        var handler = new ArtifactHandler(guid);
+        using var http = new HttpClient(handler);
+        var options = new DiagnosticsOptions
+        {
+            Enabled = true, Url = "https://example.test/Fault/UploadArtifact",
+            MaxRetry = 0, MaxSizeBytes = 19 * 1024 * 1024
+        };
+        var scanner = new PendingDiagnosticsScanner(Path.Combine(_root, "install"), options,
+            new DiagnosticsUploader(options, http), stateRoot: Path.Combine(_root, "state"));
+
+        await scanner.ScanAsync(CancellationToken.None);
+        Assert.True(Directory.Exists(caseDir));
+        handler.Accept = true;
+        await scanner.ScanAsync(CancellationToken.None);
+        Assert.False(Directory.Exists(caseDir));
+        Assert.Equal(2, handler.RequestCount);
+        Assert.True(handler.SawDump);
+    }
+
+    private sealed class ArtifactHandler(string guid) : HttpMessageHandler
+    {
+        public bool Accept { get; set; }
+        public bool SawDump { get; private set; }
+        public int RequestCount { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            RequestCount++;
+            var multipart = Assert.IsType<MultipartFormDataContent>(request.Content);
+            var file = Assert.Single(multipart, part => part.Headers.ContentDisposition?.Name?.Trim('"') == "file");
+            using var stream = await file.ReadAsStreamAsync(ct);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            SawDump = archive.Entries.Any(entry => entry.FullName.EndsWith(".dmp", StringComparison.OrdinalIgnoreCase));
+            var code = Accept ? 200 : 400;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent($"{{\"code\":{code},\"body\":{{\"artifactId\":\"{guid}\"}}}}", Encoding.UTF8, "application/json")
+            };
+        }
     }
 
     private Process StartProducer(string mode, string endpoint = "")
@@ -205,5 +267,17 @@ public sealed class RealBowlTheoryAttribute : TheoryAttribute
     {
         if (!File.Exists(Environment.GetEnvironmentVariable("GENERALUPDATE_REAL_BOWL_HOST")))
             Skip = "Set GENERALUPDATE_REAL_BOWL_HOST to run external production-host integration.";
+    }
+
+}
+
+public sealed class RealBowlCrashFactAttribute : FactAttribute
+{
+    public RealBowlCrashFactAttribute()
+    {
+        if (!OperatingSystem.IsWindows() ||
+            !File.Exists(Environment.GetEnvironmentVariable("GENERALUPDATE_REAL_BOWL_HOST")) ||
+            !File.Exists(Environment.GetEnvironmentVariable("GENERALUPDATE_CRASH_TEST_PEER")))
+            Skip = "Set GENERALUPDATE_REAL_BOWL_HOST and GENERALUPDATE_CRASH_TEST_PEER for Windows crash integration.";
     }
 }

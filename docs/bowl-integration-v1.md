@@ -24,6 +24,34 @@ after starting the application.
 
 ## Configuration
 
+For crash collection during an update, enable the independent option on the
+Client bootstrap:
+
+```csharp
+bootstrap.SetOption(Option.BowlCrashCollectionEnabled, true);
+```
+
+It defaults off. When enabled it configures v1 monitoring and crash capture,
+using `C:\Bowl\Bowl.Host.exe` unless `Monitoring.ExecutablePath` is already
+set. Deploy a compatible Bowl host first; an unavailable host stops the update
+before application files are changed. This option does not change
+`LaunchClientAfterUpdate`: without application relaunch, Bowl supervises the
+updater but has no relaunched application to observe. Capture is Windows-only
+and limited to the v1 update/health-observation window, not a long-running
+watchdog. A valid target version is required.
+
+The Client uploads Bowl's completed crash cases from
+`<DiagnosticsDirectory>\crash-outbox\<version>\<guid>`; the legacy
+`<installPath>\fail` outbox remains supported. Use the same durable state root
+for updater, Bowl and subsequent Client runs. Configure `ReportUrl` (whose
+origin determines `/Fault/UploadArtifact`) or `Option.DiagnosticsReportUrl`,
+and set `X-Tenant-Id` through `UpdateRequest.CustomHeaders` as required by
+GeneralSpace. Outbox failures remain on disk for retry on a subsequent Client
+run; no retry limit applies to this option. Evidence is removed only after the
+server returns HTTP success, JSON `code` 200 and a matching `body.artifactId`.
+Oversized or excluded dumps remain on disk. Existing separately enabled
+self-check/rollback diagnostics are unchanged.
+
 Configure `UpdateRequest.Monitoring` and `UpdateRequest.DiagnosticsDirectory`
 through `SetConfig`, JSON configuration, or `UpdateRequestBuilder`:
 
@@ -103,6 +131,7 @@ replaceable files must permit `FileShare.Delete` as well as reading.
   "healthTimeoutSeconds": 5,
   "updateTimeoutSeconds": 600,
   "autoRollback": false,
+  "crashCollectionEnabled": false,
   "report": {
     "url": "https://updates.example.test/report",
     "recordId": 42,
@@ -308,6 +337,12 @@ test peer:
 $env:GENERALUPDATE_REAL_BOWL_HOST = 'C:\External\Bowl.Host.exe'
 dotnet test tests\CoreTest\CoreTest.csproj --filter FullyQualifiedName~RealBowlIntegrationTests
 ```
+
+On Windows, setting `GENERALUPDATE_CRASH_TEST_PEER` to the independently built
+`Bowl.TestPeer.dll` also enables a real unhandled-exception capture test. It
+checks the resulting nonempty dump and schema-2 outbox, then exercises the
+Client scanner against a simulated HTTP server that first rejects the upload
+at the business layer and then acknowledges the same GUID.
 
 Six scenarios have been verified against the independently built net8.0 host:
 files-only success, the complete application-survival window, launch failure,

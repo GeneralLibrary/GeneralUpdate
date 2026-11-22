@@ -24,12 +24,13 @@ if (args[0] == "--real-producer")
         InstallPath = Path.Combine(root, "install"),
         DiagnosticsDirectory = Path.Combine(root, "state"),
         ClientVersion = "1.0.0", LastVersion = "2.0.0",
-        LaunchClientAfterUpdate = scenario is "processAlive" or "launchFailure" or "healthCheckFailure",
+        LaunchClientAfterUpdate = scenario is "processAlive" or "launchFailure" or "healthCheckFailure" or "crash",
         ReportUrl = args.Length > 4 ? args[4] : string.Empty,
         Monitoring = new BowlOptions
         {
             Enabled = true, ExecutablePath = args[2], ReadyTimeoutSeconds = 10,
-            HealthTimeoutSeconds = 2, UpdateTimeoutSeconds = 30
+            HealthTimeoutSeconds = scenario == "crash" ? 20 : 2, UpdateTimeoutSeconds = 30,
+            CrashCollectionEnabled = scenario == "crash"
         },
         UpdateVersions = scenario == "updaterTerminated"
             ? [new VersionEntry { RecordId = 42, Version = "2.0.0", Name = "sample" }]
@@ -164,8 +165,16 @@ sealed class RealLaunchStrategy(string mode) : AbstractStrategy
     {
         if (mode == "launchFailure")
             throw new FileNotFoundException("Deliberately missing integration-test application.", "missing-test-app");
-        var info = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
-        info.ArgumentList.Add("--application");
+        var info = mode == "crash"
+            ? new ProcessStartInfo("dotnet") { UseShellExecute = false }
+            : new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        if (mode == "crash")
+        {
+            info.ArgumentList.Add(Environment.GetEnvironmentVariable("GENERALUPDATE_CRASH_TEST_PEER")!);
+            info.ArgumentList.Add("8000");
+            info.ArgumentList.Add("--crash");
+        }
+        else info.ArgumentList.Add("--application");
         using var application = Spawn(info) ?? throw new InvalidOperationException("Test application did not start.");
         if (OnAppStarted != null) await OnAppStarted(application);
         if (mode == "healthCheckFailure")

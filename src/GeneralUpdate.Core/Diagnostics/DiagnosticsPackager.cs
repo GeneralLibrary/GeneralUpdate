@@ -80,6 +80,13 @@ internal static class DiagnosticsPackager
         // audit list declares the real archive contents.
         UpdateEmbeddedManifest(zipPath, sourceDirectory, included);
 
+        if (new FileInfo(zipPath).Length > options.MaxSizeBytes)
+        {
+            File.Delete(zipPath);
+            GeneralTracer.Warn("DiagnosticsPackager: final bundle exceeds the size cap — not delivered.");
+            return null;
+        }
+
         return (zipPath, included);
     }
 

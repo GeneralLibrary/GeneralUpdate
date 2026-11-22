@@ -5,6 +5,8 @@ public sealed class BowlOptions
 {
     /// <summary>False preserves operation without a Bowl deployment; true requires a successful readiness handshake.</summary>
     public bool Enabled { get; set; }
+    /// <summary>Collect crash evidence for the supervised application. Defaults to false.</summary>
+    public bool CrashCollectionEnabled { get; set; }
     /// <summary>Absolute path to the actual host executable, outside every update/backup tree; not a launcher or library.</summary>
     public string ExecutablePath { get; set; } = string.Empty;
     /// <summary>Maximum seconds to wait for a matching, live host before aborting without applying application files.</summary>

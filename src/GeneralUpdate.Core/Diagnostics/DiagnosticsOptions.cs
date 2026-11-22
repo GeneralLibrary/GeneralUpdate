@@ -75,7 +75,7 @@ public sealed class DiagnosticsOptions
     /// </summary>
     public int RetainDays { get; set; } = 14;
 
-    /// <summary>Upload attempts per outbox directory before it is marked giveup. Default 5.</summary>
+    /// <summary>Upload attempts before giveup; zero means unlimited retries. Default 5.</summary>
     public int MaxRetry { get; set; } = 5;
 
     // ---- Server attribution identity (GeneralSpace /Fault/UploadArtifact form fields) ----

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,19 +11,19 @@ using GeneralUpdate.Core.JsonContext;
 namespace GeneralUpdate.Core.Diagnostics;
 
 /// <summary>
-///     Scans the Bowl crash-evidence outbox (<c>{install}/fail/{version}/{guid}/</c>) and
+///     Scans Bowl crash-evidence outboxes under <c>{install}/fail</c> and
+///     <c>{stateRoot}/crash-outbox</c> (<c>{version}/{guid}/</c>) and
 ///     uploads pending evidence to the server. This is the arrival channel for crash
 ///     diagnostics — Bowl writes evidence to disk, Core delivers it.
 /// </summary>
 /// <remarks>
 ///     <para>
-///         Pure disk-contract interaction: read-only scanning without locks, the whole flow
-///         wrapped so it can run fire-and-forget in the background of a client start. The
-///         three no-coordination rules (docs/bowl-redesign.md §3.2):
+///         A per-root lock serializes client scans. The flow runs in the background at client
+///         start. The disk contract uses the following rules:
 ///     </para>
 ///     <list type="number">
 ///         <item>existing means pending — a <c>{guid}/</c> directory present means "not uploaded yet";</item>
-///         <item>uploaded means deleted — the whole directory is removed after a 2xx response;</item>
+///         <item>uploaded means deleted — the directory is removed only after server acknowledgment;</item>
 ///         <item>schema tolerance — manifests with a schema other than 2 are skipped with a warning.</item>
 ///     </list>
 ///     <para>
@@ -35,6 +37,7 @@ public sealed class PendingDiagnosticsScanner
 {
     /// <summary>Root of the outbox: <c>{installPath}/fail</c>.</summary>
     private readonly string _failRoot;
+    private readonly string? _crashOutboxRoot;
     private readonly DiagnosticsOptions _options;
     private readonly IDiagnosticsUploader _uploader;
     private readonly IBlackMatcher? _privacyFilter;
@@ -47,11 +50,12 @@ public sealed class PendingDiagnosticsScanner
     ///     the ambient static) so the scan behaves deterministically regardless of other state.
     /// </param>
     public PendingDiagnosticsScanner(string installPath, DiagnosticsOptions options,
-        IDiagnosticsUploader uploader, IBlackMatcher? privacyFilter = null)
+        IDiagnosticsUploader uploader, IBlackMatcher? privacyFilter = null, string? stateRoot = null)
     {
         if (string.IsNullOrWhiteSpace(installPath))
             throw new ArgumentNullException(nameof(installPath));
         _failRoot = Path.Combine(installPath, "fail");
+        _crashOutboxRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.Combine(stateRoot, "crash-outbox");
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _uploader = uploader ?? throw new ArgumentNullException(nameof(uploader));
         _privacyFilter = privacyFilter;
@@ -86,18 +90,9 @@ public sealed class PendingDiagnosticsScanner
     {
         try
         {
-            if (!Directory.Exists(_failRoot))
-                return;
-
-            foreach (var versionDir in Directory.EnumerateDirectories(_failRoot))
-            {
-                ct.ThrowIfCancellationRequested();
-                foreach (var caseDir in Directory.EnumerateDirectories(versionDir))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    await ProcessCaseAsync(caseDir, ct).ConfigureAwait(false);
-                }
-            }
+            await ScanRootAsync(_failRoot, false, ct).ConfigureAwait(false);
+            if (_crashOutboxRoot != null)
+                await ScanRootAsync(_crashOutboxRoot, true, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -105,12 +100,37 @@ public sealed class PendingDiagnosticsScanner
         }
         catch (Exception ex)
         {
-            // One broken directory must not take down the scan loop or the caller.
             GeneralTracer.Warn($"PendingDiagnosticsScanner: scan aborted: {ex.Message}");
         }
     }
 
-    private async Task ProcessCaseAsync(string caseDir, CancellationToken ct)
+    private async Task ScanRootAsync(string root, bool requireDump, CancellationToken ct)
+    {
+        if (!Directory.Exists(root)) return;
+        try
+        {
+            using var scanLock = new FileStream(Path.Combine(root, ".scan.lock"), FileMode.OpenOrCreate,
+                FileAccess.ReadWrite, FileShare.None);
+            foreach (var versionDir in Directory.EnumerateDirectories(root))
+            {
+                ct.ThrowIfCancellationRequested();
+                if ((File.GetAttributes(versionDir) & FileAttributes.ReparsePoint) != 0) continue;
+                foreach (var caseDir in Directory.EnumerateDirectories(versionDir))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if ((File.GetAttributes(caseDir) & FileAttributes.ReparsePoint) != 0) continue;
+                    if (!Guid.TryParseExact(Path.GetFileName(caseDir), "D", out _)) continue;
+                    await ProcessCaseAsync(caseDir, requireDump, ct).ConfigureAwait(false);
+                }
+            }
+        }
+        catch (IOException ex)
+        {
+            GeneralTracer.Warn($"PendingDiagnosticsScanner: could not scan {root}: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessCaseAsync(string caseDir, bool requireDump, CancellationToken ct)
     {
         try
         {
@@ -129,12 +149,35 @@ public sealed class PendingDiagnosticsScanner
                 return;
             }
 
+            if (!Guid.TryParseExact(manifest.Guid, "D", out var manifestGuid) ||
+                !Guid.TryParseExact(Path.GetFileName(caseDir), "D", out var directoryGuid) ||
+                manifestGuid != directoryGuid ||
+                !string.Equals(manifest.Kind, DiagnosticsKinds.Crash, StringComparison.OrdinalIgnoreCase))
+            {
+                GeneralTracer.Warn($"PendingDiagnosticsScanner: skipping {caseDir} — invalid crash manifest identity.");
+                return;
+            }
+
             if (string.Equals(manifest.State, OutboxStates.Giveup, StringComparison.OrdinalIgnoreCase))
                 return; // Retry budget exhausted; Bowl's disk GC owns the directory from here.
+
+            if (requireDump && !IsSafeCrashCase(caseDir))
+            {
+                GeneralTracer.Warn($"PendingDiagnosticsScanner: crash case is incomplete or contains links; retaining {caseDir}.");
+                return;
+            }
 
             var packed = DiagnosticsPackager.PackDirectory(caseDir, _options, _privacyFilter);
             if (packed == null)
             {
+                RecordFailure(manifestPath, manifest);
+                return;
+            }
+            if (requireDump && !packed.Value.Entries.Any(entry =>
+                    string.Equals(Path.GetExtension(entry), ".dmp", StringComparison.OrdinalIgnoreCase)))
+            {
+                File.Delete(packed.Value.ZipPath);
+                GeneralTracer.Warn($"PendingDiagnosticsScanner: crash dump was excluded or too large; retaining {caseDir}.");
                 RecordFailure(manifestPath, manifest);
                 return;
             }
@@ -174,19 +217,48 @@ public sealed class PendingDiagnosticsScanner
         }
     }
 
+    private static bool IsSafeCrashCase(string caseDir)
+    {
+        var directories = new Stack<string>();
+        directories.Push(caseDir);
+        var hasDump = false;
+        while (directories.Count > 0)
+        {
+            foreach (var path in Directory.EnumerateFileSystemEntries(directories.Pop()))
+            {
+                var attributes = File.GetAttributes(path);
+                if ((attributes & FileAttributes.ReparsePoint) != 0) return false;
+                if ((attributes & FileAttributes.Directory) != 0)
+                    directories.Push(path);
+                else if (string.Equals(Path.GetExtension(path), ".dmp", StringComparison.OrdinalIgnoreCase) &&
+                         new FileInfo(path).Length > 0)
+                    hasDump = true;
+            }
+        }
+        return hasDump;
+    }
+
     private void RecordFailure(string manifestPath, OutboxManifest manifest)
     {
         try
         {
             manifest.Attempts++;
-            if (manifest.Attempts >= _options.MaxRetry)
+            if (_options.MaxRetry > 0 && manifest.Attempts >= _options.MaxRetry)
             {
                 manifest.State = OutboxStates.Giveup;
                 GeneralTracer.Warn($"PendingDiagnosticsScanner: {manifest.Guid} marked giveup after {manifest.Attempts} attempts.");
             }
 
-            File.WriteAllText(manifestPath,
-                JsonSerializer.Serialize(manifest, DiagnosticsJsonContext.Default.OutboxManifest));
+            var tempPath = manifestPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(manifest, DiagnosticsJsonContext.Default.OutboxManifest));
+                File.Replace(tempPath, manifestPath, null);
+            }
+            finally
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            }
         }
         catch (Exception ex)
         {
