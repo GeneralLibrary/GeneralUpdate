@@ -125,6 +125,11 @@ a server-supported event ID/idempotency contract. Ordering applies only to repor
 sharing this queue, not old clients or independent queues. A report is durable once its
 queue file has been flushed and published; failure before that point cannot be recovered.
 Storage and filesystem durability depend on the host's filesystem and hardware.
+Any future server idempotency fields remain disabled by default. Enable them only after
+trusted capability negotiation or explicit operator confirmation that the target service
+supports the contract; a successful response is not proof because older servers may ignore
+unknown fields. The queue's local file order is not a server sequence or a causal order,
+and its file numbering can restart after the queue drains.
 
 ## 🙏 Thanks
 
