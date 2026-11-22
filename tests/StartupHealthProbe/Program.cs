@@ -1,6 +1,47 @@
 using GeneralUpdate.Core.StartupHealth;
 using System.Diagnostics;
 
+if (args.Length == 3 && args[0] == "native-handoff")
+{
+    var handoff = new StartupHealthHandoff(args[1]);
+    var nativeId = Guid.NewGuid();
+    handoff.Prepare(nativeId, DateTimeOffset.UtcNow.AddMinutes(1));
+    var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+    start.ArgumentList.Add("business-ready");
+    start.ArgumentList.Add(args[2]);
+    using var child = handoff.Start(nativeId, start);
+    if (await handoff.WaitAsync(nativeId, child) != StartupHealthStatus.Healthy)
+        throw new InvalidOperationException("Native handoff failed.");
+    Console.WriteLine("healthy");
+    return;
+}
+
+if (args.Length == 4 && args[0] == "handoff-prepare")
+{
+    new StartupHealthHandoff(args[1]).Prepare(Guid.Parse(args[2]), DateTimeOffset.UtcNow.AddSeconds(30));
+    File.WriteAllText(args[3], "prepared");
+    Thread.Sleep(Timeout.Infinite);
+    return;
+}
+
+if (args.Length == 7 && args[0] == "handoff-host")
+{
+    var handoff = new StartupHealthHandoff(args[1]);
+    var handoffId = Guid.Parse(args[2]);
+    var start = new ProcessStartInfo("dotnet") { UseShellExecute = false };
+    start.ArgumentList.Add("exec");
+    start.ArgumentList.Add("--runtimeconfig");
+    start.ArgumentList.Add(args[5]);
+    start.ArgumentList.Add("--depsfile");
+    start.ArgumentList.Add(args[6]);
+    start.ArgumentList.Add(args[4]);
+    start.ArgumentList.Add("wait");
+    using var child = handoff.Start(handoffId, start);
+    File.WriteAllText(args[3], child.Id.ToString());
+    await handoff.WaitAsync(handoffId, child);
+    return;
+}
+
 if (args.Length == 1 && args[0] == "disabled")
 {
     if (StartupHealthProcess.ConfirmCurrentProcess())

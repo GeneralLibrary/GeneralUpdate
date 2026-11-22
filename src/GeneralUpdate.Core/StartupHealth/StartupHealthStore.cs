@@ -31,18 +31,30 @@ public sealed class StartupHealthStore
     /// <summary>Creates an attempt with a future UTC deadline and returns its unique ID.</summary>
     public Guid Begin(DateTimeOffset deadline)
     {
+        var id = Guid.NewGuid();
+        Begin(id, deadline);
+        return id;
+    }
+
+    /// <summary>
+    /// Creates an attempt under a caller-selected ID. The caller must durably retain the ID
+    /// before creation; an ID must never be reused, even if creation is interrupted.
+    /// </summary>
+    public void Begin(Guid id, DateTimeOffset deadline)
+    {
+        if (id == Guid.Empty) throw new ArgumentException("An attempt ID is required.", nameof(id));
         if (deadline <= DateTimeOffset.UtcNow)
             throw new ArgumentOutOfRangeException(nameof(deadline), "The deadline must be in the future.");
 
-        var id = Guid.NewGuid();
         var directory = AttemptDirectory(id);
         Directory.CreateDirectory(directory);
+        using (var claim = new FileStream(Path.Combine(directory, "creation"), FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            claim.Flush(true);
         WriteAtomically(Path.Combine(directory, "attempt"), writer =>
         {
             writer.Write(FormatVersion);
             writer.Write(deadline.UtcDateTime.Ticks);
         });
-        return id;
     }
 
     /// <summary>
