@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using GeneralUpdate.Core.Download.Reporting;
+using Microsoft.Data.Sqlite;
 
 namespace CoreTest.Download;
 
@@ -92,6 +93,49 @@ public sealed class OrderedUpdateReporterTests : IDisposable
         var handler = new Handler();
         await Create(handler).ReplayAsync();
         await Create(handler).ReportAsync(new UpdateReport(10, 2));
+        Assert.Equal(new long[] { 1, 2 }, handler.Bodies.Select(Sequence));
+    }
+
+    [Fact]
+    public async Task SlowDeliveryDoesNotBlockAnotherProcessFromCommitting()
+    {
+        using var first = StartWorker("hold");
+        Process? second = null;
+        try
+        {
+            Assert.Equal("committed", await first.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(60)));
+            second = StartWorker("offline");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            while (true)
+            {
+                timeout.Token.ThrowIfCancellationRequested();
+                using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+                {
+                    DataSource = Path.Combine(_directory, "ordered-reports.db"),
+                    Mode = SqliteOpenMode.ReadOnly,
+                    Pooling = false
+                }.ToString());
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM outbox;";
+                if ((long)command.ExecuteScalar()! == 2) break;
+                await Task.Delay(100, timeout.Token);
+            }
+            Assert.False(first.HasExited);
+        }
+        finally
+        {
+            if (!first.HasExited) first.Kill(entireProcessTree: true);
+            await first.WaitForExitAsync();
+            if (second != null)
+            {
+                if (!second.HasExited) second.Kill(entireProcessTree: true);
+                await second.WaitForExitAsync();
+                second.Dispose();
+            }
+        }
+        var handler = new Handler();
+        await Create(handler).ReplayAsync();
         Assert.Equal(new long[] { 1, 2 }, handler.Bodies.Select(Sequence));
     }
 

@@ -163,6 +163,10 @@ conflict or other failure stops replay without deleting it. Keep the database an
 counters even when the queue is empty. Deleting, rolling back or cloning the database,
 or using network filesystems, invalidates the ordering guarantee. Hardware and filesystem
 durability still apply. The SQLite native dependency must be available for the target RID.
+Enqueue transactions do not hold the delivery lock during HTTP requests. If delivery
+is busy, times out or is cancelled after the transaction commits, `ReportAsync` can
+throw while the event remains queued; retry delivery with `ReplayAsync`, not by
+submitting a new report. Persistence failures before commit cannot be replayed.
 
 ## 🙏 Thanks
 
