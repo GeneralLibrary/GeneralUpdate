@@ -208,6 +208,12 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
+            processInfo.CustomHeaders = source.CustomHeaders == null
+                ? null
+                : new Dictionary<string, string>(source.CustomHeaders, StringComparer.OrdinalIgnoreCase);
+            processInfo.RequirePushValidation = source.RequirePushValidation;
+            processInfo.PushValidationUrl = source.PushValidationUrl;
+            processInfo.PushValidationAppKey = source.PushValidationAppKey;
             return processInfo;
         }
     }

@@ -437,6 +437,14 @@ public class ClientStrategy : IStrategy
         {
             _reportType = 2;
             _configInfo.ReportType = 2;
+            if (_configInfo.RequirePushValidation)
+            {
+                if (_orchestrator != null || _customDownloadExecutor != null || _customDownloadPipelineFactory != null)
+                    throw new InvalidOperationException(
+                        "Validated push updates require the built-in HTTP download executor and orchestrator.");
+                _configInfo.VerifyChecksum = true;
+                GeneralTracer.Info("ClientStrategy: checksum verification is required for validated push packages.");
+            }
         }
 
         // Call server validation — returns assets from the two Validate calls
@@ -599,10 +607,17 @@ public class ClientStrategy : IStrategy
             }
             else
             {
-                var httpClient = GeneralUpdate.Core.Network.HttpClientProvider.Shared;
+                var httpClient = _configInfo.RequirePushValidation
+                    ? Network.PushHttpTransport.Client
+                    : Network.HttpClientProvider.Shared;
+                var executor = _configInfo.RequirePushValidation
+                    ? new Download.Executors.HttpDownloadExecutor(httpClient,
+                        TimeSpan.FromSeconds(_configInfo.DownloadTimeOut), _configInfo.EnableResume,
+                        (request, token) => Network.PushHttpTransport.ApplyAuthAsync(_configInfo, request, token))
+                    : _customDownloadExecutor;
                 var orchestrator = new Download.Orchestrators.DefaultDownloadOrchestrator(
                     httpClient, orchOptions, _customDownloadPolicy,
-                    _customDownloadExecutor, _customDownloadPipelineFactory);
+                    executor, _customDownloadPipelineFactory);
                 return await orchestrator.ExecuteAsync(plan, _configInfo.TempPath, progress: progress).ConfigureAwait(false);
             }
         }
@@ -666,6 +681,7 @@ public class ClientStrategy : IStrategy
             {
                 case UpdateScenario.UpgradeOnly:
                     await ApplyUpgradePackagesAsync(uVersions).ConfigureAwait(false);
+                    if (_configInfo.PushValidationRejected) return;
                     if (UpgradePackagesSucceeded())
                     {
                         await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
@@ -728,6 +744,7 @@ public class ClientStrategy : IStrategy
         await DownloadAndApplyAsync(downloadPlan, scenario).ConfigureAwait(false);
     }
 
+
     #endregion
 
     #region Scenario actions
@@ -754,7 +771,11 @@ public class ClientStrategy : IStrategy
         // continues the loop, so ExecuteAsync() completing is not a
         // reliable success signal on its own.
         if ((_osStrategy as AbstractStrategy)?.AllPackagesSucceeded == true)
+        {
             WriteBackUpgradeVersion(upgradeVersions, _configInfo!.InstallPath);
+            if (_configInfo.RequirePushValidation)
+                _configInfo.UpgradeClientVersion = upgradeVersions.Last().Version!;
+        }
     }
 
     /// <summary>

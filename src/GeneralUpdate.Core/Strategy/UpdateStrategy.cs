@@ -101,6 +101,14 @@ public class UpdateStrategy : IStrategy
     public async Task ExecuteAsync()
     {
         if (_configInfo == null) throw new InvalidOperationException("UpdateStrategy not configured.");
+        if (_configInfo.RequirePushValidation &&
+            (_configInfo.ReportType != 2 || _configInfo.UpdateVersions?.Count != 1 ||
+             _configInfo.UpdateVersions[0].AppType != (int)AppType.Client ||
+             _configInfo.UpdateVersions[0].PackageType != (int)PackageType.Full))
+        {
+            GeneralTracer.Warn("UpdateStrategy: rejected invalid validated-push IPC contract.");
+            return;
+        }
 
         var ctx = BuildUpdateContext();
         try
@@ -123,6 +131,11 @@ public class UpdateStrategy : IStrategy
                 GeneralTracer.Info("UpdateStrategy: applying " + _configInfo.UpdateVersions.Count +
                                    " MainApp update(s).");
                 await _osStrategy.ExecuteAsync();
+                if (_configInfo.PushValidationRejected)
+                {
+                    GeneralTracer.Warn("UpdateStrategy: rejected push update; no files applied or terminal receipt sent.");
+                    return;
+                }
 
                 // Only advance the manifest version when every package was applied
                 // successfully. AbstractStrategy catches per-package failures and

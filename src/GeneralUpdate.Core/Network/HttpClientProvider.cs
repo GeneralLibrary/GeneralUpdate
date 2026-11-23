@@ -85,6 +85,21 @@ public static class HttpClientProvider
     public static HttpClient Shared => _shared;
 
     /// <summary>
+    /// Creates a caller-owned client using the configured certificate policy.
+    /// Use a non-redirecting client when request headers must not cross origins.
+    /// </summary>
+    internal static HttpClient CreateClient(bool allowAutoRedirect)
+    {
+        var handler = new HttpClientHandler { AllowAutoRedirect = allowAutoRedirect, UseCookies = false };
+        handler.ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
+            _sslPolicy.ValidateCertificate(cert, chain, errors);
+        return new HttpClient(handler, disposeHandler: true)
+        {
+            Timeout = _shared.Timeout
+        };
+    }
+
+    /// <summary>
     /// Gets or sets the global default HTTP authentication provider.
     /// When set, every HTTP call from <see cref="VersionService"/>,
     /// <see cref="HttpUpdateReporter"/>, and other components using

@@ -6,6 +6,7 @@ on:
       - 'src/GeneralUpdate.Core/**'
       - 'src/GeneralUpdate.Differential/**'
       - 'tests/PushAotSmoke/**'
+      - 'tests/CoreTest/Hubs/PushProcessIntegrationTests.cs'
       - '.github/workflows/push-aot.yml'
   workflow_dispatch:
 
@@ -31,3 +32,21 @@ jobs:
           if errorlevel 1 exit /b 1
           "%RUNNER_TEMP%\push-aot\PushAotSmoke.exe"
           if errorlevel 1 exit /b 1
+          set "GENERALUPDATE_PUSH_HOST_PATH=%RUNNER_TEMP%\push-aot\PushAotSmoke.exe"
+          dotnet test tests\CoreTest\CoreTest.csproj -c Release --filter FullyQualifiedName~PushProcessIntegrationTests
+          if errorlevel 1 exit /b 1
+
+  push-aot-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish and exercise native listener and updater processes
+        shell: bash
+        run: |
+          dotnet publish tests/PushAotSmoke/PushAotSmoke.csproj -c Release -r linux-x64 -o "$RUNNER_TEMP/push-aot"
+          "$RUNNER_TEMP/push-aot/PushAotSmoke"
+          export GENERALUPDATE_PUSH_HOST_PATH="$RUNNER_TEMP/push-aot/PushAotSmoke"
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter FullyQualifiedName~PushProcessIntegrationTests
