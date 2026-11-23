@@ -125,10 +125,21 @@ def main():
                 raise AssertionError(f"API request failed: HTTP {status}, body {value}")
             return value["body"]
 
-        def worker(mode, record):
-            subprocess.run(["dotnet", str(client), mode, str(work / "outbox"),
-                            base + "/Upgrade/Report", str(pem), str(record)],
+        def worker(mode, record, outbox="outbox", fresh_record=None):
+            command = ["dotnet", str(client), mode, str(work / outbox),
+                       base + "/Upgrade/Report", str(pem), str(record)]
+            if fresh_record is not None:
+                command.append(str(fresh_record))
+            subprocess.run(command,
                            check=True, timeout=60)
+
+        def queued(outbox):
+            with closing(sqlite3.connect(work / outbox / "ordered-reports.db")) as queue:
+                return queue.execute("SELECT id,payload FROM outbox ORDER BY id").fetchall()
+
+        def quarantined(outbox):
+            with closing(sqlite3.connect(work / outbox / "ordered-reports.db")) as queue:
+                return queue.execute("SELECT id,payload,reason FROM quarantine ORDER BY id").fetchall()
 
         with (work / "api.log").open("w", encoding="utf-8") as log:
             process = subprocess.Popen([str(api_dir / "GeneralSpace.Api")], cwd=api_dir,
@@ -181,6 +192,130 @@ def main():
                         }))
                         assert len(packages) == 1 and packages[0]["hash"] == hashlib.sha256(payload).hexdigest()
                         return packages[0]["recordId"]
+
+                    if os.environ.get("ORDERED_REPORT_TERMINAL_CONFIRMED") == "true":
+                        def record_snapshot(record_id):
+                            with db.cursor() as cursor:
+                                cursor.execute("SELECT status,report_time,fault_id FROM tb_upgrade_record "
+                                               "WHERE id=%s", (record_id,))
+                                state = cursor.fetchone()
+                                cursor.execute("SELECT event_id,sequence FROM tb_report_event WHERE record_type=1 "
+                                               "AND record_id=%s ORDER BY sequence", (record_id,))
+                                events = cursor.fetchall()
+                                cursor.execute("SELECT COUNT(*) FROM tb_fault_log WHERE record_type=1 "
+                                               "AND record_id=%s", (record_id,))
+                                faults = cursor.fetchone()[0]
+                            return state, events, faults
+
+                        def terminal_rejection(result):
+                            http, body = result
+                            assert http == 200 and body["code"] == 400 and body["body"] is False
+                            assert body["errorCode"] == "ReportTerminalConflict"
+
+                        legacy_record = new_record()
+                        worker("legacy", legacy_record, "legacy")
+                        legacy_state = record_snapshot(legacy_record)
+                        assert legacy_state[0][0] == 2 and legacy_state[1:] == ((), 0)
+
+                        failure_record = new_record()
+                        worker("lost", failure_record, "lost-response")
+                        pending_failure = queued("lost-response")
+                        assert len(pending_failure) == 1
+                        accepted = json.loads(pending_failure[0][1])
+                        failure_state = record_snapshot(failure_record)
+                        assert failure_state[0][0] == 3 and failure_state[2] == 1
+                        assert failure_state[1] == ((accepted["eventId"], 1),)
+                        worker("replay", failure_record, "lost-response")
+                        assert not queued("lost-response") and record_snapshot(failure_record) == failure_state
+                        assert success(request("/Upgrade/Report", "POST", accepted)) is True
+                        terminal_rejection(request("/Upgrade/Report", "POST", {
+                            "recordId": failure_record, "type": 1, "status": 2,
+                            "eventId": str(uuid.uuid4()), "sequence": 2,
+                        }))
+                        assert record_snapshot(failure_record) == failure_state
+
+                        ordered_record = new_record()
+                        newer = {"recordId": ordered_record, "type": 1, "status": 2,
+                                 "eventId": str(uuid.uuid4()), "sequence": 4}
+                        stale = {"recordId": ordered_record, "type": 1, "status": 3,
+                                 "eventId": str(uuid.uuid4()), "sequence": 3}
+                        assert success(request("/Upgrade/Report", "POST", newer)) is True
+                        final_state = record_snapshot(ordered_record)[0]
+                        assert success(request("/Upgrade/Report", "POST", stale)) is True
+                        assert success(request("/Upgrade/Report", "POST", stale)) is True
+                        ordered_state = record_snapshot(ordered_record)
+                        assert ordered_state[0] == final_state and ordered_state[2] == 0
+                        assert ordered_state[1] == ((stale["eventId"], 3), (newer["eventId"], 4))
+
+                        terminal_record, fresh_record = new_record(), new_record()
+                        assert terminal_record != fresh_record
+                        # This suite requires a server candidate explicitly confirmed to reject Success -> Failure.
+                        assert success(request("/Upgrade/Report", "POST", {
+                            "recordId": terminal_record, "type": 1, "status": 2,
+                        })) is True
+
+                        def terminal_snapshot():
+                            with db.cursor() as cursor:
+                                cursor.execute("SELECT status,report_time,fault_id FROM tb_upgrade_record "
+                                               "WHERE id=%s", (terminal_record,))
+                                state = cursor.fetchone()
+                                cursor.execute("SELECT COUNT(*) FROM tb_report_event WHERE record_type=1 "
+                                               "AND record_id=%s", (terminal_record,))
+                                events = cursor.fetchone()[0]
+                                cursor.execute("SELECT COUNT(*) FROM tb_fault_log WHERE record_type=1 "
+                                               "AND record_id=%s", (terminal_record,))
+                                faults = cursor.fetchone()[0]
+                            return state, events, faults
+
+                        before = terminal_snapshot()
+                        assert before[0][0] == 2 and before[1:] == (0, 0)
+                        worker("terminal-seed", terminal_record, "terminal")
+                        seed = queued("terminal")
+                        assert len(seed) == 1 and not quarantined("terminal")
+                        original = json.loads(seed[0][1])
+                        assert original["recordId"] == terminal_record and original["status"] == 3
+                        assert original["sequence"] == 1 and uuid.UUID(original["eventId"]).int != 0
+                        worker("terminal-reject", terminal_record, "terminal")
+                        retained = quarantined("terminal")
+                        assert retained == [(seed[0][0], seed[0][1], "ReportTerminalConflict")]
+                        assert not queued("terminal") and terminal_snapshot() == before
+                        worker("terminal-restart", terminal_record, "terminal", fresh_record)
+                        assert quarantined("terminal") == retained and terminal_snapshot() == before
+                        blocked = queued("terminal")
+                        assert len(blocked) == 1
+                        later = json.loads(blocked[0][1])
+                        assert later["recordId"] == terminal_record and later["sequence"] == 2
+                        with db.cursor() as cursor:
+                            cursor.execute("SELECT status FROM tb_upgrade_record WHERE id=%s", (fresh_record,))
+                            assert cursor.fetchone()[0] == 2
+                            cursor.execute("SELECT sequence FROM tb_report_event WHERE record_type=1 "
+                                           "AND record_id=%s", (fresh_record,))
+                            assert cursor.fetchall() == ((1,),)
+
+                        for collision in ("identity", "sequence"):
+                            conflict_record = new_record()
+                            outbox = "conflict-" + collision
+                            worker("terminal-seed", conflict_record, outbox)
+                            pending = queued(outbox)
+                            assert len(pending) == 1
+                            conflicting = dict(json.loads(pending[0][1]), status=1)
+                            if collision == "sequence":
+                                conflicting["eventId"] = str(uuid.uuid4())
+                            assert success(request("/Upgrade/Report", "POST", conflicting)) is True
+                            worker("conflict", conflict_record, outbox)
+                            assert queued(outbox) == pending and not quarantined(outbox)
+                            with db.cursor() as cursor:
+                                cursor.execute("SELECT status FROM tb_upgrade_record WHERE id=%s", (conflict_record,))
+                                assert cursor.fetchone()[0] == 1
+                                cursor.execute("SELECT event_id,sequence FROM tb_report_event WHERE record_type=1 "
+                                               "AND record_id=%s", (conflict_record,))
+                                assert cursor.fetchall() == ((conflicting["eventId"], 1),)
+                                cursor.execute("SELECT COUNT(*) FROM tb_fault_log WHERE record_type=1 "
+                                               "AND record_id=%s", (conflict_record,))
+                                assert cursor.fetchone()[0] == 0
+                        print("Real API candidate: legacy, lost response, replay, ordering, terminal quarantine, "
+                              "restart, exact payload, blocked record, fresh delivery and ordinary conflicts passed.")
+                        return
 
                     record, other_record, legacy_record = new_record(), new_record(), new_record()
                     assert len({record, other_record, legacy_record}) == 3

@@ -36,3 +36,47 @@ report with no ordered fields to the pinned server's legacy path and verifies
 the record changed without creating an event. This does not test an older
 server revision. The TLS connection is validated against the temporary test
 CA; redirects and proxies are disabled.
+
+## Terminal rejection candidate suite
+
+The terminal suite additionally requires the client quarantine candidate from
+GeneralUpdate #558 at `d78d9f697f37e915f083c3d0e20441a25a2d25a2`
+(which descends from #550's `bb97a74f8eac25a665002722a17daea037072f2c`).
+The server candidate is not frozen. Do not run this suite against the original
+#330 pin or claim it verifies a final server revision: that pin cannot return
+`ReportTerminalConflict`. Before running, record and verify an accessible
+server candidate SHA and confirm that a committed Success followed by Failure
+returns HTTP 200, `code=400`, `body=false`, and
+`errorCode=ReportTerminalConflict`.
+
+Use the same publish commands and database environment, adding
+`ORDERED_REPORT_TERMINAL_CONFIRMED=true`. This selects a separate candidate
+suite, including legacy reporting, lost-response replay and late-event
+registration, plus both terminal-direction rejection checks. The default
+suite remains unchanged and covers the original protocol where higher
+sequences may replace a terminal status; it must not be run against the
+terminal-latching candidate.
+
+The process CLI is:
+
+```text
+RealReportHarness <mode> <outbox-directory> <report-url> <test-ca-pem> <record-id> [fresh-record-id]
+```
+
+`terminal-seed` commits a failure to the real client outbox and interrupts
+delivery before transport. `terminal-reject` actually sends it to the SaaS API
+and requires the explicit terminal response plus one quarantined event.
+`terminal-restart` uses a new process, inspects the retained event, verifies
+Replay/Report surface operator review without sending that record, delivers a
+fresh record, and explicitly retries the quarantined event. Its sixth argument
+is the fresh record ID. `conflict` verifies a real ordinary `Conflict` response
+retains the outbox event without quarantine.
+
+The Python suite compares SQLite's original payload byte-for-byte, including
+event ID and sequence, with the retained quarantine across process restart
+and explicit retry. It checks the stable `ReportTerminalConflict` reason;
+arbitrary server messages are not persisted as reasons. MySQL checks show
+the terminal record and fault attribution are unchanged, its successor was
+not accepted, and the fresh record was accepted. Identity and sequence
+collisions are tested separately with real API pre-registration. No payloads,
+credentials, or server messages are printed or uploaded.
