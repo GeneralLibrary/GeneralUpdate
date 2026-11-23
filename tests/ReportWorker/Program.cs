@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Download.Reporting;
+using Microsoft.Data.Sqlite;
 
 namespace ReportWorker;
 
@@ -12,6 +13,21 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--sqlite-module-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            if (!SetDefaultDllDirectories(0x00000200 | 0x00000800))
+                throw new InvalidOperationException($"SetDefaultDllDirectories failed: {Marshal.GetLastWin32Error()}");
+            using var connection = new SqliteConnection("Data Source=:memory:");
+            connection.Open();
+            var module = GetModuleHandle("e_sqlite3.dll");
+            if (module == IntPtr.Zero) throw new InvalidOperationException("SQLite native module not found.");
+            var path = new StringBuilder(32768);
+            if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
+                throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
+            Console.WriteLine(path.ToString());
+            return 0;
+        }
         if (args.Length == 2 && args[0] == "--dll-search-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
@@ -68,6 +84,16 @@ internal static class Program
     [DllImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool FreeLibrary(IntPtr module);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetModuleHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string name);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetModuleFileNameW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetModuleFileName(IntPtr module, StringBuilder path, uint size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetDefaultDllDirectories(uint flags);
 
     private sealed class Handler(string mode) : HttpMessageHandler
     {

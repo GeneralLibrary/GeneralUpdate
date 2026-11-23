@@ -13,6 +13,66 @@ public sealed class WindowsDllSearchExperimentTests
         await RunExperiment();
     }
 
+    [Fact]
+    public async Task NativeAotSqliteUsesAdjacentDependencyAndFailsWhenItIsMissing()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var executable = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER");
+        if (executable == null) return;
+        await RunSqliteExperiment(executable);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static async Task RunSqliteExperiment(string executable)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "gu-sqlite-search-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var adjacent = await RunSqlitePeer(executable, root);
+            Assert.True(adjacent.ExitCode == 0, adjacent.Error);
+            Assert.Equal(Path.Combine(Path.GetDirectoryName(executable)!, "e_sqlite3.dll"),
+                adjacent.Output.Trim(), ignoreCase: true);
+
+            var isolated = Path.Combine(root, "peer.exe");
+            File.Copy(executable, isolated);
+            var missing = await RunSqlitePeer(isolated, root);
+            Assert.NotEqual(0, missing.ExitCode);
+            Assert.Contains("e_sqlite3", missing.Error + missing.Output, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> RunSqlitePeer(string executable, string directory)
+    {
+        var start = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = directory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        start.Environment["PATH"] = Environment.SystemDirectory;
+        start.ArgumentList.Add("--sqlite-module-probe");
+        using var peer = Process.Start(start) ?? throw new InvalidOperationException("SQLite probe did not start.");
+        var output = peer.StandardOutput.ReadToEndAsync();
+        var error = peer.StandardError.ReadToEndAsync();
+        try
+        {
+            await peer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            return (peer.ExitCode, await output, await error);
+        }
+        finally
+        {
+            if (!peer.HasExited) peer.Kill(entireProcessTree: true);
+            await peer.WaitForExitAsync();
+        }
+    }
+
     [SupportedOSPlatform("windows")]
     private static async Task RunExperiment()
     {
