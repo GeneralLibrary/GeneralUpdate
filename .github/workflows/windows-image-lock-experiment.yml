@@ -31,5 +31,5 @@ jobs:
         shell: pwsh
         run: |
           $env:GU_WINDOWS_NATIVE_LOCK_PEER = Join-Path $PWD 'native-peer\ReportWorker.exe'
-          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter "FullyQualifiedName~WindowsImageLockExperimentTests|FullyQualifiedName~WindowsRestrictedInheritanceExperimentTests|FullyQualifiedName~WindowsDllSearchExperimentTests|FullyQualifiedName~WindowsJobLifetimeExperimentTests" --logger "console;verbosity=detailed"
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter "FullyQualifiedName~WindowsImageLockExperimentTests|FullyQualifiedName~WindowsRestrictedInheritanceExperimentTests|FullyQualifiedName~WindowsDllSearchExperimentTests|FullyQualifiedName~WindowsJobLifetimeExperimentTests|FullyQualifiedName~WindowsAtomicSnapshotExperimentTests|FullyQualifiedName~WindowsImageSnapshotLeaseTests" --logger "console;verbosity=detailed"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

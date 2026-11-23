@@ -13,6 +13,22 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--snapshot-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            if (!SetDefaultDllDirectories(0x00000200 | 0x00000800))
+                throw new InvalidOperationException($"SetDefaultDllDirectories failed: {Marshal.GetLastWin32Error()}");
+            using var connection = new SqliteConnection("Data Source=:memory:");
+            connection.Open();
+            var module = GetModuleHandle("e_sqlite3.dll");
+            if (module == IntPtr.Zero) throw new InvalidOperationException("SQLite native module not found.");
+            var path = new StringBuilder(32768);
+            if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
+                throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
+            File.WriteAllText(args[1], path.ToString());
+            if (args[2] == "wait") await Task.Delay(Timeout.InfiniteTimeSpan);
+            return 0;
+        }
         if (args.Length == 3 && args[0] == "--job-owner-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
