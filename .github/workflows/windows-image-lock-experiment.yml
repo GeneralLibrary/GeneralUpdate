@@ -16,7 +16,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Publish Native AOT experiment peer
-        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -o native-peer
+        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -p:DefineConstants=WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT -o native-peer
       - name: Inspect static native dependencies
         shell: pwsh
         run: |

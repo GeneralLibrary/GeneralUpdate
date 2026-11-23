@@ -4,6 +4,10 @@ using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Download.Reporting;
 using Microsoft.Data.Sqlite;
+#if WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
+using GeneralUpdate.Core.Security;
+using System.Security.Cryptography;
+#endif
 
 namespace ReportWorker;
 
@@ -13,6 +17,18 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+#if WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
+        if (args.Length == 5 && args[0] == "--snapshot-owner-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            var image = new WindowsSnapshotFile(args[2], SHA256.HashData(File.ReadAllBytes(args[2])));
+            var dll = new WindowsSnapshotFile(args[3], SHA256.HashData(File.ReadAllBytes(args[3])));
+            await using var lease = WindowsNativeLaunchLease.Start(true, args[1], image, new[] { dll },
+                new[] { "--snapshot-probe", args[4], "wait" });
+            await Console.In.ReadLineAsync();
+            return 0;
+        }
+#endif
         if (args.Length == 3 && args[0] == "--snapshot-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
@@ -25,7 +41,8 @@ internal static class Program
             var path = new StringBuilder(32768);
             if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
                 throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
-            File.WriteAllText(args[1], path.ToString());
+            File.WriteAllLines(args[1] + ".tmp", new[] { path.ToString(), Environment.ProcessId.ToString() });
+            File.Move(args[1] + ".tmp", args[1]);
             if (args[2] == "wait") await Task.Delay(Timeout.InfiniteTimeSpan);
             return 0;
         }

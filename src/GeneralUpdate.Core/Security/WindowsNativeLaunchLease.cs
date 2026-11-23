@@ -1,6 +1,7 @@
 // The experiment does not yet verify the Windows system dependency closure.
 #if NET8_0_OR_GREATER && WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ namespace GeneralUpdate.Core.Security;
 /// </summary>
 public sealed class WindowsNativeLaunchLease : IAsyncDisposable
 {
+    private static readonly HashSet<WindowsNativeLaunchLease> Active = new();
     private readonly SafeFileHandle _job;
     private readonly SafeFileHandle _process;
     private readonly WindowsImageSnapshotLease _snapshot;
@@ -111,6 +113,7 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
                             snapshot.DirectoryPath, ref startup, out var process))
                         throw new Win32Exception(Marshal.GetLastWin32Error());
                     var resumed = false;
+                    WindowsNativeLaunchLease? result = null;
                     using var thread = new SafeFileHandle(process.Thread, true);
                     var processHandle = new SafeFileHandle(process.Process, true);
                     try
@@ -119,10 +122,11 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
                             throw new Win32Exception(Marshal.GetLastWin32Error());
                         if (!assigned) throw new InvalidOperationException("The created process is not in the job.");
                         cancellationToken.ThrowIfCancellationRequested();
+                        result = new WindowsNativeLaunchLease(job, processHandle, snapshot);
+                        lock (Active) Active.Add(result);
                         if (ResumeThread(thread) == uint.MaxValue)
                             throw new Win32Exception(Marshal.GetLastWin32Error());
                         resumed = true;
-                        var result = new WindowsNativeLaunchLease(job, processHandle, snapshot);
                         job = null;
                         return result;
                     }
@@ -130,6 +134,8 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
                     {
                         if (!resumed)
                         {
+                            if (result != null)
+                                lock (Active) Active.Remove(result);
                             if (!TerminateProcess(processHandle, 1))
                                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to terminate the suspended process.");
                             if (WaitForSingleObject(processHandle, uint.MaxValue) != 0)
@@ -229,6 +235,7 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
             _process.Dispose();
             _snapshot.Dispose();
             _disposed = true;
+            lock (Active) Active.Remove(this);
         }
         finally { _disposeLock.Release(); }
     }

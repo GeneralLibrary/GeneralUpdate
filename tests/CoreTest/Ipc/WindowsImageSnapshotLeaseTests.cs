@@ -135,7 +135,7 @@ public sealed class WindowsImageSnapshotLeaseTests
             {
                 for (var i = 0; i < 200 && !File.Exists(marker); i++) await Task.Delay(50);
                 Assert.True(File.Exists(marker), "Native AOT peer did not load SQLite and create the marker.");
-                Assert.Equal(Path.Combine(lease.SnapshotDirectory, "e_sqlite3.dll"), File.ReadAllText(marker), ignoreCase: true);
+                Assert.Equal(Path.Combine(lease.SnapshotDirectory, "e_sqlite3.dll"), File.ReadAllLines(marker)[0], ignoreCase: true);
             }
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lease.WaitForExitAsync(timeout.Token));
@@ -158,6 +158,79 @@ public sealed class WindowsImageSnapshotLeaseTests
             Array.Empty<WindowsSnapshotFile>(), new[] { "/c", "exit 1" });
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         Assert.Equal(1u, await lease.WaitForExitAsync(timeout.Token));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SnapshotJobStopsChildOnOwnerExit(bool killOwner)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER")
+            ?? throw new InvalidOperationException("The Native AOT experiment peer is required.");
+        using var fixture = new Fixture();
+        File.Copy(native, fixture.Image, overwrite: true);
+        var sqlite = Path.Combine(fixture.Root, "e_sqlite3.dll");
+        File.Copy(Path.Combine(Path.GetDirectoryName(native)!, "e_sqlite3.dll"), sqlite);
+        var marker = Path.Combine(fixture.Root, "child.txt");
+        var start = new ProcessStartInfo(native)
+        {
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardError = true, CreateNoWindow = true
+        };
+        foreach (var argument in new[] { "--snapshot-owner-probe", fixture.Staging, fixture.Image, sqlite, marker })
+            start.ArgumentList.Add(argument);
+        using var owner = Process.Start(start) ?? throw new InvalidOperationException("Could not start the owner.");
+        var errors = owner.StandardError.ReadToEndAsync();
+        Process? child = null;
+        try
+        {
+            for (var i = 0; i < 600 && !File.Exists(marker) && !owner.HasExited; i++) await Task.Delay(50);
+            Assert.True(File.Exists(marker), owner.HasExited ? await errors : "Child did not start.");
+            var lines = File.ReadAllLines(marker);
+            child = Process.GetProcessById(int.Parse(lines[1]));
+            Assert.False(child.HasExited);
+            if (killOwner) owner.Kill();
+            else await owner.StandardInput.WriteLineAsync("release");
+            await owner.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            if (!killOwner) Assert.True(owner.ExitCode == 0, await errors);
+            await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        finally
+        {
+            if (!owner.HasExited) owner.Kill();
+            await owner.WaitForExitAsync();
+            if (child != null)
+            {
+                if (!child.HasExited) child.Kill();
+                await child.WaitForExitAsync();
+                child.Dispose();
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SnapshotLaunchInheritsNoUnlistedHandles()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER")
+            ?? throw new InvalidOperationException("The Native AOT experiment peer is required.");
+        using var fixture = new Fixture();
+        File.Copy(native, fixture.Image, overwrite: true);
+        var marker = Path.Combine(fixture.Root, "inherited.txt");
+        var attributes = new SecurityAttributes { Length = Marshal.SizeOf<SecurityAttributes>(), InheritHandle = true };
+        using var first = CreateInheritableFile(fixture.Dependency, 0x80000000, 7, ref attributes, 3, 0x80, IntPtr.Zero);
+        using var second = CreateInheritableFile(fixture.Dependency, 0x80000000, 7, ref attributes, 3, 0x80, IntPtr.Zero);
+        if (first.IsInvalid || second.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        await using var lease = WindowsNativeLaunchLease.Start(true, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), new[] { "--handle-list-probe",
+                first.DangerousGetHandle().ToInt64().ToString(),
+                second.DangerousGetHandle().ToInt64().ToString(), marker });
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        Assert.Equal(0u, await lease.WaitForExitAsync(timeout.Token));
+        var lines = File.ReadAllLines(marker);
+        Assert.Equal(2, lines.Length);
+        Assert.DoesNotContain(lines, path => path.EndsWith(fixture.Dependency, StringComparison.OrdinalIgnoreCase));
     }
 
     [SupportedOSPlatform("windows")]
@@ -201,5 +274,16 @@ public sealed class WindowsImageSnapshotLeaseTests
 
     [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(string path, uint access, uint share, IntPtr security,
+        uint creation, uint flags, IntPtr template);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SecurityAttributes
+    {
+        public int Length;
+        public IntPtr SecurityDescriptor;
+        [MarshalAs(UnmanagedType.Bool)] public bool InheritHandle;
+    }
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateInheritableFile(string path, uint access, uint share, ref SecurityAttributes security,
         uint creation, uint flags, IntPtr template);
 }
