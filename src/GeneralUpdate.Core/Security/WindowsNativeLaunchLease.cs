@@ -36,6 +36,24 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
     public string SnapshotDirectory => _snapshot.DirectoryPath;
 
     /// <summary>
+    /// Returns an independently owned handle to this exact process, limited to
+    /// query and synchronization. The caller must dispose the returned handle.
+    /// </summary>
+    public SafeProcessHandle DuplicateProcessHandle()
+    {
+        _disposeLock.Wait();
+        try
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(WindowsNativeLaunchLease));
+            var current = GetCurrentProcess();
+            if (!DuplicateHandle(current, _process, current, out var duplicate, 0x00101000, false, 0))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            return duplicate;
+        }
+        finally { _disposeLock.Release(); }
+    }
+
+    /// <summary>
     /// Starts a host-authorized, cooperative Windows Native AOT peer. The hash identifies
     /// the peer and its trusted entry-point contract; this method does not inspect its code.
     /// The peer must limit DLL loading to its authorized snapshot and Windows system
@@ -326,5 +344,11 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetExitCodeProcess(SafeFileHandle process, out uint exitCode);
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DuplicateHandle(IntPtr sourceProcess, SafeFileHandle source, IntPtr targetProcess,
+        out SafeProcessHandle target, uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint options);
 }
 #endif

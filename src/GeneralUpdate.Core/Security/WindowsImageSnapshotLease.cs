@@ -259,7 +259,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
     [SupportedOSPlatform("windows")]
     private static SafeFileHandle OpenPath(string path, bool directory, bool root)
     {
-        var handle = CreateFile(path, 0x80000000, root ? 7u : 1u, IntPtr.Zero, 3,
+        var handle = CreateFile(path, 0x80000000, root ? 7u : directory ? 3u : 1u, IntPtr.Zero, 3,
             0x00200000 | (directory ? 0x02000000u : 0u), IntPtr.Zero);
         if (!handle.IsInvalid) return handle;
         var error = Marshal.GetLastWin32Error();

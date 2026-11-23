@@ -43,8 +43,8 @@ internal static class Program
                 var path = new StringBuilder(32768);
                 if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
                     throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
-                File.WriteAllLines(args[1] + ".tmp", new[] { path.ToString(), Environment.ProcessId.ToString() });
-                File.Move(args[1] + ".tmp", args[1]);
+                File.WriteAllLines(args[1], new[] { path.ToString(), Environment.ProcessId.ToString() });
+                File.WriteAllText(args[1] + ".ready", "ready");
                 if (args[2] == "wait") await Task.Delay(Timeout.InfiniteTimeSpan);
                 return 0;
             }

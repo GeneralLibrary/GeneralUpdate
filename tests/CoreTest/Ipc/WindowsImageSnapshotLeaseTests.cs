@@ -53,6 +53,19 @@ public sealed class WindowsImageSnapshotLeaseTests
     }
 
     [Fact]
+    public void DeploymentCanReplaceSourceWhileSnapshotRemainsFixed()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        using var lease = fixture.Create();
+        var replacement = fixture.Image + ".new";
+        File.WriteAllText(replacement, "new deployment");
+        File.Move(replacement, fixture.Image, overwrite: true);
+        Assert.Equal("new deployment", File.ReadAllText(fixture.Image));
+        Assert.Equal("image bytes", File.ReadAllText(lease.ImagePath));
+    }
+
+    [Fact]
     public void UnexpectedChildIsNotRecursivelyDeleted()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -156,10 +169,13 @@ public sealed class WindowsImageSnapshotLeaseTests
         var lease = WindowsNativeLaunchLease.Start(true, fixture.Staging, image, dependencies, arguments);
         await using (lease)
         {
+            using var process = lease.DuplicateProcessHandle();
+            Assert.False(TerminateProcess(process, 123));
+            Assert.Equal(5, Marshal.GetLastWin32Error());
             if (native != null)
             {
-                for (var i = 0; i < 200 && !File.Exists(marker) && !File.Exists(marker + ".error"); i++) await Task.Delay(50);
-                Assert.True(File.Exists(marker), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") : "Native AOT peer did not load SQLite and create the marker.");
+                for (var i = 0; i < 200 && !File.Exists(marker + ".ready") && !File.Exists(marker + ".error"); i++) await Task.Delay(50);
+                Assert.True(File.Exists(marker + ".ready"), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") : "Native AOT peer did not load SQLite and create the marker.");
                 Assert.Equal(Path.Combine(lease.SnapshotDirectory, "e_sqlite3.dll"), File.ReadAllLines(marker)[0], ignoreCase: true);
             }
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -209,8 +225,8 @@ public sealed class WindowsImageSnapshotLeaseTests
         Process? child = null;
         try
         {
-            for (var i = 0; i < 600 && !File.Exists(marker) && !File.Exists(marker + ".error") && !owner.HasExited; i++) await Task.Delay(50);
-            Assert.True(File.Exists(marker), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") :
+            for (var i = 0; i < 600 && !File.Exists(marker + ".ready") && !File.Exists(marker + ".error") && !owner.HasExited; i++) await Task.Delay(50);
+            Assert.True(File.Exists(marker + ".ready"), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") :
                 owner.HasExited ? await errors : "Child did not start.");
             var lines = File.ReadAllLines(marker);
             child = Process.GetProcessById(int.Parse(lines[1]));
@@ -312,4 +328,7 @@ public sealed class WindowsImageSnapshotLeaseTests
     [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateInheritableFile(string path, uint access, uint share, ref SecurityAttributes security,
         uint creation, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool TerminateProcess(SafeProcessHandle process, uint exitCode);
 }
