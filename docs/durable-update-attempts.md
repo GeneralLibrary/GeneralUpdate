@@ -93,6 +93,11 @@ points and non-portable or colliding path names. These path-based checks do not
 use OS-specific no-follow handles and cannot exclude a concurrent non-cooperating
 writer swapping entries between enumeration, opening, hashing, and use. The
 verification-to-apply interval is also not protected by an OS write fence.
+On Unix, `FileAttributes` does not prove that a non-directory entry is a
+regular file; opening a FIFO or device can block or have side effects. Durable
+mode must not be enabled on an installation containing such entries, and a
+future platform-specific no-follow, nonblocking regular-file check is required
+before this path is safe for untrusted filesystem contents.
 Hashes are integrity comparisons, not a fencing mechanism, signature, or
 authorization proof; they do not prevent same-permission writers from changing
 both files and unauthenticated metadata. The installing application should be
