@@ -74,6 +74,7 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
     /// </summary>
     public static WindowsNativeLaunchLease Start(WindowsNativeLaunchProfile profile, string snapshotParent,
         WindowsSnapshotFile image, System.Collections.Generic.IReadOnlyList<WindowsSnapshotFile> dependencies,
+        System.Collections.Generic.IReadOnlyList<string> applicationModules,
         System.Collections.Generic.IReadOnlyList<string> systemModules,
         System.Collections.Generic.IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
@@ -83,6 +84,7 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
         if (profile != WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot)
             throw new InvalidOperationException("The trusted Windows system and cooperative Native AOT profile is not enabled.");
         if (dependencies == null) throw new ArgumentNullException(nameof(dependencies));
+        if (applicationModules == null) throw new ArgumentNullException(nameof(applicationModules));
         if (systemModules == null) throw new ArgumentNullException(nameof(systemModules));
         if (arguments == null) throw new ArgumentNullException(nameof(arguments));
         var argumentCopy = new string[arguments.Count];
@@ -94,6 +96,7 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
         var dependencyCopy = new WindowsSnapshotFile[dependencies.Count];
         for (var i = 0; i < dependencyCopy.Length; i++)
             dependencyCopy[i] = dependencies[i] ?? throw new ArgumentException("Dependencies must not contain null values.", nameof(dependencies));
+        WindowsNativeImportPolicy.ValidateManifest(dependencyCopy, applicationModules, systemCopy);
         return StartWindows(snapshotParent, image, dependencyCopy, systemCopy, argumentCopy, cancellationToken);
     }
 
@@ -183,11 +186,15 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
                         {
                             if (result != null)
                                 lock (Active) Active.Remove(result);
-                            if (!TerminateProcess(processHandle, 1))
-                                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to terminate the suspended process.");
-                            if (WaitForSingleObject(processHandle, uint.MaxValue) != 0)
-                                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to wait for the suspended process.");
-                            processHandle.Dispose();
+                            try
+                            {
+                                TerminateProcess(processHandle, 1);
+                                job?.Dispose();
+                                job = null;
+                                if (WaitForSingleObject(processHandle, uint.MaxValue) != 0)
+                                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to wait for the suspended process.");
+                            }
+                            finally { processHandle.Dispose(); }
                         }
                     }
                 }

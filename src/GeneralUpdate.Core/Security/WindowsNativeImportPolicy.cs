@@ -10,6 +10,24 @@ namespace GeneralUpdate.Core.Security;
 
 internal static class WindowsNativeImportPolicy
 {
+    internal static void ValidateManifest(IReadOnlyList<WindowsSnapshotFile> dependencies,
+        IReadOnlyList<string> applicationModules, IReadOnlyList<string> systemModules)
+    {
+        var application = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in applicationModules)
+            if (!IsModuleName(name) || !application.Add(name))
+                throw new ArgumentException("Application module names must be distinct DLL names.", nameof(applicationModules));
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var dependency in dependencies)
+            if (!files.Add(Path.GetFileName(dependency.SourcePath)))
+                throw new ArgumentException("Application dependency file names must be distinct.", nameof(dependencies));
+        if (!files.SetEquals(application))
+            throw new ArgumentException("Every application module must have exactly one authorized dependency file.", nameof(dependencies));
+        foreach (var name in systemModules)
+            if (application.Contains(name))
+                throw new ArgumentException("An application module cannot be classified as a system module.", nameof(systemModules));
+    }
+
     internal static void Validate(string directory, IReadOnlyList<WindowsSnapshotFile> files,
         IReadOnlyList<string> systemModules)
     {

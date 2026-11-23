@@ -2,15 +2,26 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using GeneralUpdate.Core.Security;
+using Microsoft.Win32.SafeHandles;
 using Microsoft.Data.Sqlite;
 
+if (args.Length == 3 && args[0] == "--hold-file-probe")
+{
+    using var file = Native.CreateFile(args[1], args[2] == "write" ? 0x40000000u : 0x00010000u,
+        7, IntPtr.Zero, 3, 0x80, IntPtr.Zero);
+    if (file.IsInvalid) throw new InvalidOperationException($"CreateFile failed: {Marshal.GetLastWin32Error()}");
+    Console.WriteLine("ready");
+    await Console.Out.FlushAsync();
+    await Console.In.ReadLineAsync();
+    return 0;
+}
 if (args.Length >= 5 && args[0] == "--snapshot-owner-probe")
 {
     var image = new WindowsSnapshotFile(args[2], SHA256.HashData(File.ReadAllBytes(args[2])));
     var dll = new WindowsSnapshotFile(args[3], SHA256.HashData(File.ReadAllBytes(args[3])));
     await using var lease = WindowsNativeLaunchLease.Start(
         WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
-        args[1], image, new[] { dll }, args.Skip(5).ToArray(), new[] { "--snapshot-probe", args[4], "wait" });
+        args[1], image, new[] { dll }, new[] { "e_sqlite3.dll" }, args.Skip(5).ToArray(), new[] { "--snapshot-probe", args[4], "wait" });
     await Console.In.ReadLineAsync();
     return 0;
 }
@@ -94,4 +105,7 @@ internal static class Native
     internal static extern bool SetDefaultDllDirectories(uint flags);
     [DllImport("kernel32.dll", EntryPoint = "LoadLibraryExW", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern SafeFileHandle CreateFile(string path, uint access, uint share, IntPtr security,
+        uint creation, uint flags, IntPtr template);
 }
