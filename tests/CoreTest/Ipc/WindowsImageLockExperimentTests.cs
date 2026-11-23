@@ -26,6 +26,226 @@ public sealed class WindowsImageLockExperimentTests(ITestOutputHelper output)
         await RunWindowsExperiment();
     }
 
+    [Fact]
+    public async Task DirectorySharingDoesNotFreezeAclOrContents()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        await RunDirectorySharingCounterexample();
+    }
+
+    [Theory]
+    [InlineData(2u)]
+    [InlineData(65536u)]
+    public async Task PreviouslyOpenedWriteOrDeleteHandlePreventsImageLease(uint access)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        await RunExistingHandleExperiment(access);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static async Task RunExistingHandleExperiment(uint access)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "gu-existing-handle-" + Guid.NewGuid().ToString("N"));
+        var identity = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The current user has no SID.");
+        var security = new DirectorySecurity();
+        security.SetOwner(identity);
+        security.SetAccessRuleProtection(true, false);
+        security.AddAccessRule(new FileSystemAccessRule(identity, FileSystemRights.FullControl,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None, AccessControlType.Allow));
+        new DirectoryInfo(root).Create(security);
+
+        try
+        {
+            var file = Path.Combine(root, "image.bin");
+            File.WriteAllText(file, "probe");
+            var script = """
+                         $ErrorActionPreference = 'Stop'
+                         Add-Type @'
+                         using System;
+                         using System.Runtime.InteropServices;
+                         using Microsoft.Win32.SafeHandles;
+                         public static class ExistingHandleProbe {
+                             [DllImport("kernel32.dll", EntryPoint="CreateFileW", CharSet=CharSet.Unicode, SetLastError=true)]
+                             public static extern SafeFileHandle Open(string path, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+                         }
+                         '@
+                         $handle = [ExistingHandleProbe]::Open($args[0], [uint32]$args[1], 7, [IntPtr]::Zero, 3, 0x80, [IntPtr]::Zero)
+                         if ($handle.IsInvalid) { throw "Open failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+                         try {
+                             [Console]::WriteLine('ready')
+                             [Console]::Out.Flush()
+                             if ([Console]::ReadLine() -ne 'close') { throw 'Unexpected input' }
+                         } finally { $handle.Dispose() }
+                         """;
+            var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(
+                "& { " + script + " } '" + file.Replace("'", "''") + "' '" + access + "'"));
+            var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))
+            {
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-NonInteractive");
+            start.ArgumentList.Add("-EncodedCommand");
+            start.ArgumentList.Add(encoded);
+            using var worker = Process.Start(start) ?? throw new InvalidOperationException("Sharing probe did not start.");
+            var errors = worker.StandardError.ReadToEndAsync();
+            try
+            {
+                Assert.Equal("ready", await worker.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)));
+                var exception = Assert.Throws<Win32Exception>(() => OpenLocked(file, directory: false));
+                Assert.Equal(32, exception.NativeErrorCode);
+                await worker.StandardInput.WriteLineAsync("close");
+                await worker.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.True(worker.ExitCode == 0, await errors);
+                using var lease = OpenLocked(file, directory: false);
+            }
+            finally
+            {
+                if (!worker.HasExited) worker.Kill(entireProcessTree: true);
+                await worker.WaitForExitAsync();
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static async Task RunDirectorySharingCounterexample()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "gu-directory-sharing-" + Guid.NewGuid().ToString("N"));
+        var identity = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("The current user has no SID.");
+        var security = new DirectorySecurity();
+        security.SetOwner(identity);
+        security.SetAccessRuleProtection(true, false);
+        security.AddAccessRule(new FileSystemAccessRule(identity, FileSystemRights.FullControl,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None, AccessControlType.Allow));
+        new DirectoryInfo(root).Create(security);
+
+        try
+        {
+            var directory = Path.Combine(root, "image");
+            new DirectoryInfo(directory).Create(security);
+            var snapshot = Path.Combine(directory, "snapshot");
+            new DirectoryInfo(snapshot).Create(security);
+            var inheritedControl = Path.Combine(directory, "inherited");
+            Directory.CreateDirectory(inheritedControl);
+            var snapshotFile = Path.Combine(snapshot, "image.bin");
+            File.WriteAllText(snapshotFile, "probe");
+            var fileSecurity = new FileSecurity();
+            fileSecurity.SetOwner(identity);
+            fileSecurity.SetAccessRuleProtection(true, false);
+            fileSecurity.AddAccessRule(new FileSystemAccessRule(identity, FileSystemRights.FullControl, AccessControlType.Allow));
+            new FileInfo(snapshotFile).SetAccessControl(fileSecurity);
+            var before = new DirectoryInfo(directory).GetAccessControl().GetSecurityDescriptorSddlForm(
+                AccessControlSections.Access);
+            var snapshotBefore = new DirectoryInfo(snapshot).GetAccessControl().GetSecurityDescriptorSddlForm(
+                AccessControlSections.Access);
+            var fileBefore = new FileInfo(snapshotFile).GetAccessControl().GetSecurityDescriptorSddlForm(
+                AccessControlSections.Access);
+            var script = """
+                         $ErrorActionPreference = 'Stop'
+                         Add-Type @'
+                         using System;
+                         using System.Runtime.InteropServices;
+                         using Microsoft.Win32.SafeHandles;
+                         public static class DirectorySharingProbe {
+                             [DllImport("kernel32.dll", EntryPoint="CreateFileW", CharSet=CharSet.Unicode, SetLastError=true)]
+                             public static extern SafeFileHandle Open(string path, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+                             [DllImport("advapi32.dll", EntryPoint="ConvertStringSecurityDescriptorToSecurityDescriptorW", CharSet=CharSet.Unicode, SetLastError=true)]
+                             public static extern bool Convert(string sddl, uint revision, out IntPtr descriptor, out uint size);
+                             [DllImport("advapi32.dll", SetLastError=true)]
+                             public static extern bool GetSecurityDescriptorDacl(IntPtr descriptor, out bool present, out IntPtr dacl, out bool defaulted);
+                             [DllImport("advapi32.dll")]
+                             public static extern uint SetSecurityInfo(SafeFileHandle handle, int type, uint information, IntPtr owner, IntPtr group, IntPtr dacl, IntPtr sacl);
+                             [DllImport("kernel32.dll")]
+                             public static extern IntPtr LocalFree(IntPtr pointer);
+                         }
+                         '@
+                         $handle = [DirectorySharingProbe]::Open($args[0], 393216, 7, [IntPtr]::Zero, 3, 0x02000000, [IntPtr]::Zero)
+                         if ($handle.IsInvalid) { throw "WRITE_DAC open failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+                         $descriptor = [IntPtr]::Zero
+                         $size = [uint32]0
+                         try {
+                             $sddl = 'D:P(A;OICI;FA;;;' + $args[1] + ')(A;OICI;FR;;;BU)'
+                             if (-not [DirectorySharingProbe]::Convert($sddl, 1, [ref]$descriptor, [ref]$size)) {
+                                 throw "Security descriptor conversion failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+                             }
+                             $present = $false
+                             $defaulted = $false
+                             $dacl = [IntPtr]::Zero
+                             if (-not [DirectorySharingProbe]::GetSecurityDescriptorDacl($descriptor, [ref]$present, [ref]$dacl, [ref]$defaulted)) {
+                                 throw "GetSecurityDescriptorDacl failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+                             }
+                             [Console]::WriteLine('ready')
+                             [Console]::Out.Flush()
+                             if ([Console]::ReadLine() -ne 'continue') { throw 'Unexpected input' }
+                             $status = [DirectorySharingProbe]::SetSecurityInfo($handle, 1, 4, [IntPtr]::Zero, [IntPtr]::Zero, $dacl, [IntPtr]::Zero)
+                             if ($status -ne 0) { throw "SetSecurityInfo failed: $status" }
+                             [IO.File]::WriteAllText([IO.Path]::Combine($args[0], 'created.txt'), 'probe')
+                             [Console]::WriteLine('changed-and-created')
+                         } finally {
+                             if ($descriptor -ne [IntPtr]::Zero) { [void][DirectorySharingProbe]::LocalFree($descriptor) }
+                             $handle.Dispose()
+                         }
+                         """;
+            var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(
+                "& { " + script + " } '" + directory.Replace("'", "''") + "' '" + identity.Value + "'"));
+            var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))
+            {
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-NonInteractive");
+            start.ArgumentList.Add("-EncodedCommand");
+            start.ArgumentList.Add(encoded);
+            using var worker = Process.Start(start) ?? throw new InvalidOperationException("Sharing probe did not start.");
+            var errors = worker.StandardError.ReadToEndAsync();
+            try
+            {
+                Assert.Equal("ready", await worker.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)));
+                using var lease = OpenLocked(directory, directory: true);
+                await worker.StandardInput.WriteLineAsync("continue");
+                Assert.Equal("changed-and-created", await worker.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)));
+                await worker.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.True(worker.ExitCode == 0, await errors);
+                var after = new DirectoryInfo(directory).GetAccessControl().GetSecurityDescriptorSddlForm(
+                    AccessControlSections.Access);
+                Assert.NotEqual(before, after);
+                Assert.True(File.Exists(Path.Combine(directory, "created.txt")));
+                Assert.Equal(snapshotBefore, new DirectoryInfo(snapshot).GetAccessControl().GetSecurityDescriptorSddlForm(
+                    AccessControlSections.Access));
+                Assert.Equal(fileBefore, new FileInfo(snapshotFile).GetAccessControl().GetSecurityDescriptorSddlForm(
+                    AccessControlSections.Access));
+                Assert.Contains(new DirectoryInfo(inheritedControl).GetAccessControl()
+                        .GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>(),
+                    rule => rule.IdentityReference.Equals(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null)));
+            }
+            finally
+            {
+                if (!worker.HasExited) worker.Kill(entireProcessTree: true);
+                await worker.WaitForExitAsync();
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
     [SupportedOSPlatform("windows")]
     private async Task RunWindowsExperiment()
     {

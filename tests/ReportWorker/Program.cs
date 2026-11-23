@@ -1,4 +1,6 @@
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Download.Reporting;
 
@@ -10,6 +12,12 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 4 && args[0] == "--handle-list-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            File.WriteAllLines(args[3], new[] { HandlePath(args[1]), HandlePath(args[2]) });
+            return 0;
+        }
         if (args.Length == 1 && args[0] == "--image-lock-peer")
         {
             Console.WriteLine("ready");
@@ -30,6 +38,16 @@ internal static class Program
         }
         return 0;
     }
+
+    private static string HandlePath(string value)
+    {
+        var path = new StringBuilder(32768);
+        var length = GetFinalPathNameByHandle(new IntPtr(long.Parse(value)), path, (uint)path.Capacity, 0);
+        return length == 0 ? "" : path.ToString();
+    }
+
+    [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFinalPathNameByHandle(IntPtr handle, StringBuilder path, uint size, uint flags);
 
     private sealed class Handler(string mode) : HttpMessageHandler
     {
