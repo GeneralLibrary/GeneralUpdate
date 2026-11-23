@@ -233,9 +233,12 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
             }
             _job.Dispose();
             _process.Dispose();
-            _snapshot.Dispose();
-            _disposed = true;
-            lock (Active) Active.Remove(this);
+            try { _snapshot.Dispose(); }
+            finally
+            {
+                _disposed = true;
+                lock (Active) Active.Remove(this);
+            }
         }
         finally { _disposeLock.Release(); }
     }

@@ -41,6 +41,31 @@ public sealed class WindowsImageSnapshotLeaseTests
     }
 
     [Fact]
+    public void DisposalDeletesTheHeldSnapshot()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        var lease = fixture.Create();
+        var path = lease.DirectoryPath;
+        lease.Dispose();
+        Assert.False(Directory.Exists(path));
+        lease.Dispose();
+    }
+
+    [Fact]
+    public void UnexpectedChildIsNotRecursivelyDeleted()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        var lease = fixture.Create();
+        var path = Path.Combine(lease.DirectoryPath, "unexpected.txt");
+        File.WriteAllText(path, "preserve");
+        var failure = Assert.Throws<Win32Exception>(() => lease.Dispose());
+        Assert.Equal(145, failure.NativeErrorCode);
+        Assert.Equal("preserve", File.ReadAllText(path));
+    }
+
+    [Fact]
     public void HashMismatchAndExistingWriteHandleAreRejected()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -133,8 +158,8 @@ public sealed class WindowsImageSnapshotLeaseTests
         {
             if (native != null)
             {
-                for (var i = 0; i < 200 && !File.Exists(marker); i++) await Task.Delay(50);
-                Assert.True(File.Exists(marker), "Native AOT peer did not load SQLite and create the marker.");
+                for (var i = 0; i < 200 && !File.Exists(marker) && !File.Exists(marker + ".error"); i++) await Task.Delay(50);
+                Assert.True(File.Exists(marker), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") : "Native AOT peer did not load SQLite and create the marker.");
                 Assert.Equal(Path.Combine(lease.SnapshotDirectory, "e_sqlite3.dll"), File.ReadAllLines(marker)[0], ignoreCase: true);
             }
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -184,8 +209,9 @@ public sealed class WindowsImageSnapshotLeaseTests
         Process? child = null;
         try
         {
-            for (var i = 0; i < 600 && !File.Exists(marker) && !owner.HasExited; i++) await Task.Delay(50);
-            Assert.True(File.Exists(marker), owner.HasExited ? await errors : "Child did not start.");
+            for (var i = 0; i < 600 && !File.Exists(marker) && !File.Exists(marker + ".error") && !owner.HasExited; i++) await Task.Delay(50);
+            Assert.True(File.Exists(marker), File.Exists(marker + ".error") ? File.ReadAllText(marker + ".error") :
+                owner.HasExited ? await errors : "Child did not start.");
             var lines = File.ReadAllLines(marker);
             child = Process.GetProcessById(int.Parse(lines[1]));
             Assert.False(child.HasExited);

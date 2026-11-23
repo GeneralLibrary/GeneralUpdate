@@ -36,13 +36,23 @@ public sealed class WindowsSnapshotFile
 public sealed class WindowsImageSnapshotLease : IDisposable
 {
     private readonly List<SafeFileHandle> _handles;
-    private bool _disposed;
+    private readonly SafeFileHandle _parent;
+    private readonly SafeFileHandle _directory;
+    private readonly string _directoryName;
+    private readonly List<(string Name, SafeFileHandle Handle)> _files;
+    private int _disposed;
 
-    private WindowsImageSnapshotLease(string directory, string image, List<SafeFileHandle> handles)
+    private WindowsImageSnapshotLease(string directory, string image, List<SafeFileHandle> handles,
+        SafeFileHandle parent, SafeFileHandle directoryHandle, string directoryName,
+        List<(string Name, SafeFileHandle Handle)> files)
     {
         DirectoryPath = directory;
         ImagePath = image;
         _handles = handles;
+        _parent = parent;
+        _directory = directoryHandle;
+        _directoryName = directoryName;
+        _files = files;
     }
 
     public string DirectoryPath { get; }
@@ -51,7 +61,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
     /// <summary>
     /// Creates a new protected snapshot. The feature is disabled unless explicitly enabled.
     /// The caller must separately establish a controlled launch and a trusted peer contract.
-    /// Files are left in the private directory after disposal.
+    /// Cleanup uses relative handles and verifies object identities before deletion.
     /// </summary>
     public static WindowsImageSnapshotLease Create(bool enabled, string snapshotParent,
         WindowsSnapshotFile image, IReadOnlyList<WindowsSnapshotFile> dependencies,
@@ -91,6 +101,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
         }
 
         var leases = new List<SafeFileHandle>();
+        var heldFiles = new List<(string Name, SafeFileHandle Handle)>();
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -110,7 +121,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                CopyVerifiedFile(file, snapshot, user, leases, cancellationToken);
+                CopyVerifiedFile(file, snapshot, user, leases, heldFiles, cancellationToken);
             }
             var heldDirectory = NtOpenRelative(parent, directoryName, null, directory: true, write: false, create: false, share: 3);
             try
@@ -130,7 +141,8 @@ public sealed class WindowsImageSnapshotLease : IDisposable
                 throw;
             }
             snapshot.Dispose();
-            return new WindowsImageSnapshotLease(directoryPath, Path.Combine(directoryPath, Path.GetFileName(image.SourcePath)), leases);
+            return new WindowsImageSnapshotLease(directoryPath, Path.Combine(directoryPath, Path.GetFileName(image.SourcePath)),
+                leases, parent, heldDirectory, directoryName, heldFiles);
         }
         catch
         {
@@ -141,7 +153,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
 
     [SupportedOSPlatform("windows")]
     private static void CopyVerifiedFile(WindowsSnapshotFile file, SafeFileHandle snapshot, SecurityIdentifier user,
-        List<SafeFileHandle> leases, CancellationToken cancellationToken)
+        List<SafeFileHandle> leases, List<(string Name, SafeFileHandle Handle)> heldFiles, CancellationToken cancellationToken)
     {
         var path = ValidatePath(file.SourcePath);
         var sourceLeases = new List<SafeFileHandle>();
@@ -193,6 +205,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
                 if (!CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), file.Sha256))
                     throw new InvalidDataException("The held snapshot file does not match its authorized SHA256.");
                 leases.Add(held);
+                heldFiles.Add((name, held));
             }
             catch
             {
@@ -312,7 +325,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
         NtOpenRelative(parent, name, null, directory, write: false, create: false);
 
     private static SafeFileHandle NtOpenRelative(SafeFileHandle parent, string name, byte[]? security,
-        bool directory, bool write, bool create, uint share = 1)
+        bool directory, bool write, bool create, uint share = 1, bool delete = false)
     {
         var nameBuffer = Marshal.StringToHGlobalUni(name);
         var namePointer = Marshal.AllocHGlobal(Marshal.SizeOf<UnicodeString>());
@@ -335,7 +348,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
                 Attributes = 0x40,
                 SecurityDescriptor = descriptor
             };
-            var access = directory ? (write ? 0x00120083u : 0x00120081u) : write ? 0xc0100000u : 0x80100000u;
+            var access = delete ? 0x00110080u : directory ? (write ? 0x00120083u : 0x00120081u) : write ? 0xc0100000u : 0x80100000u;
             var options = 0x00200020u | (directory ? 1u : 0x40u);
             var status = NtCreateFile(out var handle, access, ref attributes, out _, IntPtr.Zero, 0x80, share,
                 create ? 2u : 1u, options, IntPtr.Zero, 0);
@@ -354,9 +367,41 @@ public sealed class WindowsImageSnapshotLease : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        for (var i = _handles.Count - 1; i >= 0; i--) _handles[i].Dispose();
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        try
+        {
+            foreach (var file in _files)
+                DeleteVerified(_directory, file.Name, file.Handle, directory: false);
+            DeleteVerified(_parent, _directoryName, _directory, directory: true);
+        }
+        finally
+        {
+            for (var i = _handles.Count - 1; i >= 0; i--) _handles[i].Dispose();
+        }
+    }
+
+    private static void DeleteVerified(SafeFileHandle parent, string name, SafeFileHandle original, bool directory)
+    {
+        using var retained = NtOpenRelative(parent, name, null, directory, write: false, create: false, share: 7);
+        RequireSameObject(original, retained);
+        original.Dispose();
+        using var deleteHandle = NtOpenRelative(parent, name, null, directory, write: false, create: false, share: 3, delete: true);
+        RequireSameObject(retained, deleteHandle);
+        var disposition = new FileDispositionInformation { DeleteFile = true };
+        var status = NtSetInformationFile(deleteHandle, out _, ref disposition, 1, 13);
+        if (status != 0)
+        {
+            var error = (int)RtlNtStatusToDosError(status);
+            throw new Win32Exception(error, $"Unable to delete the snapshot object (NTSTATUS 0x{status:x8}, Win32 {error}).");
+        }
+    }
+
+    private static void RequireSameObject(SafeFileHandle first, SafeFileHandle second)
+    {
+        if (!GetFileInformationByHandle(first, out var a) || !GetFileInformationByHandle(second, out var b))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (a.VolumeSerialNumber != b.VolumeSerialNumber || a.FileIndexHigh != b.FileIndexHigh || a.FileIndexLow != b.FileIndexLow)
+            throw new InvalidDataException("A snapshot object changed during cleanup.");
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -371,6 +416,8 @@ public sealed class WindowsImageSnapshotLease : IDisposable
     }
     [StructLayout(LayoutKind.Sequential)]
     private struct IoStatusBlock { public IntPtr Status, Information; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FileDispositionInformation { [MarshalAs(UnmanagedType.U1)] public bool DeleteFile; }
     [StructLayout(LayoutKind.Sequential)]
     private struct FileInformation
     {
@@ -395,6 +442,9 @@ public sealed class WindowsImageSnapshotLease : IDisposable
     private static extern int NtCreateFile(out SafeFileHandle handle, uint access, ref ObjectAttributes attributes,
         out IoStatusBlock status, IntPtr allocationSize, uint fileAttributes, uint share, uint disposition,
         uint options, IntPtr extendedAttributes, uint extendedAttributesLength);
+    [DllImport("ntdll.dll")]
+    private static extern int NtSetInformationFile(SafeFileHandle handle, out IoStatusBlock status,
+        ref FileDispositionInformation information, uint length, int informationClass);
     [DllImport("ntdll.dll")]
     private static extern uint RtlNtStatusToDosError(int status);
 }

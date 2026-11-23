@@ -31,20 +31,28 @@ internal static class Program
 #endif
         if (args.Length == 3 && args[0] == "--snapshot-probe")
         {
-            if (!OperatingSystem.IsWindows()) return 3;
-            if (!SetDefaultDllDirectories(0x00000200 | 0x00000800))
-                throw new InvalidOperationException($"SetDefaultDllDirectories failed: {Marshal.GetLastWin32Error()}");
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
-            var module = GetModuleHandle("e_sqlite3.dll");
-            if (module == IntPtr.Zero) throw new InvalidOperationException("SQLite native module not found.");
-            var path = new StringBuilder(32768);
-            if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
-                throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
-            File.WriteAllLines(args[1] + ".tmp", new[] { path.ToString(), Environment.ProcessId.ToString() });
-            File.Move(args[1] + ".tmp", args[1]);
-            if (args[2] == "wait") await Task.Delay(Timeout.InfiniteTimeSpan);
-            return 0;
+            try
+            {
+                if (!OperatingSystem.IsWindows()) return 3;
+                if (!SetDefaultDllDirectories(0x00000200 | 0x00000800))
+                    throw new InvalidOperationException($"SetDefaultDllDirectories failed: {Marshal.GetLastWin32Error()}");
+                using var connection = new SqliteConnection("Data Source=:memory:");
+                connection.Open();
+                var module = GetModuleHandle("e_sqlite3.dll");
+                if (module == IntPtr.Zero) throw new InvalidOperationException("SQLite native module not found.");
+                var path = new StringBuilder(32768);
+                if (GetModuleFileName(module, path, (uint)path.Capacity) == 0)
+                    throw new InvalidOperationException($"GetModuleFileName failed: {Marshal.GetLastWin32Error()}");
+                File.WriteAllLines(args[1] + ".tmp", new[] { path.ToString(), Environment.ProcessId.ToString() });
+                File.Move(args[1] + ".tmp", args[1]);
+                if (args[2] == "wait") await Task.Delay(Timeout.InfiniteTimeSpan);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(args[1] + ".error", ex.ToString());
+                return 91;
+            }
         }
         if (args.Length == 3 && args[0] == "--job-owner-probe")
         {
