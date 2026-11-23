@@ -7,6 +7,32 @@ using GeneralUpdate.Core.Strategy;
 using System.Diagnostics;
 using System.Reflection;
 
+if (args.Length == 3 && args[0] == "attempt-apply-ordered")
+{
+    var bootstrap = new GeneralUpdateBootstrap();
+    var context = (UpdateContext)typeof(GeneralUpdateBootstrap)
+        .GetField("_configInfo", BindingFlags.Instance | BindingFlags.NonPublic)!
+        .GetValue(bootstrap)!;
+    context.LaunchClientAfterUpdate = false;
+    using var client = new HttpClient();
+    var strategy = new UpdateStrategy
+    {
+        Reporter = new OrderedUpdateReporter(args[1], client, args[2], "test-tenant/database", true)
+    };
+    strategy.Create(context);
+    await strategy.ExecuteAsync();
+    Console.WriteLine("applied");
+    return;
+}
+
+if (args.Length == 3 && args[0] == "attempt-replay-ordered")
+{
+    using var client = new HttpClient();
+    await new OrderedUpdateReporter(args[1], client, args[2], "test-tenant/database", true).ReplayAsync();
+    Console.WriteLine("replayed");
+    return;
+}
+
 if (args.Length == 1 && args[0] == "attempt-contract")
 {
     try

@@ -40,6 +40,8 @@ reopens the journal record to validate the exact bound snapshot. This detects a
 lost contract only when the child is running a consumer that implements this
 marker. An older or unrelated executable can ignore it; there is no version
 handshake proving which consumer was launched.
+Such an updater may independently report `Success`; suppression is only
+enforced by the participating new Core code, not by the environment marker.
 
 The existing IPC file is not an authenticated identity channel. Its fixed
 AES-CBC key and IV are derived from public implementation constants, and the
@@ -47,6 +49,9 @@ contract has no authentication tag or durable consumption nonce. Deleting the
 file after reading does not prevent a writer from replaying a contract for an
 active attempt. The required-attempt environment marker checks consistency in
 the current consumer, not sender authorization.
+The default file is `%TEMP%/GeneralUpdate/ipc/process_info.enc` on Windows.
+It serializes the configured application secret and authentication credentials;
+the fixed-key encryption does not protect them from a local reader.
 
 `ReportType` and package `RecordId` values travel in the contract, but the
 journal does not bind them to an authorized tenant or record identity. There
@@ -120,3 +125,11 @@ must establish a versioned required-attempt handshake, consume the attempt
 contract, keep `AutoRollback=false` until a single real recovery owner is
 implemented and fenced, and report health only after application-owned
 readiness confirmation.
+
+The ordered-report outbox is not automatically installed in either process.
+Its `ReplayAsync` must be explicitly invoked by a cooperating host at startup
+and after connectivity returns. A committed event is not proof of delivery;
+if replay fails after enqueue, replay the queue rather than enqueueing the same
+report again. Connecting that lifecycle, verifying the updater before handoff,
+and establishing a single authorized writer and recovery owner are separate
+unfinished work. No automatic recovery or global filesystem fence is enabled.
