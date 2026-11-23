@@ -435,6 +435,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 ReportType = processInfo.ReportType,
                 DurableUpdateAttemptId = processInfo.DurableUpdateAttemptId,
                 AttemptJournalDirectory = processInfo.AttemptJournalDirectory,
+                SnapshotManifestHash = processInfo.SnapshotManifestHash,
                 DisableLegacyRollback = processInfo.DisableLegacyRollback,
                 Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
                 Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
@@ -447,8 +448,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                     throw new InvalidDataException("The update process contract contains an empty durable attempt ID.");
                 var expectedJournal = DurableUpdateAttemptStore.GetDirectory(processInfo.InstallPath);
                 if (string.IsNullOrWhiteSpace(processInfo.AttemptJournalDirectory) ||
-                    !string.Equals(Path.GetFullPath(processInfo.AttemptJournalDirectory), expectedJournal,
-                        StringComparison.OrdinalIgnoreCase))
+                    !DurableUpdateAttemptStore.PathsEqual(processInfo.AttemptJournalDirectory, expectedJournal))
                     throw new InvalidDataException("The update process contract has a mismatched attempt journal directory.");
                 if (!processInfo.DisableLegacyRollback)
                     throw new InvalidDataException("A durable update attempt must disable the legacy Core rollback path.");
@@ -458,10 +458,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                     .GetAttempt(processInfo.DurableUpdateAttemptId.Value);
                 if (attempt.Status != DurableUpdateAttemptStatus.SnapshotBound ||
                     string.IsNullOrWhiteSpace(attempt.SnapshotPath) ||
-                    !string.Equals(Path.GetFullPath(attempt.SnapshotPath), Path.GetFullPath(processInfo.BackupDirectory),
-                        StringComparison.OrdinalIgnoreCase) ||
+                    !DurableUpdateAttemptStore.PathsEqual(attempt.SnapshotPath, processInfo.BackupDirectory) ||
                     !Directory.Exists(attempt.SnapshotPath))
                     throw new InvalidDataException("The update process contract does not match the journal's bound snapshot.");
+                if (string.IsNullOrWhiteSpace(processInfo.SnapshotManifestHash))
+                    throw new InvalidDataException("The update process contract is missing the bound snapshot content identity.");
+                new DurableUpdateAttemptStore(processInfo.InstallPath).VerifySnapshotContent(
+                    processInfo.DurableUpdateAttemptId.Value, processInfo.BackupDirectory, processInfo.SnapshotManifestHash);
             }
 
             StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);

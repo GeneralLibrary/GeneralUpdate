@@ -29,6 +29,7 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         Assert.Null(legacyRequest.DurableUpdateAttemptId);
         var legacyContract = new ProcessContract();
         Assert.Null(legacyContract.DurableUpdateAttemptId);
+        Assert.Null(legacyContract.SnapshotManifestHash);
         Assert.Null(legacyContract.AttemptJournalDirectory);
         Assert.False(legacyContract.DisableLegacyRollback);
 
@@ -45,7 +46,8 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
             TempPath = _root,
             Encoding = Encoding.UTF8,
             Format = Format.Zip,
-            DurableUpdateAttemptId = attemptId
+            DurableUpdateAttemptId = attemptId,
+            SnapshotManifestHash = new string('A', 64)
         };
 
         var contract = ConfigurationMapper.MapToProcessContract(
@@ -55,6 +57,7 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         var reopened = JsonSerializer.Deserialize(json, ProcessContractJsonContext.Default.ProcessContract)!;
 
         Assert.Equal(attemptId, reopened.DurableUpdateAttemptId);
+        Assert.Equal(source.SnapshotManifestHash, reopened.SnapshotManifestHash);
         Assert.Equal(DurableUpdateAttemptStore.GetDirectory(_root), reopened.AttemptJournalDirectory);
         Assert.True(reopened.DisableLegacyRollback);
         Assert.Equal(attemptId, ConfigurationMapper.MapToUpdateContext(new UpdateRequest
@@ -88,7 +91,8 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         var store = new DurableUpdateAttemptStore(installPath);
         store.Begin(attemptId);
         store.ReserveSnapshot(attemptId, snapshotPath);
-        StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true);
+        StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true,
+            rejectReparsePoints: true);
         store.BindSnapshot(attemptId, snapshotPath);
 
         for (var index = 0; index < 3; index++)
@@ -122,22 +126,77 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
     }
 
     [Fact]
+    public void Strict_backup_and_bound_snapshot_reject_directory_links()
+    {
+        var installPath = Path.Combine(_root, "link-install");
+        var sourcePath = Path.Combine(_root, "link-source");
+        var externalPath = Path.Combine(_root, "outside");
+        Directory.CreateDirectory(installPath);
+        Directory.CreateDirectory(sourcePath);
+        Directory.CreateDirectory(externalPath);
+        File.WriteAllText(Path.Combine(externalPath, "outside.txt"), "outside");
+        var link = Path.Combine(sourcePath, "linked");
+        CreateDirectoryLink(link, externalPath);
+        try
+        {
+            var snapshotPath = Path.Combine(installPath, StorageManager.BackupRootDirectory, "backup-link");
+            Assert.Throws<InvalidDataException>(() =>
+                StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true,
+                    rejectReparsePoints: true));
+            Assert.False(Directory.Exists(snapshotPath));
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
+
+        File.WriteAllText(Path.Combine(sourcePath, "data.txt"), "data");
+        var store = CreateBoundAttempt(installPath, sourcePath, out var attemptId);
+        var record = store.GetAttempt(attemptId);
+        var snapshotLink = Path.Combine(record.SnapshotPath!, "linked");
+        CreateDirectoryLink(snapshotLink, externalPath);
+        try
+        {
+            Assert.Throws<InvalidDataException>(() =>
+                store.VerifySnapshotContent(attemptId, record.SnapshotPath!, record.SnapshotManifestHash!));
+        }
+        finally
+        {
+            Directory.Delete(snapshotLink);
+        }
+    }
+
+    [Fact]
     public async Task Client_strategy_creates_and_binds_the_backup_used_by_its_update_workflow()
     {
         var installPath = Path.Combine(_root, "install");
         Directory.CreateDirectory(installPath);
         File.WriteAllText(Path.Combine(installPath, "app-state.txt"), "before-update");
         var attemptId = Guid.NewGuid();
-        var asset = new DownloadAsset("client.zip", "https://example.test/client.zip", 10, null, "2.0.0",
-            AppType: (int)AppType.Client);
+        var packageFixture = Path.Combine(_root, "client-package.zip");
+        using (var archive = ZipFile.Open(packageFixture, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("updated.txt").Open()))
+            writer.Write("child-applied");
+        byte[] packageHash;
+        using (var sha = System.Security.Cryptography.SHA256.Create())
+            packageHash = sha.ComputeHash(File.ReadAllBytes(packageFixture));
+        var asset = new DownloadAsset("client", "https://example.test/client.zip",
+            new FileInfo(packageFixture).Length, Convert.ToHexString(packageHash), "2.0.0",
+            AppType: (int)AppType.Client, PackageType: (int)PackageType.Full);
+        var chain = new DownloadAsset("chain", "https://example.test/chain.zip",
+            asset.Size, null, "2.0.0", AppType: (int)AppType.Client, PackageType: (int)PackageType.Chain);
         var source = new Mock<IDownloadSource>();
         source.Setup(s => s.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DownloadSourceResult { Assets = new[] { asset }, HasMainUpdate = true });
+            .ReturnsAsync(new DownloadSourceResult { Assets = new[] { chain, asset }, HasMainUpdate = true });
         var executor = new Mock<IDownloadExecutor>();
         executor.Setup(e => e.ExecuteAsync(It.IsAny<DownloadAsset>(), It.IsAny<string>(),
                 It.IsAny<IProgress<DownloadProgress>>(), It.IsAny<CancellationToken>()))
             .Returns((DownloadAsset download, string path, IProgress<DownloadProgress>? _, CancellationToken _) =>
-                Task.FromResult(new DownloadResult(download, path, 10, TimeSpan.Zero, 0, true, null)));
+            {
+                File.Copy(packageFixture, path, overwrite: true);
+                return Task.FromResult(new DownloadResult(download, path,
+                    new FileInfo(path).Length, TimeSpan.Zero, 0, true, null));
+            });
         var reports = new List<UpdateReport>();
         var reporter = new Mock<IUpdateReporter>();
         reporter.Setup(r => r.ReportAsync(It.IsAny<UpdateReport>(), It.IsAny<CancellationToken>()))
@@ -149,7 +208,8 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
             DownloadSource = source.Object,
             LaunchAfterPrepare = false,
             Reporter = reporter.Object,
-            ProcessContractProvider = new EncryptedFileProcessContractProvider(Path.Combine(_root, "client-ipc"))
+            ProcessContractProvider = new EncryptedFileProcessContractProvider(
+                Path.Combine(_root, "GeneralUpdate", "ipc"))
         };
         strategy.SetDownloadExecutor(executor.Object);
         strategy.Create(new UpdateContext
@@ -166,13 +226,28 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         try
         {
             await strategy.ExecuteAsync();
-            Assert.True(strategy.HasPreparedClientUpdate);
+            Assert.True(strategy.HasPreparedClientUpdate,
+                $"Client update was not prepared. Reports: {string.Join(",", reports.Select(report => report.Status))}");
             var attempt = new DurableUpdateAttemptStore(installPath).GetAttempt(attemptId);
             Assert.Equal(DurableUpdateAttemptStatus.SnapshotBound, attempt.Status);
             Assert.NotNull(attempt.SnapshotPath);
             Assert.Contains(attemptId.ToString("N"), Path.GetFileName(attempt.SnapshotPath));
+            Assert.NotNull(attempt.SnapshotManifestHash);
             Assert.Equal("before-update", File.ReadAllText(Path.Combine(attempt.SnapshotPath, "app-state.txt")));
             Assert.DoesNotContain(reports, report => report.Status == (int)UpdateStatus.Success);
+
+            var childStart = CreateProbeStart("attempt-apply");
+            ConfigureProbeTemp(childStart, _root);
+            childStart.EnvironmentVariables[DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable] =
+                attemptId.ToString("D");
+            using var child = Process.Start(childStart) ?? throw new InvalidOperationException("Failed to start update child.");
+            var appliedOutput = Finish(child).Split('|');
+            Assert.Equal(attemptId.ToString("D"), appliedOutput[0]);
+            Assert.DoesNotContain((int)UpdateStatus.Success, appliedOutput[1]
+                .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse));
+            var appliedFile = Path.Combine(installPath, "updated.txt");
+            Assert.True(File.Exists(appliedFile), $"Child output: {string.Join("|", appliedOutput)}");
+            Assert.Equal("child-applied", File.ReadAllText(appliedFile));
         }
         finally
         {
@@ -364,6 +439,36 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         File.WriteAllBytes(ipcPath, new byte[] { 1, 2, 3, 4 });
         Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
 
+        provider.Send(contract);
+        var snapshotPath = store.GetAttempt(attemptId).SnapshotPath!;
+        var snapshotFile = Path.Combine(snapshotPath, "file.txt");
+        File.WriteAllText(snapshotFile, "SNAPSHOT");
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        File.WriteAllText(snapshotFile, "snapshot");
+        File.Delete(snapshotFile);
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        File.WriteAllText(snapshotFile, "snapshot");
+        File.WriteAllText(Path.Combine(snapshotPath, "unexpected.txt"), "extra");
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        File.Delete(Path.Combine(snapshotPath, "unexpected.txt"));
+
+        var manifestPath = DurableUpdateAttemptStore.GetSnapshotManifestPath(installPath, attemptId);
+        var manifest = File.ReadAllBytes(manifestPath);
+        File.WriteAllBytes(manifestPath, new byte[] { 0, 1, 2, 3 });
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        File.WriteAllBytes(manifestPath, manifest);
+
+        contract.SnapshotManifestHash = new string('0', 64);
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        contract.SnapshotManifestHash = null;
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        contract.SnapshotManifestHash = store.GetAttempt(attemptId).SnapshotManifestHash;
+
         contract.DurableUpdateAttemptId = Guid.NewGuid();
         provider.Send(contract);
         Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
@@ -457,9 +562,44 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         Assert.Throws<InvalidDataException>(() => StorageManager.CleanBackup(installPath, keepVersions: 0));
     }
 
+    [Fact]
+    public void Legacy_v1_bound_snapshot_is_still_pinned_but_cannot_be_promoted_or_verified()
+    {
+        var installPath = Path.Combine(_root, "legacy-install");
+        var snapshotPath = Path.Combine(installPath, StorageManager.BackupRootDirectory, "backup-legacy-attempt");
+        var tempRoot = Path.Combine(_root, "legacy-ipc");
+        Directory.CreateDirectory(snapshotPath);
+        Directory.CreateDirectory(tempRoot);
+        File.WriteAllText(Path.Combine(snapshotPath, "file.txt"), "legacy");
+        using (var archive = ZipFile.Open(Path.Combine(_root, "package.zip"), ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("updated.txt").Open()))
+            writer.Write("must-not-apply");
+        var attemptId = Guid.NewGuid();
+        WriteLegacyBoundAttempt(installPath, attemptId, snapshotPath);
+        var store = new DurableUpdateAttemptStore(installPath);
+
+        var record = store.GetAttempt(attemptId);
+        Assert.Equal(DurableUpdateAttemptStatus.SnapshotBound, record.Status);
+        Assert.Null(record.SnapshotManifestHash);
+        Assert.Throws<InvalidDataException>(() =>
+            store.VerifySnapshotContent(attemptId, snapshotPath, new string('A', 64)));
+        Assert.Throws<InvalidDataException>(() => store.ClaimRecovery(attemptId, 0));
+        var contract = CreateAttemptContract(installPath, attemptId, snapshotPath);
+        contract.SnapshotManifestHash = new string('A', 64);
+        var provider = new EncryptedFileProcessContractProvider(Path.Combine(tempRoot, "GeneralUpdate", "ipc"));
+        provider.Send(contract);
+        Assert.Equal("rejected", RunRequiredAttemptProbe(tempRoot, attemptId));
+        Assert.False(File.Exists(Path.Combine(installPath, "updated.txt")));
+
+        StorageManager.CleanBackup(installPath, keepVersions: 0);
+
+        Assert.True(Directory.Exists(snapshotPath));
+        Assert.Null(store.GetAttempt(attemptId).SnapshotManifestHash);
+    }
+
     private ProcessContract CreateAttemptContract(string installPath, Guid attemptId, string snapshotPath, string bowl = "")
     {
-        return ConfigurationMapper.MapToProcessContract(new UpdateContext
+        var contract = ConfigurationMapper.MapToProcessContract(new UpdateContext
         {
             MainAppName = "App.exe",
             InstallPath = installPath,
@@ -486,6 +626,9 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
             }
         },
             BlackDefaults.DefaultFormats, BlackDefaults.DefaultFiles, BlackDefaults.DefaultDirectories);
+        contract.SnapshotManifestHash = new DurableUpdateAttemptStore(installPath).GetAttempt(attemptId)
+            .SnapshotManifestHash;
+        return contract;
     }
 
     private static string RunRequiredAttemptProbe(string tempRoot, Guid attemptId)
@@ -511,9 +654,65 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
         var store = new DurableUpdateAttemptStore(installPath);
         store.Begin(attemptId);
         store.ReserveSnapshot(attemptId, snapshotPath);
-        StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true);
+        StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true,
+            rejectReparsePoints: true);
         store.BindSnapshot(attemptId, snapshotPath);
         return store;
+    }
+
+    private static void WriteLegacyBoundAttempt(string installPath, Guid attemptId, string snapshotPath)
+    {
+        var journalDirectory = DurableUpdateAttemptStore.GetDirectory(installPath);
+        Directory.CreateDirectory(journalDirectory);
+        byte[] payload;
+        using (var memory = new MemoryStream())
+        {
+            using (var writer = new BinaryWriter(memory, Encoding.UTF8, true))
+            {
+                writer.Write(1);
+                writer.Write(attemptId.ToByteArray());
+                writer.Write((int)DurableUpdateAttemptStatus.SnapshotBound);
+                writer.Write(0L);
+                writer.Write(false);
+                writer.Write(true);
+                writer.Write(snapshotPath);
+            }
+            payload = memory.ToArray();
+        }
+
+        byte[] hash;
+        using (var sha = System.Security.Cryptography.SHA256.Create())
+            hash = sha.ComputeHash(payload);
+        var bytes = new byte[payload.Length + hash.Length];
+        Buffer.BlockCopy(payload, 0, bytes, 0, payload.Length);
+        Buffer.BlockCopy(hash, 0, bytes, payload.Length, hash.Length);
+        File.WriteAllBytes(Path.Combine(journalDirectory, attemptId.ToString("N") + ".state"), bytes);
+    }
+
+    private static void CreateDirectoryLink(string link, string target)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Directory.CreateSymbolicLink(link, target);
+            return;
+        }
+
+        var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe")
+        {
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true
+        };
+        start.ArgumentList.Add("/c");
+        start.ArgumentList.Add("mklink");
+        start.ArgumentList.Add("/J");
+        start.ArgumentList.Add(link);
+        start.ArgumentList.Add(target);
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to create junction.");
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(process.ExitCode == 0, $"Failed to create junction: {stdout} {stderr}");
     }
 
     private static Process StartProbe(params string[] args)
@@ -547,11 +746,20 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
 
     private static string Finish(Process process)
     {
-        Assert.True(process.WaitForExit(15000), "The durable-attempt probe did not exit.");
-        var stderr = process.StandardError.ReadToEnd();
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(30000))
+        {
+            process.Kill();
+            process.WaitForExit();
+            throw new Xunit.Sdk.XunitException(
+                $"The durable-attempt probe did not exit. stdout: {standardOutput.GetAwaiter().GetResult()} " +
+                $"stderr: {standardError.GetAwaiter().GetResult()}");
+        }
+        var stderr = standardError.GetAwaiter().GetResult();
         Assert.Equal(0, process.ExitCode);
         Assert.Empty(stderr);
-        return process.StandardOutput.ReadToEnd()
+        return standardOutput.GetAwaiter().GetResult()
             .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
             .LastOrDefault()?.Trim() ?? string.Empty;
     }

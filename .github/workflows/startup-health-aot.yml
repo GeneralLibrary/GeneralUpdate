@@ -3,7 +3,7 @@ name: Startup health Native AOT
 on:
   pull_request:
     paths:
-      - 'src/GeneralUpdate.Core/StartupHealth/**'
+      - 'src/GeneralUpdate.Core/**'
       - 'tests/StartupHealthProbe/**'
       - '.github/workflows/startup-health-aot.yml'
 
@@ -28,3 +28,20 @@ jobs:
           [System.IO.File]::WriteAllText($ready, 'ready')
           & (Join-Path $output 'StartupHealthProbe.exe') native-handoff $state $ready
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $install = Join-Path $env:RUNNER_TEMP 'snapshot-install'
+          $source = Join-Path $env:RUNNER_TEMP 'snapshot-source'
+          $snapshot = Join-Path $install ('.backups\backup-aot-' + [Guid]::NewGuid().ToString('N'))
+          $attempt = [Guid]::NewGuid().ToString('D')
+          New-Item -ItemType Directory -Force $install, $source | Out-Null
+          [System.IO.File]::WriteAllText((Join-Path $source 'state.txt'), 'snapshot-content')
+          $manifestHash = & (Join-Path $output 'StartupHealthProbe.exe') snapshot-create $install $attempt $source $snapshot
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $manifestHash = ($manifestHash | Select-Object -Last 1).Trim()
+          if ($manifestHash -notmatch '^[0-9A-F]{64}$') { throw 'Snapshot manifest identity was not emitted.' }
+          $verified = & (Join-Path $output 'StartupHealthProbe.exe') snapshot-verify $install $attempt $snapshot $manifestHash
+          if ($LASTEXITCODE -ne 0 -or ($verified | Select-Object -Last 1).Trim() -ne 'verified') { throw 'Persisted snapshot was not verified after restart.' }
+          Write-Host 'Native AOT snapshot verified after restart.'
+          [System.IO.File]::WriteAllText((Join-Path $snapshot 'state.txt'), 'SNAPSHOT-CONTENT')
+          $rejected = & (Join-Path $output 'StartupHealthProbe.exe') snapshot-verify $install $attempt $snapshot $manifestHash
+          if ($LASTEXITCODE -ne 0 -or ($rejected | Select-Object -Last 1).Trim() -ne 'rejected') { throw 'Tampered snapshot was not rejected.' }
+          Write-Host 'Native AOT tampered snapshot rejected.'

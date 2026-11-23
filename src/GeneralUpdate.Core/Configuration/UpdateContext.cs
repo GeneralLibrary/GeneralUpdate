@@ -136,6 +136,9 @@ public class UpdateContext : UpdateConfiguration
     /// </summary>
     public string? AttemptJournalDirectory { get; set; }
 
+    /// <summary>SHA-256 identity of the bound durable snapshot manifest.</summary>
+    public string? SnapshotManifestHash { get; set; }
+
     /// <summary>
     /// When true, the in-process legacy rollback path must not compete with an external
     /// recovery protocol. This does not enable or designate an external recovery owner.

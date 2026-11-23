@@ -13,7 +13,8 @@ namespace GeneralUpdate.Core.StartupHealth;
 /// </summary>
 public sealed class DurableUpdateAttemptStore
 {
-    private const int FormatVersion = 1;
+    private const int LegacyFormatVersion = 1;
+    private const int FormatVersion = 2;
     public const string RequiredAttemptIdEnvironmentVariable = "GENERALUPDATE_REQUIRED_DURABLE_ATTEMPT_ID";
     private readonly string _installPath;
     private readonly string _directory;
@@ -33,6 +34,12 @@ public sealed class DurableUpdateAttemptStore
             throw new ArgumentException("An installation path is required.", nameof(installPath));
         return Path.Combine(Path.GetFullPath(installPath), GeneralUpdate.Core.FileSystem.StorageManager.BackupRootDirectory,
             GeneralUpdate.Core.FileSystem.StorageManager.AttemptDirectoryName);
+    }
+
+    internal static string GetSnapshotManifestPath(string installPath, Guid attemptId)
+    {
+        ValidateId(attemptId);
+        return DurableUpdateSnapshotManifest.ManifestPath(installPath, attemptId);
     }
 
     /// <summary>
@@ -73,8 +80,8 @@ public sealed class DurableUpdateAttemptStore
     }
 
     /// <summary>
-    /// Binds the exact reserved path after the real backup operation has completed.
-    /// Missing or mismatched paths fail explicitly; no latest-backup fallback is used.
+    /// Publishes a content manifest and binds it to the exact reserved path after
+    /// the real backup operation has completed. No latest-backup fallback is used.
     /// </summary>
     public void BindSnapshot(Guid attemptId, string snapshotPath)
     {
@@ -88,8 +95,33 @@ public sealed class DurableUpdateAttemptStore
                 throw new InvalidOperationException("The completed backup does not match the reserved snapshot path.");
             if (!Directory.Exists(fullPath))
                 throw new DirectoryNotFoundException($"The reserved update snapshot was not created: {fullPath}");
+            if (state.JournalVersion == LegacyFormatVersion)
+                throw new InvalidOperationException("A legacy reserved snapshot cannot be promoted without a content identity.");
+            state.SnapshotManifestHash = DurableUpdateSnapshotManifest.CreateAndPublish(_installPath, attemptId, fullPath);
             state.Status = DurableUpdateAttemptStatus.SnapshotBound;
             WriteState(StatePath(attemptId), state);
+        });
+    }
+
+    /// <summary>
+    /// Verifies the bound manifest identity and every file and directory in the exact snapshot.
+    /// This detects changed content but does not prevent writes after verification.
+    /// </summary>
+    public void VerifySnapshotContent(Guid attemptId, string snapshotPath, string expectedManifestHash)
+    {
+        ValidateId(attemptId);
+        var fullPath = ValidateSnapshotPath(snapshotPath);
+        WithLock(() =>
+        {
+            var state = ReadState(attemptId);
+            RequireStatus(state, DurableUpdateAttemptStatus.SnapshotBound);
+            if (state.SnapshotPath == null || !PathEquals(state.SnapshotPath, fullPath))
+                throw new InvalidDataException("The process contract does not match the journal's bound snapshot.");
+            if (string.IsNullOrEmpty(state.SnapshotManifestHash))
+                throw new InvalidDataException("The bound snapshot has no verifiable content identity.");
+            if (!string.Equals(state.SnapshotManifestHash, expectedManifestHash, StringComparison.Ordinal))
+                throw new InvalidDataException("The process contract does not match the journal's snapshot content identity.");
+            DurableUpdateSnapshotManifest.Verify(_installPath, attemptId, fullPath, state.SnapshotManifestHash);
         });
     }
 
@@ -116,6 +148,9 @@ public sealed class DurableUpdateAttemptStore
                 throw new InvalidOperationException("Recovery requires an active attempt with a bound snapshot.");
             if (state.SnapshotPath == null || !Directory.Exists(state.SnapshotPath))
                 throw new DirectoryNotFoundException($"The bound update snapshot is missing: {state.SnapshotPath}");
+            if (string.IsNullOrEmpty(state.SnapshotManifestHash))
+                throw new InvalidDataException("The bound update snapshot has no verifiable content identity.");
+            DurableUpdateSnapshotManifest.Verify(_installPath, attemptId, state.SnapshotPath, state.SnapshotManifestHash);
             if (state.Fence != expectedFence)
                 throw new InvalidOperationException($"Stale recovery fence {expectedFence}; current fence is {state.Fence}.");
             state.Fence = checked(state.Fence + 1);
@@ -193,9 +228,13 @@ public sealed class DurableUpdateAttemptStore
         if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("A snapshot path is required.", nameof(path));
         var fullPath = Path.GetFullPath(path);
         var backupRoot = Path.GetFullPath(Path.Combine(_installPath, GeneralUpdate.Core.FileSystem.StorageManager.BackupRootDirectory));
+        var pathComparison = Path.DirectorySeparatorChar == '\\'
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
         if (!PathEquals(Path.GetDirectoryName(fullPath)!, backupRoot) ||
-            !Path.GetFileName(fullPath).StartsWith("backup-", StringComparison.OrdinalIgnoreCase))
+            !Path.GetFileName(fullPath).StartsWith("backup-", pathComparison))
             throw new ArgumentException("The snapshot must be a direct backup-{name} child of the installation backup directory.", nameof(path));
+        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInExistingPath(Path.GetDirectoryName(fullPath)!);
         return fullPath;
     }
 
@@ -203,7 +242,10 @@ public sealed class DurableUpdateAttemptStore
 
     private TResult WithLock<TResult>(Func<TResult> action)
     {
+        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInExistingPath(_installPath);
+        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInExistingPath(_directory);
         Directory.CreateDirectory(_directory);
+        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(_directory);
         using (AcquireLock(_installPath))
             return action();
     }
@@ -259,7 +301,9 @@ public sealed class DurableUpdateAttemptStore
         if (!File.Exists(path)) throw new FileNotFoundException("Durable update attempt was not found.", path);
         try
         {
+            DurableUpdateSnapshotManifest.RejectReparsePointIfPresent(path);
             var fileBytes = File.ReadAllBytes(path);
+            DurableUpdateSnapshotManifest.RejectReparsePoint(path);
             if (fileBytes.Length < 36) throw new InvalidDataException("Truncated update attempt journal.");
             var payloadLength = fileBytes.Length - 32;
             var payload = new byte[payloadLength];
@@ -273,7 +317,9 @@ public sealed class DurableUpdateAttemptStore
 
             using var stream = new MemoryStream(payload, writable: false);
             using var reader = new BinaryReader(stream);
-            if (reader.ReadInt32() != FormatVersion) throw new InvalidDataException("Unsupported update attempt journal format.");
+            var journalVersion = reader.ReadInt32();
+            if (journalVersion != LegacyFormatVersion && journalVersion != FormatVersion)
+                throw new InvalidDataException("Unsupported update attempt journal format.");
             var idBytes = reader.ReadBytes(16);
             if (idBytes.Length != 16) throw new InvalidDataException("Truncated update attempt identifier.");
             var id = new Guid(idBytes);
@@ -294,6 +340,15 @@ public sealed class DurableUpdateAttemptStore
             }
             var hasSnapshot = reader.ReadBoolean();
             var snapshotPath = hasSnapshot ? reader.ReadString() : null;
+            string? snapshotManifestHash = null;
+            if (journalVersion >= FormatVersion && reader.ReadBoolean())
+            {
+                snapshotManifestHash = reader.ReadString();
+                if (snapshotManifestHash.Length != 64 ||
+                    snapshotManifestHash.Any(character => !((character >= '0' && character <= '9') ||
+                                                            (character >= 'A' && character <= 'F'))))
+                    throw new InvalidDataException("Invalid update snapshot manifest identity.");
+            }
             if (stream.Position != stream.Length) throw new InvalidDataException("Unexpected trailing update attempt data.");
             if ((status == DurableUpdateAttemptStatus.Pending) != (snapshotPath == null))
                 throw new InvalidDataException("Update attempt snapshot state is inconsistent.");
@@ -304,7 +359,9 @@ public sealed class DurableUpdateAttemptStore
                 Status = status,
                 Fence = fence,
                 ClaimId = claimId,
-                SnapshotPath = snapshotPath
+                SnapshotPath = snapshotPath,
+                SnapshotManifestHash = snapshotManifestHash,
+                JournalVersion = journalVersion
             };
         }
         catch (EndOfStreamException ex)
@@ -323,7 +380,7 @@ public sealed class DurableUpdateAttemptStore
             {
                 using (var writer = new BinaryWriter(memory, System.Text.Encoding.UTF8, true))
                 {
-                    writer.Write(FormatVersion);
+                    writer.Write(state.JournalVersion);
                     writer.Write(state.AttemptId.ToByteArray());
                     writer.Write((int)state.Status);
                     writer.Write(state.Fence);
@@ -331,6 +388,11 @@ public sealed class DurableUpdateAttemptStore
                     if (state.ClaimId.HasValue) writer.Write(state.ClaimId.Value.ToByteArray());
                     writer.Write(state.SnapshotPath != null);
                     if (state.SnapshotPath != null) writer.Write(state.SnapshotPath);
+                    if (state.JournalVersion >= FormatVersion)
+                    {
+                        writer.Write(state.SnapshotManifestHash != null);
+                        if (state.SnapshotManifestHash != null) writer.Write(state.SnapshotManifestHash);
+                    }
                     writer.Flush();
                 }
                 payload = memory.ToArray();
@@ -344,6 +406,7 @@ public sealed class DurableUpdateAttemptStore
                 stream.Write(hash, 0, hash.Length);
                 stream.Flush(true);
             }
+            DurableUpdateSnapshotManifest.RejectReparsePointIfPresent(path);
             if (File.Exists(path)) File.Replace(temporary, path, null);
             else File.Move(temporary, path);
         }
@@ -360,10 +423,13 @@ public sealed class DurableUpdateAttemptStore
     }
 
     private static DurableUpdateAttemptRecord ToRecord(AttemptState state) =>
-        new(state.AttemptId, state.Status, state.SnapshotPath, state.Fence, state.ClaimId);
+        new(state.AttemptId, state.Status, state.SnapshotPath, state.Fence, state.ClaimId, state.SnapshotManifestHash);
 
-    private static bool PathEquals(string left, string right) =>
-        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+    internal static bool PathsEqual(string left, string right) =>
+        string.Equals(Path.GetFullPath(left), Path.GetFullPath(right),
+            Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    private static bool PathEquals(string left, string right) => PathsEqual(left, right);
 
     private static void ValidateId(Guid id)
     {
@@ -376,8 +442,10 @@ public sealed class DurableUpdateAttemptStore
         public Guid AttemptId { get; }
         public DurableUpdateAttemptStatus Status { get; set; } = DurableUpdateAttemptStatus.Pending;
         public string? SnapshotPath { get; set; }
+        public string? SnapshotManifestHash { get; set; }
         public long Fence { get; set; }
         public Guid? ClaimId { get; set; }
+        public int JournalVersion { get; set; } = FormatVersion;
     }
 }
 
@@ -398,13 +466,15 @@ public enum DurableUpdateAttemptCompletion
 
 public sealed class DurableUpdateAttemptRecord
 {
-    internal DurableUpdateAttemptRecord(Guid attemptId, DurableUpdateAttemptStatus status, string? snapshotPath, long fence, Guid? claimId)
+    internal DurableUpdateAttemptRecord(Guid attemptId, DurableUpdateAttemptStatus status, string? snapshotPath, long fence,
+        Guid? claimId, string? snapshotManifestHash)
     {
         AttemptId = attemptId;
         Status = status;
         SnapshotPath = snapshotPath;
         Fence = fence;
         ClaimId = claimId;
+        SnapshotManifestHash = snapshotManifestHash;
     }
 
     public Guid AttemptId { get; }
@@ -412,6 +482,7 @@ public sealed class DurableUpdateAttemptRecord
     public string? SnapshotPath { get; }
     public long Fence { get; }
     public Guid? ClaimId { get; }
+    public string? SnapshotManifestHash { get; }
 }
 
 public sealed class DurableUpdateAttemptClaim

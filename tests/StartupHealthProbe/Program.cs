@@ -49,7 +49,38 @@ if (args.Length == 1 && args[0] == "attempt-apply")
 if (args.Length == 3 && args[0] == "attempt-read")
 {
     var record = new DurableUpdateAttemptStore(args[1]).GetAttempt(Guid.Parse(args[2]));
-    Console.WriteLine($"{record.Status}|{record.SnapshotPath}|{record.Fence}");
+    Console.WriteLine($"{record.Status}|{record.SnapshotPath}|{record.Fence}|{record.SnapshotManifestHash}");
+    return;
+}
+
+if (args.Length == 5 && args[0] == "snapshot-create")
+{
+    var installPath = args[1];
+    var attemptId = Guid.Parse(args[2]);
+    var sourcePath = args[3];
+    var snapshotPath = args[4];
+    var store = new DurableUpdateAttemptStore(installPath);
+    store.Begin(attemptId);
+    store.ReserveSnapshot(attemptId, snapshotPath);
+    StorageManager.Backup(sourcePath, snapshotPath, Array.Empty<string>(), createOnly: true,
+        rejectReparsePoints: true);
+    store.BindSnapshot(attemptId, snapshotPath);
+    Console.WriteLine(store.GetAttempt(attemptId).SnapshotManifestHash);
+    return;
+}
+
+if (args.Length == 5 && args[0] == "snapshot-verify")
+{
+    try
+    {
+        new DurableUpdateAttemptStore(args[1])
+            .VerifySnapshotContent(Guid.Parse(args[2]), args[3], args[4]);
+        Console.WriteLine("verified");
+    }
+    catch (InvalidDataException)
+    {
+        Console.WriteLine("rejected");
+    }
     return;
 }
 

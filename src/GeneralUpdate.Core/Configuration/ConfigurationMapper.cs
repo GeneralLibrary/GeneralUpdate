@@ -213,6 +213,7 @@ namespace GeneralUpdate.Core.Configuration
             processInfo.DurableUpdateAttemptId = source.DurableUpdateAttemptId;
             if (source.DurableUpdateAttemptId.HasValue)
             {
+                processInfo.SnapshotManifestHash = source.SnapshotManifestHash;
                 processInfo.AttemptJournalDirectory = DurableUpdateAttemptStore.GetDirectory(source.InstallPath);
                 processInfo.DisableLegacyRollback = true;
             }
