@@ -53,7 +53,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// 8. <b>Upgrade Application</b>: Calls <c>ApplyUpgradePackagesAsync</c> to apply incremental/full update packages in place through the OS strategy pipeline.
 /// </para>
 /// <para>
-/// 9. <b>IPC Communication</b>: Serializes main program update information as JSON via <c>SendProcessIpc</c> and sends it to the upgrade process through encrypted IPC.
+/// 9. <b>IPC Communication</b>: Serializes main program update information as JSON via <c>SendProcessIpcAsync</c> and sends it to the upgrade process through encrypted IPC.
 /// </para>
 /// <para>
 /// 10. <b>Launch Upgrade Process</b>: Delegates to the OS strategy via <c>LaunchUpgradeProcessAsync</c> to start the upgrade executable.</para>
@@ -74,10 +74,10 @@ public class ClientStrategy : IStrategy
     private Download.Abstractions.IDownloadExecutor? _customDownloadExecutor;
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
+    private bool _downloadFailuresReported;
     private int _upgradeRecordId;
+    private int? _reportTypeOverride;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
-    internal EncryptedFileProcessContractProvider? ProcessContractProvider { get; set; }
-
     /// <summary>
     /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
     /// The caller (e.g. <see cref="Silent.SilentPollOrchestrator"/>) is responsible for launching the
@@ -87,7 +87,7 @@ public class ClientStrategy : IStrategy
 
     /// <summary>
     /// After <see cref="ExecuteAsync"/> completes, <c>true</c> indicates that client packages were
-    /// staged via <see cref="SendProcessIpc"/> and the upgrade process should be launched to apply them.
+    /// staged via <see cref="SendProcessIpcAsync"/> and the upgrade process should be launched to apply them.
     /// </summary>
     public bool HasPreparedClientUpdate { get; private set; }
 
@@ -134,6 +134,12 @@ public class ClientStrategy : IStrategy
     /// and other information in <c>UpdateContext</c>.
     /// </remarks>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
+
+    /// <summary>
+    /// Optional IPC provider for handing prepared client packages to the upgrade process.
+    /// When unset, the encrypted file provider is used.
+    /// </summary>
+    public IProcessContractProvider? ProcessContractProvider { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientStrategy"/> class.
@@ -186,7 +192,11 @@ public class ClientStrategy : IStrategy
     /// When a push notification triggers the update (via SignalR hub), the caller should set this to 2
     /// so the server can distinguish push-triggered updates from active poll updates.
     /// </remarks>
-    public void SetReportType(int reportType) => _reportType = reportType;
+    public void SetReportType(int reportType)
+    {
+        _reportTypeOverride = _reportType = reportType;
+        if (_configInfo != null) _configInfo.ReportType = reportType;
+    }
 
     /// <summary>
     /// Sets a custom download retry policy. Registered and injected by the bootstrap via <c>.DownloadPolicy&lt;T&gt;()</c>.
@@ -236,6 +246,8 @@ public class ClientStrategy : IStrategy
     public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
+        _reportType = _reportTypeOverride ?? parameter.ReportType;
+        parameter.ReportType = _reportType;
         _osStrategy = ResolveOsStrategy();
         if (_osStrategy is AbstractStrategy abs)
         {
@@ -262,6 +274,7 @@ public class ClientStrategy : IStrategy
         if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
 
         HasPreparedClientUpdate = false;
+        _downloadFailuresReported = false;
 
         try
         {
@@ -274,7 +287,8 @@ public class ClientStrategy : IStrategy
         {
             var errCtx = BuildUpdateContext();
             await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
-            await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
+            if (!_downloadFailuresReported)
+                await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
             GeneralTracer.Error("ClientStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
@@ -391,7 +405,7 @@ public class ClientStrategy : IStrategy
     /// <b>Step 9 - Scenario Dispatch</b>: Executes different operations based on the determined scenario:
     /// <list type="bullet">
     /// <item><description><c>UpgradeOnly</c>: Calls <see cref="ApplyUpgradePackagesAsync"/> to apply upgrade packages in place.</description></item>
-    /// <item><description><c>MainOnly</c>: Calls <see cref="SendProcessIpc"/> to send main program update information,
+    /// <item><description><c>MainOnly</c>: Calls <see cref="SendProcessIpcAsync"/> to send main program update information,
     /// then calls <see cref="LaunchUpgradeProcessAsync"/> to start the upgrade process.</description></item>
     /// <item><description><c>Both</c>: Applies upgrade packages first, then sends main program information and starts the upgrade process.</description></item>
     /// </list>
@@ -634,6 +648,25 @@ public class ClientStrategy : IStrategy
 
             if (downloadReport.FailedCount > 0)
             {
+                var reportedRecords = new HashSet<int>();
+                foreach (var result in downloadReport.Results.Where(r => !r.Success))
+                {
+                    var error = result.Error ?? new InvalidOperationException(result.ErrorMessage ?? "Download failed.");
+                    EventManager.Instance.Dispatch(this, new Download.MultiDownloadErrorEventArgs(error, result.Asset));
+                    if (reportedRecords.Add(result.Asset.RecordId))
+                    {
+                        try
+                        {
+                            await Reporter.ReportAsync(Download.Reporting.FailureReports.Create(
+                                result.Asset.RecordId, _reportType, result.FailureCategory)).ConfigureAwait(false);
+                        }
+                        catch (Exception reportError)
+                        {
+                            GeneralTracer.Warn($"Report download failure failed: {reportError.Message}");
+                        }
+                    }
+                }
+                _downloadFailuresReported = reportedRecords.Count > 0;
                 var failDetails = string.Join(", ",
                     downloadReport.Results.Where(r => !r.Success)
                         .Select(r => $"{r.Asset.Name}: {r.ErrorMessage}"));
@@ -687,16 +720,16 @@ public class ClientStrategy : IStrategy
                     {
                         var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
-                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                            await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error("ClientStrategy: Upgrade-only update failed, client continues running.");
                     }
                     break;
 
                 case UpdateScenario.MainOnly:
-                    SendProcessIpc(cVersions);
+                    await SendProcessIpcAsync(cVersions).ConfigureAwait(false);
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                    await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
                     if (LaunchAfterPrepare)
                     {
                         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
@@ -715,7 +748,8 @@ public class ClientStrategy : IStrategy
                     {
                         var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
-                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                            await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error(
                             "ClientStrategy: upgrade packages failed to apply, aborting MainApp update and upgrade launch.");
@@ -724,7 +758,7 @@ public class ClientStrategy : IStrategy
 
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                     await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
-                    SendProcessIpc(cVersions);
+                    await SendProcessIpcAsync(cVersions).ConfigureAwait(false);
                     if (LaunchAfterPrepare)
                     {
                         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
@@ -781,7 +815,7 @@ public class ClientStrategy : IStrategy
     /// <para>After the upgrade process (Bowl) receives this information, it will perform the actual installation and replacement operations
     /// based on the <c>ProcessContract</c>.</para>
     /// </remarks>
-    private void SendProcessIpc(List<VersionEntry> clientVersions)
+    private async Task SendProcessIpcAsync(List<VersionEntry> clientVersions)
     {
         var processInfo = ConfigurationMapper.MapToProcessContract(
             _configInfo!, clientVersions,
@@ -792,7 +826,7 @@ public class ClientStrategy : IStrategy
 
         _configInfo.ProcessContract = JsonSerializer.Serialize(processInfo,
             ProcessContractJsonContext.Default.ProcessContract);
-        (ProcessContractProvider ?? new EncryptedFileProcessContractProvider()).Send(processInfo);
+        await (ProcessContractProvider ?? new EncryptedFileProcessContractProvider()).SendAsync(processInfo).ConfigureAwait(false);
         HasPreparedClientUpdate = true;
         GeneralTracer.Info("ClientStrategy: ProcessContract sent with MainApp versions only.");
     }
@@ -1163,7 +1197,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1181,7 +1215,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1200,7 +1234,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)

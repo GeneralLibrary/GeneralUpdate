@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.JsonContext;
@@ -59,12 +60,73 @@ public enum UpdateStatus { Updating = 1, Success = 2, Failure = 3 }
 /// </summary>
 /// <param name="RecordId">The record ID returned from version validation, used to identify this update record.</param>
 /// <param name="Status">The update status code: 1 = Updating, 2 = Success, 3 = Failure. Defaults to 1 (Updating).</param>
-/// <param name="Type">The update type: 1 = Upgrade, 2 = Push. Defaults to 1 (Upgrade).</param>
+/// <param name="Type">The record source: 1 = polled upgrade record, 2 = push record. This is not the package AppType. Defaults to 1.</param>
 /// <remarks>
 /// This record is serialized to JSON using camelCase naming policy.
 /// Example JSON: {"recordId": 123, "status": 1, "type": 1}
+/// The client reports Updating while downloading and does not report Success for a staged main
+/// application. After application, the platform reports one result per record for its package batch;
+/// a failure in any package sharing that record takes precedence. The role strategy may report
+/// the same result again, or report Failure if a later launch operation throws.
+/// Success means package application completed; it does not attest that the restarted application is healthy.
 /// </remarks>
-public record UpdateReport(int RecordId, int Status = 1, int Type = 1);
+public record UpdateReport(int RecordId, int Status = 1, int Type = 1)
+{
+    /// <summary>Optional idempotency key, paired with <see cref="Sequence"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? EventId { get; init; }
+
+    /// <summary>Optional positive sequence for the record, paired with <see cref="EventId"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? Sequence { get; init; }
+
+    /// <summary>Optional failure category, matching the server's diagnostic contract.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FailureCategory? Category { get; init; }
+
+    /// <summary>Optional name of the operation that failed.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Phase { get; init; }
+
+    /// <summary>Optional stable, non-sensitive diagnostic code.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ErrorCode { get; init; }
+
+    /// <summary>Optional sanitized diagnostic message.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; init; }
+}
+
+/// <summary>Failure categories understood by the reporting service.</summary>
+public enum FailureCategory
+{
+    Download = 0, Verify = 1, Extract = 2, Apply = 3, Compat = 4,
+    Startup = 5, Rollback = 6, Timeout = 7, Unknown = 8
+}
+
+internal static class FailureReports
+{
+    internal static UpdateReport Create(int recordId, int type, FailureCategory? category)
+    {
+        var phase = category switch
+        {
+            FailureCategory.Download => "Download",
+            FailureCategory.Verify => "Verify",
+            FailureCategory.Extract => "Extract",
+            FailureCategory.Apply => "Apply",
+            FailureCategory.Rollback => "Rollback",
+            FailureCategory.Timeout => "Download",
+            _ => null
+        };
+        return new UpdateReport(recordId, (int)UpdateStatus.Failure, type)
+        {
+            Category = category,
+            Phase = phase,
+            ErrorCode = category?.ToString().ToUpperInvariant(),
+            Message = phase == null ? null : phase + " failed."
+        };
+    }
+}
 
 /// <summary>
 /// An HTTP POST-based update status reporter that serializes <see cref="UpdateReport"/> to JSON
@@ -141,17 +203,7 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
-            
-            var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
-            using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Apply the global authentication provider (if one was set via
-            // VersionService.SetDefaultAuthProvider or HttpClientProvider.DefaultAuthProvider)
-            // so that report requests carry the same credentials as version validation requests.
-            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
-
-            await _client.SendAsync(request, token).ConfigureAwait(false);
+            await SendAsync(report, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -161,5 +213,40 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
+    }
+
+    /// <summary>Sends a report and throws unless the server confirms both HTTP and business success.</summary>
+    public async Task SendAsync(UpdateReport report, CancellationToken token = default)
+    {
+        if (report == null) throw new ArgumentNullException(nameof(report));
+        if (string.IsNullOrWhiteSpace(_reportUrl))
+            throw new InvalidOperationException("A report URL is required.");
+
+        var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
+        await SendJsonAsync(json, token).ConfigureAwait(false);
+    }
+
+    internal async Task SendJsonAsync(string json, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(_reportUrl))
+            throw new InvalidOperationException("A report URL is required.");
+        using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
+        using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        using var document = JsonDocument.Parse(content);
+        var root = document.RootElement;
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("errorCode", out var errorCode) &&
+            errorCode.ValueKind == JsonValueKind.String &&
+            errorCode.GetString() == "Conflict")
+            throw new InvalidOperationException("The report endpoint reported an event or sequence conflict.");
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("code", out var code) || code.ValueKind != JsonValueKind.Number ||
+            !code.TryGetInt32(out var value) || value != 200 ||
+            !root.TryGetProperty("body", out var body) || body.ValueKind != JsonValueKind.True)
+            throw new InvalidOperationException("The report endpoint did not confirm business success.");
     }
 }

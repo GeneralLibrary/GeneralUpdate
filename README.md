@@ -94,6 +94,76 @@ Special thanks to the authors of the following open source projects for contribu
 | 🩺 `generalupdate-troubleshoot` | `/generalupdate-troubleshoot` | 50+ known issues diagnosis |
 
 
+## Durable update reports (opt-in)
+
+The default `HttpUpdateReporter` remains best-effort. Hosts that need durable reporting
+can create and register a `PersistentUpdateReporter`, and must replay it on every
+application start (and periodically when connectivity returns):
+
+```csharp
+var sender = new HttpUpdateReporter(httpClient, reportUrl);
+var reporter = new PersistentUpdateReporter(queueDirectory, sender);
+await reporter.ReplayAsync(cancellationToken); // handle and log failures; retry later
+bootstrap.UpdateReporter(reporter);
+```
+
+Use the same writable, local, private queue directory and endpoint across restarts and
+processes, and a separate directory for each endpoint/account. Configure authentication
+and register the reporter again in each reporting process, including the upgrade process;
+neither the URL nor credentials are stored in the queue. Queue
+files contain record IDs and statuses and should be protected and retained by the host.
+The host must arrange periodic retries and monitor disk usage, permissions and errors.
+`ReportAsync` writes before sending and throws if persistence or delivery fails;
+the built-in strategies catch and log reporter exceptions so the update continues.
+
+All statuses are queued to preserve their order, including success after failure.
+Delivery stops at the first unconfirmed report: HTTP success alone is insufficient;
+the response must also have `code: 200` and `body: true`. This is **at-least-once**,
+not exactly-once: a crash or lost response after server acceptance can resend a report,
+and the current server may count a repeated failure again. Safe deduplication requires
+a server-supported event ID/idempotency contract. Ordering applies only to reporters
+sharing this queue, not old clients or independent queues. A report is durable once its
+queue file has been flushed and published; failure before that point cannot be recovered.
+Storage and filesystem durability depend on the host's filesystem and hardware.
+The queue's local file order is not a server sequence or a causal order, and its file
+numbering can restart after the queue drains.
+
+### Ordered idempotent reports (separate opt-in)
+
+`OrderedUpdateReporter` uses the GeneralSpace ordered-event protocol, but is **disabled
+by default** and separate from the legacy file queue. Enable it only after an operator
+confirms the deployed service supports both `eventId` and `sequence`; an ordinary
+success response is not evidence because older servers ignore unknown fields.
+
+```csharp
+var reporter = new OrderedUpdateReporter(
+    queueDirectory, httpClient, reportUrl,
+    namespaceIdentity: "stable-tenant-and-server-database-id",
+    protocolConfirmed: true);
+await reporter.ReplayAsync(cancellationToken);
+bootstrap.UpdateReporter(reporter);
+```
+
+The host must replay on startup and periodically, monitor errors and storage, and
+register the same reporter in each reporting process. It must ensure that **all**
+writers for a server database's `(type, recordId)` use this one database on the same
+machine and the same exact endpoint and namespace identity; no legacy, independent,
+multi-machine or restored-old-copy writers may write those records. The namespace must
+identify the tenant and actual server database, not an ephemeral token or hostname.
+URLs and credentials are not stored, but a hash binding the exact URL and namespace is
+stored to reject accidental reconfiguration. The host must prevent redirects, retargeting,
+and authentication changes that could send to a different tenant or database.
+
+The private directory must be on a local filesystem supporting SQLite locking and
+durable flushes, with access restricted to trusted processes. Protect the database,
+rollback journal, lock file, and backups: report payloads may contain sensitive
+diagnostics. SQLite transactionally commits the record counter, GUID, and complete
+payload before sending. A lost response or crash replays the same event; a business
+conflict or other failure stops replay without deleting it. Keep the database and
+counters even when the queue is empty. Deleting, rolling back or cloning the database,
+or using network filesystems, invalidates the ordering guarantee. Hardware and filesystem
+durability still apply. The SQLite native dependency must be available for the target RID.
+
 ## 🙏 Thanks
 
 <div align="center">

@@ -216,7 +216,10 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                 GeneralTracer.Warn($"DefaultDownloadOrchestrator: semaphore wait timed out (1 min) for '{asset.Name}'. Concurrency={effectiveConcurrency}, ActiveSlots={effectiveConcurrency - sem.CurrentCount}. Skipping asset.");
                 lock (results)
                 {
-                    results.Add(new DownloadResult(asset, null, 0, TimeSpan.Zero, 0, false, "Semaphore wait timed out"));
+                    results.Add(new DownloadResult(asset, null, 0, TimeSpan.Zero, 0, false, "Semaphore wait timed out")
+                    {
+                        FailureCategory = Reporting.FailureCategory.Timeout
+                    });
                 }
                 return;
             }
@@ -254,7 +257,11 @@ public class DefaultDownloadOrchestrator : IDownloadOrchestrator
                     {
                         return new DownloadResult(asset, destPath,
                             downloadResult.DownloadedBytes, downloadResult.Duration,
-                            downloadResult.RetryCount, false, $"SHA256 verification failed: {ex.Message}");
+                            downloadResult.RetryCount, false, $"SHA256 verification failed: {ex.Message}")
+                        {
+                            Error = ex,
+                            FailureCategory = Reporting.FailureCategory.Verify
+                        };
                     }
 
                     return downloadResult;

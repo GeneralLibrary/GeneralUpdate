@@ -45,6 +45,7 @@ public class UpdateStrategy : IStrategy
     private UpdateContext? _configInfo;
     private IStrategy? _osStrategy;
     private IStrategy? _customOsStrategy;
+    private int? _reportTypeOverride;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
@@ -68,7 +69,11 @@ public class UpdateStrategy : IStrategy
     /// report type it used, so the server can distinguish push-triggered updates from active polls.
     /// </summary>
     /// <param name="reportType">1 = Upgrade (active poll), 2 = Push (SignalR push). Default is 1.</param>
-    public void SetReportType(int reportType) => _reportType = reportType;
+    public void SetReportType(int reportType)
+    {
+        _reportTypeOverride = _reportType = reportType;
+        if (_configInfo != null) _configInfo.ReportType = reportType;
+    }
 
     /// <summary>
     /// Initializes the upgrade-side strategy. Receives the global configuration information passed from the client
@@ -79,6 +84,8 @@ public class UpdateStrategy : IStrategy
     public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
+        _reportType = _reportTypeOverride ?? parameter.ReportType;
+        parameter.ReportType = _reportType;
         _osStrategy = ResolveOsStrategy();
         if (_osStrategy is AbstractStrategy abs)
         {
@@ -147,7 +154,8 @@ public class UpdateStrategy : IStrategy
             {
                 var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
                 await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
-                await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
+                if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                    await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                 return;
             }

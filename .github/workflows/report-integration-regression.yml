@@ -1,0 +1,48 @@
+name: Report integration regression
+
+on:
+  push:
+    branches: [justerzhu-persistent-regression-integration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report-regression:
+    name: Report regression (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    env:
+      REPORT_INTEGRATION_MERGE_SHA: 057da130aab3251342d344e2b60a12dcc8be71ef
+      REPORT_ROUTING_SHA: 623a87ce5112af0dab4d23c457797d23cd419143
+      FAILURE_STAGE_SHA: 66a9403259235dd19c4602ed17a8c51c4615fba0
+      PERSISTENT_REPORT_SHA: ad77b50c5125a436ab4d4c8a894f6df7235d95b0
+    steps:
+      - name: Checkout fixed integration history
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify dependency commits
+        shell: bash
+        run: |
+          test "$(git rev-parse "${REPORT_INTEGRATION_MERGE_SHA}^1")" = "${FAILURE_STAGE_SHA}"
+          test "$(git rev-parse "${REPORT_INTEGRATION_MERGE_SHA}^2")" = "${PERSISTENT_REPORT_SHA}"
+          git merge-base --is-ancestor "${REPORT_ROUTING_SHA}" "${REPORT_INTEGRATION_MERGE_SHA}"
+          git merge-base --is-ancestor "${REPORT_INTEGRATION_MERGE_SHA}" HEAD
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run cross-PR report regressions
+        run: >-
+          dotnet test tests/CoreTest/CoreTest.csproj
+          --configuration Release
+          --filter "FullyQualifiedName~PersistentUpdateReporterTests|FullyQualifiedName~FailureReportingTests|FullyQualifiedName~ReportRoutingTests"
