@@ -10,6 +10,13 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--image-lock-peer")
+        {
+            Console.WriteLine("ready");
+            await Console.Out.FlushAsync();
+            await Console.In.ReadLineAsync();
+            return 0;
+        }
         if (args.Length != 2) return 2;
         using var client = new HttpClient(new Handler(args[1]));
         var reporter = new OrderedUpdateReporter(args[0], client, "https://example.test/report", "tenant/database", true);
