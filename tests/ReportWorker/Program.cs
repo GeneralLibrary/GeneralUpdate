@@ -12,6 +12,19 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--dll-search-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            var module = LoadLibrary(args[1]);
+            if (module == IntPtr.Zero)
+            {
+                Console.WriteLine($"error:{Marshal.GetLastWin32Error()}");
+                return 0;
+            }
+            FreeLibrary(module);
+            Console.WriteLine("loaded");
+            return 0;
+        }
         if (args.Length == 4 && args[0] == "--handle-list-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
@@ -48,6 +61,13 @@ internal static class Program
 
     [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint GetFinalPathNameByHandle(IntPtr handle, StringBuilder path, uint size, uint flags);
+
+    [DllImport("kernel32.dll", EntryPoint = "LoadLibraryW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibrary(string path);
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FreeLibrary(IntPtr module);
 
     private sealed class Handler(string mode) : HttpMessageHandler
     {
