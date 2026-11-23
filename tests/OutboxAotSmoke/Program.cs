@@ -18,8 +18,25 @@ try
     var consumer = new DiagnosticOutboxConsumer(root, client, TimeSpan.FromSeconds(5));
     if (await consumer.ProcessCaseAsync("1.0", id) || !Directory.Exists(casePath))
         throw new InvalidOperationException("Unconfirmed evidence was deleted.");
-    if (!await consumer.ProcessCaseAsync("1.0", id) || Directory.Exists(casePath) || handler.Attempts != 2)
-        throw new InvalidOperationException("Confirmed retry did not complete.");
+    var tombstone = Path.Combine(root, "2.0", ".generalupdate-uploaded-" + id);
+    Directory.CreateDirectory(tombstone);
+    using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var recovered = false;
+    var host = new DiagnosticOutboxHost(new DiagnosticOutboxHostOptions
+    {
+        Enabled = true, FailDirectory = root, Endpoint = new Uri("https://example.test/upload"),
+        TenantId = "tenant", AppKey = "app"
+    }, e =>
+    {
+        if (e.Status == DiagnosticOutboxHostStatus.Error) throw e.Error!;
+        if (e.Status == DiagnosticOutboxHostStatus.TombstoneDeleted) recovered = true;
+        if (e.Status == DiagnosticOutboxHostStatus.ScanCompleted) stop.Cancel();
+    }, http);
+    await host.StartAsync(stop.Token);
+    if (Directory.Exists(casePath) || handler.Attempts != 2)
+        throw new InvalidOperationException("Host did not replay the persisted snapshot.");
+    if (!recovered || Directory.Exists(tombstone))
+        throw new InvalidOperationException("Host did not recover a confirmed tombstone.");
     Console.WriteLine("Outbox Native AOT smoke passed.");
 }
 finally

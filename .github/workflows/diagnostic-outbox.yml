@@ -27,6 +27,40 @@ jobs:
         run: dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter FullyQualifiedName~Diagnostics
       - name: Build integration harness
         run: dotnet build tests/OutboxConsumerHarness/OutboxConsumerHarness.csproj -c Release
+      - name: Build all compatible Core targets
+        run: dotnet build src/GeneralUpdate.Core/GeneralUpdate.Core.csproj -c Release
+      - name: Publish standalone Native AOT host
+        run: dotnet publish src/GeneralUpdate.Diagnostics.Host/GeneralUpdate.Diagnostics.Host.csproj -c Release -r ${{ matrix.rid }} -o diagnostic-host-aot
+      - name: Run default-off host (Windows)
+        if: runner.os == 'Windows'
+        run: ./diagnostic-host-aot/GeneralUpdate.Diagnostics.Host.exe
+      - name: Run default-off host (Linux)
+        if: runner.os == 'Linux'
+        run: ./diagnostic-host-aot/GeneralUpdate.Diagnostics.Host
+      - name: Run enabled native host lifecycle (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          root=$(mktemp -d)
+          export GENERALUPDATE_DIAGNOSTICS_ENABLED=true
+          export GENERALUPDATE_DIAGNOSTICS_TENANT=ci-tenant
+          export GENERALUPDATE_DIAGNOSTICS_APP_KEY=ci-app
+          export GENERALUPDATE_DIAGNOSTICS_SCAN_SECONDS=0.1
+          ./diagnostic-host-aot/GeneralUpdate.Diagnostics.Host "$root" https://localhost:1/Fault/UploadArtifact > "$root/host.log" 2> "$root/error.log" &
+          pid=$!
+          trap 'kill -TERM "$pid" 2>/dev/null || true' EXIT
+          for i in {1..100}; do
+            if grep -q ScanCompleted "$root/host.log"; then break; fi
+            sleep 0.1
+          done
+          grep -q ScanCompleted "$root/host.log"
+          kill -TERM "$pid"
+          wait "$pid"
+          grep -q Stopped "$root/host.log"
+          test ! -s "$root/error.log"
+          rm "$root/host.log" "$root/error.log"
+          rmdir "$root"
+          trap - EXIT
       - name: Publish Native AOT smoke
         run: dotnet publish tests/OutboxAotSmoke/OutboxAotSmoke.csproj -c Release -r ${{ matrix.rid }} -o outbox-aot
       - name: Run Native AOT smoke (Windows)
