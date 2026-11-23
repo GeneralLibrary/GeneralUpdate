@@ -55,7 +55,7 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
         if (report.RecordId <= 0 || (report.Type != 1 && report.Type != 2))
             throw new ArgumentException("A positive record ID and supported record type are required.", nameof(report));
 
-        using (await AcquireLockAsync(token).ConfigureAwait(false))
+        Directory.CreateDirectory(_directory);
         using (var connection = Open())
         {
             token.ThrowIfCancellationRequested();
@@ -91,8 +91,8 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
                 }
                 transaction.Commit();
             }
-            await ReplayLockedAsync(connection, token).ConfigureAwait(false);
         }
+        await ReplayAsync(token).ConfigureAwait(false);
     }
 
     /// <summary>Replays committed events in order, stopping on the first unconfirmed response.</summary>
