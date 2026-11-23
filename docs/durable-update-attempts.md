@@ -41,6 +41,22 @@ lost contract only when the child is running a consumer that implements this
 marker. An older or unrelated executable can ignore it; there is no version
 handshake proving which consumer was launched.
 
+The existing IPC file is not an authenticated identity channel. Its fixed
+AES-CBC key and IV are derived from public implementation constants, and the
+contract has no authentication tag or durable consumption nonce. Deleting the
+file after reading does not prevent a writer from replaying a contract for an
+active attempt. The required-attempt environment marker checks consistency in
+the current consumer, not sender authorization.
+
+`ReportType` and package `RecordId` values travel in the contract, but the
+journal does not bind them to an authorized tenant or record identity. There
+is no protected tenant/record/attempt context produced for Bowl. A future
+diagnostic-case association must establish the authorization source, supported
+consumer version, protected channel, persistent replay rejection, and complete
+tenant/record/attempt/installation/snapshot binding before treating these
+fields as trusted evidence. Adding a snapshot content digest alone cannot
+establish that trust.
+
 The attempt journal uses atomic state-file publication and an OS-released
 cross-process lock. `CleanBackup` takes the same lock while reading pins and
 deleting candidates. Reserved and bound paths are excluded from retention; a
