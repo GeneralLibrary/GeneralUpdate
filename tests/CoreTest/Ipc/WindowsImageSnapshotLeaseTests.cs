@@ -265,6 +265,32 @@ public sealed class WindowsImageSnapshotLeaseTests
         Assert.False(File.Exists(marker));
     }
 
+    [Theory]
+    [InlineData(0, 0x7fffffff, 0x7fffffff)]
+    [InlineData(1, 0x7fffffff, 0x7fffffff)]
+    [InlineData(13, 0x7fffffff, 0x7fffffff)]
+    public void OutOfBoundsNativeDirectoryNeverStarts(int index, int rva, int size)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        var bytes = File.ReadAllBytes(Path.Combine(Environment.SystemDirectory, "cmd.exe"));
+        var peOffset = BitConverter.ToInt32(bytes, 0x3c);
+        var optional = checked(peOffset + 24);
+        var magic = BitConverter.ToUInt16(bytes, optional);
+        var directories = checked(optional + (magic == 0x20b ? 112 : 96));
+        var entry = checked(directories + index * 8);
+        BitConverter.GetBytes(rva).CopyTo(bytes, entry);
+        BitConverter.GetBytes(size).CopyTo(bytes, entry + 4);
+        File.WriteAllBytes(fixture.Image, bytes);
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(bytes));
+        var marker = Path.Combine(fixture.Root, "unexpected.txt");
+        Assert.ThrowsAny<Exception>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(),
+            new[] { "/c", "echo", "bad", ">", marker }));
+        Assert.False(File.Exists(marker));
+    }
+
     [NativeAotTheory]
     [InlineData(false)]
     [InlineData(true)]
