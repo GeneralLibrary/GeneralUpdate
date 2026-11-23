@@ -13,6 +13,22 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--job-owner-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            return await WindowsJobProbe.RunAsync(args[1], args[2]);
+        }
+        if (args.Length == 3 && args[0] == "--job-invalid-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            return await WindowsJobProbe.RunAsync(args[1], args[2], invalidJob: true);
+        }
+        if (args.Length == 2 && args[0] == "--job-child-probe")
+        {
+            File.WriteAllText(args[1], "ready");
+            await Task.Delay(Timeout.InfiniteTimeSpan);
+            return 0;
+        }
         if (args.Length == 1 && args[0] == "--sqlite-module-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
