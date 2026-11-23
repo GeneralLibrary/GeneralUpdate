@@ -1,0 +1,55 @@
+# Windows protected native launch
+
+`WindowsNativeLaunchLease` is an opt-in primitive, not an authenticated channel
+or an updater integration. It is available on .NET 8 and later and requires
+Windows 10 version 2004 or later and local fixed NTFS paths. Other platforms
+fail closed. The default profile is disabled; the host must explicitly select
+`TrustedWindowsSystemAndCooperativeNativeAot`.
+
+The host must pin the absolute source executable path and SHA-256, explicitly
+list and pin every application DLL needed by the peer, and provide an absolute
+staging parent. Source directories and files are checked and leased while
+copying. The launcher atomically creates a new private protected-DACL directory,
+copies only the authorized files, checks the staged bytes, and holds the staged
+objects and their namespace until the owned job is stopped. An existing writer
+or delete handle to a source file makes acquisition fail. Normal deployment can
+replace a source after its copy is complete; it does not change the snapshot.
+Directory sharing does not freeze directory contents or security descriptors.
+
+The selected profile **trusts the Windows loader, API-set and SxS resolution,
+and system DLLs**. The deployer must ensure untrusted users have not retained
+write, delete, WRITE_DAC or WRITE_OWNER capabilities to those system objects.
+This historical condition is not established by this API, a System32 path,
+signatures, or repeated ACL checks. It does not extend to application DLLs.
+The host must authorize the exact Native AOT peer hash and its cooperative
+entry-point contract: before processing sensitive input, the peer restricts
+DLL searches to its snapshot and trusted Windows system directories and uses
+only explicitly authorized application dependencies. This is not a sandbox:
+trusted peer code can deliberately load other paths.
+
+The process starts suspended in a creation-time kill-on-close job, with no
+inherited handles, then is resumed only after job membership is confirmed.
+`DuplicateProcessHandle` returns an independently disposable query/synchronize
+handle to the actual process; it does not authenticate the peer. Keep the
+launch lease alive for the entire required operation and dispose duplicated
+process handles when no longer needed.
+`WaitForExitAsync`
+returns the exit code; cancellation terminates the job and releases the lease.
+`DisposeAsync` terminates the job, waits for its processes to exit, and attempts
+identity-checked, non-recursive cleanup. Cleanup failures are reported.
+The lease remains rooted until disposal; neglecting it retains resources.
+
+The executable path, working directory and `AppContext.BaseDirectory` are in
+staging, not the original installation. The host must provide installation
+context separately; applications depending on relative paths must be adapted.
+Each launch uses disk space for a full copy. Failed creation, a crash or a
+failed cleanup can leave protected staging files; no crash recovery is provided.
+Cleanup must never delete a replacement by path. Parent termination closes the
+job, but does not guarantee immediate cleanup.
+
+This boundary excludes malicious processes running as the same Windows user and
+administrators. It does not claim kernel image-section identity, prevent all
+behavior of the authorized program, authenticate either peer, or replace a
+later handshake and endpoint authorization. Do not pass credentials or nonces
+in arguments, environment variables, files or logs. No Client/Updater wiring,
+IPC or credential transfer is provided.
