@@ -21,7 +21,7 @@ public class PushProcessCollection;
 public class PushProcessIntegrationTests
 {
     [Fact]
-    public async Task ClientPush_AutomaticallyLaunchesUpdater_WithTwoChecksAndTenantReceipts()
+    public async Task ClientPush_AutomaticallyLaunchesUpdater_WithTwoChecksWithoutCredentials()
     {
         await using var test = await PushFixture.StartAsync();
         await test.SendAsync(test.Packet(AppType.Client, 123));
@@ -36,13 +36,30 @@ public class PushProcessIntegrationTests
             Assert.Equal(123, request.RecordId);
             Assert.Equal(PushFixture.AppKey, request.AppKey);
             Assert.Equal(test.Hash, request.PacketHash);
-            Assert.Equal("push-tenant", request.Tenant);
+            Assert.Equal("", request.Tenant);
             Assert.False(request.MarkerExists);
         });
         Assert.Contains(test.State.Reports, report =>
             report.RecordId == 123 && report.Type == 2 && report.Status == 2 && report.MarkerExists);
-        Assert.All(test.State.Reports, report => Assert.Equal("push-tenant", report.Tenant));
+        Assert.All(test.State.Reports, report => Assert.Equal("", report.Tenant));
         Assert.Equal(0, test.State.Verifications);
+    }
+
+    [Theory]
+    [InlineData("GU_PUSH_TENANT")]
+    [InlineData("GU_PUSH_TOKEN")]
+    [InlineData("GU_PUSH_BASIC_USERNAME")]
+    [InlineData("GU_PUSH_BASIC_PASSWORD")]
+    public async Task CredentialBearingConfiguration_FailsClosedBeforeListening(string credentialSetting)
+    {
+        await using var test = await PushFixture.StartAsync(credentialSetting: credentialSetting);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await test.Client.WaitForExitAsync(timeout.Token);
+        Assert.NotEqual(0, test.Client.ExitCode);
+        Assert.False(File.Exists(Path.Combine(test.Root, "client-ready")));
+        Assert.Empty(test.State.Validations);
+        Assert.Equal(0, test.State.Downloads);
+        Assert.Empty(test.State.Reports);
     }
 
     [Fact]
@@ -167,7 +184,7 @@ public class PushProcessIntegrationTests
         public required ServerState State { get; init; }
         private readonly ConcurrentQueue<string> _output = new();
 
-        public static async Task<PushFixture> StartAsync(bool pause = false)
+        public static async Task<PushFixture> StartAsync(bool pause = false, string? credentialSetting = null)
         {
             var root = Path.Combine(Path.GetTempPath(), "GeneralUpdate.PushProcess", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(root, "updater"));
@@ -211,6 +228,8 @@ public class PushProcessIntegrationTests
                 var body = state.ValidationBody;
                 var delay = state.ValidationDelay;
                 Assert.False(context.Request.Headers.ContainsKey("X-Poison"));
+                Assert.False(context.Request.Headers.ContainsKey("Authorization"));
+                Assert.False(context.Request.Headers.ContainsKey("X-Update-Signature"));
                 state.Validations.Enqueue(new(request!.RecordId, request.AppKey, request.PacketHash,
                     context.Request.Headers["X-Tenant-Id"].ToString(),
                     File.Exists(Path.Combine(root, "marker.txt"))));
@@ -222,8 +241,10 @@ public class PushProcessIntegrationTests
             });
             app.MapGet("/package.zip", (Microsoft.AspNetCore.Http.HttpContext context) =>
             {
-                Assert.Equal("push-tenant", context.Request.Headers["X-Tenant-Id"].ToString());
+                Assert.Equal("", context.Request.Headers["X-Tenant-Id"].ToString());
                 Assert.False(context.Request.Headers.ContainsKey("X-Poison"));
+                Assert.False(context.Request.Headers.ContainsKey("Authorization"));
+                Assert.False(context.Request.Headers.ContainsKey("X-Update-Signature"));
                 Interlocked.Increment(ref state.Downloads);
                 if (state.RedirectDownload)
                     return Microsoft.AspNetCore.Http.Results.Redirect("/redirected", permanent: false, preserveMethod: true);
@@ -253,6 +274,12 @@ public class PushProcessIntegrationTests
             start.Environment["GU_PUSH_SERVER"] = url;
             start.Environment["GU_PUSH_APPKEY"] = AppKey;
             start.Environment["GU_PUSH_PAUSE_APPLY"] = pause ? "1" : "0";
+            start.Environment.Remove("GU_PUSH_TENANT");
+            start.Environment.Remove("GU_PUSH_TOKEN");
+            start.Environment.Remove("GU_PUSH_BASIC_USERNAME");
+            start.Environment.Remove("GU_PUSH_BASIC_PASSWORD");
+            if (credentialSetting != null)
+                start.Environment[credentialSetting] = "sensitive-test-value";
             var process = Process.Start(start)!;
             var fixture = new PushFixture
             {
@@ -265,7 +292,8 @@ public class PushProcessIntegrationTests
             process.BeginErrorReadLine();
             try
             {
-                await fixture.WaitForFileAsync("client-ready");
+                if (credentialSetting == null)
+                    await fixture.WaitForFileAsync("client-ready");
             }
             catch
             {

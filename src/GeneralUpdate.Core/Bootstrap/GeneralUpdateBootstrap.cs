@@ -205,12 +205,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             throw new ArgumentOutOfRangeException(nameof(config), "Push queue capacity must be positive.");
         if (string.IsNullOrWhiteSpace(config.AppKey))
             throw new ArgumentException("Push updates require an explicitly configured AppKey.", nameof(config));
-        if (!IsValidHeaderName(config.TenantHeaderName) ||
-            config.TenantHeaderName.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
-            config.TenantHeaderName.Equals("Cookie", StringComparison.OrdinalIgnoreCase) ||
-            config.TenantHeaderName.Equals("Host", StringComparison.OrdinalIgnoreCase) ||
-            config.TenantHeaderName.Equals("appkey", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("TenantHeaderName must be a non-sensitive tenant-scoping header.", nameof(config));
         if (!IsSecureEndpoint(config.ValidationUrl))
             throw new ArgumentException("Push validation URL must be an absolute HTTPS URL (HTTP is allowed only for loopback).", nameof(config));
         if (config.AllowedDownloadOrigins == null ||
@@ -224,8 +218,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             ValidationUrl = config.ValidationUrl,
             AccessToken = config.AccessToken,
             AppKey = config.AppKey,
-            TenantHeaderName = config.TenantHeaderName,
-            ForwardTenantHeaderToHub = config.ForwardTenantHeaderToHub,
             ReconnectDelay = config.ReconnectDelay,
             MaxReconnectAttempts = config.MaxReconnectAttempts,
             QueueCapacity = config.QueueCapacity,
@@ -239,15 +231,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
            (uri.Scheme == Uri.UriSchemeHttps ||
             (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) &&
            string.IsNullOrEmpty(uri.UserInfo);
-
-    private static bool IsValidHeaderName(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return false;
-        foreach (var character in name)
-            if (!(char.IsLetterOrDigit(character) || character == '-'))
-                return false;
-        return true;
-    }
 
     /// <summary>Stops and disposes the opt-in push listener, waiting for queued messages to finish.</summary>
     public async Task StopPushUpdatesAsync()
@@ -313,6 +296,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         AppMetadataDiscoverer.Discover(_configInfo);
         if (string.IsNullOrWhiteSpace(_configInfo.ProductId))
             throw new InvalidOperationException("Push updates require ProductId in the request or installed manifest.");
+        if (_configInfo.CustomHeaders?.Count > 0 || !string.IsNullOrEmpty(_configInfo.Token) ||
+            !string.IsNullOrEmpty(_configInfo.BasicUsername) || !string.IsNullOrEmpty(_configInfo.BasicPassword))
+            throw new InvalidOperationException(
+                "NOT DEPLOYABLE: credential-bearing or tenant-header push flows require a separately authenticated IPC channel.");
         if (ResolveExtension<Download.Abstractions.IDownloadSource>() != null ||
             ResolveExtension<Download.Abstractions.IDownloadOrchestrator>() != null ||
             ResolveExtension<Download.Abstractions.IDownloadExecutor>() != null ||
@@ -328,25 +315,10 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         if (_configInfo.CustomHeaders != null)
             _configInfo.CustomHeaders = new Dictionary<string, string>(_configInfo.CustomHeaders, StringComparer.OrdinalIgnoreCase);
 
-        var hubHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (_pushHubConfig!.ForwardTenantHeaderToHub && _configInfo.CustomHeaders != null)
-        {
-            foreach (var header in _configInfo.CustomHeaders)
-            {
-                if (header.Key.Equals(_pushHubConfig!.TenantHeaderName, StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(header.Value))
-                {
-                    hubHeaders[_pushHubConfig.TenantHeaderName] = header.Value;
-                    break;
-                }
-            }
-        }
-
         var hub = new UpgradeHubService(
             _pushHubConfig!.Url,
             _pushHubConfig.AccessToken,
-            _pushHubConfig.AppKey,
-            hubHeaders);
+            _pushHubConfig.AppKey);
         var listener = new PushUpdateListener(hub, ProcessPushMessageAsync, _pushHubConfig.QueueCapacity);
         _pushListener = listener;
         try
@@ -724,7 +696,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 UpdatePath = processInfo.UpdatePath,
                 LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
                 ReportType = processInfo.ReportType,
-                CustomHeaders = processInfo.CustomHeaders,
                 RequirePushValidation = processInfo.RequirePushValidation,
                 PushValidationUrl = processInfo.PushValidationUrl,
                 PushValidationAppKey = processInfo.PushValidationAppKey,
@@ -733,7 +704,6 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
             };
 
-            SyncCustomHeaders(_configInfo.CustomHeaders);
             StorageManager.BlackMatcher = BlackMatcher.FromConfigInfo(_configInfo);
         }
         catch (Exception ex)

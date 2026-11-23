@@ -67,13 +67,16 @@ static async Task RunHostAsync()
         ?? throw new InvalidOperationException("GU_PUSH_SERVER is required.");
     var appKey = Environment.GetEnvironmentVariable("GU_PUSH_APPKEY")
         ?? throw new InvalidOperationException("GU_PUSH_APPKEY is required.");
-    var tenant = Environment.GetEnvironmentVariable("GU_PUSH_TENANT") ?? "push-tenant";
+    var tenant = Environment.GetEnvironmentVariable("GU_PUSH_TENANT");
     await bootstrap.SetConfig(new UpdateRequest
         {
             UpdateUrl = serverUrl + "/Upgrade/Verification",
             ReportUrl = serverUrl + "/Upgrade/Report",
             AppSecretKey = Environment.GetEnvironmentVariable("GU_PUSH_SECRET")
                 ?? "process-fixture-api-secret",
+            Token = Environment.GetEnvironmentVariable("GU_PUSH_TOKEN"),
+            BasicUsername = Environment.GetEnvironmentVariable("GU_PUSH_BASIC_USERNAME"),
+            BasicPassword = Environment.GetEnvironmentVariable("GU_PUSH_BASIC_PASSWORD"),
             ProductId = Environment.GetEnvironmentVariable("GU_PUSH_PRODUCT") ?? "push-product",
             ClientVersion = Environment.GetEnvironmentVariable("GU_PUSH_CLIENT_VERSION") ?? "1.0.0",
             UpgradeClientVersion = Environment.GetEnvironmentVariable("GU_PUSH_UPGRADE_VERSION") ?? "1.0.0",
@@ -81,7 +84,8 @@ static async Task RunHostAsync()
             MainAppName = "Client",
             UpdateAppName = OperatingSystem.IsWindows() ? "PushUpdater.exe" : "PushUpdater",
             UpdatePath = "updater",
-            CustomHeaders = new Dictionary<string, string> { ["X-Tenant-Id"] = tenant }
+            CustomHeaders = string.IsNullOrEmpty(tenant) ? null :
+                new Dictionary<string, string> { ["X-Tenant-Id"] = tenant }
         })
         .EnablePushUpdates(new HubConfig
         {

@@ -102,7 +102,10 @@ public class UpdateStrategy : IStrategy
     {
         if (_configInfo == null) throw new InvalidOperationException("UpdateStrategy not configured.");
         if (_configInfo.RequirePushValidation &&
-            (_configInfo.ReportType != 2 || _configInfo.UpdateVersions?.Count != 1 ||
+            (!string.IsNullOrEmpty(_configInfo.AppSecretKey) ||
+             !string.IsNullOrEmpty(_configInfo.Token) || !string.IsNullOrEmpty(_configInfo.BasicUsername) ||
+             !string.IsNullOrEmpty(_configInfo.BasicPassword) || _configInfo.CustomHeaders?.Count > 0 ||
+             _configInfo.ReportType != 2 || _configInfo.UpdateVersions?.Count != 1 ||
              _configInfo.UpdateVersions[0].AppType != (int)AppType.Client ||
              _configInfo.UpdateVersions[0].PackageType != (int)PackageType.Full))
         {

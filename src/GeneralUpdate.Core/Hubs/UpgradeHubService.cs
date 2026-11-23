@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using GeneralUpdate.Core.JsonContext;
 using Microsoft.AspNetCore.SignalR;
@@ -22,20 +21,9 @@ public class UpgradeHubService : IUpgradeHubService
     private bool _disposed;
 
     public UpgradeHubService(string url, string? token = null, string? appkey = null)
-        : this(url, token, appkey, null) { }
+        => _connection = BuildHubConnection(url, token, appkey);
 
-    public UpgradeHubService(
-        string url,
-        string? token,
-        string? appkey,
-        IReadOnlyDictionary<string, string>? headers)
-        => _connection = BuildHubConnection(url, token, appkey, headers);
-
-    private HubConnection BuildHubConnection(
-        string url,
-        string? token = null,
-        string? appkey = null,
-        IReadOnlyDictionary<string, string>? headers = null)
+    private HubConnection BuildHubConnection(string url, string? token = null, string? appkey = null)
     {
         var builder = new HubConnectionBuilder()
             .WithUrl(url, config =>
@@ -46,11 +34,6 @@ public class UpgradeHubService : IUpgradeHubService
                 if (!string.IsNullOrWhiteSpace(appkey))
                     config.Headers.Add("appkey", appkey);
 
-                if (headers != null)
-                {
-                    foreach (var header in headers)
-                        config.Headers.Add(header.Key, header.Value);
-                }
             }).WithAutomaticReconnect(new RandomRetryPolicy());
         builder.Services.Configure<JsonHubProtocolOptions>(o =>
         {

@@ -43,6 +43,13 @@ sidebar_position: 4
 
 #### 默认关闭的自动宿主路径
 
+**DRAFT / NOT DEPLOYABLE for credential-bearing flow。** 现有固定 AES IPC 没有
+经过验证的 OS 目录 ACL、父子身份认证、endpoint-tenant 绑定或篡改/重放拒绝机制。
+本层不是安全传输修复，也不是认证握手。自动配置含任何 CustomHeaders（包括租户头）、
+API Token 或 Basic 用户名/密码时，在监听开始前 fail-closed；不得借助该路径传凭据。
+必填的 AppSecretKey 仅保留在 Client 本地，不用于自动 HTTP 认证，也不进入自动 IPC。
+安全通道需要独立 PR；无凭据进程 fixture 成功不证明生产安装安全。
+
 `GeneralUpdateBootstrap` 默认仍使用原有轮询/升级入口。显式调用 `EnablePushUpdates`
 才启动自动监听；该模式的 `LaunchAsync` 只连接 SignalR，不调用 Verification，不和轮询
 混用。应用需要保留 bootstrap 实例，在退出时调用 `StopPushUpdatesAsync`；控制台宿主
@@ -84,7 +91,7 @@ Chain/未声明包类型无法证明差分前置版本，拒绝自动应用。�
 `{"recordId":123,"appKey":"registered-client","packetHash":"..."}`。
 仅 HTTP 2xx 且 camelCase `code=200/body=true` 继续；缺字段、旧端点、超时、异常、
 HTTP 403/其他非成功均拒绝。默认 10 秒超时，不添加 TTL。下载完成后，Client 包的
-端点、appKey、RecordId、Hash 和 CustomHeaders 经 IPC 交给真实 updater；
+端点、appKey、RecordId 和 Hash 经 IPC 交给真实 updater（不传 HTTP 头或 API 凭据）；
 updater 执行现有 `OnBeforeUpdateAsync` hook 和文件 hash 检查后，
 `CompressMiddleware` 在实际写入文件前再次请求同一三元组。
 Upgrade 包走现有 ClientStrategy 的就地应用路径，并在同一写入边界复查。
@@ -94,20 +101,23 @@ Blocked/终态，本实现不声称消除了该竞态。
 
 自动下载只允许 UpdateUrl 的精确 origin（scheme/host/port），其他可信 origin 必须
 在 `HubConfig.AllowedDownloadOrigins` 明确列出；不要加入不可信地址。
-认证/租户头仅来自本地 UpdateRequest 的快照，不读取其他 bootstrap 的全局 HTTP 头。
+自动 HTTP 流不附带 API 认证、租户头或其他 bootstrap 的全局 HTTP 头。
 下载、校验和报告禁用重定向及 cookie 容器，防止跨 origin 转发；需要重定向的部署应
-配置最终可信地址。Hub 只发送明确的 AppKey/AccessToken，不自动发送 API 租户头；
-需要时显式设置 `ForwardTenantHeaderToHub=true` 和 `TenantHeaderName`。
+配置最终可信地址。Hub 只发送明确的 AppKey/AccessToken，不发送 API 租户头。
 ValidatePush 谓词不使用租户头，但停用租户头可被服务器激活过滤器提前拒绝为 403。
-Local 下载仍需要 `request.CustomHeaders["X-Tenant-Id"]`，它同样随 IPC 传给报告。
-自定义认证/下载/OS/reporter 不适用该自动路径；使用本地请求凭据和现有 hooks。
+Local 下载如果需要 `X-Tenant-Id` 或认证，**本层自动流拒绝该配置，不能用于该部署**。
+旧手动 API 的进程级头配置行为未改变，但本层不新增头/凭据 IPC 传输。
+自定义认证/下载/OS/reporter 不适用该自动路径；使用现有 hooks，不能用它绕过安全限制。
 
 每进程仅允许一个自动监听器，因为文件存储仍有进程级状态；不要并行运行其他
 手动升级/静默轮询，或在监听期间修改 bootstrap 配置/选项。队列默认容量 16、
 消息上限 64 Ki 字符，串行处理；满队列显式记录拒绝，不保证可靠投递/重放。
 初始连接失败向调用者传播，连接建立后沿用 SignalR 自动重连；不保证重连耗尽后
 自动恢复。连接/身份/路径必须由真实宿主配置，库不能推断任意程序的启动生命周期。
-IPC 的固定 AES 密钥不是本地攻击者认证边界，安装目录和 IPC 目录需要 OS 权限保护。
+IPC 的固定 AES 密钥不是本地攻击者认证边界。本层没有设置或实测 OS ACL；选用安装级
+目录不等于权限安全。也没有父子身份验证、租户与端点认证绑定、MAC 或重放 nonce。
+删除读过的文件不等于重放拒绝；本地攻击者可修改包括验证开关在内的合同字段。
+因此无凭据路径的验证/回执测试也不证明能抵御本地 IPC 攻击或可安全生产部署。
 
 #### 手动兼容路径
 
@@ -129,7 +139,8 @@ IPC 的固定 AES 密钥不是本地攻击者认证边界，安装目录和 IPC 
 
 `tests/CoreTest/Hubs/PushProcessIntegrationTests.cs` 使用真实 loopback Kestrel/SignalR，
 通过公开 bootstrap 自动监听，实际启动不同 PID 的 updater 并写入 ZIP marker，
-验证两次校验、撤销后的拒绝、租户 IPC/回执、旧消息拒绝、串行 Upgrade 调度、
+验证两次校验、撤销后的拒绝、不发送 API 凭据、带租户头/Token 时 fail-closed、
+旧消息拒绝、串行 Upgrade 调度、
 超时/业务/HTTP 拒绝与禁止重定向。它不是 GeneralSpace/MySQL 联测。
 `tests/PushAotSmoke` 同时提供该进程宿主和 source-generated JSON smoke；
 `.github/workflows/push-aot.yml` 在 Windows/Linux 发布 Native AOT 后用原生宿主运行

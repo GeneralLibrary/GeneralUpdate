@@ -177,6 +177,11 @@ namespace GeneralUpdate.Core.Configuration
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "UpdateContext source cannot be null");
+            if (source.RequirePushValidation &&
+                (source.CustomHeaders?.Count > 0 || !string.IsNullOrEmpty(source.Token) ||
+                 !string.IsNullOrEmpty(source.BasicUsername) || !string.IsNullOrEmpty(source.BasicPassword)))
+                throw new InvalidOperationException(
+                    "NOT DEPLOYABLE: automatic push cannot transfer credentials or tenant headers through unauthenticated IPC.");
 
             // 在单一位置创建 ProcessContract，包含所有必需参数
             // 集中管理 ProcessContract 的参数映射逻辑
@@ -189,16 +194,16 @@ namespace GeneralUpdate.Core.Configuration
                 compressEncoding: source.Encoding,               // 调用此方法前已计算好的值
                 compressFormat: source.Format.ToExtension(),     // 调用此方法前已计算好的值
                 downloadTimeOut: source.DownloadTimeOut,         // 调用此方法前已计算好的值
-                appSecretKey: source.AppSecretKey,
+                appSecretKey: source.RequirePushValidation ? string.Empty : source.AppSecretKey,
                 updateVersions: updateVersions,                  // 来自 API 响应
                 reportUrl: source.ReportUrl,
                 backupDirectory: source.BackupDirectory,         // 调用此方法前已计算好的值
                 bowl: source.Bowl,
-                scheme: source.Scheme,
-                token: source.Token,
+                scheme: source.RequirePushValidation ? null : source.Scheme,
+                token: source.RequirePushValidation ? null : source.Token,
                 authScheme: source.AuthScheme,
-                basicUsername: source.BasicUsername,
-                basicPassword: source.BasicPassword,
+                basicUsername: source.RequirePushValidation ? null : source.BasicUsername,
+                basicPassword: source.RequirePushValidation ? null : source.BasicPassword,
                 driverDirectory: source.DriverDirectory,         // 驱动更新所需的目录
                 tempPath: source.TempPath,                       // 客户端的下载临时路径，供升级进程定位包文件
                 blackFileFormats: blackFileFormats,              // 来自 BlackListManager
@@ -208,9 +213,6 @@ namespace GeneralUpdate.Core.Configuration
                 launchClient: source.LaunchClientAfterUpdate
             );
             processInfo.ReportType = reportType;
-            processInfo.CustomHeaders = source.CustomHeaders == null
-                ? null
-                : new Dictionary<string, string>(source.CustomHeaders, StringComparer.OrdinalIgnoreCase);
             processInfo.RequirePushValidation = source.RequirePushValidation;
             processInfo.PushValidationUrl = source.PushValidationUrl;
             processInfo.PushValidationAppKey = source.PushValidationAppKey;

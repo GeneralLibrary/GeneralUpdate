@@ -404,9 +404,6 @@ namespace GeneralUpdate.Core.Configuration
         [JsonPropertyName("ReportType")]
         public int ReportType { get; set; } = 1;
 
-        [JsonPropertyName("CustomHeaders")]
-        public Dictionary<string, string>? CustomHeaders { get; set; }
-
         [JsonPropertyName("RequirePushValidation")]
         public bool RequirePushValidation { get; set; }
 
