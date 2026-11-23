@@ -47,13 +47,18 @@ public sealed class WindowsImageLockExperimentTests(ITestOutputHelper output)
             AssertPrivateAcl(actualSecurity, identity);
 
             var directory = Path.Combine(root, "image");
-            Directory.CreateDirectory(directory);
+            new DirectoryInfo(directory).Create(security);
             var image = Path.Combine(directory, "peer.exe");
             var replacement = Path.Combine(root, "replacement.exe");
             var nativePeer = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER");
             var sourceImage = nativePeer ?? Path.Combine(Environment.SystemDirectory, "cmd.exe");
             File.Copy(sourceImage, image);
             File.Copy(image, replacement);
+            var fileSecurity = new FileSecurity();
+            fileSecurity.SetOwner(identity);
+            fileSecurity.SetAccessRuleProtection(true, false);
+            fileSecurity.AddAccessRule(new FileSystemAccessRule(identity, FileSystemRights.FullControl, AccessControlType.Allow));
+            new FileInfo(image).SetAccessControl(fileSecurity);
             AssertPrivateAcl(new DirectoryInfo(directory).GetAccessControl(), identity);
             AssertPrivateAcl(new FileInfo(image).GetAccessControl(), identity);
 
