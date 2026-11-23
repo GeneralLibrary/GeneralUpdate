@@ -4,13 +4,13 @@ using System.Text;
 using GeneralUpdate.Core.Security;
 using Microsoft.Data.Sqlite;
 
-if (args.Length == 5 && args[0] == "--snapshot-owner-probe")
+if (args.Length >= 5 && args[0] == "--snapshot-owner-probe")
 {
     var image = new WindowsSnapshotFile(args[2], SHA256.HashData(File.ReadAllBytes(args[2])));
     var dll = new WindowsSnapshotFile(args[3], SHA256.HashData(File.ReadAllBytes(args[3])));
     await using var lease = WindowsNativeLaunchLease.Start(
         WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
-        args[1], image, new[] { dll }, new[] { "--snapshot-probe", args[4], "wait" });
+        args[1], image, new[] { dll }, args.Skip(5).ToArray(), new[] { "--snapshot-probe", args[4], "wait" });
     await Console.In.ReadLineAsync();
     return 0;
 }
@@ -20,6 +20,9 @@ if (args.Length == 3 && args[0] == "--snapshot-probe")
     {
         if (!Native.SetDefaultDllDirectories(0x00000200 | 0x00000800))
             throw new InvalidOperationException($"SetDefaultDllDirectories failed: {Marshal.GetLastWin32Error()}");
+        var sqlitePath = Path.Combine(AppContext.BaseDirectory, "e_sqlite3.dll");
+        if (Native.LoadLibraryEx(sqlitePath, IntPtr.Zero, 0x00000100 | 0x00000800) == IntPtr.Zero)
+            throw new InvalidOperationException($"Loading the staged SQLite library failed: {Marshal.GetLastWin32Error()}");
         using var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         var module = Native.GetModuleHandle("e_sqlite3.dll");
@@ -89,4 +92,6 @@ internal static class Native
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool SetDefaultDllDirectories(uint flags);
+    [DllImport("kernel32.dll", EntryPoint = "LoadLibraryExW", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
 }

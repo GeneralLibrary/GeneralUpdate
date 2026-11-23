@@ -7,8 +7,14 @@ fail closed. The default profile is disabled; the host must explicitly select
 `TrustedWindowsSystemAndCooperativeNativeAot`.
 
 The host must pin the absolute source executable path and SHA-256, explicitly
-list and pin every application DLL needed by the peer, and provide an absolute
-staging parent. Source directories and files are checked and leased while
+list and pin every application DLL needed by the peer, provide an explicit
+list of names that the deployer has established are trusted Windows system
+modules, and provide an absolute staging parent. The launcher checks normal and
+delay import names in the staged native PE files against these lists and rejects
+forwarded application exports. The system-name list is a deployer assertion,
+not proof that a file in System32 is a Windows component. The host must also
+audit application SxS manifests and the peer's runtime loading behavior.
+Source directories and files are checked and leased while
 copying. The launcher atomically creates a new private protected-DACL directory,
 copies only the authorized files, checks the staged bytes, and holds the staged
 objects and their namespace until the owned job is stopped. An existing writer
@@ -23,8 +29,9 @@ This historical condition is not established by this API, a System32 path,
 signatures, or repeated ACL checks. It does not extend to application DLLs.
 The host must authorize the exact Native AOT peer hash and its cooperative
 entry-point contract: before processing sensitive input, the peer restricts
-DLL searches to its snapshot and trusted Windows system directories and uses
-only explicitly authorized application dependencies. This is not a sandbox:
+DLL searches to its snapshot and trusted Windows system directories and loads
+application dependencies by their absolute staged paths. It must not depend on
+an application assembly supplied through an unaudited SxS manifest. This is not a sandbox:
 trusted peer code can deliberately load other paths.
 
 The process starts suspended in a creation-time kill-on-close job, with no

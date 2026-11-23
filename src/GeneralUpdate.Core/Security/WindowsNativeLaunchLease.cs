@@ -66,12 +66,15 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
     /// access to those system objects. This method cannot verify that historical condition.
     /// The hash identifies the peer and its trusted entry-point contract; this method does not inspect its code.
     /// The peer must limit DLL loading to its authorized snapshot and Windows system
-    /// directories before handling sensitive input. Do not pass secrets in arguments.
+    /// directories before handling sensitive input. The supplied system module names
+    /// are a host assertion of trusted OS components, not proof based on their names.
+    /// Do not pass secrets in arguments.
     /// No handles are inherited. The working directory and executable directory are the
     /// snapshot, not the application installation directory.
     /// </summary>
     public static WindowsNativeLaunchLease Start(WindowsNativeLaunchProfile profile, string snapshotParent,
         WindowsSnapshotFile image, System.Collections.Generic.IReadOnlyList<WindowsSnapshotFile> dependencies,
+        System.Collections.Generic.IReadOnlyList<string> systemModules,
         System.Collections.Generic.IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Windows is required.");
@@ -79,16 +82,25 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
             throw new PlatformNotSupportedException("Windows 10 version 2004 or later is required.");
         if (profile != WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot)
             throw new InvalidOperationException("The trusted Windows system and cooperative Native AOT profile is not enabled.");
+        if (dependencies == null) throw new ArgumentNullException(nameof(dependencies));
+        if (systemModules == null) throw new ArgumentNullException(nameof(systemModules));
         if (arguments == null) throw new ArgumentNullException(nameof(arguments));
         var argumentCopy = new string[arguments.Count];
         for (var i = 0; i < argumentCopy.Length; i++)
             argumentCopy[i] = arguments[i] ?? throw new ArgumentException("Arguments must not contain null values.", nameof(arguments));
-        return StartWindows(snapshotParent, image, dependencies, argumentCopy, cancellationToken);
+        var systemCopy = new string[systemModules.Count];
+        for (var i = 0; i < systemCopy.Length; i++)
+            systemCopy[i] = systemModules[i] ?? throw new ArgumentException("System module names must not be null.", nameof(systemModules));
+        var dependencyCopy = new WindowsSnapshotFile[dependencies.Count];
+        for (var i = 0; i < dependencyCopy.Length; i++)
+            dependencyCopy[i] = dependencies[i] ?? throw new ArgumentException("Dependencies must not contain null values.", nameof(dependencies));
+        return StartWindows(snapshotParent, image, dependencyCopy, systemCopy, argumentCopy, cancellationToken);
     }
 
     [SupportedOSPlatform("windows")]
     private static WindowsNativeLaunchLease StartWindows(string snapshotParent,
         WindowsSnapshotFile image, System.Collections.Generic.IReadOnlyList<WindowsSnapshotFile> dependencies,
+        System.Collections.Generic.IReadOnlyList<string> systemModules,
         System.Collections.Generic.IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         foreach (var argument in arguments)
@@ -99,6 +111,9 @@ public sealed class WindowsNativeLaunchLease : IAsyncDisposable
         SafeFileHandle? job = null;
         try
         {
+            var files = new List<WindowsSnapshotFile> { image };
+            files.AddRange(dependencies);
+            WindowsNativeImportPolicy.Validate(snapshot.DirectoryPath, files, systemModules);
             job = CreateJobObject(IntPtr.Zero, null);
             if (job.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
             var limits = new ExtendedLimitInformation
