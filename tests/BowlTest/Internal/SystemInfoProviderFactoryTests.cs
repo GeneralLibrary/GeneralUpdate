@@ -40,7 +40,7 @@ public class SystemInfoProviderFactoryTests
     public async Task 返回的Provider_ExportAsync不抛出异常()
     {
         var provider = SystemInfoProviderFactory.Create();
-        var tempDir = Path.Combine(Path.GetTempPath(), $"BowlTest_{Guid.NewGuid():N}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"Bowl Test_{Guid.NewGuid():N}");
         try
         {
             Directory.CreateDirectory(tempDir);
