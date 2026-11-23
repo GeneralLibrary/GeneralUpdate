@@ -188,62 +188,63 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
             }
         }
     }
-            /// <summary>Returns quarantined reports for operator inspection. Payloads may contain sensitive diagnostics.</summary>
-            public async Task<IReadOnlyList<QuarantinedUpdateReport>> GetQuarantinedAsync(CancellationToken token = default)
+    /// <summary>Returns quarantined reports for operator inspection. Payloads may contain sensitive diagnostics.</summary>
+    public async Task<IReadOnlyList<QuarantinedUpdateReport>> GetQuarantinedAsync(CancellationToken token = default)
+    {
+        using (await AcquireLockAsync(token).ConfigureAwait(false))
+        using (var connection = Open())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT id, payload, reason FROM quarantine ORDER BY id;";
+            using (var reader = command.ExecuteReader())
             {
-                using (await AcquireLockAsync(token).ConfigureAwait(false))
-                using (var connection = Open())
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT id, payload, reason FROM quarantine ORDER BY id;";
-                    using (var reader = command.ExecuteReader())
-                    {
-                        var result = new List<QuarantinedUpdateReport>();
-                        while (reader.Read()) result.Add(new QuarantinedUpdateReport(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
-                        return result;
-                    }
-                }
+                var result = new List<QuarantinedUpdateReport>();
+                while (reader.Read()) result.Add(new QuarantinedUpdateReport(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
+                return result;
             }
+        }
+    }
 
-            /// <summary>Moves an inspected event back to its original place in the outbox for an explicit retry.</summary>
-            public async Task RetryQuarantinedAsync(long id, CancellationToken token = default)
+    /// <summary>Moves an inspected event back to its original place in the outbox for an explicit retry.</summary>
+    public async Task RetryQuarantinedAsync(long id, CancellationToken token = default)
+    {
+        using (await AcquireLockAsync(token).ConfigureAwait(false))
+        using (var connection = Open())
+        using (var transaction = connection.BeginTransaction())
+        {
+            using (var command = connection.CreateCommand())
             {
-                using (await AcquireLockAsync(token).ConfigureAwait(false))
-                using (var connection = Open())
-                using (var transaction = connection.BeginTransaction())
-                {
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.Transaction = transaction;
-                        command.CommandText = "INSERT INTO outbox (id, payload) SELECT id, payload FROM quarantine WHERE id = $id;";
-                        command.Parameters.AddWithValue("$id", id);
-                        if (command.ExecuteNonQuery() != 1) throw new InvalidOperationException("Quarantined report not found.");
-                        command.CommandText = "DELETE FROM quarantine WHERE id = $id;";
-                        if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Quarantined report changed.");
-                    }
-                    transaction.Commit();
-                }
+                command.Transaction = transaction;
+                command.CommandText = "INSERT INTO outbox (id, payload) SELECT id, payload FROM quarantine WHERE id = $id;";
+                command.Parameters.AddWithValue("$id", id);
+                if (command.ExecuteNonQuery() != 1) throw new InvalidOperationException("Quarantined report not found.");
+                command.CommandText = "DELETE FROM quarantine WHERE id = $id;";
+                if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Quarantined report changed.");
             }
+            transaction.Commit();
+        }
+    }
 
-            private static bool IsBlocked(SqliteConnection connection, int type, int recordId)
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine WHERE type = $type AND record_id = $record);";
-                    command.Parameters.AddWithValue("$type", type);
-                    command.Parameters.AddWithValue("$record", recordId);
-                    return (long)command.ExecuteScalar()! != 0;
-                }
-            }
+    private static bool IsBlocked(SqliteConnection connection, int type, int recordId)
+    {
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine WHERE type = $type AND record_id = $record);";
+            command.Parameters.AddWithValue("$type", type);
+            command.Parameters.AddWithValue("$record", recordId);
+            return (long)command.ExecuteScalar()! != 0;
+        }
+    }
 
-            private static bool HasQuarantine(SqliteConnection connection)
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine);";
-                    return (long)command.ExecuteScalar()! != 0;
-                }
-            }
+    private static bool HasQuarantine(SqliteConnection connection)
+    {
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine);";
+            return (long)command.ExecuteScalar()! != 0;
+        }
+    }
+
     private SqliteConnection Open()
     {
         var builder = new SqliteConnectionStringBuilder
