@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using GeneralUpdate.Core.Download.Reporting;
@@ -45,6 +46,36 @@ switch (mode)
         catch (BeforeDeliveryException)
         {
             Console.WriteLine("Committed original payload before transport.");
+        }
+        break;
+    case "transient-seed":
+        try
+        {
+            await reporter.ReportAsync(new UpdateReport(recordId, 3)
+            {
+                Category = FailureCategory.Apply, Phase = "Apply", ErrorCode = "CI-TRANSIENT", Message = "CI failure"
+            });
+            throw new InvalidDataException("Transient transport failure was not observed.");
+        }
+        catch (BeforeDeliveryException)
+        {
+            Console.WriteLine("Transient transport failure retained report.");
+        }
+        break;
+    case "unknown-response":
+        try
+        {
+            await reporter.ReportAsync(new UpdateReport(recordId, 3)
+            {
+                Category = FailureCategory.Apply, Phase = "Apply", ErrorCode = "CI-UNKNOWN", Message = "CI failure"
+            });
+            throw new InvalidDataException("Unknown response was incorrectly accepted.");
+        }
+        catch (InvalidOperationException)
+        {
+            if (handler.UnknownResponses != 1)
+                throw new InvalidDataException("The successful response was not replaced as expected.");
+            Console.WriteLine("Unrecognized response retained report.");
         }
         break;
     case "terminal-reject":
@@ -98,6 +129,13 @@ switch (mode)
     case "replay":
         await reporter.ReplayAsync();
         break;
+    case "replay-exact":
+        if (args.Length != 6) throw new ArgumentException("Expected SHA-256 digest of retained payload.");
+        await reporter.ReplayAsync();
+        if (handler.SentPayloadHashes.Count != 1 ||
+            !string.Equals(handler.SentPayloadHashes[0], args[5], StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Replay did not send the exact retained payload.");
+        break;
     case "success":
         await reporter.ReportAsync(new UpdateReport(recordId, 2));
         break;
@@ -124,13 +162,17 @@ sealed class BeforeDeliveryException : HttpRequestException;
 sealed class TestHandler(HttpMessageHandler inner, string mode) : DelegatingHandler(inner)
 {
     public List<int> SentRecords { get; } = [];
+    public List<string> SentPayloadHashes { get; } = [];
     public int TerminalResponses { get; private set; }
     public int ConflictResponses { get; private set; }
+    public int UnknownResponses { get; private set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
-        if (mode == "terminal-seed") throw new BeforeDeliveryException();
-        using var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
+        if (mode is "terminal-seed" or "transient-seed") throw new BeforeDeliveryException();
+        var wireBytes = await request.Content!.ReadAsByteArrayAsync(token);
+        SentPayloadHashes.Add(Convert.ToHexString(SHA256.HashData(wireBytes)));
+        using var payload = JsonDocument.Parse(wireBytes);
         SentRecords.Add(payload.RootElement.GetProperty("recordId").GetInt32());
         if (mode == "legacy")
         {
@@ -139,6 +181,23 @@ sealed class TestHandler(HttpMessageHandler inner, string mode) : DelegatingHand
                 throw new InvalidDataException("Legacy report included ordered protocol fields.");
         }
         var response = await base.SendAsync(request, token);
+        if (mode == "unknown-response")
+        {
+            using (response)
+            {
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw new InvalidDataException("Server failed before response replacement.");
+                using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+                if (result.RootElement.GetProperty("code").GetInt32() != 200 ||
+                    !result.RootElement.GetProperty("body").GetBoolean())
+                    throw new InvalidDataException("Server did not commit before response replacement.");
+            }
+            UnknownResponses++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"code\":400,\"body\":false,\"errorCode\":\"Unrecognized\"}")
+            };
+        }
         if (mode.StartsWith("terminal-", StringComparison.Ordinal) || mode == "conflict")
         {
             using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));

@@ -125,11 +125,11 @@ def main():
                 raise AssertionError(f"API request failed: HTTP {status}, body {value}")
             return value["body"]
 
-        def worker(mode, record, outbox="outbox", fresh_record=None):
+        def worker(mode, record, outbox="outbox", extra=None):
             command = ["dotnet", str(client), mode, str(work / outbox),
                        base + "/Upgrade/Report", str(pem), str(record)]
-            if fresh_record is not None:
-                command.append(str(fresh_record))
+            if extra is not None:
+                command.append(str(extra))
             subprocess.run(command,
                            check=True, timeout=60)
 
@@ -234,6 +234,31 @@ def main():
                         }))
                         assert record_snapshot(failure_record) == failure_state
 
+                        for mode in ("transient-seed", "unknown-response"):
+                            retry_record = new_record()
+                            outbox = "retry-" + mode
+                            initial = record_snapshot(retry_record)
+                            worker(mode, retry_record, outbox)
+                            pending = queued(outbox)
+                            assert len(pending) == 1 and not quarantined(outbox)
+                            event = json.loads(pending[0][1])
+                            assert event["recordId"] == retry_record and event["sequence"] == 1
+                            assert uuid.UUID(event["eventId"]).int != 0
+                            after_failure = record_snapshot(retry_record)
+                            if mode == "transient-seed":
+                                assert after_failure == initial
+                            else:
+                                assert after_failure[0][0] == 3 and after_failure[2] == 1
+                                assert after_failure[1] == ((event["eventId"], 1),)
+                            worker("replay-exact", retry_record, outbox,
+                                   hashlib.sha256(pending[0][1].encode("utf-8")).hexdigest())
+                            final = record_snapshot(retry_record)
+                            assert not queued(outbox) and not quarantined(outbox)
+                            assert final[0][0] == 3 and final[2] == 1
+                            assert final[1] == ((event["eventId"], 1),)
+                            if mode == "unknown-response":
+                                assert final == after_failure
+
                         ordered_record = new_record()
                         newer = {"recordId": ordered_record, "type": 1, "status": 2,
                                  "eventId": str(uuid.uuid4()), "sequence": 4}
@@ -246,6 +271,11 @@ def main():
                         ordered_state = record_snapshot(ordered_record)
                         assert ordered_state[0] == final_state and ordered_state[2] == 0
                         assert ordered_state[1] == ((stale["eventId"], 3), (newer["eventId"], 4))
+                        terminal_rejection(request("/Upgrade/Report", "POST", {
+                            "recordId": ordered_record, "type": 1, "status": 3,
+                            "eventId": str(uuid.uuid4()), "sequence": 5,
+                        }))
+                        assert record_snapshot(ordered_record) == ordered_state
 
                         terminal_record, fresh_record = new_record(), new_record()
                         assert terminal_record != fresh_record
@@ -313,8 +343,9 @@ def main():
                                 cursor.execute("SELECT COUNT(*) FROM tb_fault_log WHERE record_type=1 "
                                                "AND record_id=%s", (conflict_record,))
                                 assert cursor.fetchone()[0] == 0
-                        print("Real API candidate: legacy, lost response, replay, ordering, terminal quarantine, "
-                              "restart, exact payload, blocked record, fresh delivery and ordinary conflicts passed.")
+                        print("Real API candidate: legacy, lost and unknown response, transient transport, replay, "
+                              "ordering, terminal quarantine, restart, exact payload, blocked record, "
+                              "fresh delivery and ordinary conflicts passed.")
                         return
 
                     record, other_record, legacy_record = new_record(), new_record(), new_record()
