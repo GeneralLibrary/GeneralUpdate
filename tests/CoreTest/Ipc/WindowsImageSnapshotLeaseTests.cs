@@ -1,9 +1,13 @@
+#if WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using GeneralUpdate.Core.Security;
+using Microsoft.Win32.SafeHandles;
 
 namespace CoreTest.Ipc;
 
@@ -61,6 +65,44 @@ public sealed class WindowsImageSnapshotLeaseTests
             FileSystemRights.WriteData, AccessControlType.Allow));
         new FileInfo(fixture.Image).SetAccessControl(security);
         Assert.Throws<InvalidDataException>(() => fixture.Create());
+    }
+
+    [Fact]
+    public void ExistingDeleteHandleAndAncestorJunctionAreRejected()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        using (var handle = CreateFile(fixture.Image, 0x00010000, 7, IntPtr.Zero, 3, 0x80, IntPtr.Zero))
+        {
+            if (handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+            var failure = Assert.Throws<Win32Exception>(() =>
+                WindowsImageSnapshotLease.Create(true, fixture.Staging, image, Array.Empty<WindowsSnapshotFile>()));
+            Assert.Equal(32, failure.NativeErrorCode);
+        }
+        var junction = Path.Combine(fixture.Root, "junction");
+        var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"))
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in new[] { "/c", "mklink", "/J", junction, fixture.Root })
+            start.ArgumentList.Add(argument);
+        using var command = Process.Start(start) ?? throw new InvalidOperationException("Could not start mklink.");
+        var output = command.StandardOutput.ReadToEnd();
+        var error = command.StandardError.ReadToEnd();
+        command.WaitForExit();
+        Assert.True(command.ExitCode == 0, output + error);
+        try
+        {
+            var throughJunction = new WindowsSnapshotFile(Path.Combine(junction, "image.exe"),
+                SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+            Assert.Throws<InvalidDataException>(() =>
+                WindowsImageSnapshotLease.Create(true, fixture.Staging, throughJunction, Array.Empty<WindowsSnapshotFile>()));
+        }
+        finally { Directory.Delete(junction); }
     }
 
     [Fact]
@@ -144,6 +186,7 @@ public sealed class WindowsImageSnapshotLeaseTests
             File.WriteAllText(Image, "image bytes");
             File.WriteAllText(Dependency, "dependency bytes");
         }
+        #endif
 
         public WindowsImageSnapshotLease Create() => WindowsImageSnapshotLease.Create(true, Staging,
             new WindowsSnapshotFile(Image, SHA256.HashData(File.ReadAllBytes(Image))),
@@ -153,5 +196,10 @@ public sealed class WindowsImageSnapshotLeaseTests
         {
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
+
     }
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFile(string path, uint access, uint share, IntPtr security,
+        uint creation, uint flags, IntPtr template);
 }

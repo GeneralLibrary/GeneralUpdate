@@ -1,4 +1,5 @@
-#if NET8_0_OR_GREATER
+// The experiment does not yet verify the Windows system dependency closure.
+#if NET8_0_OR_GREATER && WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
 using System;
 using System.ComponentModel;
 using System.IO;

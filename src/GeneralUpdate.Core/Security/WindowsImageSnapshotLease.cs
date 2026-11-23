@@ -1,4 +1,5 @@
-#if NET8_0_OR_GREATER
+// This snapshot is part of the unfinished launch experiment, not a production API.
+#if NET8_0_OR_GREATER && WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
