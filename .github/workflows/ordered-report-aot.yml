@@ -32,5 +32,10 @@ jobs:
           $queue = Join-Path $env:RUNNER_TEMP "ordered-aot"
           & $exe $queue success
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $rejectedQueue = Join-Path $env:RUNNER_TEMP "ordered-aot-rejected"
+          & $exe $rejectedQueue terminal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe $rejectedQueue inspect
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $exe $queue success
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
