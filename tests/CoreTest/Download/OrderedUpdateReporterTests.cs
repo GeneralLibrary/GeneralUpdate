@@ -62,6 +62,67 @@ public sealed class OrderedUpdateReporterTests : IDisposable
     }
 
     [Fact]
+    public async Task TerminalRejectionIsOptInAndPreservesPerRecordOrderingAcrossRestart()
+    {
+        var handler = new Handler { TerminalRecord = 10 };
+        var legacy = Create(handler);
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => legacy.ReportAsync(new UpdateReport(10, 3)));
+        Assert.Empty(await legacy.GetQuarantinedAsync());
+        var reporter = Create(handler, true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => reporter.ReplayAsync());
+        var quarantined = Assert.Single(await Create(handler, true).GetQuarantinedAsync());
+        Assert.Equal(handler.Bodies[0], quarantined.Payload);
+        Assert.Equal("ReportTerminalConflict", quarantined.Reason);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => reporter.ReportAsync(new UpdateReport(10, 2)));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => reporter.ReportAsync(new UpdateReport(11, 3)));
+        Assert.Equal(new[] { 10, 10, 11 }, handler.Bodies.Select(RecordId));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => legacy.ReplayAsync());
+        handler.TerminalRecord = null;
+        await reporter.RetryQuarantinedAsync(quarantined.Id);
+        await Create(handler, true).ReplayAsync();
+        Assert.Equal(new[] { 10, 10, 11, 10, 10 }, handler.Bodies.Select(RecordId));
+        Assert.Equal(quarantined.Payload, handler.Bodies[3]);
+        Assert.Equal(2, Sequence(handler.Bodies[4]));
+        Assert.Empty(await reporter.GetQuarantinedAsync());
+    }
+
+    [Theory]
+    [InlineData("{\"code\":400,\"body\":false,\"errorCode\":\"Conflict\"}", 200)]
+    [InlineData("{\"code\":200,\"body\":true,\"errorCode\":\"ReportTerminalConflict\"}", 200)]
+    [InlineData("{\"code\":400,\"body\":false,\"errorCode\":\"ReportTerminalConflict\"}", 409)]
+    [InlineData("{\"code\":400,\"body\":false,\"errorCode\":\"Other\"}", 200)]
+    public async Task OtherResponsesNeverQuarantine(string body, int status)
+    {
+        var handler = new Handler { ResponseBody = body, ResponseStatus = status };
+        var reporter = Create(handler, true);
+        await Assert.ThrowsAnyAsync<Exception>(() => reporter.ReportAsync(new UpdateReport(10, 3)));
+        Assert.Empty(await reporter.GetQuarantinedAsync());
+        handler.ResponseBody = null;
+        handler.ResponseStatus = 200;
+        await reporter.ReplayAsync();
+        Assert.Equal(handler.Bodies[0], handler.Bodies[1]);
+    }
+
+    [Fact]
+    public async Task QuarantineSurvivesProcessRestartAndOtherRecordIsDelivered()
+    {
+        using (var worker = StartWorker("terminal"))
+        {
+            await worker.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+            Assert.Equal(0, worker.ExitCode);
+        }
+        using (var worker = StartWorker("inspect"))
+        {
+            await worker.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+            Assert.Equal(0, worker.ExitCode);
+        }
+        var handler = new Handler();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Create(handler, true).ReportAsync(new UpdateReport(11, 3)));
+        Assert.Equal(11, RecordId(Assert.Single(handler.Bodies)));
+        Assert.Single(await Create(handler, true).GetQuarantinedAsync());
+    }
+
+    [Fact]
     public async Task ConcurrentProcessesAllocateUniqueSequences()
     {
         var workers = Enumerable.Range(0, 6).Select(_ => StartWorker("offline")).ToArray();
@@ -152,8 +213,9 @@ public sealed class OrderedUpdateReporterTests : IDisposable
         Assert.Equal(12, handler.Bodies.Select(EventId).Distinct().Count());
     }
 
-    private OrderedUpdateReporter Create(Handler handler) =>
-        new(_directory, new HttpClient(handler, false), "https://example.test/report", "tenant/database", true);
+    private OrderedUpdateReporter Create(Handler handler, bool terminalConfirmed = false) =>
+        new(_directory, new HttpClient(handler, false), "https://example.test/report", "tenant/database", true,
+            terminalRejectionConfirmed: terminalConfirmed);
 
     private Process StartWorker(string mode)
     {
@@ -167,6 +229,7 @@ public sealed class OrderedUpdateReporterTests : IDisposable
 
     private static long Sequence(string body) => JsonDocument.Parse(body).RootElement.GetProperty("sequence").GetInt64();
     private static Guid EventId(string body) => JsonDocument.Parse(body).RootElement.GetProperty("eventId").GetGuid();
+    private static int RecordId(string body) => JsonDocument.Parse(body).RootElement.GetProperty("recordId").GetInt32();
 
     public void Dispose()
     {
@@ -178,6 +241,9 @@ public sealed class OrderedUpdateReporterTests : IDisposable
         public bool Fail { get; set; }
         public bool AcceptBeforeFailure { get; set; }
         public bool Conflict { get; set; }
+        public int? TerminalRecord { get; set; }
+        public string? ResponseBody { get; set; }
+        public int ResponseStatus { get; set; } = 200;
         public List<string> Bodies { get; } = [];
         public HashSet<Guid> Applied { get; } = [];
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
@@ -189,11 +255,13 @@ public sealed class OrderedUpdateReporterTests : IDisposable
                 json.RootElement.TryGetProperty("eventId", out var eventId))
                 Applied.Add(eventId.GetGuid());
             if (Fail) throw new HttpRequestException("lost response");
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage((HttpStatusCode)ResponseStatus)
             {
-                Content = new StringContent(Conflict
+                Content = new StringContent(ResponseBody ?? (TerminalRecord == json.RootElement.GetProperty("recordId").GetInt32()
+                    ? "{\"code\":400,\"errorCode\":\"ReportTerminalConflict\",\"body\":false}"
+                    : Conflict
                     ? "{\"code\":400,\"errorCode\":\"Conflict\",\"body\":false}"
-                    : "{\"code\":200,\"body\":true}")
+                    : "{\"code\":200,\"body\":true}"))
             };
         }
     }
