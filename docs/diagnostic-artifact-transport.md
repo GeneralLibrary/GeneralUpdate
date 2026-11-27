@@ -1,13 +1,9 @@
 # Diagnostic artifact transport
 
 `ArtifactUploadClient` is an opt-in transport for an already prepared Bowl schema 2
-crash ZIP. It does **not** scan an outbox, create snapshots, schedule retries, or
-delete evidence. It is not integrated into `LaunchAsync`. In particular, do not
-read a live outbox using this API: Bowl's original writer, crash hook and GC do
-not coordinate with readers. Integration requires the Bowl `outboxProtocol: 1`
-shared-lock contract and a separately implemented durable snapshot/consumer.
-Unmarked legacy cases must be skipped unless all legacy participants have been
-stopped and an explicit migration is performed.
+crash ZIP. `DiagnosticOutboxConsumer` separately implements the cooperative Bowl
+`outboxProtocol: 1` case lifecycle. Neither component is integrated into
+`LaunchAsync`; the host explicitly schedules and retries cases.
 
 The host must provide a stable ZIP snapshot, `manifest.json` at its root, and
 matching metadata. Retain the **same ZIP bytes** for retries, including after a
@@ -48,6 +44,78 @@ cancellation propagates. The response is accepted only for HTTP success,
 and `parsed` flags. A returned `contentSha256` must match the sent bytes.
 `HashVerified` is false when the server omits it; older servers cannot prove a
 duplicate contains the same content. `Parsed=false` means the server stored but
-did not interpret the artifact. None of these results by itself authorizes
-deleting source evidence: safe cleanup also requires the coordinated Bowl
-lifecycle and a server that verifies and returns the stored content hash.
+did not interpret the artifact.
+
+## Cooperative outbox consumer
+
+Only enable this after installing a Bowl writer and GC that both implement
+protocol 1. Configure `{install}/fail` as the root, and have the host enumerate
+version and D-format GUID directories and call `ProcessCaseAsync` for each one.
+Do not pass `.locks` or the consumer's `.generalupdate-uploaded-*` directories
+as cases. The host should report exceptions, retry transient failures with
+backoff, and separately manage scheduling, retention and consent.
+
+```csharp
+var consumer = new DiagnosticOutboxConsumer(
+    failDirectory, upload, TimeSpan.FromSeconds(30));
+bool deleted = await consumer.ProcessCaseAsync(version, caseGuid, cancellationToken);
+```
+
+`false` means busy, incomplete, unmarked, or not confirmed by a server hash;
+errors and cancellation propagate. Invalid cases are preserved for investigation.
+The consumer validates the manifest and its top-level evidence list, rejects
+links and unexpected entries, and bounds the manifest, file count and ZIP size.
+It persists a ZIP and SHA-256 inside the case before sending and reuses the same
+bytes across retries and restarts. A corrupt or incomplete persisted snapshot
+stops automatic processing: preserve the case and investigate; do not delete the
+snapshot and retry the same GUID. A hash-confirmed case is first atomically
+renamed to `.generalupdate-uploaded-{guid}` before deletion, so interruption
+during deletion cannot trigger a regenerated upload. The host must also enumerate
+`.generalupdate-uploaded-{guid}` tombstones and call
+`CleanupConfirmedCase(version, guid)` to finish an interrupted deletion under
+the same stripe lock. Tombstones count against Bowl's admission limits until
+removed; a cleanup failure can therefore cause exit-code-only degradation.
+
+The lock is `{fail}/.locks/{first two lowercase GUID hex characters}.lock`,
+opened with `FileShare.None` and never deleted. It remains held through snapshot,
+upload and cleanup. The required upload timeout is at most two minutes; the HTTP
+handler must honor cancellation. Even with a timeout, a slow upload can prevent
+Bowl from acquiring the same stripe. Bowl tries another GUID; exhausted
+admission or lock retries can degrade monitoring to exit-code-only, losing
+crash evidence. Choose a short timeout appropriate for the deployment and
+monitor this failure.
+
+This contract requires a local filesystem, compatible .NET processes running
+with matching permissions, and a private outbox protected by OS permissions.
+It does not protect against a malicious local process that can change the
+outbox or replace paths while it is being read. It does not provide power-loss
+durability guarantees beyond the filesystem's flush and rename guarantees.
+Evidence and retained ZIPs may contain secrets; apply host access controls,
+redaction and a retention policy. Never remove lock files while any participant
+may be running. Do not allow hooks to leave background writers.
+
+Legacy schema 2 cases without `outboxProtocol` are skipped by default. Set
+`allowLegacyAfterQuiescence` only after **all** old watchdogs, uploaders and
+collectors are stopped; this is an operational prerequisite, not something the
+consumer can verify. GeneralSpace must provide hash-confirmed acknowledgments
+before cleanup; older servers without `contentSha256` retain every case.
+
+## Local integration harness
+
+`tests/OutboxConsumerHarness` invokes the real consumer once against a loopback
+HTTPS service. Supply the server's PEM certificate to pin its exact bytes;
+hostname validation remains enabled. It disables proxies and redirects. For
+example, with a test certificate valid for `localhost`:
+
+```powershell
+$env:OUTBOX_TEST_TENANT = 'test-tenant'
+$env:OUTBOX_TEST_APP_KEY = 'test-app'
+dotnet run --project tests\OutboxConsumerHarness -- `
+  'C:\fixture\fail' '1.0.2' '<case-guid>' `
+  'https://localhost:5001/Fault/UploadArtifact' 'C:\fixture\server.pem'
+```
+
+Exit code 0 means hash-confirmed deletion, 2 means skipped or not confirmed,
+and 1 means an error. This test harness does not schedule retries: invoke it
+again to exercise persisted snapshots. Never use its certificate pinning to
+disable certificate validation in production.
