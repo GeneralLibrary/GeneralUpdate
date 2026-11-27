@@ -1,6 +1,6 @@
-#if WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
@@ -18,9 +18,23 @@ public sealed class WindowsImageSnapshotLeaseTests
     {
         var image = new WindowsSnapshotFile("unused.exe", new byte[32]);
         if (OperatingSystem.IsWindows())
+        {
             Assert.Throws<InvalidOperationException>(() => WindowsImageSnapshotLease.Create(false, "unused", image, Array.Empty<WindowsSnapshotFile>()));
+            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            {
+                Assert.Throws<InvalidOperationException>(() => WindowsNativeLaunchLease.Start(
+                    WindowsNativeLaunchProfile.Disabled, "unused", image, Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>()));
+                Assert.Throws<InvalidOperationException>(() => WindowsNativeLaunchLease.Start(
+                    (WindowsNativeLaunchProfile)42, "unused", image, Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>()));
+            }
+        }
         else
+        {
             Assert.Throws<PlatformNotSupportedException>(() => WindowsImageSnapshotLease.Create(false, "unused", image, Array.Empty<WindowsSnapshotFile>()));
+            Assert.Throws<PlatformNotSupportedException>(() => WindowsNativeLaunchLease.Start(
+                WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
+                "unused", image, Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>()));
+        }
     }
 
     [Fact]
@@ -148,7 +162,7 @@ public sealed class WindowsImageSnapshotLeaseTests
     {
         if (!OperatingSystem.IsWindows()) return;
         using var fixture = new Fixture();
-        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER");
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER");
         var dependencies = Array.Empty<WindowsSnapshotFile>();
         string[] arguments;
         var marker = Path.Combine(fixture.Root, "child marker.txt");
@@ -166,12 +180,16 @@ public sealed class WindowsImageSnapshotLeaseTests
             arguments = new[] { "/c", "ping", "-n", "120", "127.0.0.1" };
         }
         var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
-        var lease = WindowsNativeLaunchLease.Start(true, fixture.Staging, image, dependencies, arguments);
+        var systems = TrustedModules(new[] { fixture.Image }.Concat(dependencies.Select(item => item.SourcePath)));
+        var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
+            fixture.Staging, image, dependencies, dependencies.Select(item => Path.GetFileName(item.SourcePath)).ToArray(), systems, arguments);
         await using (lease)
         {
-            using var process = lease.DuplicateProcessHandle();
-            Assert.False(TerminateProcess(process, 123));
-            Assert.Equal(5, Marshal.GetLastWin32Error());
+            using (var process = lease.DuplicateProcessHandle())
+            {
+                Assert.False(TerminateProcess(process, 123));
+                Assert.Equal(5, Marshal.GetLastWin32Error());
+            }
             if (native != null)
             {
                 for (var i = 0; i < 200 && !File.Exists(marker + ".ready") && !File.Exists(marker + ".error"); i++) await Task.Delay(50);
@@ -191,24 +209,96 @@ public sealed class WindowsImageSnapshotLeaseTests
         File.Copy(Path.Combine(Environment.SystemDirectory, "cmd.exe"), fixture.Image, overwrite: true);
         var marker = Path.Combine(fixture.Root, "unexpected.txt");
         var bad = new WindowsSnapshotFile(fixture.Image, new byte[32]);
-        Assert.Throws<InvalidDataException>(() => WindowsNativeLaunchLease.Start(true, fixture.Staging, bad,
-            Array.Empty<WindowsSnapshotFile>(), new[] { "/c", "echo", "bad", ">", marker }));
+        Assert.Throws<InvalidDataException>(() => WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, bad,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(), new[] { "/c", "echo", "bad", ">", marker }));
+        var good = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        var badDependency = new WindowsSnapshotFile(fixture.Dependency, new byte[32]);
+        Assert.Throws<InvalidDataException>(() => WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
+            fixture.Staging, good, new[] { badDependency }, new[] { "native.dll" }, Array.Empty<string>(), new[] { "/c", "echo", "bad", ">", marker }));
+        Assert.Throws<InvalidDataException>(() => WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
+            fixture.Staging, good, Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(), new[] { "/c", "echo", "bad", ">", marker }));
         Assert.False(File.Exists(marker));
-        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
-        await using var lease = WindowsNativeLaunchLease.Start(true, fixture.Staging, image,
-            Array.Empty<WindowsSnapshotFile>(), new[] { "/c", "exit 1" });
+        await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, good,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), TrustedModules(new[] { fixture.Image }), new[] { "/c", "exit 1" });
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         Assert.Equal(1u, await lease.WaitForExitAsync(timeout.Token));
     }
 
+    [Fact]
+    public void MissingReplacedOrMisclassifiedApplicationModuleNeverStarts()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        File.Copy(Path.Combine(Environment.SystemDirectory, "cmd.exe"), fixture.Image, overwrite: true);
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        var expected = new WindowsSnapshotFile(fixture.Dependency, SHA256.HashData(File.ReadAllBytes(fixture.Dependency)));
+        var marker = Path.Combine(fixture.Root, "unexpected.txt");
+        var arguments = new[] { "/c", "echo", "bad", ">", marker };
+        Assert.Throws<ArgumentException>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), new[] { "native.dll" }, new[] { "NATIVE.DLL" }, arguments));
+        Assert.Throws<ArgumentException>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            new[] { expected }, new[] { "native.dll" }, new[] { "NATIVE.DLL" }, arguments));
+        Assert.Throws<ArgumentException>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            new[] { expected }, new[] { @"sub\native.dll" }, Array.Empty<string>(), arguments));
+        File.WriteAllText(fixture.Dependency, "replacement");
+        Assert.Throws<InvalidDataException>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            new[] { expected }, new[] { "NATIVE.DLL" }, Array.Empty<string>(), arguments));
+        Assert.False(File.Exists(marker));
+    }
+
+    [Fact]
+    public void TruncatedNativeImageNeverStarts()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        File.WriteAllBytes(fixture.Image, new byte[] { 0x4d, 0x5a });
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        var marker = Path.Combine(fixture.Root, "unexpected.txt");
+        Assert.ThrowsAny<Exception>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(),
+            new[] { "/c", "echo", "bad", ">", marker }));
+        Assert.False(File.Exists(marker));
+    }
+
     [Theory]
+    [InlineData(0, 0x7fffffff, 0x7fffffff)]
+    [InlineData(1, 0x7fffffff, 0x7fffffff)]
+    [InlineData(13, 0x7fffffff, 0x7fffffff)]
+    public void OutOfBoundsNativeDirectoryNeverStarts(int index, int rva, int size)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var fixture = new Fixture();
+        var bytes = File.ReadAllBytes(Path.Combine(Environment.SystemDirectory, "cmd.exe"));
+        var peOffset = BitConverter.ToInt32(bytes, 0x3c);
+        var optional = checked(peOffset + 24);
+        var magic = BitConverter.ToUInt16(bytes, optional);
+        var directories = checked(optional + (magic == 0x20b ? 112 : 96));
+        var entry = checked(directories + index * 8);
+        BitConverter.GetBytes(rva).CopyTo(bytes, entry);
+        BitConverter.GetBytes(size).CopyTo(bytes, entry + 4);
+        File.WriteAllBytes(fixture.Image, bytes);
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(bytes));
+        var marker = Path.Combine(fixture.Root, "unexpected.txt");
+        Assert.ThrowsAny<Exception>(() => WindowsNativeLaunchLease.Start(
+            WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), Array.Empty<string>(),
+            new[] { "/c", "echo", "bad", ">", marker }));
+        Assert.False(File.Exists(marker));
+    }
+
+    [NativeAotTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task SnapshotJobStopsChildOnOwnerExit(bool killOwner)
     {
         if (!OperatingSystem.IsWindows()) return;
-        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER")
-            ?? throw new InvalidOperationException("The Native AOT experiment peer is required.");
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")
+            ?? throw new InvalidOperationException("The Native AOT snapshot peer is required.");
         using var fixture = new Fixture();
         File.Copy(native, fixture.Image, overwrite: true);
         var sqlite = Path.Combine(fixture.Root, "e_sqlite3.dll");
@@ -220,6 +310,7 @@ public sealed class WindowsImageSnapshotLeaseTests
         };
         foreach (var argument in new[] { "--snapshot-owner-probe", fixture.Staging, fixture.Image, sqlite, marker })
             start.ArgumentList.Add(argument);
+        foreach (var module in TrustedModules(new[] { fixture.Image, sqlite })) start.ArgumentList.Add(module);
         using var owner = Process.Start(start) ?? throw new InvalidOperationException("Could not start the owner.");
         var errors = owner.StandardError.ReadToEndAsync();
         Process? child = null;
@@ -250,12 +341,12 @@ public sealed class WindowsImageSnapshotLeaseTests
         }
     }
 
-    [Fact]
+    [NativeAotFact]
     public async Task SnapshotLaunchInheritsNoUnlistedHandles()
     {
         if (!OperatingSystem.IsWindows()) return;
-        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_NATIVE_LOCK_PEER")
-            ?? throw new InvalidOperationException("The Native AOT experiment peer is required.");
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")
+            ?? throw new InvalidOperationException("The Native AOT snapshot peer is required.");
         using var fixture = new Fixture();
         File.Copy(native, fixture.Image, overwrite: true);
         var marker = Path.Combine(fixture.Root, "inherited.txt");
@@ -264,8 +355,8 @@ public sealed class WindowsImageSnapshotLeaseTests
         using var second = CreateInheritableFile(fixture.Dependency, 0x80000000, 7, ref attributes, 3, 0x80, IntPtr.Zero);
         if (first.IsInvalid || second.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
         var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
-        await using var lease = WindowsNativeLaunchLease.Start(true, fixture.Staging, image,
-            Array.Empty<WindowsSnapshotFile>(), new[] { "--handle-list-probe",
+        await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, fixture.Staging, image,
+            Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), TrustedModules(new[] { fixture.Image }), new[] { "--handle-list-probe",
                 first.DangerousGetHandle().ToInt64().ToString(),
                 second.DangerousGetHandle().ToInt64().ToString(), marker });
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -273,6 +364,150 @@ public sealed class WindowsImageSnapshotLeaseTests
         var lines = File.ReadAllLines(marker);
         Assert.Equal(2, lines.Length);
         Assert.DoesNotContain(lines, path => path.EndsWith(fixture.Dependency, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [NativeAotFact]
+    public async Task AnotherProcessCannotReplaceHeldImageOrAncestor()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")
+            ?? throw new InvalidOperationException("The Native AOT snapshot peer is required.");
+        using var fixture = new Fixture();
+        using var lease = fixture.Create();
+        var marker = Path.Combine(fixture.Root, "conflicts.txt");
+        var start = new ProcessStartInfo(native)
+        {
+            UseShellExecute = false, RedirectStandardError = true, CreateNoWindow = true
+        };
+        foreach (var argument in new[] { "--snapshot-conflict-probe", lease.ImagePath, fixture.Staging, marker })
+            start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the probe.");
+        var errors = process.StandardError.ReadToEndAsync();
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.True(process.ExitCode == 0, await errors);
+            Assert.Equal(new[] { "32", "32" }, File.ReadAllLines(marker));
+        }
+
+        finally
+        {
+            if (!process.HasExited) process.Kill();
+            await process.WaitForExitAsync();
+        }
+    }
+
+    [NativeAotTheory]
+    [InlineData("write")]
+    [InlineData("delete")]
+    public async Task PriorCrossProcessWriteOrDeleteHandleRejectsSnapshot(string access)
+    {
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")
+            ?? throw new InvalidOperationException("The Native AOT snapshot peer is required.");
+        using var fixture = new Fixture();
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        var start = new ProcessStartInfo(native)
+        {
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,
+            RedirectStandardError = true, CreateNoWindow = true
+        };
+        foreach (var argument in new[] { "--hold-file-probe", fixture.Image, access })
+            start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the probe.");
+        var errors = process.StandardError.ReadToEndAsync();
+        try
+        {
+            var ready = await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.True(ready == "ready", ready ?? await errors);
+            var failure = Assert.Throws<Win32Exception>(() => WindowsImageSnapshotLease.Create(
+                true, fixture.Staging, image, Array.Empty<WindowsSnapshotFile>()));
+            Assert.Equal(32, failure.NativeErrorCode);
+        }
+        finally
+        {
+            if (!process.HasExited) await process.StandardInput.WriteLineAsync("release");
+            try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30)); }
+            finally
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                    await process.WaitForExitAsync();
+                }
+            }
+        }
+    }
+
+    [NativeAotFact]
+    public async Task NativePeerReceivesExactArguments()
+    {
+        var native = Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")
+            ?? throw new InvalidOperationException("The Native AOT snapshot peer is required.");
+        using var fixture = new Fixture();
+        File.Copy(native, fixture.Image, overwrite: true);
+        var marker = Path.Combine(fixture.Root, "arguments.txt");
+        var values = new[] { "", "space value", "quote\"value", "slashes\\\\", "trailing space ", "unicode \u6d4b\u8bd5" };
+        var arguments = new[] { "--argument-probe", marker }.Concat(values).ToArray();
+        var image = new WindowsSnapshotFile(fixture.Image, SHA256.HashData(File.ReadAllBytes(fixture.Image)));
+        await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot,
+            fixture.Staging, image, Array.Empty<WindowsSnapshotFile>(), Array.Empty<string>(), TrustedModules(new[] { fixture.Image }), arguments);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        Assert.Equal(0u, await lease.WaitForExitAsync(timeout.Token));
+        Assert.Equal(values, File.ReadAllLines(marker).Select(line => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(line))));
+    }
+
+    private static string[] TrustedModules(IEnumerable<string> paths)
+    {
+        var files = paths.ToArray();
+        var application = files.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var modules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in files)
+        {
+            using var stream = File.OpenRead(path);
+            using var pe = new PEReader(stream);
+            var header = pe.PEHeaders.PEHeader ?? throw new InvalidDataException("Invalid PE image.");
+            void ReadTable(DirectoryEntry table, bool delay)
+            {
+                if (table.RelativeVirtualAddress == 0) return;
+                var reader = pe.GetSectionData(table.RelativeVirtualAddress).GetReader(0, table.Size);
+                var size = delay ? 32 : 20;
+                while (reader.RemainingBytes >= size)
+                {
+                    var fields = new uint[delay ? 8 : 5];
+                    for (var i = 0; i < fields.Length; i++) fields[i] = reader.ReadUInt32();
+                    if (fields.All(value => value == 0)) return;
+                    var address = fields[delay ? 1 : 3];
+                    var name = pe.GetSectionData(checked((int)address)).GetReader();
+                    var bytes = new List<byte>();
+                    byte value;
+                    while ((value = name.ReadByte()) != 0) bytes.Add(value);
+                    var module = System.Text.Encoding.ASCII.GetString(bytes.ToArray());
+                    if (!application.Contains(module)) modules.Add(module);
+                }
+                throw new InvalidDataException("Invalid test PE import table.");
+            }
+            ReadTable(header.ImportTableDirectory, delay: false);
+            ReadTable(header.DelayImportTableDirectory, delay: true);
+        }
+        return modules.ToArray();
+    }
+
+    public sealed class NativeAotFactAttribute : FactAttribute
+    {
+        public NativeAotFactAttribute()
+        {
+            if (!OperatingSystem.IsWindows() || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")))
+                Skip = "The Windows Native AOT snapshot peer is required.";
+        }
+    }
+
+    public sealed class NativeAotTheoryAttribute : TheoryAttribute
+    {
+        public NativeAotTheoryAttribute()
+        {
+            if (!OperatingSystem.IsWindows() || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GU_WINDOWS_SNAPSHOT_PEER")))
+                Skip = "The Windows Native AOT snapshot peer is required.";
+        }
     }
 
     [SupportedOSPlatform("windows")]
@@ -301,7 +536,6 @@ public sealed class WindowsImageSnapshotLeaseTests
             File.WriteAllText(Image, "image bytes");
             File.WriteAllText(Dependency, "dependency bytes");
         }
-        #endif
 
         public WindowsImageSnapshotLease Create() => WindowsImageSnapshotLease.Create(true, Staging,
             new WindowsSnapshotFile(Image, SHA256.HashData(File.ReadAllBytes(Image))),

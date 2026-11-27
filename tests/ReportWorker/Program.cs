@@ -17,13 +17,32 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 4 && args[0] == "--snapshot-conflict-probe")
+        {
+            if (!OperatingSystem.IsWindows()) return 3;
+            var errors = new string[2];
+            for (var i = 0; i < errors.Length; i++)
+            {
+                var original = args[i + 1];
+                var replacement = original + ".moved";
+                if (MoveFileEx(original, replacement, 0))
+                {
+                    if (!MoveFileEx(replacement, original, 0))
+                        throw new InvalidOperationException($"Failed to restore moved object: {Marshal.GetLastWin32Error()}");
+                    errors[i] = "0";
+                }
+                else errors[i] = Marshal.GetLastWin32Error().ToString();
+            }
+            File.WriteAllLines(args[3], errors);
+            return 0;
+        }
 #if WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
         if (args.Length == 5 && args[0] == "--snapshot-owner-probe")
         {
             if (!OperatingSystem.IsWindows()) return 3;
             var image = new WindowsSnapshotFile(args[2], SHA256.HashData(File.ReadAllBytes(args[2])));
             var dll = new WindowsSnapshotFile(args[3], SHA256.HashData(File.ReadAllBytes(args[3])));
-            await using var lease = WindowsNativeLaunchLease.Start(true, args[1], image, new[] { dll },
+            await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, args[1], image, new[] { dll }, Array.Empty<string>(),
                 new[] { "--snapshot-probe", args[4], "wait" });
             await Console.In.ReadLineAsync();
             return 0;
@@ -137,6 +156,9 @@ internal static class Program
 
     [DllImport("kernel32.dll", EntryPoint = "LoadLibraryW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string path);
+    [DllImport("kernel32.dll", EntryPoint = "MoveFileExW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool MoveFileEx(string existing, string target, uint flags);
 
     [DllImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

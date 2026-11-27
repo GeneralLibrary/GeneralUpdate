@@ -1,5 +1,4 @@
-// This snapshot is part of the unfinished launch experiment, not a production API.
-#if NET8_0_OR_GREATER && WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT
+#if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -171,6 +170,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
             using (var stream = new FileStream(destination, FileAccess.ReadWrite))
             using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             {
+                ValidateHandle(destination, user, directory: false, ancestor: false, privateSnapshot: true);
                 var buffer = new byte[81920];
                 long offset = 0;
                 int count;
@@ -291,7 +291,6 @@ public sealed class WindowsImageSnapshotLease : IDisposable
             const uint fileWriteRights = namespaceRights | 0x00000116;
             foreach (GenericAce ace in security.DiscretionaryAcl)
             {
-                if ((ace.AceFlags & AceFlags.InheritOnly) != 0) continue;
                 if (ace is not CommonAce common || common.IsCallback)
                     throw new InvalidDataException("The object has an unsupported access rule.");
                 if (common.AceQualifier == AceQualifier.AccessDenied) continue;
@@ -299,6 +298,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
                     throw new InvalidDataException("The object has an unsupported access rule.");
                 if (privateSnapshot && !common.SecurityIdentifier.Equals(user))
                     throw new InvalidDataException("A snapshot access rule grants another principal access.");
+                if ((ace.AceFlags & AceFlags.InheritOnly) != 0) continue;
                 if (!IsTrusted(common.SecurityIdentifier, user) &&
                     (unchecked((uint)common.AccessMask) & (ancestor ? namespaceRights : fileWriteRights)) != 0)
                     throw new InvalidDataException("An untrusted principal can modify the object or namespace.");
@@ -385,7 +385,7 @@ public sealed class WindowsImageSnapshotLease : IDisposable
         using var retained = NtOpenRelative(parent, name, null, directory, write: false, create: false, share: 7);
         RequireSameObject(original, retained);
         original.Dispose();
-        using var deleteHandle = NtOpenRelative(parent, name, null, directory, write: false, create: false, share: 3, delete: true);
+        using var deleteHandle = OpenForCleanup(parent, name, directory);
         RequireSameObject(retained, deleteHandle);
         var disposition = new FileDispositionInformation { DeleteFile = true };
         var status = NtSetInformationFile(deleteHandle, out _, ref disposition, 1, 13);
@@ -393,6 +393,18 @@ public sealed class WindowsImageSnapshotLease : IDisposable
         {
             var error = (int)RtlNtStatusToDosError(status);
             throw new Win32Exception(error, $"Unable to delete the snapshot object (NTSTATUS 0x{status:x8}, Win32 {error}).");
+        }
+    }
+
+    private static SafeFileHandle OpenForCleanup(SafeFileHandle parent, string name, bool directory)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try { return NtOpenRelative(parent, name, null, directory, write: false, create: false, share: 3, delete: true); }
+            catch (Win32Exception error) when (error.NativeErrorCode == 32 && attempt < 19)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 
