@@ -161,7 +161,11 @@ public class HttpDownloadExecutor : IDownloadExecutor
         {
             GeneralTracer.Error($"HttpDownloadExecutor: download failed '{asset.Url}' -> '{destPath}' after {sw.Elapsed}. {ex.Message}", ex);
             sw.Stop();
-            return new DownloadResult(asset, destPath, existingBytes, sw.Elapsed, retries, false, ex.Message);
+            return new DownloadResult(asset, destPath, existingBytes, sw.Elapsed, retries, false, ex.Message)
+            {
+                Error = ex,
+                FailureCategory = Reporting.FailureCategory.Download
+            };
         }
     }
 

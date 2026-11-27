@@ -72,6 +72,7 @@ public class ClientStrategy : IStrategy
     private Download.Abstractions.IDownloadExecutor? _customDownloadExecutor;
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
+    private bool _downloadFailuresReported;
     private int _upgradeRecordId;
     private int? _reportTypeOverride;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
@@ -272,6 +273,7 @@ public class ClientStrategy : IStrategy
         if (_configInfo == null) throw new InvalidOperationException("ClientStrategy not configured.");
 
         HasPreparedClientUpdate = false;
+        _downloadFailuresReported = false;
 
         try
         {
@@ -283,7 +285,8 @@ public class ClientStrategy : IStrategy
         {
             var errCtx = BuildUpdateContext();
             await SafeOnUpdateErrorAsync(errCtx, ex).ConfigureAwait(false);
-            await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
+            if (!_downloadFailuresReported)
+                await SafeReportUpdateFailedAsync(errCtx, ex).ConfigureAwait(false);
             GeneralTracer.Error("ClientStrategy.ExecuteAsync failed.", ex);
             EventManager.Instance.Dispatch(this, new ExceptionEventArgs(ex, ex.Message));
         }
@@ -617,6 +620,25 @@ public class ClientStrategy : IStrategy
 
             if (downloadReport.FailedCount > 0)
             {
+                var reportedRecords = new HashSet<int>();
+                foreach (var result in downloadReport.Results.Where(r => !r.Success))
+                {
+                    var error = result.Error ?? new InvalidOperationException(result.ErrorMessage ?? "Download failed.");
+                    EventManager.Instance.Dispatch(this, new Download.MultiDownloadErrorEventArgs(error, result.Asset));
+                    if (reportedRecords.Add(result.Asset.RecordId))
+                    {
+                        try
+                        {
+                            await Reporter.ReportAsync(Download.Reporting.FailureReports.Create(
+                                result.Asset.RecordId, _reportType, result.FailureCategory)).ConfigureAwait(false);
+                        }
+                        catch (Exception reportError)
+                        {
+                            GeneralTracer.Warn($"Report download failure failed: {reportError.Message}");
+                        }
+                    }
+                }
+                _downloadFailuresReported = reportedRecords.Count > 0;
                 var failDetails = string.Join(", ",
                     downloadReport.Results.Where(r => !r.Success)
                         .Select(r => $"{r.Asset.Name}: {r.ErrorMessage}"));
@@ -670,7 +692,8 @@ public class ClientStrategy : IStrategy
                     {
                         var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
-                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                            await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error("ClientStrategy: Upgrade-only update failed, client continues running.");
                     }
@@ -697,7 +720,8 @@ public class ClientStrategy : IStrategy
                     {
                         var failEx = new InvalidOperationException("Upgrade packages failed to apply.");
                         await SafeOnUpdateErrorAsync(hooksCtx, failEx).ConfigureAwait(false);
-                        await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
+                        if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                            await SafeReportUpdateFailedAsync(hooksCtx, failEx).ConfigureAwait(false);
                         EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                         GeneralTracer.Error(
                             "ClientStrategy: upgrade packages failed to apply, aborting MainApp update and upgrade launch.");

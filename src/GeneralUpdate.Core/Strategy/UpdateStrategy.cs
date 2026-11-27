@@ -153,7 +153,8 @@ public class UpdateStrategy : IStrategy
             {
                 var failEx = new InvalidOperationException("MainApp pipeline did not complete successfully.");
                 await SafeOnUpdateErrorAsync(ctx, failEx).ConfigureAwait(false);
-                await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
+                if (_osStrategy is not AbstractStrategy { HasReportedPackageFailures: true })
+                    await SafeReportUpdateFailedAsync(ctx, failEx).ConfigureAwait(false);
                 EventManager.Instance.Dispatch(this, new ExceptionEventArgs(failEx, failEx.Message));
                 return;
             }

@@ -118,7 +118,21 @@ namespace GeneralUpdate.Core.Pipeline
         {
             foreach (var middleware in _middlewareQueue)
             {
-                await middleware.InvokeAsync(context);
+                try
+                {
+                    await middleware.InvokeAsync(context);
+                }
+                catch
+                {
+                    context.FailureCategory = middleware switch
+                    {
+                        HashMiddleware => Download.Reporting.FailureCategory.Verify,
+                        CompressMiddleware => Download.Reporting.FailureCategory.Extract,
+                        PatchMiddleware => Download.Reporting.FailureCategory.Apply,
+                        _ => null
+                    };
+                    throw;
+                }
             }
         }
     }

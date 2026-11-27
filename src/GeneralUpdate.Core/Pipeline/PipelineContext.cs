@@ -71,6 +71,7 @@ namespace GeneralUpdate.Core.Pipeline;
 public class PipelineContext
 {
     private ConcurrentDictionary<string, object?> _context = new();
+    internal Download.Reporting.FailureCategory? FailureCategory { get; set; }
 
     /// <summary>
     /// Retrieves a strongly-typed value associated with the specified key from the context.
