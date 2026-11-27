@@ -51,7 +51,7 @@ namespace GeneralUpdate.Core.Strategy;
 /// 8. <b>Upgrade Application</b>: Calls <c>ApplyUpgradePackagesAsync</c> to apply incremental/full update packages in place through the OS strategy pipeline.
 /// </para>
 /// <para>
-/// 9. <b>IPC Communication</b>: Serializes main program update information as JSON via <c>SendProcessIpc</c> and sends it to the upgrade process through encrypted IPC.
+/// 9. <b>IPC Communication</b>: Serializes main program update information as JSON via <c>SendProcessIpcAsync</c> and sends it to the upgrade process through encrypted IPC.
 /// </para>
 /// <para>
 /// 10. <b>Launch Upgrade Process</b>: Delegates to the OS strategy via <c>LaunchUpgradeProcessAsync</c> to start the upgrade executable.</para>
@@ -73,6 +73,7 @@ public class ClientStrategy : IStrategy
     private Func<string?, Download.Abstractions.IDownloadPipeline>? _customDownloadPipelineFactory;
     private int _mainRecordId;
     private int _upgradeRecordId;
+    private int? _reportTypeOverride;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
 
     /// <summary>
@@ -84,7 +85,7 @@ public class ClientStrategy : IStrategy
 
     /// <summary>
     /// After <see cref="ExecuteAsync"/> completes, <c>true</c> indicates that client packages were
-    /// staged via <see cref="SendProcessIpc"/> and the upgrade process should be launched to apply them.
+    /// staged via <see cref="SendProcessIpcAsync"/> and the upgrade process should be launched to apply them.
     /// </summary>
     public bool HasPreparedClientUpdate { get; private set; }
 
@@ -131,6 +132,12 @@ public class ClientStrategy : IStrategy
     /// and other information in <c>UpdateContext</c>.
     /// </remarks>
     public Download.Abstractions.IDownloadSource? DownloadSource { get; set; }
+
+    /// <summary>
+    /// Optional IPC provider for handing prepared client packages to the upgrade process.
+    /// When unset, the encrypted file provider is used.
+    /// </summary>
+    public IProcessContractProvider? ProcessContractProvider { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientStrategy"/> class.
@@ -183,7 +190,11 @@ public class ClientStrategy : IStrategy
     /// When a push notification triggers the update (via SignalR hub), the caller should set this to 2
     /// so the server can distinguish push-triggered updates from active poll updates.
     /// </remarks>
-    public void SetReportType(int reportType) => _reportType = reportType;
+    public void SetReportType(int reportType)
+    {
+        _reportTypeOverride = _reportType = reportType;
+        if (_configInfo != null) _configInfo.ReportType = reportType;
+    }
 
     /// <summary>
     /// Sets a custom download retry policy. Registered and injected by the bootstrap via <c>.DownloadPolicy&lt;T&gt;()</c>.
@@ -233,6 +244,8 @@ public class ClientStrategy : IStrategy
     public void Create(UpdateContext parameter)
     {
         _configInfo = parameter ?? throw new ArgumentNullException(nameof(parameter));
+        _reportType = _reportTypeOverride ?? parameter.ReportType;
+        parameter.ReportType = _reportType;
         _osStrategy = ResolveOsStrategy();
         if (_osStrategy is AbstractStrategy abs)
         {
@@ -387,7 +400,7 @@ public class ClientStrategy : IStrategy
     /// <b>Step 9 - Scenario Dispatch</b>: Executes different operations based on the determined scenario:
     /// <list type="bullet">
     /// <item><description><c>UpgradeOnly</c>: Calls <see cref="ApplyUpgradePackagesAsync"/> to apply upgrade packages in place.</description></item>
-    /// <item><description><c>MainOnly</c>: Calls <see cref="SendProcessIpc"/> to send main program update information,
+    /// <item><description><c>MainOnly</c>: Calls <see cref="SendProcessIpcAsync"/> to send main program update information,
     /// then calls <see cref="LaunchUpgradeProcessAsync"/> to start the upgrade process.</description></item>
     /// <item><description><c>Both</c>: Applies upgrade packages first, then sends main program information and starts the upgrade process.</description></item>
     /// </list>
@@ -664,9 +677,8 @@ public class ClientStrategy : IStrategy
                     break;
 
                 case UpdateScenario.MainOnly:
-                    SendProcessIpc(cVersions);
+                    await SendProcessIpcAsync(cVersions).ConfigureAwait(false);
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
-                    await SafeReportUpdateAppliedAsync(hooksCtx, _mainRecordId).ConfigureAwait(false);
                     if (LaunchAfterPrepare)
                     {
                         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
@@ -694,7 +706,7 @@ public class ClientStrategy : IStrategy
 
                     await SafeOnAfterUpdateAsync(hooksCtx).ConfigureAwait(false);
                     await SafeReportUpdateAppliedAsync(hooksCtx, _upgradeRecordId).ConfigureAwait(false);
-                    SendProcessIpc(cVersions);
+                    await SendProcessIpcAsync(cVersions).ConfigureAwait(false);
                     if (LaunchAfterPrepare)
                     {
                         await SafeOnBeforeStartAppAsync(hooksCtx).ConfigureAwait(false);
@@ -751,7 +763,7 @@ public class ClientStrategy : IStrategy
     /// <para>After the upgrade process (Bowl) receives this information, it will perform the actual installation and replacement operations
     /// based on the <c>ProcessContract</c>.</para>
     /// </remarks>
-    private void SendProcessIpc(List<VersionEntry> clientVersions)
+    private async Task SendProcessIpcAsync(List<VersionEntry> clientVersions)
     {
         var processInfo = ConfigurationMapper.MapToProcessContract(
             _configInfo!, clientVersions,
@@ -762,7 +774,7 @@ public class ClientStrategy : IStrategy
 
         _configInfo.ProcessContract = JsonSerializer.Serialize(processInfo,
             ProcessContractJsonContext.Default.ProcessContract);
-        new EncryptedFileProcessContractProvider().Send(processInfo);
+        await (ProcessContractProvider ?? new EncryptedFileProcessContractProvider()).SendAsync(processInfo).ConfigureAwait(false);
         HasPreparedClientUpdate = true;
         GeneralTracer.Info("ClientStrategy: ProcessContract sent with MainApp versions only.");
     }
@@ -1121,7 +1133,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1139,7 +1151,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Updating, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1158,7 +1170,7 @@ public class ClientStrategy : IStrategy
         try
         {
             await Reporter
-                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId,
+                .ReportAsync(new Download.Reporting.UpdateReport(_mainRecordId != 0 ? _mainRecordId : _upgradeRecordId,
                     (int)Download.Reporting.UpdateStatus.Failure, _reportType)).ConfigureAwait(false);
         }
         catch (Exception ex)
