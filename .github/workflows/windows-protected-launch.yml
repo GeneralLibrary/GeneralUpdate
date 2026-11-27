@@ -1,0 +1,25 @@
+name: Windows protected launch
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-aot:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish cooperative Native AOT peer
+        run: dotnet publish tests/NativeSnapshotWorker/NativeSnapshotWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -o native-snapshot-peer
+      - name: Exercise snapshot and process ownership
+        shell: pwsh
+        run: |
+          $env:GU_WINDOWS_SNAPSHOT_PEER = Join-Path $PWD 'native-snapshot-peer\NativeSnapshotWorker.exe'
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter "FullyQualifiedName~WindowsImageSnapshotLeaseTests" --logger "console;verbosity=detailed"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

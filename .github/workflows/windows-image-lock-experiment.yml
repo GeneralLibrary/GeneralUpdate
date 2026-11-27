@@ -16,10 +16,20 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Publish Native AOT experiment peer
-        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -o native-peer
-      - name: Test held image with native peer
+        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -p:DefineConstants=WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT -o native-peer
+      - name: Inspect static native dependencies
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'Visual C++ tools were not found' }
+          $tools = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          $dumpbin = Join-Path $tools.FullName 'bin\Hostx64\x64\dumpbin.exe'
+          & $dumpbin /dependents (Join-Path $PWD 'native-peer\ReportWorker.exe')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test sharing and restricted inheritance with native peer
         shell: pwsh
         run: |
           $env:GU_WINDOWS_NATIVE_LOCK_PEER = Join-Path $PWD 'native-peer\ReportWorker.exe'
-          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter "FullyQualifiedName~WindowsImageLockExperimentTests" --logger "console;verbosity=detailed"
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release -p:DefineConstants=WINDOWS_SNAPSHOT_LAUNCH_EXPERIMENT --filter "FullyQualifiedName~WindowsImageLockExperimentTests|FullyQualifiedName~WindowsRestrictedInheritanceExperimentTests|FullyQualifiedName~WindowsDllSearchExperimentTests|FullyQualifiedName~WindowsJobLifetimeExperimentTests|FullyQualifiedName~WindowsAtomicSnapshotExperimentTests|FullyQualifiedName~WindowsImageSnapshotLeaseTests" --logger "console;verbosity=detailed"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
