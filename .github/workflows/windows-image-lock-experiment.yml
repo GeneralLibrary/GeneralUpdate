@@ -1,0 +1,25 @@
+name: Windows image lock experiment
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-peer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish Native AOT experiment peer
+        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r win-x64 -p:PublishAot=true -p:TargetFrameworks=net10.0 -o native-peer
+      - name: Test held image with native peer
+        shell: pwsh
+        run: |
+          $env:GU_WINDOWS_NATIVE_LOCK_PEER = Join-Path $PWD 'native-peer\ReportWorker.exe'
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release --filter "FullyQualifiedName~WindowsImageLockExperimentTests" --logger "console;verbosity=detailed"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
