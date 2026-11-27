@@ -50,6 +50,7 @@ public class HttpDownloadExecutor : IDownloadExecutor
     private readonly HttpClient _client;
     private readonly TimeSpan _timeout;
     private readonly bool _enableResume;
+    private readonly Func<HttpRequestMessage, CancellationToken, Task>? _applyAuth;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpDownloadExecutor"/> class
@@ -65,6 +66,11 @@ public class HttpDownloadExecutor : IDownloadExecutor
         _timeout = timeout ?? TimeSpan.FromSeconds(30);
         _enableResume = enableResume;
     }
+
+    internal HttpDownloadExecutor(HttpClient client, TimeSpan timeout, bool enableResume,
+        Func<HttpRequestMessage, CancellationToken, Task> applyAuth)
+        : this(client, timeout, enableResume)
+        => _applyAuth = applyAuth;
 
     /// <summary>
     /// Asynchronously executes the download of a single asset file.
@@ -124,7 +130,9 @@ public class HttpDownloadExecutor : IDownloadExecutor
             // Apply global auth provider and extra headers (e.g. X-Tenant-Id) from HttpClientProvider.
             // This ensures download requests carry the same auth context as version validation
             // and status reporting requests.
-            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
+            await (_applyAuth == null
+                ? HttpClientProvider.ApplyAuthAsync(request, token)
+                : _applyAuth(request, token)).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             cts.CancelAfter(_timeout);

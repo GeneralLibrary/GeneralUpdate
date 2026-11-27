@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\GeneralUpdate.Core\GeneralUpdate.Core.csproj" />
+    <ProjectReference Include="..\PushAotSmoke\PushAotSmoke.csproj" ReferenceOutputAssembly="false" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

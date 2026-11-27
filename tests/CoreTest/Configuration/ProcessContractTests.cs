@@ -10,6 +10,38 @@ public class ProcessContractTests
     private static List<VersionEntry> SingleVersion => new() { new VersionEntry { Version = "2.0.0" } };
 
     [Fact]
+    public void ValidatedPushContract_DoesNotExportLocalApiSecret()
+    {
+        var source = new UpdateContext
+        {
+            MainAppName = "Client", InstallPath = ExistingDir, ClientVersion = "1.0.0",
+            LastVersion = "2.0.0", Encoding = Encoding.UTF8, Format = Format.Zip,
+            AppSecretKey = "local-api-secret", BackupDirectory = ExistingDir,
+            RequirePushValidation = true, PushValidationUrl = "https://api.example.test/Upgrade/ValidatePush",
+            PushValidationAppKey = "registered-client"
+        };
+        var contract = ConfigurationMapper.MapToProcessContract(
+            source, SingleVersion, new(), new(), new(), 2);
+        Assert.Empty(contract.AppSecretKey);
+        Assert.Null(contract.Token);
+        Assert.Null(contract.BasicUsername);
+        Assert.Null(contract.BasicPassword);
+        Assert.Equal("registered-client", contract.PushValidationAppKey);
+    }
+
+    [Fact]
+    public void ValidatedPushContract_RejectsTenantHeaderWithoutAuthenticatedChannel()
+    {
+        var source = new UpdateContext
+        {
+            RequirePushValidation = true,
+            CustomHeaders = new() { ["X-Tenant-Id"] = "private-tenant" }
+        };
+        Assert.Throws<InvalidOperationException>(() =>
+            ConfigurationMapper.MapToProcessContract(source, SingleVersion, new(), new(), new(), 2));
+    }
+
+    [Fact]
     public void Ctor_AppNameNull_ThrowsArgumentNullException()
     {
         var ex = Assert.Throws<ArgumentNullException>(() =>

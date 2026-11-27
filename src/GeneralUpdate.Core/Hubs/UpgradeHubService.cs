@@ -33,6 +33,7 @@ public class UpgradeHubService : IUpgradeHubService
 
                 if (!string.IsNullOrWhiteSpace(appkey))
                     config.Headers.Add("appkey", appkey);
+
             }).WithAutomaticReconnect(new RandomRetryPolicy());
         builder.Services.Configure<JsonHubProtocolOptions>(o =>
         {

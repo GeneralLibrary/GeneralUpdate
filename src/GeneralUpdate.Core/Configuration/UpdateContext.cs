@@ -76,6 +76,17 @@ public class UpdateContext : UpdateConfiguration
     /// </summary>
     public int ReportType { get; set; } = 1;
 
+    /// <summary>Whether this update requires a server-side push-record validation before application.</summary>
+    public bool RequirePushValidation { get; set; }
+
+    /// <summary>The server endpoint used to revalidate this push record.</summary>
+    public string PushValidationUrl { get; set; } = string.Empty;
+
+    /// <summary>The configured client app key used for push-record validation.</summary>
+    public string PushValidationAppKey { get; set; } = string.Empty;
+
+    internal bool PushValidationRejected { get; set; }
+
     /// <summary>
     ///     The list of version information objects to be updated.
     ///     Populated from the update server response based on <see cref="IsUpgradeUpdate" /> and <see cref="IsMainUpdate" />.

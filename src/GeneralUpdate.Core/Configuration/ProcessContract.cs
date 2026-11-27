@@ -403,5 +403,14 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("ReportType")]
         public int ReportType { get; set; } = 1;
+
+        [JsonPropertyName("RequirePushValidation")]
+        public bool RequirePushValidation { get; set; }
+
+        [JsonPropertyName("PushValidationUrl")]
+        public string PushValidationUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("PushValidationAppKey")]
+        public string PushValidationAppKey { get; set; } = string.Empty;
     }
 }

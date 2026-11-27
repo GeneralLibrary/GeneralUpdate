@@ -95,6 +95,7 @@ public class HttpUpdateReporter : IUpdateReporter
 {
     private HttpClient _client;
     private string _reportUrl;
+    private readonly Func<HttpRequestMessage, CancellationToken, Task>? _applyAuth;
 
     /// <summary>
     /// Gets or sets the report URL for update status reporting.
@@ -140,6 +141,11 @@ public class HttpUpdateReporter : IUpdateReporter
         _reportUrl = reportUrl ?? string.Empty;
     }
 
+    internal HttpUpdateReporter(HttpClient client, string reportUrl,
+        Func<HttpRequestMessage, CancellationToken, Task> applyAuth)
+        : this(client, reportUrl)
+        => _applyAuth = applyAuth;
+
     public async Task ReportAsync(UpdateReport report, CancellationToken token = default)
     {
         try
@@ -154,9 +160,11 @@ public class HttpUpdateReporter : IUpdateReporter
             // Apply the global authentication provider (if one was set via
             // VersionService.SetDefaultAuthProvider or HttpClientProvider.DefaultAuthProvider)
             // so that report requests carry the same credentials as version validation requests.
-            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
+            await (_applyAuth == null
+                ? HttpClientProvider.ApplyAuthAsync(request, token)
+                : _applyAuth(request, token)).ConfigureAwait(false);
 
-            await _client.SendAsync(request, token).ConfigureAwait(false);
+            using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

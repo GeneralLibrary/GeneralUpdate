@@ -15,6 +15,8 @@ using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Differential;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Network;
+using GeneralUpdate.Core.Hubs;
+using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Differential.Differ;
 
 namespace GeneralUpdate.Core;
@@ -90,6 +92,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     private DiffPipelineBuilder? _diffPipelineBuilder;
     private Silent.SilentPollOrchestrator? _silentOrchestrator;
     private List<string> _syncedCustomHeaders = new();
+    private HubConfig? _pushHubConfig;
+    private PushUpdateListener? _pushListener;
+    private readonly IProcessContractProvider? _processContractProvider;
+    private readonly SemaphoreSlim _launchLock = new(1, 1);
+
+    /// <summary>Completes when push listening stops, including after a Client update is handed to the updater.</summary>
+    public Task PushCompletion => _pushListener?.Completion ?? Task.CompletedTask;
 
     /// <summary>
     /// When silent mode is active, provides access to the background polling orchestrator.
@@ -99,6 +108,13 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
     public GeneralUpdateBootstrap()
     {
+        InitializeFromEnvironment();
+    }
+
+    /// <summary>Uses an installation-scoped IPC provider shared with the updater host.</summary>
+    public GeneralUpdateBootstrap(IProcessContractProvider processContractProvider)
+    {
+        _processContractProvider = processContractProvider ?? throw new ArgumentNullException(nameof(processContractProvider));
         InitializeFromEnvironment();
     }
 
@@ -124,8 +140,32 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// <returns>This bootstrap instance for chaining.</returns>
     public override async Task<GeneralUpdateBootstrap> LaunchAsync()
     {
+        await _launchLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await LaunchCoreAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _launchLock.Release();
+        }
+    }
+
+    private async Task<GeneralUpdateBootstrap> LaunchCoreAsync()
+    {
         var appType = GetOption(Option.AppType);
         _configInfo.AppType = appType;
+
+        if (_pushHubConfig != null && appType != AppType.Client)
+            throw new InvalidOperationException("Push updates can only be enabled for AppType.Client.");
+        if (_pushHubConfig != null)
+        {
+            if (GetOption(Option.Silent))
+                throw new InvalidOperationException("Push updates cannot be combined with silent polling.");
+            ApplyRuntimeOptions();
+            await StartPushUpdatesAsync().ConfigureAwait(false);
+            return this;
+        }
 
         // Silent mode: start background poll and return immediately
         if (appType == AppType.Client && GetOption(Option.Silent))
@@ -134,7 +174,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             return this;
         }
 
-        return appType switch
+        var result = appType switch
         {
             AppType.Client => await LaunchWithStrategy(new ClientStrategy()),
             AppType.Upgrade => await LaunchWithStrategy(new UpdateStrategy()),
@@ -142,9 +182,75 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             AppType.OssUpgrade => await LaunchWithStrategy(new OssStrategy(AppType.OssUpgrade)),
             _ => await LaunchWithStrategy(new ClientStrategy())
         };
+
+        return result;
     }
 
-    private async Task<GeneralUpdateBootstrap> LaunchWithStrategy(IStrategy roleStrategy)
+    /// <summary>
+    /// Enables an opt-in SignalR listener on the long-running Client host. Received messages are
+    /// validated against this configuration and processed sequentially through the normal Client
+    /// or Upgrade strategy. Push listening is disabled unless this method is called.
+    /// </summary>
+    public GeneralUpdateBootstrap EnablePushUpdates(HubConfig config)
+    {
+        if (config == null) throw new ArgumentNullException(nameof(config));
+        if (_pushListener != null)
+            throw new InvalidOperationException("Stop push listening before changing its configuration.");
+        if (!Uri.TryCreate(config.Url, UriKind.Absolute, out var hubUri) ||
+            (hubUri.Scheme != Uri.UriSchemeHttps && hubUri.Scheme != Uri.UriSchemeHttp) ||
+            (hubUri.Scheme == Uri.UriSchemeHttp && !hubUri.IsLoopback) ||
+            !string.IsNullOrEmpty(hubUri.UserInfo))
+            throw new ArgumentException("Push hub URL must be an absolute HTTPS URL (HTTP is allowed only for loopback).", nameof(config));
+        if (config.QueueCapacity < 1)
+            throw new ArgumentOutOfRangeException(nameof(config), "Push queue capacity must be positive.");
+        if (string.IsNullOrWhiteSpace(config.AppKey))
+            throw new ArgumentException("Push updates require an explicitly configured AppKey.", nameof(config));
+        if (!IsSecureEndpoint(config.ValidationUrl))
+            throw new ArgumentException("Push validation URL must be an absolute HTTPS URL (HTTP is allowed only for loopback).", nameof(config));
+        if (config.AllowedDownloadOrigins == null ||
+            config.AllowedDownloadOrigins.Any(origin => !IsSecureEndpoint(origin) ||
+                new Uri(origin).AbsolutePath != "/" || !string.IsNullOrEmpty(new Uri(origin).Query)))
+            throw new ArgumentException("AllowedDownloadOrigins must contain HTTPS origins including any non-default port.", nameof(config));
+
+        _pushHubConfig = new HubConfig
+        {
+            Url = config.Url,
+            ValidationUrl = config.ValidationUrl,
+            AccessToken = config.AccessToken,
+            AppKey = config.AppKey,
+            ReconnectDelay = config.ReconnectDelay,
+            MaxReconnectAttempts = config.MaxReconnectAttempts,
+            QueueCapacity = config.QueueCapacity,
+            AllowedDownloadOrigins = new List<string>(config.AllowedDownloadOrigins)
+        };
+        return this;
+    }
+
+    private static bool IsSecureEndpoint(string? value)
+        => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+           (uri.Scheme == Uri.UriSchemeHttps ||
+            (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) &&
+           string.IsNullOrEmpty(uri.UserInfo);
+
+    /// <summary>Stops and disposes the opt-in push listener, waiting for queued messages to finish.</summary>
+    public async Task StopPushUpdatesAsync()
+    {
+        await _launchLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_pushListener != null)
+                await _pushListener.StopAsync().ConfigureAwait(false);
+            _pushListener = null;
+        }
+        finally
+        {
+            _launchLock.Release();
+        }
+    }
+
+    private async Task<GeneralUpdateBootstrap> LaunchWithStrategy(
+        IStrategy roleStrategy,
+        Action<IStrategy>? configureRoleStrategy = null)
     {
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
@@ -163,6 +269,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
             if (authProvider != null) Network.VersionService.SetDefaultAuthProvider(authProvider);
 
             ConfigureStrategy(roleStrategy);
+            configureRoleStrategy?.Invoke(roleStrategy);
 
             roleStrategy.Create(_configInfo);
 
@@ -181,18 +288,205 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
 
         return this;
     }
+
+    private async Task StartPushUpdatesAsync()
+    {
+        if (_pushListener != null) return;
+
+        AppMetadataDiscoverer.Discover(_configInfo);
+        if (string.IsNullOrWhiteSpace(_configInfo.ProductId))
+            throw new InvalidOperationException("Push updates require ProductId in the request or installed manifest.");
+        if (_configInfo.CustomHeaders?.Count > 0 || !string.IsNullOrEmpty(_configInfo.Token) ||
+            !string.IsNullOrEmpty(_configInfo.BasicUsername) || !string.IsNullOrEmpty(_configInfo.BasicPassword))
+            throw new InvalidOperationException(
+                "NOT DEPLOYABLE: credential-bearing or tenant-header push flows require a separately authenticated IPC channel.");
+        if (ResolveExtension<Download.Abstractions.IDownloadSource>() != null ||
+            ResolveExtension<Download.Abstractions.IDownloadOrchestrator>() != null ||
+            ResolveExtension<Download.Abstractions.IDownloadExecutor>() != null ||
+            ResolveExtension<Download.Abstractions.IDownloadPipeline>() != null ||
+            ResolveExtension<IStrategy>() != null ||
+            ResolveExtension<Download.Reporting.IUpdateReporter>() != null ||
+            ResolveExtension<Security.IHttpAuthProvider>() != null)
+            throw new InvalidOperationException("Automatic push requires the built-in download, authentication and OS pipeline; use request credentials and lifecycle hooks.");
+
+        _configInfo.RequirePushValidation = true;
+        _configInfo.PushValidationUrl = _pushHubConfig!.ValidationUrl;
+        _configInfo.PushValidationAppKey = _pushHubConfig.AppKey;
+        if (_configInfo.CustomHeaders != null)
+            _configInfo.CustomHeaders = new Dictionary<string, string>(_configInfo.CustomHeaders, StringComparer.OrdinalIgnoreCase);
+
+        var hub = new UpgradeHubService(
+            _pushHubConfig!.Url,
+            _pushHubConfig.AccessToken,
+            _pushHubConfig.AppKey);
+        var listener = new PushUpdateListener(hub, ProcessPushMessageAsync, _pushHubConfig.QueueCapacity);
+        _pushListener = listener;
+        try
+        {
+            await listener.StartAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            _pushListener = null;
+            await listener.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task<bool> ProcessPushMessageAsync(string message)
+    {
+        PushPayload payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize(message, PushPayloadJsonContext.Default.PushPayload)
+                      ?? throw new JsonException("The push packet must not be null.");
+        }
+        catch (JsonException ex)
+        {
+            GeneralTracer.Warn($"GeneralUpdateBootstrap: rejected malformed push packet: {ex.Message}");
+            return false;
+        }
+
+        if (!string.Equals(payload.ProductId, _configInfo.ProductId, StringComparison.Ordinal))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet for a different or unspecified product.");
+            return false;
+        }
+
+        if (payload.Platform != (int)GeneralUpdate.Core.Strategy.OsStrategyResolver.GetPlatform())
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet for a different or unspecified platform.");
+            return false;
+        }
+
+        if (payload.AppType != (int)AppType.Client && payload.AppType != (int)AppType.Upgrade)
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet with an unsupported AppType.");
+            return false;
+        }
+
+        if (payload.RecordId is null or <= 0 ||
+            string.IsNullOrWhiteSpace(payload.Hash) ||
+            payload.Hash.Length != 64)
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet without a positive record ID and SHA-256 hash.");
+            return false;
+        }
+        foreach (var character in payload.Hash)
+        {
+            if (!Uri.IsHexDigit(character))
+            {
+                GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet with an invalid SHA-256 hash.");
+                return false;
+            }
+        }
+
+        if (payload.PackageType != (int)PackageType.Full)
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet because only explicit full packages are safe for automatic application.");
+            return false;
+        }
+
+        var expectedFormat = GetOption(Option.Format).ToExtension().TrimStart('.');
+        if ((!string.IsNullOrWhiteSpace(payload.Format) &&
+             !payload.Format.Trim().TrimStart('.').Equals(expectedFormat, StringComparison.OrdinalIgnoreCase)) ||
+            (string.IsNullOrWhiteSpace(payload.Format) &&
+             !expectedFormat.Equals("zip", StringComparison.OrdinalIgnoreCase)))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet with a missing or mismatched package format.");
+            return false;
+        }
+
+        if (!IsAllowedPushDownloadUrl(payload.Url))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet with an untrusted download URL.");
+            return false;
+        }
+
+        var localVersion = payload.AppType == (int)AppType.Client
+            ? _configInfo.ClientVersion
+            : _configInfo.UpgradeClientVersion;
+        if (!Utilities.Semver.TryParse(localVersion, out var local) ||
+            !Utilities.Semver.TryParse(payload.Version, out var target))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: rejected push packet without valid local and target version tracks.");
+            return false;
+        }
+        if (payload.IsFreeze == true || target <= local)
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: ignored frozen or already-installed push package.");
+            return false;
+        }
+
+        if (!await PushValidationClient.ValidateAsync(
+                _configInfo,
+                payload.RecordId.Value,
+                _pushHubConfig.AppKey,
+                payload.Hash).ConfigureAwait(false))
+        {
+            GeneralTracer.Warn("GeneralUpdateBootstrap: push record was not approved before download.");
+            return false;
+        }
+
+        Download.Sources.PushDownloadSource source;
+        try
+        {
+            source = new Download.Sources.PushDownloadSource(message);
+        }
+        catch (JsonException ex)
+        {
+            GeneralTracer.Warn($"GeneralUpdateBootstrap: rejected invalid push packet: {ex.Message}");
+            return false;
+        }
+
+        _configInfo.RequirePushValidation = true;
+        _configInfo.PushValidationUrl = _pushHubConfig.ValidationUrl;
+        _configInfo.PushValidationAppKey = _pushHubConfig.AppKey;
+        _configInfo.PushValidationRejected = false;
+        var strategy = new ClientStrategy();
+        await LaunchWithStrategy(strategy, configured =>
+        {
+            ((ClientStrategy)configured).DownloadSource = source;
+        }).ConfigureAwait(false);
+        return strategy.HasPreparedClientUpdate;
+    }
+
+    private bool IsAllowedPushDownloadUrl(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var downloadUri) ||
+            !string.IsNullOrEmpty(downloadUri.UserInfo) ||
+            !string.IsNullOrEmpty(downloadUri.Fragment) ||
+            (downloadUri.Scheme != Uri.UriSchemeHttps &&
+             (downloadUri.Scheme != Uri.UriSchemeHttp || !downloadUri.IsLoopback)))
+            return false;
+
+        var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Uri.TryCreate(_configInfo.UpdateUrl, UriKind.Absolute, out var updateUri))
+            allowedOrigins.Add(updateUri.GetLeftPart(UriPartial.Authority));
+        foreach (var origin in _pushHubConfig!.AllowedDownloadOrigins)
+            allowedOrigins.Add(new Uri(origin).GetLeftPart(UriPartial.Authority));
+        return allowedOrigins.Contains(downloadUri.GetLeftPart(UriPartial.Authority));
+    }
     
-    /// <summary>
-    /// Applies the primary configuration object. Validates required fields, maps to
-    /// the internal <see cref="UpdateContext"/>, and initialises the blacklist
-    /// matcher for file exclusion during update operations.
-    /// </summary>
-    /// <param name="configInfo">User-facing configuration. All required fields must
-    /// be set explicitly — no auto-discovery is performed. Use
-    /// <see cref="SetSource"/> for the zero-config path.</param>
-    /// <returns>This bootstrap instance for chaining.</returns>
+    private void SyncCustomHeaders(Dictionary<string, string>? customHeaders)
+    {
+        foreach (var key in _syncedCustomHeaders)
+            HttpClientProvider.ExtraHeaders.TryRemove(key, out _);
+        _syncedCustomHeaders.Clear();
+        if (customHeaders == null) return;
+
+        foreach (var header in customHeaders)
+        {
+            HttpClientProvider.ExtraHeaders[header.Key] = header.Value;
+            _syncedCustomHeaders.Add(header.Key);
+        }
+    }
+
+    /// <summary>Validates and applies the user-provided update configuration.</summary>
     public GeneralUpdateBootstrap SetConfig(UpdateRequest configInfo)
     {
+        if (_pushListener != null)
+            throw new InvalidOperationException("Stop push listening before replacing the update configuration.");
         configInfo.Validate();
         _configInfo = ConfigurationMapper.MapToUpdateContext(configInfo);
 
@@ -200,18 +494,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         // to every request (Verification + Report) without manual extra setup.
         // First clear stale headers from a previous SetConfig call, then apply
         // the current ones — avoids leaking headers between bootstrap instances.
-        var oldHeaders = _syncedCustomHeaders;
-        _syncedCustomHeaders = new List<string>();
-        foreach (var key in oldHeaders)
-            HttpClientProvider.ExtraHeaders.TryRemove(key, out _);
-        if (_configInfo.CustomHeaders is { Count: > 0 })
-        {
-            foreach (var kv in _configInfo.CustomHeaders)
-            {
-                HttpClientProvider.ExtraHeaders[kv.Key] = kv.Value;
-                _syncedCustomHeaders.Add(kv.Key);
-            }
-        }
+        SyncCustomHeaders(_configInfo.CustomHeaders);
 
         var appType = GetOption(Option.AppType);
         if (appType != AppType.Upgrade)
@@ -363,7 +646,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         ProcessContract? processInfo;
         try
         {
-            processInfo = new EncryptedFileProcessContractProvider().Receive();
+            processInfo = _processContractProvider == null
+                ? new EncryptedFileProcessContractProvider().Receive()
+                : _processContractProvider.ReceiveAsync().GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
@@ -411,6 +696,9 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
                 UpdatePath = processInfo.UpdatePath,
                 LaunchClientAfterUpdate = processInfo.LaunchClientAfterUpdate,
                 ReportType = processInfo.ReportType,
+                RequirePushValidation = processInfo.RequirePushValidation,
+                PushValidationUrl = processInfo.PushValidationUrl,
+                PushValidationAppKey = processInfo.PushValidationAppKey,
                 Files = processInfo.Files ?? BlackDefaults.DefaultFiles,
                 Formats = processInfo.Formats ?? BlackDefaults.DefaultFormats,
                 Directories = processInfo.Directories ?? BlackDefaults.DefaultDirectories
@@ -435,6 +723,8 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
     /// </summary>
     private void ApplyRuntimeOptions()
     {
+        if (_pushHubConfig != null)
+            _configInfo.LaunchClientAfterUpdate = GetOption(Option.LaunchClientAfterUpdate);
         // Preserve Upgrade path values set by InitializeFromEnvironment()
         _configInfo.Encoding ??= GetOption(Option.Encoding);
         _configInfo.Format = GetOption(Option.Format);
@@ -506,8 +796,16 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         var hooks = ResolveExtension<Hooks.IUpdateHooks>() ?? new Hooks.NoOpUpdateHooks();
         roleStrategy.Hooks = hooks;
 
+        if (_configInfo.RequirePushValidation &&
+            (ResolveExtension<IStrategy>() != null || ResolveExtension<Security.IHttpAuthProvider>() != null ||
+             ResolveExtension<Download.Reporting.IUpdateReporter>() != null))
+            throw new InvalidOperationException("Validated push requires built-in application and HTTP reporting; configure credentials in UpdateRequest.");
+
         var reporter = ResolveExtension<Download.Reporting.IUpdateReporter>() ??
-                       new Download.Reporting.HttpUpdateReporter();
+                       (_configInfo.RequirePushValidation
+                           ? new Download.Reporting.HttpUpdateReporter(PushHttpTransport.Client, _configInfo.ReportUrl,
+                               (request, token) => PushHttpTransport.ApplyAuthAsync(_configInfo, request, token))
+                           : new Download.Reporting.HttpUpdateReporter());
         if (reporter is Download.Reporting.HttpUpdateReporter httpReporter)
             httpReporter.ReportUrl = _configInfo.ReportUrl;
         roleStrategy.Reporter = reporter;
@@ -527,6 +825,7 @@ public class GeneralUpdateBootstrap : AbstractBootstrap<GeneralUpdateBootstrap, 
         switch (roleStrategy)
         {
             case ClientStrategy cs:
+                cs.ProcessContractProvider = _processContractProvider;
                 cs.DownloadSource = ResolveExtension<Download.Abstractions.IDownloadSource>();
                 cs.SetDiffPipeline(diffPipeline);
                 if (downloadOrchestrator != null) cs.SetOrchestrator(downloadOrchestrator);

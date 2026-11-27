@@ -54,9 +54,22 @@ public class CompressMiddleware : IMiddleware
     /// <see cref="PipelineBuilder.Build"/> to halt pipeline execution.
     /// </para>
     /// </remarks>
-    public Task InvokeAsync(PipelineContext context)
+    public async Task InvokeAsync(PipelineContext context)
     {
-        return Task.Run(() =>
+        var update = context.Get<UpdateContext>("PushUpdateContext");
+        if (update?.RequirePushValidation == true)
+        {
+            var version = update.UpdateVersions?.Count == 1 ? update.UpdateVersions[0] : null;
+            if (version == null || update.ReportType != 2 || version.PackageType != (int)PackageType.Full ||
+                !await Network.PushValidationClient.ValidateAsync(update, version.RecordId,
+                    update.PushValidationAppKey, version.Hash).ConfigureAwait(false))
+            {
+                update.PushValidationRejected = true;
+                throw new Network.PushValidationRejectedException();
+            }
+        }
+
+        await Task.Run(() =>
         {
             var format = context.Get<Configuration.Format>("Format");
             var sourcePath = context.Get<string>("ZipFilePath");

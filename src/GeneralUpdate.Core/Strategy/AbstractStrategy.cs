@@ -207,6 +207,13 @@ namespace GeneralUpdate.Core.Strategy
                         _appliedAnyVersion = true;
                         status = ReportType.Success;
                     }
+                    catch (Network.PushValidationRejectedException e)
+                    {
+                        AllPackagesSucceeded = false;
+                        _configinfo.PushValidationRejected = true;
+                        HandleExecuteException(e);
+                        return;
+                    }
                     catch (Exception e) when (version.PackageType == (int)PackageType.Chain
                         && !string.IsNullOrEmpty(version.FallbackFullName)
                         && e is not OperationCanceledException)
@@ -278,7 +285,8 @@ namespace GeneralUpdate.Core.Strategy
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
-                        DeleteVersionZip(version);
+                        if (!_configinfo.PushValidationRejected)
+                            DeleteVersionZip(version);
                     }
                 }
 
@@ -364,6 +372,8 @@ namespace GeneralUpdate.Core.Strategy
             // Used by CompressMiddleware and platform strategies to decide decompression target
             // and whether PatchMiddleware is needed.
             context.Add("PackageType", version.PackageType);
+            if (_configinfo.RequirePushValidation)
+                context.Add("PushUpdateContext", _configinfo);
             // DiffPipeline for parallel patch application with progress reporting
             context.Add("DiffPipeline", DiffPipeline);
             
