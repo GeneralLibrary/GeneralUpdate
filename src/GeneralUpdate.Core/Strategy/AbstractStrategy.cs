@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,6 +10,7 @@ using GeneralUpdate.Core.Event;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Configuration;
 using GeneralUpdate.Core.Utilities;
+using GeneralUpdate.Core.StartupHealth;
 
 using GeneralUpdate.Core.Hooks;
 using IUpdateReporter = GeneralUpdate.Core.Download.Reporting.IUpdateReporter;
@@ -91,6 +92,8 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         public bool LaunchBowl { get; set; }
 
+        protected internal Guid? RequiredDurableUpdateAttemptId { get; set; }
+
         /// <summary>
         /// Gets or sets whether to prefer using the update path. When <c>true</c>, <see cref="StartAppAsync"/>
         /// will first attempt to resolve the application from <see cref="UpdateContext.UpdatePath"/>,
@@ -169,6 +172,7 @@ namespace GeneralUpdate.Core.Strategy
                 HasReportedPackageFailures = false;
                 _appliedAnyVersion = false;
                 var recordStatuses = new Dictionary<int, UpdateReport>();
+                var reportOrder = new List<int>();
                 var rollbackFailures = new HashSet<int>();
                 patchRoot = StorageManager.GetTempDirectory(Patchs);
 
@@ -189,7 +193,10 @@ namespace GeneralUpdate.Core.Strategy
                     {
                         GeneralTracer.Info($"AbstractStrategy.ExecuteAsync: skipping {version.Version} ({version.Name}) — already covered by fallback full package v{fallbackEffectiveVersion}.");
                         if (!recordStatuses.ContainsKey(version.RecordId))
+                        {
                             recordStatuses.Add(version.RecordId, new UpdateReport(version.RecordId, ReportType.Success, _configinfo.ReportType));
+                            reportOrder.Add(version.RecordId);
+                        }
                         continue;
                     }
                     var status = ReportType.None;
@@ -296,9 +303,13 @@ namespace GeneralUpdate.Core.Strategy
                         _failureCategory = null;
                         if (!recordStatuses.TryGetValue(version.RecordId, out var previousStatus)
                             || previousStatus.Status != ReportType.Failure)
+                        {
+                            if (!recordStatuses.ContainsKey(version.RecordId))
+                                reportOrder.Add(version.RecordId);
                             recordStatuses[version.RecordId] = status == ReportType.Failure
                                 ? FailureReports.Create(version.RecordId, _configinfo.ReportType, failureCategory)
                                 : new UpdateReport(version.RecordId, status, _configinfo.ReportType);
+                        }
 
                         // Delete only this version's zip file — other AppType packages
                         // in TempPath may still be needed by a downstream process.
@@ -306,15 +317,21 @@ namespace GeneralUpdate.Core.Strategy
                     }
                 }
 
-                foreach (var record in recordStatuses)
+                foreach (var recordId in reportOrder)
                 {
-                    if (record.Value.Status == ReportType.Failure)
+                    var report = recordStatuses[recordId];
+                    if (report.Status == ReportType.Failure)
                         HasReportedPackageFailures = true;
+                    if (report.Status == ReportType.Success && _configinfo.DurableUpdateAttemptId.HasValue)
+                        continue;
+                    // Push records are created lazily on the server; a missing record id cannot be routed.
+                    if (_configinfo.ReportType == 2 && recordId <= 0)
+                        continue;
                     try
                     {
-                        await Reporter.ReportAsync(record.Value).ConfigureAwait(false);
-                        if (rollbackFailures.Contains(record.Key))
-                            await Reporter.ReportAsync(FailureReports.Create(record.Key, _configinfo.ReportType, FailureCategory.Rollback)).ConfigureAwait(false);
+                        await Reporter.ReportAsync(report).ConfigureAwait(false);
+                        if (rollbackFailures.Contains(recordId))
+                            await Reporter.ReportAsync(FailureReports.Create(recordId, _configinfo.ReportType, FailureCategory.Rollback)).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -500,10 +517,28 @@ namespace GeneralUpdate.Core.Strategy
             if (string.IsNullOrEmpty(appPath))
                 throw new FileNotFoundException($"Can't find the app {appName}!");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: launching {appPath}");
-            using var process = Process.Start(appPath);
+            using var process = StartProcess(new ProcessStartInfo(appPath) { UseShellExecute = false });
             if (process == null)
                 throw new InvalidOperationException($"Failed to start process: {appPath}");
             GeneralTracer.Info($"AbstractStrategy.StartProcess: process started (PID: {process.Id}).");
+        }
+
+        protected Process? StartProcess(ProcessStartInfo startInfo)
+        {
+            if (startInfo == null) throw new ArgumentNullException(nameof(startInfo));
+            var inheritedAttemptMarker = Environment.GetEnvironmentVariable(
+                DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable);
+            if (!RequiredDurableUpdateAttemptId.HasValue && string.IsNullOrEmpty(inheritedAttemptMarker))
+                return Process.Start(startInfo.FileName);
+
+            startInfo.UseShellExecute = false;
+            startInfo.EnvironmentVariables.Remove(DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable);
+            if (RequiredDurableUpdateAttemptId.HasValue)
+            {
+                startInfo.EnvironmentVariables[DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable] =
+                    RequiredDurableUpdateAttemptId.Value.ToString("D");
+            }
+            return Process.Start(startInfo);
         }
 
         /// <summary>
@@ -558,6 +593,12 @@ namespace GeneralUpdate.Core.Strategy
         /// </summary>
         private bool TryRollback(int recordId)
         {
+            if (_configinfo.DisableLegacyRollback)
+            {
+                GeneralTracer.Warn("AbstractStrategy.TryRollback: skipped because this durable attempt suppresses legacy automatic rollback.");
+                return true;
+            }
+
             try
             {
                 var backupDir = _configinfo.BackupDirectory;

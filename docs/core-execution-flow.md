@@ -39,6 +39,24 @@ sidebar_position: 4
 
 ## 1. 架构总览
 
+### SignalR 推送的宿主接入
+
+`UpgradeHubService.AddListenerReceive` 接收服务端 `ReceiveMessage` 的单个字符串参数。
+宿主可先用 `JsonSerializer.Deserialize(message, PushPayloadJsonContext.Default.PushPayload)`
+检查 `ProductId`、`Platform`、包格式、来源和适用版本，再为每次推送单独创建
+`new PushDownloadSource(message)`，以 `.DownloadSource(source)` 注册到本次
+`GeneralUpdateBootstrap`（或设置 `ClientStrategy.DownloadSource`）。不要与轮询结果混合：
+推送源使用消息中的 `RecordId`，自动选择报告类型 2，并随 IPC 传给 Upgrade 进程。
+老服务端未提供 ID 时仍可处理包，但不会发送记录回执；不会用 Verification 的 ID 代替。
+无效的 AppType、URL 或版本信息会被拒绝。宿主负责连接生命周期、异步调度、
+避免并发升级，以及验证推送包是否适合当前安装（包括差分包的前置版本）。
+
+下载沿用 `HttpDownloadExecutor` 的全局认证和额外请求头；本地文件服务的租户包需要宿主
+配置 `X-Tenant-Id`，例如在 `UpdateRequest.CustomHeaders` 中配置。报告请求也使用这些头。
+这些配置是进程级的，宿主必须限制可信下载地址、隔离租户并避免向不可信 URL 泄露凭据；
+签名 OBS URL 不代表本地文件服务无需租户认证。消息内的 `Format` 不会自动改变客户端
+配置，宿主应确保包格式与配置的 `Option.Format` 一致。实际 HTTP/数据库链路仍需部署环境验证。
+
 ### 1.1 三层架构
 
 GeneralUpdate.Core 采用**三层调度 + 两层引擎**的设计：

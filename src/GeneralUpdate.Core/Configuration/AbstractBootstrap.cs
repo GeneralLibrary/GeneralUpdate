@@ -255,8 +255,17 @@ namespace GeneralUpdate.Core.Configuration
         /// </remarks>
         public TBootstrap DownloadSource<T>() where T : Download.Abstractions.IDownloadSource, new()
         {
+            _instances.Remove(typeof(Download.Abstractions.IDownloadSource));
             _extensions[typeof(Download.Abstractions.IDownloadSource)] = typeof(T);
             _extensionFactories[typeof(Download.Abstractions.IDownloadSource)] = () => new T();
+            return (TBootstrap)this;
+        }
+
+        /// <summary>Registers a pre-constructed download source for this update.</summary>
+        public TBootstrap DownloadSource(Download.Abstractions.IDownloadSource source)
+        {
+            _instances[typeof(Download.Abstractions.IDownloadSource)] =
+                source ?? throw new ArgumentNullException(nameof(source));
             return (TBootstrap)this;
         }
 

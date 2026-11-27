@@ -1,0 +1,33 @@
+name: Push Native AOT smoke
+
+on:
+  pull_request:
+    paths:
+      - 'src/GeneralUpdate.Core/**'
+      - 'src/GeneralUpdate.Differential/**'
+      - 'tests/PushAotSmoke/**'
+      - '.github/workflows/push-aot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  push-aot:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish and run native push smoke
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSROOT=%%i"
+          if not defined VSROOT exit /b 1
+          call "%VSROOT%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
+          if errorlevel 1 exit /b 1
+          dotnet publish tests\PushAotSmoke\PushAotSmoke.csproj -c Release -r win-x64 -o "%RUNNER_TEMP%\push-aot"
+          if errorlevel 1 exit /b 1
+          "%RUNNER_TEMP%\push-aot\PushAotSmoke.exe"
+          if errorlevel 1 exit /b 1
