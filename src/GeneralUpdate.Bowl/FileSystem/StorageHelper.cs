@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace GeneralUpdate.Bowl.FileSystem;
 
@@ -48,7 +49,7 @@ internal static class StorageHelper
         Directory.Delete(targetDir, false);
     }
 
-    public static void CreateJson<T>(string targetPath, T obj) where T : class
+    public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T> typeInfo) where T : class
     {
         var folderPath = Path.GetDirectoryName(targetPath) ??
                          throw new ArgumentException("invalid path", nameof(targetPath));
@@ -56,7 +57,7 @@ internal static class StorageHelper
         if (!Directory.Exists(folderPath))
             Directory.CreateDirectory(folderPath);
 
-        var jsonString = JsonSerializer.Serialize(obj);
+        var jsonString = JsonSerializer.Serialize(obj, typeInfo);
         File.WriteAllText(targetPath, jsonString);
     }
 }

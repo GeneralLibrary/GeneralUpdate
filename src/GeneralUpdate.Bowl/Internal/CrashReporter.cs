@@ -33,7 +33,7 @@ internal sealed class CrashReporter : ICrashReporter
         };
 
         var failJsonPath = Path.Combine(context.FailDirectory, context.FailFileName);
-        StorageHelper.CreateJson(failJsonPath, crash);
+        StorageHelper.CreateJson(failJsonPath, crash, CrashJsonContext.Default.Crash);
 
         GeneralTracer.Info($"CrashReporter.GenerateReportAsync: report written to {failJsonPath}.");
         return Task.FromResult(failJsonPath);

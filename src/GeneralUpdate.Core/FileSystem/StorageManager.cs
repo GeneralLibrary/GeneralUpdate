@@ -145,13 +145,11 @@ namespace GeneralUpdate.Core.FileSystem
         /// <typeparam name="T">The type of the object to serialize. Must be a reference type.</typeparam>
         /// <param name="targetPath">The full path of the target JSON file.</param>
         /// <param name="obj">The object instance to serialize.</param>
-        /// <param name="typeInfo">JSON type info metadata for source generator serialization support. When <c>null</c>, the reflection-based serializer is used (not AOT-compatible); pass a generated context for Native AOT support.</param>
+        /// <param name="typeInfo">Required JSON type metadata, typically from a generated context.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="targetPath"/> does not contain a valid directory path.</exception>
         /// <remarks>
         /// If the directory of the target file does not exist, it will be created automatically.
-        /// When <paramref name="typeInfo"/> is null, this method falls back to the reflection-based serializer
-        /// which is not compatible with Native AOT. For AOT compilation, always pass a generated
-        /// <see cref="JsonTypeInfo{T}"/> instance.
+        /// A null <paramref name="typeInfo"/> throws; no reflection fallback is provided.
         /// </remarks>
         public static void CreateJson<T>(string targetPath, T obj, JsonTypeInfo<T>? typeInfo = null) where T : class
         {
@@ -176,13 +174,11 @@ namespace GeneralUpdate.Core.FileSystem
         /// </summary>
         /// <typeparam name="T">The target type for deserialization. Must be a reference type.</typeparam>
         /// <param name="path">The full path of the JSON file.</param>
-        /// <param name="typeInfo">JSON type info metadata for source generator deserialization support. When <c>null</c>, the reflection-based serializer is used (not AOT-compatible); pass a generated context for Native AOT support.</param>
+        /// <param name="typeInfo">Required JSON type metadata, typically from a generated context.</param>
         /// <returns>The deserialized object instance; returns <c>default</c> if the file does not exist.</returns>
         /// <remarks>
         /// If the file does not exist, no exception is thrown and <c>null</c> is returned.
-        /// When <paramref name="typeInfo"/> is null, this method falls back to the reflection-based serializer
-        /// which is not compatible with Native AOT. For AOT compilation, always pass a generated
-        /// <see cref="JsonTypeInfo{T}"/> instance.
+        /// A null <paramref name="typeInfo"/> throws; no reflection fallback is provided.
         /// </remarks>
         public static T? GetJson<T>(string path, JsonTypeInfo<T>? typeInfo = null) where T : class
         {

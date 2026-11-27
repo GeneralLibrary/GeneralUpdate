@@ -3,7 +3,10 @@
 
 ![](./imgs/LOGO白1.png)
 
-# GeneralUpdate #
+# GeneralUpdate # #
+
+For the tested Native AOT scope and publish instructions, see
+[Native AOT verification](docs/native-aot.md).
 
 **Unlimited Updates, Boundless Upgrades.**</br>
 
