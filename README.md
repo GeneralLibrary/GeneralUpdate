@@ -168,6 +168,27 @@ is busy, times out or is cancelled after the transaction commits, `ReportAsync` 
 throw while the event remains queued; retry delivery with `ReplayAsync`, not by
 submitting a new report. Persistence failures before commit cannot be replayed.
 
+#### Terminal rejection quarantine (additional opt-in)
+
+Only after verifying the target service supports the newer `ReportTerminalConflict`
+contract (not just ordered events), pass `terminalRejectionConfirmed: true` to
+`OrderedUpdateReporter` in **every** writer and replay process sharing the store.
+Upgrade all processes first: older versions do not respect the quarantine. Never enable
+this based on HTTP success or an untrusted endpoint. By default terminal rejection still
+stops the entire queue. Other conflicts, HTTP errors, malformed replies and transient
+failures always stop replay and retain the original event.
+
+With the extra opt-in, a confirmed terminal rejection is atomically retained in the
+same database with its original JSON, event identity, sequence and reason. Later events
+for that `(type, recordId)` remain pending and are never sent ahead of it; unrelated
+records can proceed. Replay reports an error while any quarantine remains, even if
+other records were delivered. Inspect `await reporter.GetQuarantinedAsync()` and alert
+an operator; protect these payloads as sensitive. After investigating and correcting
+the cause, `await reporter.RetryQuarantinedAsync(id)` restores the exact event to its
+original queue position; call `ReplayAsync` to retry it. A terminal record cannot be
+reopened; a genuinely new attempt requires a new server record ID. Quarantine does
+not fix legacy flows that report Success before a later launch Failure.
+
 ## 🙏 Thanks
 
 <div align="center">

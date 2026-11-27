@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -22,6 +23,7 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
     private readonly string _identity;
     private readonly HttpUpdateReporter _sender;
     private readonly TimeSpan _lockTimeout;
+    private readonly bool _terminalRejectionConfirmed;
 
     /// <summary>
     /// Creates an ordered reporter. The operator must confirm that the endpoint supports
@@ -30,6 +32,13 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
     /// </summary>
     public OrderedUpdateReporter(string directory, HttpClient client, string reportUrl,
         string namespaceIdentity, bool protocolConfirmed, TimeSpan? lockTimeout = null)
+        : this(directory, client, reportUrl, namespaceIdentity, protocolConfirmed, false, lockTimeout)
+    {
+    }
+
+    /// <summary>Creates a reporter with explicit confirmation of the terminal rejection protocol.</summary>
+    public OrderedUpdateReporter(string directory, HttpClient client, string reportUrl,
+        string namespaceIdentity, bool protocolConfirmed, bool terminalRejectionConfirmed, TimeSpan? lockTimeout = null)
     {
         if (!protocolConfirmed) throw new InvalidOperationException("The ordered-report protocol must be explicitly confirmed.");
         if (string.IsNullOrWhiteSpace(directory)) throw new ArgumentException("A private local directory is required.", nameof(directory));
@@ -43,6 +52,7 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
         _identity = Identity(reportUrl, namespaceIdentity);
         _sender = new HttpUpdateReporter(client, reportUrl);
         _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
+        _terminalRejectionConfirmed = terminalRejectionConfirmed;
         if (_lockTimeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(lockTimeout));
     }
 
@@ -105,22 +115,70 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
 
     private async Task ReplayLockedAsync(SqliteConnection connection, CancellationToken token)
     {
+        if (!_terminalRejectionConfirmed && HasQuarantine(connection))
+            throw new InvalidOperationException("Quarantined reports require explicit terminal rejection protocol confirmation.");
         while (true)
         {
             token.ThrowIfCancellationRequested();
-            long id;
-            string payload;
+            long id = 0;
+            string? payload = null;
+            UpdateReport? report = null;
+            var blocked = false;
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT id, payload FROM outbox ORDER BY id LIMIT 1;";
+                command.CommandText = "SELECT id, payload FROM outbox ORDER BY id;";
                 using (var reader = command.ExecuteReader())
                 {
-                    if (!reader.Read()) return;
-                    id = reader.GetInt64(0);
-                    payload = reader.GetString(1);
+                    while (reader.Read())
+                    {
+                        var candidate = reader.GetString(1);
+                        var parsed = JsonSerializer.Deserialize(candidate, UpdateReportJsonContext.Default.UpdateReport)
+                            ?? throw new InvalidDataException("A queued report is null.");
+                        if (parsed.RecordId <= 0 || (parsed.Type != 1 && parsed.Type != 2) ||
+                            parsed.EventId == null || parsed.EventId == Guid.Empty || parsed.Sequence == null || parsed.Sequence <= 0)
+                            throw new InvalidDataException("A queued ordered report is invalid.");
+                        if (IsBlocked(connection, parsed.Type, parsed.RecordId))
+                        {
+                            blocked = true;
+                            continue;
+                        }
+                        id = reader.GetInt64(0);
+                        payload = candidate;
+                        report = parsed;
+                        break;
+                    }
                 }
             }
-            await _sender.SendJsonAsync(payload, token).ConfigureAwait(false);
+            if (payload == null)
+            {
+                if (blocked || HasQuarantine(connection))
+                    throw new InvalidOperationException("Ordered reports are quarantined; operator review is required.");
+                return;
+            }
+            try
+            {
+                await _sender.SendJsonAsync(payload, token).ConfigureAwait(false);
+            }
+            catch (HttpUpdateReporter.ReportTerminalConflictException) when (_terminalRejectionConfirmed)
+            {
+                using (var transaction = connection.BeginTransaction())
+                {
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.Transaction = transaction;
+                        command.CommandText = @"INSERT INTO quarantine (id, type, record_id, payload, reason)
+                            VALUES ($id, $type, $record, $payload, 'ReportTerminalConflict');
+                            DELETE FROM outbox WHERE id = $id;";
+                        command.Parameters.AddWithValue("$id", id);
+                        command.Parameters.AddWithValue("$type", report!.Type);
+                        command.Parameters.AddWithValue("$record", report.RecordId);
+                        command.Parameters.AddWithValue("$payload", payload);
+                        command.ExecuteNonQuery();
+                    }
+                    transaction.Commit();
+                }
+                continue;
+            }
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = "DELETE FROM outbox WHERE id = $id;";
@@ -128,6 +186,62 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
                 if (command.ExecuteNonQuery() != 1)
                     throw new InvalidDataException("The queued report changed during delivery.");
             }
+        }
+    }
+    /// <summary>Returns quarantined reports for operator inspection. Payloads may contain sensitive diagnostics.</summary>
+    public async Task<IReadOnlyList<QuarantinedUpdateReport>> GetQuarantinedAsync(CancellationToken token = default)
+    {
+        using (await AcquireLockAsync(token).ConfigureAwait(false))
+        using (var connection = Open())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT id, payload, reason FROM quarantine ORDER BY id;";
+            using (var reader = command.ExecuteReader())
+            {
+                var result = new List<QuarantinedUpdateReport>();
+                while (reader.Read()) result.Add(new QuarantinedUpdateReport(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
+                return result;
+            }
+        }
+    }
+
+    /// <summary>Moves an inspected event back to its original place in the outbox for an explicit retry.</summary>
+    public async Task RetryQuarantinedAsync(long id, CancellationToken token = default)
+    {
+        using (await AcquireLockAsync(token).ConfigureAwait(false))
+        using (var connection = Open())
+        using (var transaction = connection.BeginTransaction())
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "INSERT INTO outbox (id, payload) SELECT id, payload FROM quarantine WHERE id = $id;";
+                command.Parameters.AddWithValue("$id", id);
+                if (command.ExecuteNonQuery() != 1) throw new InvalidOperationException("Quarantined report not found.");
+                command.CommandText = "DELETE FROM quarantine WHERE id = $id;";
+                if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Quarantined report changed.");
+            }
+            transaction.Commit();
+        }
+    }
+
+    private static bool IsBlocked(SqliteConnection connection, int type, int recordId)
+    {
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine WHERE type = $type AND record_id = $record);";
+            command.Parameters.AddWithValue("$type", type);
+            command.Parameters.AddWithValue("$record", recordId);
+            return (long)command.ExecuteScalar()! != 0;
+        }
+    }
+
+    private static bool HasQuarantine(SqliteConnection connection)
+    {
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT EXISTS(SELECT 1 FROM quarantine);";
+            return (long)command.ExecuteScalar()! != 0;
         }
     }
 
@@ -157,10 +271,13 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
                         CREATE TABLE IF NOT EXISTS counters (type INTEGER NOT NULL, record_id INTEGER NOT NULL,
                             sequence INTEGER NOT NULL, PRIMARY KEY(type, record_id));
                         CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL);
+                        CREATE TABLE IF NOT EXISTS quarantine (id INTEGER PRIMARY KEY, type INTEGER NOT NULL,
+                            record_id INTEGER NOT NULL, payload TEXT NOT NULL, reason TEXT NOT NULL);
                         INSERT OR IGNORE INTO metadata (id, identity) VALUES (1, $identity);";
                     command.Parameters.AddWithValue("$identity", _identity);
                     command.ExecuteNonQuery();
                 }
+
                 using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
@@ -206,4 +323,7 @@ public sealed class OrderedUpdateReporter : IUpdateReporter
             return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(value)));
         }
     }
+
+    /// <summary>A rejected report retained for operator review. The JSON is the original wire payload.</summary>
+    public sealed record QuarantinedUpdateReport(long Id, string Payload, string Reason);
 }

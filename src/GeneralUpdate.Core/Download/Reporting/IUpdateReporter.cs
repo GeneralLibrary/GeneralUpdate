@@ -238,6 +238,19 @@ public class HttpUpdateReporter : IUpdateReporter
         var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         using var document = JsonDocument.Parse(content);
         var root = document.RootElement;
+        if (response.StatusCode == System.Net.HttpStatusCode.OK &&
+            root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("code", out var terminalCode) && terminalCode.ValueKind == JsonValueKind.Number &&
+            terminalCode.TryGetInt32(out var terminalValue) && terminalValue == 400 &&
+            root.TryGetProperty("body", out var terminalBody) && terminalBody.ValueKind == JsonValueKind.False &&
+            root.TryGetProperty("errorCode", out var terminalError) && terminalError.ValueKind == JsonValueKind.String &&
+            terminalError.GetString() == "ReportTerminalConflict")
+            throw new ReportTerminalConflictException();
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("errorCode", out var unexpectedTerminal) &&
+            unexpectedTerminal.ValueKind == JsonValueKind.String &&
+            unexpectedTerminal.GetString() == "ReportTerminalConflict")
+            throw new InvalidOperationException("The terminal rejection response is malformed.");
         if (root.ValueKind == JsonValueKind.Object &&
             root.TryGetProperty("errorCode", out var errorCode) &&
             errorCode.ValueKind == JsonValueKind.String &&
@@ -248,5 +261,10 @@ public class HttpUpdateReporter : IUpdateReporter
             !code.TryGetInt32(out var value) || value != 200 ||
             !root.TryGetProperty("body", out var body) || body.ValueKind != JsonValueKind.True)
             throw new InvalidOperationException("The report endpoint did not confirm business success.");
+    }
+
+    internal sealed class ReportTerminalConflictException : InvalidOperationException
+    {
+        public ReportTerminalConflictException() : base("The report endpoint rejected a terminal record transition.") { }
     }
 }

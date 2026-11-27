@@ -12,10 +12,20 @@ internal static class Program
     {
         if (args.Length != 2) return 2;
         using var client = new HttpClient(new Handler(args[1]));
-        var reporter = new OrderedUpdateReporter(args[0], client, "https://example.test/report", "tenant/database", true);
+        var reporter = new OrderedUpdateReporter(args[0], client, "https://example.test/report", "tenant/database", true,
+            terminalRejectionConfirmed: args[1] == "terminal" || args[1] == "inspect");
+        if (args[1] == "inspect")
+        {
+            var quarantined = await reporter.GetQuarantinedAsync();
+            return quarantined.Count == 1 && quarantined[0].Reason == "ReportTerminalConflict" ? 0 : 1;
+        }
         try
         {
             await reporter.ReportAsync(new UpdateReport(10, 3));
+        }
+        catch (InvalidOperationException) when (args[1] == "terminal")
+        {
+            return (await reporter.GetQuarantinedAsync()).Count == 1 ? 0 : 1;
         }
         catch (HttpRequestException)
         {
@@ -39,6 +49,8 @@ internal static class Program
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
             }
             if (mode == "offline") throw new HttpRequestException("offline");
+            if (mode == "terminal")
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"code\":400,\"body\":false,\"errorCode\":\"ReportTerminalConflict\"}") };
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"code\":200,\"body\":true}") };
         }
     }
