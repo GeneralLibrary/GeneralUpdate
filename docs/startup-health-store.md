@@ -77,3 +77,53 @@ or claim an end-to-end health guarantee until the host protocol, reporting
 semantics, a single rollback owner, exact snapshot identity, process fencing,
 and idempotent restart recovery are coordinated. Existing behavior remains
 unchanged when this adapter is not explicitly used.
+
+## Durable handoff (opt-in)
+
+`StartupHealthHandoff` connects the store and process adapter for a cooperating
+host. Before calling `Prepare`, the host must generate and durably journal a
+unique attempt ID associated with its own update. It can then create the
+attempt, start a child, and observe its explicit readiness:
+
+```csharp
+var handoff = new StartupHealthHandoff(stateDirectory);
+// Persist attemptId and its update association in the host's journal first.
+handoff.Prepare(attemptId, DateTimeOffset.UtcNow.AddMinutes(2));
+using var child = handoff.Start(attemptId, startInfo); // UseShellExecute = false
+var status = await handoff.WaitAsync(attemptId, child, cancellationToken);
+```
+
+After a host restart, use the journaled ID with `GetStatus`. If preparation
+completed but no launch was claimed, the host may call `Start`. `Start` creates
+an exclusive persistent launch claim before starting the process. Competing
+handoff launchers cannot both claim it, and a claimed launch must never be
+retried, even when the host crashes before actually starting the child. Such
+a crash is ambiguous: pending is not proof of either launch or health. Recovery
+can observe confirmation or timeout, but cannot infer process exit or safely
+reattach. A missing or corrupt attempt is an error, not a fresh attempt.
+In particular, interrupted preparation can leave an incomplete attempt; never
+reuse its ID. Launch and storage errors are surfaced, not silently retried.
+
+The claim guarantees at-most-once launch only if every participant uses
+`StartupHealthHandoff.Start` for that ID and nobody deletes the state. The
+lower-level `StartupHealthProcess.Start` does not enforce it. This protocol
+assumes a trusted local filesystem with reliable exclusive creation, local
+locking and atomic renames; it covers process crashes, not power-loss
+durability. The host still owns its journal, update association, cleanup,
+child lifetime and any recovery policy. It must not pass the health variables
+to unrelated descendants.
+
+This layer is not enabled by configuration and is not connected to the existing
+updater or Bowl. It does not record an exact backup, own rollback, publish a
+server result, or make the updater's file-application `Success` a health
+confirmation. In the existing core path, `ClientStrategy` creates the backup
+and sends its path in the process contract; the executing `AbstractStrategy`
+attempts restoration on an apply failure only when no earlier version in that
+batch succeeded, and can fall back to the latest backup. Separately, the legacy
+`BowlBootstrap` can restore on a captured crash in Upgrade mode when
+`AutoRestore` is enabled. Thus there is no verified single rollback owner
+across all these paths. This handoff adds no restore path; connecting it to a
+deployment must first establish one owner, exact snapshot identity, fencing,
+and crash-safe idempotent restoration and reporting. Bowl.Host v1's
+`filesOnly`/`processAlive` checks are not business readiness and have not been
+integrated or validated with this handoff.

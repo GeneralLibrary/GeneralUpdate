@@ -24,3 +24,7 @@ jobs:
           $state = Join-Path $env:RUNNER_TEMP 'startup-health-state'
           & (Join-Path $output 'StartupHealthProbe.exe') $state roundtrip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ready = Join-Path $env:RUNNER_TEMP 'startup-health-ready'
+          [System.IO.File]::WriteAllText($ready, 'ready')
+          & (Join-Path $output 'StartupHealthProbe.exe') native-handoff $state $ready
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
