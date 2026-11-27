@@ -97,6 +97,38 @@ Special thanks to the authors of the following open source projects for contribu
 | 🩺 `generalupdate-troubleshoot` | `/generalupdate-troubleshoot` | 50+ known issues diagnosis |
 
 
+## Durable update reports (opt-in)
+
+The default `HttpUpdateReporter` remains best-effort. Hosts that need durable reporting
+can create and register a `PersistentUpdateReporter`, and must replay it on every
+application start (and periodically when connectivity returns):
+
+```csharp
+var sender = new HttpUpdateReporter(httpClient, reportUrl);
+var reporter = new PersistentUpdateReporter(queueDirectory, sender);
+await reporter.ReplayAsync(cancellationToken); // handle and log failures; retry later
+bootstrap.UpdateReporter(reporter);
+```
+
+Use the same writable, local, private queue directory and endpoint across restarts and
+processes, and a separate directory for each endpoint/account. Configure authentication
+and register the reporter again in each reporting process, including the upgrade process;
+neither the URL nor credentials are stored in the queue. Queue
+files contain record IDs and statuses and should be protected and retained by the host.
+The host must arrange periodic retries and monitor disk usage, permissions and errors.
+`ReportAsync` writes before sending and throws if persistence or delivery fails;
+the built-in strategies catch and log reporter exceptions so the update continues.
+
+All statuses are queued to preserve their order, including success after failure.
+Delivery stops at the first unconfirmed report: HTTP success alone is insufficient;
+the response must also have `code: 200` and `body: true`. This is **at-least-once**,
+not exactly-once: a crash or lost response after server acceptance can resend a report,
+and the current server may count a repeated failure again. Safe deduplication requires
+a server-supported event ID/idempotency contract. Ordering applies only to reporters
+sharing this queue, not old clients or independent queues. A report is durable once its
+queue file has been flushed and published; failure before that point cannot be recovered.
+Storage and filesystem durability depend on the host's filesystem and hardware.
+
 ## 🙏 Thanks
 
 <div align="center">

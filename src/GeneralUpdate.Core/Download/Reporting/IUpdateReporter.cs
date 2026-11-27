@@ -146,17 +146,7 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             if(string.IsNullOrWhiteSpace(_reportUrl))
                 return;
-            
-            var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
-            using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // Apply the global authentication provider (if one was set via
-            // VersionService.SetDefaultAuthProvider or HttpClientProvider.DefaultAuthProvider)
-            // so that report requests carry the same credentials as version validation requests.
-            await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
-
-            await _client.SendAsync(request, token).ConfigureAwait(false);
+            await SendAsync(report, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -166,5 +156,28 @@ public class HttpUpdateReporter : IUpdateReporter
         {
             GeneralTracer.Warn($"Report failed: {ex.Message}");
         }
+    }
+
+    /// <summary>Sends a report and throws unless the server confirms both HTTP and business success.</summary>
+    public async Task SendAsync(UpdateReport report, CancellationToken token = default)
+    {
+        if (report == null) throw new ArgumentNullException(nameof(report));
+        if (string.IsNullOrWhiteSpace(_reportUrl))
+            throw new InvalidOperationException("A report URL is required.");
+
+        var json = JsonSerializer.Serialize(report, UpdateReportJsonContext.Default.UpdateReport);
+        using var request = new HttpRequestMessage(HttpMethod.Post, _reportUrl);
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        await HttpClientProvider.ApplyAuthAsync(request, token).ConfigureAwait(false);
+        using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        using var document = JsonDocument.Parse(content);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("code", out var code) || code.ValueKind != JsonValueKind.Number ||
+            !code.TryGetInt32(out var value) || value != 200 ||
+            !root.TryGetProperty("body", out var body) || body.ValueKind != JsonValueKind.True)
+            throw new InvalidOperationException("The report endpoint did not confirm business success.");
     }
 }
