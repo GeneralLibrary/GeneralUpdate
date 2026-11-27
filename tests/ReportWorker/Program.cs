@@ -42,7 +42,8 @@ internal static class Program
             if (!OperatingSystem.IsWindows()) return 3;
             var image = new WindowsSnapshotFile(args[2], SHA256.HashData(File.ReadAllBytes(args[2])));
             var dll = new WindowsSnapshotFile(args[3], SHA256.HashData(File.ReadAllBytes(args[3])));
-            await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, args[1], image, new[] { dll }, Array.Empty<string>(),
+            await using var lease = WindowsNativeLaunchLease.Start(WindowsNativeLaunchProfile.TrustedWindowsSystemAndCooperativeNativeAot, args[1], image, new[] { dll },
+                new[] { Path.GetFileName(args[2]), Path.GetFileName(args[3]) }, Array.Empty<string>(),
                 new[] { "--snapshot-probe", args[4], "wait" });
             await Console.In.ReadLineAsync();
             return 0;
