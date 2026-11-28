@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +13,8 @@ using GeneralUpdate.Core.JsonContext;
 using GeneralUpdate.Core.Ipc;
 using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.Utilities;
+using GeneralUpdate.Core.StartupHealth;
+using GeneralUpdate.Core.Ipc;
 
 namespace GeneralUpdate.Core.Strategy;
 
@@ -76,7 +78,6 @@ public class ClientStrategy : IStrategy
     private int _upgradeRecordId;
     private int? _reportTypeOverride;
     private int _reportType = 1; // 1=Upgrade(active poll), 2=Push(SignalR push)
-
     /// <summary>
     /// When <c>false</c>, skips <see cref="LaunchUpgradeProcessAsync"/> in MainOnly / Both scenarios.
     /// The caller (e.g. <see cref="Silent.SilentPollOrchestrator"/>) is responsible for launching the
@@ -278,6 +279,7 @@ public class ClientStrategy : IStrategy
         try
         {
             GeneralTracer.Debug("ClientStrategy.ExecuteAsync start.");
+            EnsureDurableAttemptSupported();
             await CallSmallBowlHomeAsync(_configInfo.Bowl);
             await ExecuteWorkflowAsync();
         }
@@ -411,6 +413,7 @@ public class ClientStrategy : IStrategy
     /// </remarks>
     private async Task ExecuteStandardWorkflowAsync()
     {
+        EnsureDurableAttemptSupported();
         GeneralTracer.Info(
             $"ClientStrategy: validating client={_configInfo!.ClientVersion}, upgrade={_configInfo.UpgradeClientVersion}");
 
@@ -565,6 +568,19 @@ public class ClientStrategy : IStrategy
         _configInfo.TempPath = StorageManager.GetTempDirectory("main_temp");
         _configInfo.BackupDirectory = Path.Combine(_configInfo.InstallPath, StorageManager.BackupRootDirectory,
             StorageManager.GetBackupDirectoryName());
+        var attemptStore = (DurableUpdateAttemptStore?)null;
+        if (_configInfo.DurableUpdateAttemptId.HasValue)
+        {
+            if (_configInfo.DurableUpdateAttemptId.Value == Guid.Empty)
+                throw new InvalidOperationException("DurableUpdateAttemptId must be non-empty.");
+            if (_configInfo.BackupEnabled == false)
+                throw new InvalidOperationException("A durable update attempt requires backups to be enabled.");
+
+            _configInfo.BackupDirectory += "-" + _configInfo.DurableUpdateAttemptId.Value.ToString("N");
+            _configInfo.DisableLegacyRollback = true;
+            _configInfo.AttemptJournalDirectory = DurableUpdateAttemptStore.GetDirectory(_configInfo.InstallPath);
+            attemptStore = new DurableUpdateAttemptStore(_configInfo.InstallPath);
+        }
 
         // Check failed version
         if (!string.IsNullOrEmpty(_configInfo.LastVersion) && CheckFail(_configInfo.LastVersion))
@@ -574,10 +590,22 @@ public class ClientStrategy : IStrategy
             return;
         }
 
+        // Create the durable attempt and reserve its exact snapshot before copying begins.
+        // The reservation also protects a partially-created path from concurrent retention.
+        if (attemptStore != null)
+        {
+            var attemptId = _configInfo.DurableUpdateAttemptId!.Value;
+            attemptStore.Begin(attemptId);
+            attemptStore.ReserveSnapshot(attemptId, _configInfo.BackupDirectory);
+        }
+
         // Backup — conditionally skipped when BackupEnabled is false
         if (_configInfo.BackupEnabled != false)
         {
             Backup();
+            if (attemptStore != null)
+                attemptStore.BindSnapshot(_configInfo.DurableUpdateAttemptId!.Value, _configInfo.BackupDirectory);
+            StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
         }
         else
         {
@@ -659,7 +687,7 @@ public class ClientStrategy : IStrategy
             }
 
             await SafeReportDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
-            await SafeOnDownloadCompletedAsync(hooksCtx).ConfigureAwait(false);
+            await SafeOnDownloadCompletedAsync(hooksCtx, downloadReport).ConfigureAwait(false);
 
             // Build VersionEntry list with AppType preserved from server response.
             var dVersions = plan.Assets.Select(a => new VersionEntry
@@ -826,6 +854,7 @@ public class ClientStrategy : IStrategy
             abs.LaunchAppName = _configInfo!.UpdateAppName;
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.RequiredDurableUpdateAttemptId = _configInfo.DurableUpdateAttemptId;
         }
 
         GeneralTracer.Info(
@@ -863,6 +892,7 @@ public class ClientStrategy : IStrategy
             abs.LaunchAppName = _configInfo!.UpdateAppName;
             abs.LaunchBowl = false;
             abs.UseUpdatePath = !string.IsNullOrWhiteSpace(_configInfo.UpdatePath);
+            abs.RequiredDurableUpdateAttemptId = _configInfo.DurableUpdateAttemptId;
             abs.StartProcess(abs.LaunchAppName!, abs.UseUpdatePath);
             return;
         }
@@ -922,6 +952,17 @@ public class ClientStrategy : IStrategy
             ));
     }
 
+    private void EnsureDurableAttemptSupported()
+    {
+        if (!_configInfo!.DurableUpdateAttemptId.HasValue) return;
+        if (_configInfo.DurableUpdateAttemptId == Guid.Empty)
+            throw new InvalidOperationException("DurableUpdateAttemptId must be non-empty.");
+        if (!string.IsNullOrWhiteSpace(_configInfo.Bowl))
+            throw new InvalidOperationException("Durable update attempts cannot run with a configured Bowl process.");
+        if (_customOsStrategy != null)
+            throw new InvalidOperationException("Durable update attempts require the built-in OS strategy; custom strategies are not verified.");
+    }
+
     /// <summary>
     /// Backs up the current installation directory to the specified backup directory for rollback on update failure.
     /// </summary>
@@ -936,9 +977,8 @@ public class ClientStrategy : IStrategy
         GeneralTracer.Info(
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
-            _configInfo.Directories ?? BlackDefaults.DefaultDirectories);
-        // Retain only the most recent 3 backups to prevent disk accumulation
-        StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
+            _configInfo.Directories ?? BlackDefaults.DefaultDirectories,
+            createOnly: _configInfo.DurableUpdateAttemptId.HasValue);
     }
 
     /// <summary>
@@ -1138,14 +1178,20 @@ public class ClientStrategy : IStrategy
     /// Safely invokes the download completed hook. If the hook throws an exception, logs a warning.
     /// </summary>
     /// <param name="ctx">The update context.</param>
-    private async Task SafeOnDownloadCompletedAsync(Hooks.HookContext ctx)
+    private async Task SafeOnDownloadCompletedAsync(Hooks.HookContext ctx, Download.Abstractions.DownloadReport? downloadReport = null)
     {
         try
         {
+            // Surface real download telemetry to subscribers instead of fabricated zeros.
+            var totalBytes = downloadReport?.TotalBytes ?? 0;
+            var allOk = downloadReport is null || downloadReport.FailedCount == 0;
             var downloadCtx = new Hooks.DownloadContext(
                 _configInfo?.MainAppName ?? _configInfo?.UpdateAppName ?? "unknown",
                 _configInfo?.LastVersion ?? "",
-                0, TimeSpan.Zero, _configInfo?.TempPath, true);
+                totalBytes,
+                downloadReport?.TotalDuration ?? TimeSpan.Zero,
+                _configInfo?.TempPath,
+                allOk);
             await Hooks.OnDownloadCompletedAsync(downloadCtx).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1218,6 +1264,12 @@ public class ClientStrategy : IStrategy
     /// <param name="ctx">The update context.</param>
     private async Task SafeReportUpdateAppliedAsync(Hooks.HookContext ctx, int recordId)
     {
+        if (_configInfo?.DurableUpdateAttemptId.HasValue == true)
+        {
+            GeneralTracer.Info("ClientStrategy: success report suppressed until application-owned readiness is confirmed.");
+            return;
+        }
+
         if (_reportType == 2 && recordId <= 0) return;
         try
         {

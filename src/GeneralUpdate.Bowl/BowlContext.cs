@@ -48,6 +48,12 @@ public readonly record struct BowlContext
     /// <summary>When <c>true</c> and <see cref="WorkModel"/> is "Upgrade", restores backup on crash.</summary>
     public bool AutoRestore { get; init; }
 
+    /// <summary>
+    /// Durable attempt metadata received from a cooperating updater. When present, automatic
+    /// restore is suppressed; this does not designate a replacement recovery owner.
+    /// </summary>
+    public Guid? DurableUpdateAttemptId { get; init; }
+
     /// <summary>Optional callback invoked when a crash is detected.</summary>
     public Func<CrashInfo, CancellationToken, Task>? OnCrash { get; init; }
 
@@ -66,7 +72,8 @@ public readonly record struct BowlContext
             ExtendedField = ExtendedField,
             TimeoutMs = TimeoutMs <= 0 ? 30_000 : TimeoutMs,
             DumpType = DumpType == default ? DumpType.Full : DumpType,
-            AutoRestore = AutoRestore,
+            AutoRestore = DurableUpdateAttemptId.HasValue ? false : AutoRestore,
+            DurableUpdateAttemptId = DurableUpdateAttemptId,
             OnCrash = OnCrash,
         };
     }

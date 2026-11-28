@@ -4,6 +4,21 @@ namespace CoreTest.Configuration;
 
 public class UpdateRequestBuilderTests
 {
+    [Fact]
+    public void SetDurableUpdateAttemptId_IsOptInAndPreservedByBuild()
+    {
+        var id = Guid.NewGuid();
+        var request = new UpdateRequestBuilder()
+            .SetUpdateUrl("https://api.example.com")
+            .SetAppSecretKey("test-key")
+            .SetDurableUpdateAttemptId(id)
+            .Build();
+
+        Assert.Equal(id, request.DurableUpdateAttemptId);
+        Assert.Throws<ArgumentException>(() => new UpdateRequestBuilder().SetDurableUpdateAttemptId(Guid.Empty));
+        Assert.Null(new UpdateRequest().DurableUpdateAttemptId);
+    }
+
     #region SetXxx — Null/Empty Validation
 
     [Theory]

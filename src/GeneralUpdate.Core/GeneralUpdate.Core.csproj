@@ -44,6 +44,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CoreTest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <None Include="../../imgs/GeneralUpdate.ico">
             <Pack>True</Pack>
             <Link>%(Filename)%(Extension)</Link>

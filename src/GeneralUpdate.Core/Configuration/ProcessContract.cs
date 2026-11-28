@@ -403,5 +403,20 @@ namespace GeneralUpdate.Core.Configuration
         /// </summary>
         [JsonPropertyName("ReportType")]
         public int ReportType { get; set; } = 1;
+
+        /// <summary>Caller-owned durable update-attempt ID; null keeps legacy behavior.</summary>
+        [JsonPropertyName("DurableUpdateAttemptId")]
+        public Guid? DurableUpdateAttemptId { get; set; }
+
+        /// <summary>Stable local journal directory for the durable update attempt.</summary>
+        [JsonPropertyName("AttemptJournalDirectory")]
+        public string? AttemptJournalDirectory { get; set; }
+
+        /// <summary>
+        /// Requests that cooperating consumers suppress their legacy automatic rollback.
+        /// This is a protocol declaration, not proof that an external consumer honors it.
+        /// </summary>
+        [JsonPropertyName("DisableLegacyRollback")]
+        public bool DisableLegacyRollback { get; set; }
     }
 }

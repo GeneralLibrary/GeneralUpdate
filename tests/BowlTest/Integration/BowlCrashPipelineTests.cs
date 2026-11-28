@@ -213,6 +213,40 @@ namespace BowlTest.Integration
             Assert.True(File.Exists(dumpPath));
         }
 
+        [Fact]
+        public async Task SimulatedCrash_DurableAttemptSuppressesLegacyAutoRestore()
+        {
+            var installPath = Path.Combine(_testBasePath, "DurableAttemptApp");
+            var backupDir = Path.Combine(installPath, "backup");
+            var failDir = Path.Combine(installPath, "fail", "5.0.0");
+            var dumpPath = Path.Combine(failDir, "5.0.0_fail.dmp");
+            Directory.CreateDirectory(backupDir);
+            File.WriteAllText(Path.Combine(installPath, "app.txt"), "current");
+            File.WriteAllText(Path.Combine(backupDir, "app.txt"), "backup");
+
+            var context = new BowlContext
+            {
+                ProcessNameOrId = "DurableAttemptApp.exe",
+                DumpFileName = "5.0.0_fail.dmp",
+                FailFileName = "5.0.0_fail.json",
+                TargetPath = installPath,
+                FailDirectory = failDir,
+                BackupDirectory = backupDir,
+                WorkModel = "Upgrade",
+                ExtendedField = "5.0.0",
+                TimeoutMs = 5_000,
+                AutoRestore = true,
+                DurableUpdateAttemptId = Guid.NewGuid(),
+            };
+
+            var bowl = CreateBowl(new MockCrashStrategy(dumpPath, new[] { "Dump written." }));
+            var result = await bowl.LaunchAsync(context);
+
+            Assert.True(result.DumpCaptured);
+            Assert.False(result.Restored);
+            Assert.Equal("current", File.ReadAllText(Path.Combine(installPath, "app.txt")));
+        }
+
         /// <summary>
         /// Verifies that when no dump is produced, the pipeline returns success
         /// and does NOT create a crash report.

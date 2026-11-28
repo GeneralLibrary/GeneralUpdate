@@ -108,7 +108,7 @@ namespace GeneralUpdate.Core.Strategy
                     throw new Exception($"Can't find the app {appName}!");
 
                 GeneralTracer.Info($"GeneralUpdate.Core.WindowsStrategy.StartApp: launching app={appPath}");
-                using var appProcess = Process.Start(appPath);
+                using var appProcess = StartProcess(new ProcessStartInfo(appPath) { UseShellExecute = false });
                 if (appProcess == null)
                     throw new InvalidOperationException($"Failed to start application: {appPath}");
                 // Do NOT check appProcess.HasExited here — a fast-starting app may

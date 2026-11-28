@@ -130,6 +130,18 @@ public class UpdateContext : UpdateConfiguration
     /// </summary>
     public string BackupDirectory { get; set; }
 
+    /// <summary>
+    /// Stable journal directory received by the update process for an opt-in durable attempt.
+    /// Empty when the legacy update path is in use.
+    /// </summary>
+    public string? AttemptJournalDirectory { get; set; }
+
+    /// <summary>
+    /// When true, the in-process legacy rollback path must not compete with an external
+    /// recovery protocol. This does not enable or designate an external recovery owner.
+    /// </summary>
+    public bool DisableLegacyRollback { get; set; }
+
     // ──────────────────────────────
     //  Download/Update behavior options (injected from Option)
     // ──────────────────────────────

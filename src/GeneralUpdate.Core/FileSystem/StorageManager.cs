@@ -7,6 +7,7 @@ using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using GeneralUpdate.Core.HashAlgorithms;
 using GeneralUpdate.Core;
+using GeneralUpdate.Core.StartupHealth;
 
 namespace GeneralUpdate.Core.FileSystem
 {
@@ -53,6 +54,9 @@ namespace GeneralUpdate.Core.FileSystem
         /// The subdirectory under the install path where new-format backups are stored.
         /// </summary>
         public const string BackupRootDirectory = ".backups";
+
+        /// <summary>Directory beneath <see cref="BackupRootDirectory"/> containing durable attempt records.</summary>
+        public const string AttemptDirectoryName = ".attempts";
 
         /// <summary>
         /// Backup directory name prefixes used for enumeration (both new and legacy formats).
@@ -305,7 +309,8 @@ namespace GeneralUpdate.Core.FileSystem
             if (Directory.Exists(backupRoot))
             {
                 allBackups.AddRange(new DirectoryInfo(backupRoot)
-                    .GetDirectories("*", SearchOption.TopDirectoryOnly));
+                    .GetDirectories("*", SearchOption.TopDirectoryOnly)
+                    .Where(d => !string.Equals(d.Name, AttemptDirectoryName, StringComparison.OrdinalIgnoreCase)));
             }
 
             // Scan installPath directly for backup dirs matching patterns from defaults
@@ -502,20 +507,25 @@ namespace GeneralUpdate.Core.FileSystem
         /// <param name="sourcePath">The source application directory path.</param>
         /// <param name="backupPath">The target backup directory path.</param>
         /// <param name="directoryNames">The list of subdirectory names to skip (uses containment matching).</param>
+        /// <param name="createOnly">When true, copy to a fresh staging directory and publish without replacing an existing destination.</param>
         /// <remarks>
         /// <para>
         /// Backup flow:
         /// <list type="number">
-        ///   <item><description>If the backup directory already exists, delete it first.</description></item>
-        ///   <item><description>Create a new backup directory.</description></item>
+        ///   <item><description>When <paramref name="createOnly"/> is false, delete an existing backup directory and create a new one.</description></item>
+        ///   <item><description>When <paramref name="createOnly"/> is true, create a fresh attempt staging directory instead.</description></item>
         ///   <item><description>Recursively copy all files and subdirectories from the source directory, skipping directories that match <paramref name="directoryNames"/>.</description></item>
+        ///   <item><description>When <paramref name="createOnly"/> is true, move the completed staging directory to the destination without overwriting.</description></item>
         /// </list>
         /// </para>
         /// <para>
-        /// This method overwrites existing files in the target directory.
+        /// The default mode overwrites an existing destination. Use <paramref name="createOnly"/> for paths that must be unique.
         /// </para>
         /// </remarks>
         public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames)
+            => Backup(sourcePath, backupPath, directoryNames, createOnly: false);
+
+        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames, bool createOnly)
         {
             // Merge default backup-exclusion prefixes with user-configured directories.
             // This ensures backup/legacy directories are ALWAYS skipped, preventing
@@ -523,10 +533,27 @@ namespace GeneralUpdate.Core.FileSystem
             var effectiveDirectories = new List<string>(directoryNames);
             effectiveDirectories.AddRange(BlackDefaults.DefaultDirectories);
 
-            if (Directory.Exists(backupPath))
+            if (createOnly)
             {
-                DeleteDirectory(backupPath);
+                var stagingPath = Path.Combine(
+                    Path.GetDirectoryName(backupPath)!,
+                    AttemptDirectoryName,
+                    ".staging-" + Guid.NewGuid().ToString("N"));
+                try
+                {
+                    Directory.CreateDirectory(stagingPath);
+                    CopyDirectory(sourcePath, stagingPath, effectiveDirectories);
+                    Directory.Move(stagingPath, backupPath);
+                }
+                catch
+                {
+                    if (Directory.Exists(stagingPath)) DeleteDirectory(stagingPath);
+                    throw;
+                }
+                return;
             }
+
+            if (Directory.Exists(backupPath)) DeleteDirectory(backupPath);
             Directory.CreateDirectory(backupPath);
             CopyDirectory(sourcePath, backupPath, effectiveDirectories);
         }
@@ -722,18 +749,17 @@ namespace GeneralUpdate.Core.FileSystem
         /// </remarks>
         public static void CleanBackup(string installPath, int keepVersions = 3)
         {
-            // Scan BackupRootDirectory subdirectory (new-format backup container)
-            var backupRoot = Path.Combine(installPath, BackupRootDirectory);
-            if (Directory.Exists(backupRoot))
+            DurableUpdateAttemptStore.WithBackupRetentionLock(installPath, pinned =>
             {
-                CleanDirectories(backupRoot, keepVersions);
-            }
+                var pinnedPaths = new HashSet<string>(pinned.Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
+                var backupRoot = Path.Combine(installPath, BackupRootDirectory);
+                if (Directory.Exists(backupRoot))
+                    CleanDirectories(backupRoot, keepVersions, "*", pinnedPaths, AttemptDirectoryName);
 
-            // Scan installPath directly for backup dirs matching patterns from defaults
-            foreach (var pattern in GetBackupSearchPatterns())
-            {
-                CleanDirectories(installPath, keepVersions, pattern);
-            }
+                foreach (var pattern in GetBackupSearchPatterns())
+                    CleanDirectories(installPath, keepVersions, pattern, pinnedPaths);
+                return true;
+            });
         }
 
         /// <summary>
@@ -752,10 +778,17 @@ namespace GeneralUpdate.Core.FileSystem
         /// Cleans directories matching the specified pattern in the given root path,
         /// retaining only the most recent N directories.
         /// </summary>
-        private static void CleanDirectories(string rootPath, int keepVersions, string searchPattern = "*")
+        private static void CleanDirectories(
+            string rootPath,
+            int keepVersions,
+            string searchPattern = "*",
+            ISet<string>? pinnedPaths = null,
+            string? excludedName = null)
         {
             var dirs = new DirectoryInfo(rootPath)
                 .GetDirectories(searchPattern, SearchOption.TopDirectoryOnly)
+                .Where(d => excludedName == null || !string.Equals(d.Name, excludedName, StringComparison.OrdinalIgnoreCase))
+                .Where(d => pinnedPaths == null || !pinnedPaths.Contains(Path.GetFullPath(d.FullName)))
                 .OrderByDescending(d => d.CreationTime)
                 .ThenByDescending(d => d.Name)
                 .Skip(keepVersions);
@@ -782,7 +815,8 @@ namespace GeneralUpdate.Core.FileSystem
             var backupRoot = Path.Combine(installPath, BackupRootDirectory);
             if (Directory.Exists(backupRoot))
             {
-                result.AddRange(ToBackupInfos(backupRoot, "*"));
+                result.AddRange(ToBackupInfos(backupRoot, "*")
+                    .Where(info => !string.Equals(info.Version, AttemptDirectoryName, StringComparison.OrdinalIgnoreCase)));
             }
 
             // Scan installPath directly for backup dirs matching patterns from defaults
