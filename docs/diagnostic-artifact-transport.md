@@ -3,7 +3,8 @@
 `ArtifactUploadClient` is an opt-in transport for an already prepared Bowl schema 2
 crash ZIP. `DiagnosticOutboxConsumer` separately implements the cooperative Bowl
 `outboxProtocol: 1` case lifecycle. Neither component is integrated into
-`LaunchAsync`; the host explicitly schedules and retries cases.
+`LaunchAsync`. The default-off standalone `GeneralUpdate.Diagnostics.Host`
+now schedules startup replay and periodic retries independently of upgrades.
 
 The host must provide a stable ZIP snapshot, `manifest.json` at its root, and
 matching metadata. Retain the **same ZIP bytes** for retries, including after a
@@ -75,6 +76,107 @@ during deletion cannot trigger a regenerated upload. The host must also enumerat
 `CleanupConfirmedCase(version, guid)` to finish an interrupted deletion under
 the same stripe lock. Tombstones count against Bowl's admission limits until
 removed; a cleanup failure can therefore cause exit-code-only degradation.
+
+## Standalone host (default off)
+
+Publish the executable separately from the application and upgrade worker. It
+must not be a download/pipeline hook or a child whose completion is awaited by
+`LaunchAsync`. Existing update APIs, reports, hooks and IPC are unchanged. A
+supervisor starts the diagnostic process after consent/configuration deployment
+and restarts it when it exits unexpectedly; Windows service integration is the
+supervisor's responsibility (this is a foreground executable, not a Windows
+Service). Use .NET 10 for managed deployment, or publish its Native AOT binary:
+
+```powershell
+dotnet publish src\GeneralUpdate.Diagnostics.Host -c Release -r win-x64 -o diagnostic-host
+# Environment values must come from trusted deployment configuration, never a case manifest.
+$env:GENERALUPDATE_DIAGNOSTICS_ENABLED = 'true'
+$env:GENERALUPDATE_DIAGNOSTICS_TENANT = 'configured-tenant'
+$env:GENERALUPDATE_DIAGNOSTICS_APP_KEY = 'configured-app'
+$env:GENERALUPDATE_DIAGNOSTICS_SCAN_SECONDS = '60'
+$env:GENERALUPDATE_DIAGNOSTICS_UPLOAD_SECONDS = '30'
+.\diagnostic-host\GeneralUpdate.Diagnostics.Host.exe `
+  'C:\application\fail' 'https://gateway.example/Fault/UploadArtifact'
+```
+
+Unset or `false` enablement exits successfully with `Disabled` without checking
+arguments, touching the outbox, or making HTTP requests. Any other enablement
+value is a configuration error. Enabled mode requires an explicit root, HTTPS
+endpoint, nonempty tenant and app key. Scan interval is 0.1 seconds through one
+day; upload timeout is positive and at most two minutes. Numeric environment
+values use invariant decimal seconds. Options are copied at construction, not
+read from evidence. The executable rejects redirects, disables proxies, and uses
+normal system TLS trust; it has no certificate-validation bypass. Install the
+deployment CA in the OS trust store and secure/authenticate the gateway.
+
+On startup it immediately enumerates version/GUID directories, skips `.locks`
+and non-case names, and finishes confirmed tombstones under their stripe lock.
+It scans serially, with a full configured interval after each scan, so scans
+never overlap and each case has at most one attempt per scan. Recoverable disk,
+manifest, HTTP and upload-timeout errors are reported per case/directory and
+preserve evidence; malformed cases do not prevent other cases being processed.
+A missing root is reported and retried, not created automatically. Directory
+chains are checked for links/reparse points before enumeration and consumption;
+streaming enumeration checks cancellation between entries. An inaccessible or
+changed directory can defer the rest of that directory to the next scan. The
+same private-local-filesystem/ACL and protocol-1 deployment prerequisites apply;
+these checks do not defeat a hostile local writer racing path replacement.
+Legacy unmarked cases remain skipped: the executable offers no legacy override.
+
+`Started`, `ScanStarted`, `ScanCompleted`, `ConfirmedAndDeleted`,
+`TombstoneDeleted`, `Deferred` and `Stopped` are timestamped on stdout; errors
+include exception type and message on stderr. Paths/messages may contain
+sensitive information: protect and retain these logs appropriately. `Deferred`
+means busy, incomplete, unmarked or unconfirmed, not success. A failed scan will
+still emit `ScanCompleted`; inspect `Error` events, not that marker alone.
+Configuration/unexpected process errors exit 1; ordinary scan errors keep
+retrying. Ctrl+C and Unix SIGTERM cancel the scan/upload and emit `Stopped`;
+supervisors must allow the handler to finish before force-killing. Force-kill
+releases OS locks, and next startup replays persisted snapshots/tombstones.
+Cancellation cannot interrupt a synchronous filesystem operation or a broken
+HTTP handler that ignores its token; shutdown grace must account for this.
+
+Applications with their own long-lived process can instead explicitly construct
+`DiagnosticOutboxHost(options, observer, httpClient)` and retain the task from
+`StartAsync(shutdownToken)`. `StartAsync` queues work and returns immediately;
+await that task only at host shutdown, not in the upgrade lifecycle. The caller
+owns the HTTP client and policies and must keep it alive until completion.
+Observer callbacks must be quick and thread-safe. Observer failures and
+unexpected faults fail the completion task, so callers must observe it. Host
+cancellation completes normally; upload timeout is an observable case error.
+Do not dynamically change tenant/app/endpoint for an existing outbox.
+
+### No inferred attempt association
+
+Core's version-response/report `RecordId` and IPC do **not** provide a durable
+mapping to a Bowl case. `BowlContext` and schema-2 manifests provide no trustworthy
+attempt record. Consequently this host sends no `RecordId`/`RecordType`, never
+reports an upgrade failure, and does not associate an arbitrary crash with an
+upgrade or push. Tenant/app configuration identifies the upload destination,
+not a particular attempt.
+
+Only opt in for a dedicated outbox whose ordinary crashes may be uploaded
+**without association**. If a deployment requires attempt association, leave
+this host disabled for that outbox until a trusted, persistent binding exists
+and is fixed before first send. GeneralSpace's duplicate-GUID path checks tenant
+and ZIP hash, but does not add or repair record/AppKey associations later; a
+successful unassociated first upload cannot be repaired by retrying it with
+record fields. Do not fabricate a record from version, current/latest attempt,
+process environment, or untrusted manifest data. This PR deliberately does not
+implement a record-context API in the absence of a trustworthy source.
+
+### Verification boundary
+
+Diagnostic unit tests cover startup replay, periodic discovery/retry, missing
+root recovery, per-case errors, timeout/cancellation, another process holding the
+stripe, trusted configuration, no record fields, and tombstone recovery. Native
+AOT smoke covers the scheduler and consumer; CI publishes the production host
+on Windows and Linux. These use local fixtures/mock HTTP and are **not** evidence
+of real Bowl watchdog/dump capture or a deployed GeneralSpace service.
+The cross-repository follow-up reuses GeneralSpace #326's
+`diagnostic-three-repo.yml`/`eng/diagnostic-three-repo.py` with exact source SHAs
+and must separately report real writer/API verification versus complete
+watchdog/dump coverage.
 
 The lock is `{fail}/.locks/{first two lowercase GUID hex characters}.lock`,
 opened with `FileShare.None` and never deleted. It remains held through snapshot,
