@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -37,8 +37,17 @@ public sealed class PersistentUpdateReporter : IUpdateReporter
         using (await AcquireLockAsync(token).ConfigureAwait(false))
         {
             var files = PendingFiles();
-            long sequence = files.Length == 0 ? 1 :
-                checked(long.Parse(Path.GetFileNameWithoutExtension(files[files.Length - 1]), CultureInfo.InvariantCulture) + 1);
+            long sequence = 1;
+            for (var i = files.Length - 1; i >= 0; i--)
+            {
+                // A foreign/non-numeric file dropped into the queue directory must not
+                // paralyse the pipeline — skip it for sequence derivation (replay skips it too).
+                if (long.TryParse(Path.GetFileNameWithoutExtension(files[i]), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    sequence = checked(parsed + 1);
+                    break;
+                }
+            }
             var path = Path.Combine(_directory, sequence.ToString("D20", CultureInfo.InvariantCulture) + ".json");
             var temp = Path.Combine(_directory, Guid.NewGuid().ToString("N") + ".tmp");
             try
@@ -71,16 +80,30 @@ public sealed class PersistentUpdateReporter : IUpdateReporter
         foreach (var path in PendingFiles())
         {
             token.ThrowIfCancellationRequested();
-            var json = File.ReadAllText(path, Encoding.UTF8);
-            using (var document = JsonDocument.Parse(json))
+            UpdateReport? report;
+            try
             {
-                var root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object ||
-                    !IsInteger(root, "recordId") || !IsInteger(root, "status") || !IsInteger(root, "type"))
-                    throw new InvalidDataException("A queued update report is invalid.");
+                var json = File.ReadAllText(path, Encoding.UTF8);
+                using (var document = JsonDocument.Parse(json))
+                {
+                    var root = document.RootElement;
+                    if (root.ValueKind != JsonValueKind.Object ||
+                        !IsInteger(root, "recordId") || !IsInteger(root, "status") || !IsInteger(root, "type"))
+                        throw new InvalidDataException("A queued update report is invalid.");
+                }
+                report = JsonSerializer.Deserialize(json, UpdateReportJsonContext.Default.UpdateReport)
+                    ?? throw new InvalidDataException("A queued update report is null.");
             }
-            var report = JsonSerializer.Deserialize(json, UpdateReportJsonContext.Default.UpdateReport)
-                ?? throw new InvalidDataException("A queued update report is null.");
+            catch (Exception ex) when (ex is InvalidDataException or JsonException or FormatException or IOException)
+            {
+                // A foreign or corrupt file must not paralyse the whole queue: quarantine
+                // it (evidence retained under .invalid) and keep replaying the rest.
+                var quarantine = Path.Combine(_directory, Path.GetFileName(path) + ".invalid");
+                GeneralTracer.Warn($"PersistentUpdateReporter: quarantining unreadable queue entry '{path}'. {ex.Message}");
+                if (File.Exists(quarantine)) File.Delete(quarantine);
+                File.Move(path, quarantine);
+                continue;
+            }
             await _sender.SendAsync(report, token).ConfigureAwait(false);
             File.Delete(path);
         }

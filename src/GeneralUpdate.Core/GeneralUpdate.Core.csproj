@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <LangVersion>default</LangVersion>
         <Nullable>enable</Nullable>
@@ -35,6 +35,12 @@
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
+    </ItemGroup>
+
+    <!-- Durable ordered-report outbox (SQLite) — all TFMs -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+        <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
     </ItemGroup>
 
     <ItemGroup>

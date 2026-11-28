@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
@@ -139,15 +139,25 @@ public sealed class PersistentUpdateReporterTests : IDisposable
     }
 
     [Fact]
-    public async Task CorruptQueueStopsWithoutSendingOrDeleting()
+    public async Task CorruptQueueEntryIsQuarantinedAndReplayContinues()
     {
         Directory.CreateDirectory(_directory);
-        var path = Path.Combine(_directory, "00000000000000000001.json");
-        File.WriteAllText(path, "{}");
+        // A foreign/corrupt entry must not paralyse the queue: it is quarantined
+        // under .invalid (evidence retained) and the remaining entries replay.
+        var corrupt = Path.Combine(_directory, "00000000000000000001.json");
+        File.WriteAllText(corrupt, "{}");
+        var good = Path.Combine(_directory, "00000000000000000002.json");
+        File.WriteAllText(good, JsonSerializer.Serialize(
+            new UpdateReport(2, ReportType.Success, 1), UpdateReportJsonContext.Default.UpdateReport));
         var handler = new Handler(_ => Success());
-        await Assert.ThrowsAsync<InvalidDataException>(() => Create(handler).ReplayAsync());
-        Assert.True(File.Exists(path));
-        Assert.Empty(handler.Statuses);
+        await Create(handler).ReplayAsync();
+        Assert.False(File.Exists(corrupt));
+        Assert.True(File.Exists(corrupt + ".invalid"));
+        Assert.False(File.Exists(good));
+        // Bodies carry the JSON payload; assert the surviving record's id via the body.
+        var sentBody = Assert.Single(handler.Bodies);
+        using var sentDoc = JsonDocument.Parse(sentBody);
+        Assert.Equal(2, sentDoc.RootElement.GetProperty("recordId").GetInt32());
     }
 
     [Fact]
