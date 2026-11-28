@@ -1,0 +1,38 @@
+name: Ordered report Native AOT
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  publish-and-run:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            executable: ReportWorker.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            executable: ReportWorker
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test outbox
+        run: >-
+          dotnet test tests/CoreTest/CoreTest.csproj -c Release
+          --filter "FullyQualifiedName~OrderedUpdateReporterTests|FullyQualifiedName~RealFallback_CoveredChainCannotOverwriteFailureOrReportDurableSuccess|FullyQualifiedName~Child_apply_failure_survives_restart_and_replays_exact_ordered_event_over_http|FullyQualifiedName~Child_process_requires_the_matching_attempt_contract"
+      - name: Publish Native AOT
+        run: dotnet publish tests/ReportWorker/ReportWorker.csproj -c Release -f net10.0 -r ${{ matrix.rid }} -p:PublishAot=true -p:TargetFrameworks=net10.0 -o aot-out
+      - name: Run native outbox
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "aot-out" "${{ matrix.executable }}"
+          $queue = Join-Path $env:RUNNER_TEMP "ordered-aot"
+          & $exe $queue success
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe $queue success
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

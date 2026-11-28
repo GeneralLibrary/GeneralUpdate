@@ -128,11 +128,48 @@ a server-supported event ID/idempotency contract. Ordering applies only to repor
 sharing this queue, not old clients or independent queues. A report is durable once its
 queue file has been flushed and published; failure before that point cannot be recovered.
 Storage and filesystem durability depend on the host's filesystem and hardware.
-Any future server idempotency fields remain disabled by default. Enable them only after
-trusted capability negotiation or explicit operator confirmation that the target service
-supports the contract; a successful response is not proof because older servers may ignore
-unknown fields. The queue's local file order is not a server sequence or a causal order,
-and its file numbering can restart after the queue drains.
+The queue's local file order is not a server sequence or a causal order, and its file
+numbering can restart after the queue drains.
+
+### Ordered idempotent reports (separate opt-in)
+
+`OrderedUpdateReporter` uses the GeneralSpace ordered-event protocol, but is **disabled
+by default** and separate from the legacy file queue. Enable it only after an operator
+confirms the deployed service supports both `eventId` and `sequence`; an ordinary
+success response is not evidence because older servers ignore unknown fields.
+
+```csharp
+var reporter = new OrderedUpdateReporter(
+    queueDirectory, httpClient, reportUrl,
+    namespaceIdentity: "stable-tenant-and-server-database-id",
+    protocolConfirmed: true);
+await reporter.ReplayAsync(cancellationToken);
+bootstrap.UpdateReporter(reporter);
+```
+
+The host must replay on startup and periodically, monitor errors and storage, and
+register the same reporter in each reporting process. It must ensure that **all**
+writers for a server database's `(type, recordId)` use this one database on the same
+machine and the same exact endpoint and namespace identity; no legacy, independent,
+multi-machine or restored-old-copy writers may write those records. The namespace must
+identify the tenant and actual server database, not an ephemeral token or hostname.
+URLs and credentials are not stored, but a hash binding the exact URL and namespace is
+stored to reject accidental reconfiguration. The host must prevent redirects, retargeting,
+and authentication changes that could send to a different tenant or database.
+
+The private directory must be on a local filesystem supporting SQLite locking and
+durable flushes, with access restricted to trusted processes. Protect the database,
+rollback journal, lock file, and backups: report payloads may contain sensitive
+diagnostics. SQLite transactionally commits the record counter, GUID, and complete
+payload before sending. A lost response or crash replays the same event; a business
+conflict or other failure stops replay without deleting it. Keep the database and
+counters even when the queue is empty. Deleting, rolling back or cloning the database,
+or using network filesystems, invalidates the ordering guarantee. Hardware and filesystem
+durability still apply. The SQLite native dependency must be available for the target RID.
+Enqueue transactions do not hold the delivery lock during HTTP requests. If delivery
+is busy, times out or is cancelled after the transaction commits, `ReportAsync` can
+throw while the event remains queued; retry delivery with `ReplayAsync`, not by
+submitting a new report. Persistence failures before commit cannot be replayed.
 
 ## 🙏 Thanks
 

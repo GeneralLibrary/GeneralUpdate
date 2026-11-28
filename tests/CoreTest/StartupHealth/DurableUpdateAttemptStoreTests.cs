@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
@@ -14,6 +16,7 @@ using GeneralUpdate.Core.Pipeline;
 using GeneralUpdate.Core.StartupHealth;
 using GeneralUpdate.Core.Strategy;
 using Moq;
+using Microsoft.Data.Sqlite;
 
 namespace CoreTest.StartupHealth;
 
@@ -480,6 +483,110 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Child_apply_failure_survives_restart_and_replays_exact_ordered_event_over_http()
+    {
+        var installPath = Path.Combine(_root, "install-ordered");
+        var sourcePath = Path.Combine(_root, "source-ordered");
+        var tempRoot = Path.Combine(_root, "ipc-ordered");
+        var ipcDirectory = Path.Combine(tempRoot, "GeneralUpdate", "ipc");
+        var queue = Path.Combine(_root, "queue");
+        Directory.CreateDirectory(installPath);
+        Directory.CreateDirectory(sourcePath);
+        Directory.CreateDirectory(ipcDirectory);
+        File.WriteAllText(Path.Combine(sourcePath, "file.txt"), "snapshot");
+        File.WriteAllText(Path.Combine(_root, "package.zip"), "invalid archive");
+        var store = CreateBoundAttempt(installPath, sourcePath, out var attemptId);
+        var contract = CreateAttemptContract(installPath, attemptId, store.GetAttempt(attemptId).SnapshotPath!);
+        contract.UpdateVersions[0].RecordId = 303;
+        contract.ReportType = 2;
+        new EncryptedFileProcessContractProvider(ipcDirectory).Send(contract);
+
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        using var server = new HttpListener();
+        var url = $"http://127.0.0.1:{port}/report/";
+        server.Prefixes.Add(url);
+        server.Start();
+
+        async Task<string> RespondAsync(int status)
+        {
+            var request = await server.GetContextAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            using var reader = new StreamReader(request.Request.InputStream, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            request.Response.StatusCode = status;
+            var bytes = Encoding.UTF8.GetBytes("{\"code\":200,\"body\":true}");
+            request.Response.ContentLength64 = bytes.Length;
+            await request.Response.OutputStream.WriteAsync(bytes);
+            request.Response.Close();
+            return body;
+        }
+
+        var firstResponse = RespondAsync(503);
+        var start = CreateProbeStart("attempt-apply-ordered", queue, url);
+        ConfigureProbeTemp(start, tempRoot);
+        start.EnvironmentVariables[DurableUpdateAttemptStore.RequiredAttemptIdEnvironmentVariable] = attemptId.ToString("D");
+        string failedDelivery;
+        using (var child = Process.Start(start)!)
+        try
+        {
+            var stdout = child.StandardOutput.ReadToEndAsync();
+            var stderr = child.StandardError.ReadToEndAsync();
+            failedDelivery = await firstResponse;
+            await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.True(child.ExitCode == 0, await stderr);
+            Assert.Contains("applied", await stdout);
+        }
+        finally
+        {
+            if (!child.HasExited) { child.Kill(entireProcessTree: true); child.WaitForExit(); }
+        }
+        using (var db = new SqliteConnection($"Data Source={Path.Combine(queue, "ordered-reports.db")};Mode=ReadOnly;Pooling=False"))
+        {
+            db.Open();
+            using var command = db.CreateCommand();
+            command.CommandText = "SELECT payload FROM outbox ORDER BY id;";
+            using var records = command.ExecuteReader();
+            Assert.True(records.Read());
+            Assert.Equal(failedDelivery, records.GetString(0));
+            Assert.False(records.Read());
+        }
+
+        var secondResponse = RespondAsync(200);
+        string replay;
+        using (var restarted = StartProbe("attempt-replay-ordered", queue, url))
+        try
+        {
+            var stdout = restarted.StandardOutput.ReadToEndAsync();
+            var stderr = restarted.StandardError.ReadToEndAsync();
+            replay = await secondResponse;
+            await restarted.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.True(restarted.ExitCode == 0, await stderr);
+            Assert.Contains("replayed", await stdout);
+        }
+        finally
+        {
+            if (!restarted.HasExited) { restarted.Kill(entireProcessTree: true); restarted.WaitForExit(); }
+        }
+        Assert.Equal(failedDelivery, replay);
+        using var document = JsonDocument.Parse(replay);
+        var report = document.RootElement;
+        Assert.Equal(303, report.GetProperty("recordId").GetInt32());
+        Assert.Equal(2, report.GetProperty("type").GetInt32());
+        Assert.Equal((int)UpdateStatus.Failure, report.GetProperty("status").GetInt32());
+        Assert.Equal((int)FailureCategory.Extract, report.GetProperty("category").GetInt32());
+        Assert.Equal("Extract", report.GetProperty("phase").GetString());
+        Assert.Equal(1, report.GetProperty("sequence").GetInt64());
+        Assert.NotEqual(Guid.Empty, report.GetProperty("eventId").GetGuid());
+        using var reopened = new SqliteConnection($"Data Source={Path.Combine(queue, "ordered-reports.db")};Mode=ReadOnly;Pooling=False");
+        reopened.Open();
+        using var pending = reopened.CreateCommand();
+        pending.CommandText = "SELECT COUNT(*) FROM outbox;";
+        Assert.Equal(0L, (long)pending.ExecuteScalar()!);
+    }
+
+    [Fact]
     public void Competing_process_claims_are_fenced_and_stale_claim_cannot_complete()
     {
         var installPath = Path.Combine(_root, "install");
@@ -644,6 +751,7 @@ public sealed class DurableUpdateAttemptStoreTests : IDisposable
     {
         start.EnvironmentVariables["TEMP"] = tempRoot;
         start.EnvironmentVariables["TMP"] = tempRoot;
+        start.EnvironmentVariables["TMPDIR"] = tempRoot;
     }
 
     private DurableUpdateAttemptStore CreateBoundAttempt(string installPath, string sourcePath, out Guid attemptId)

@@ -1,4 +1,6 @@
 using System.Net;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using GeneralUpdate.Core.Configuration;
@@ -136,6 +138,59 @@ public class FailureReportingTests : IDisposable
         Assert.Equal(505, report.RecordId);
         Assert.Equal(2, report.Type);
         Assert.Equal(FailureCategory.Extract, report.Category);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RealFallback_CoveredChainCannotOverwriteFailureOrReportDurableSuccess(bool durable)
+    {
+        var packages = Path.Combine(_root, "packages");
+        var install = Path.Combine(_root, "install");
+        Directory.CreateDirectory(packages);
+        Directory.CreateDirectory(install);
+        var corrupt = Path.Combine(packages, "broken.zip");
+        await File.WriteAllTextAsync(corrupt, "not a zip");
+        var full = Path.Combine(packages, "full.zip");
+        using (var archive = ZipFile.Open(full, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("applied.txt").Open()))
+            writer.Write("fallback applied");
+        static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+
+        var reporter = new RecordingReporter();
+        var context = NewContext();
+        context.InstallPath = install;
+        context.TempPath = packages;
+        context.ReportType = 2;
+        context.DurableUpdateAttemptId = durable ? Guid.NewGuid() : null;
+        context.DisableLegacyRollback = durable;
+        context.UpdateVersions = new()
+        {
+            new() { Name = "broken", Version = "1.5.0", RecordId = 303, AppType = (int)AppType.Client,
+                PackageType = (int)PackageType.Full, Hash = Hash(corrupt) },
+            new() { Name = "missing-chain", Version = "2.0.0", RecordId = 101, AppType = (int)AppType.Upgrade,
+                PackageType = (int)PackageType.Chain, FallbackFullName = "full",
+                FallbackFullVersion = "3.0.0", FallbackFullHash = Hash(full) },
+            new() { Name = "covered", Version = "2.5.0", RecordId = 303, AppType = (int)AppType.Client,
+                PackageType = (int)PackageType.Chain },
+            new() { Name = "also-covered", Version = "3.0.0", RecordId = 404, AppType = (int)AppType.Upgrade,
+                PackageType = (int)PackageType.Chain }
+        };
+        var platform = new WindowsStrategy { Reporter = reporter };
+        platform.Create(context);
+
+        await platform.ExecuteAsync();
+
+        Assert.Equal("fallback applied", await File.ReadAllTextAsync(Path.Combine(install, "applied.txt")));
+        var failure = Assert.Single(reporter.Reports.Where(r => r.RecordId == 303));
+        Assert.Equal((int)UpdateStatus.Failure, failure.Status);
+        Assert.Equal(2, failure.Type);
+        Assert.Equal(FailureCategory.Extract, failure.Category);
+        if (durable)
+            Assert.DoesNotContain(reporter.Reports, r => r.Status == (int)UpdateStatus.Success);
+        else
+            Assert.Equal(new[] { 101, 404 }, reporter.Reports.Where(r => r.Status == (int)UpdateStatus.Success)
+                .Select(r => r.RecordId));
     }
 
     [Fact]
