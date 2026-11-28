@@ -54,7 +54,15 @@ public class StartupHealthHandoffTests : IDisposable
         Process? child = null;
         try
         {
-            Assert.True(SpinWait.SpinUntil(() => File.Exists(pidFile) || host.HasExited, TimeSpan.FromSeconds(15)));
+            // The host creates the pid file before writing the PID, so the spin
+            // must wait for parseable content, not just existence — otherwise a
+            // fast reader observes an empty file and int.Parse throws.
+            Assert.True(SpinWait.SpinUntil(() =>
+            {
+                if (host.HasExited) return true;
+                try { return File.Exists(pidFile) && int.TryParse(File.ReadAllText(pidFile), out _); }
+                catch (IOException) { return false; }
+            }, TimeSpan.FromSeconds(15)));
             Assert.True(File.Exists(pidFile));
             child = Process.GetProcessById(int.Parse(File.ReadAllText(pidFile)));
             Stop(host);
