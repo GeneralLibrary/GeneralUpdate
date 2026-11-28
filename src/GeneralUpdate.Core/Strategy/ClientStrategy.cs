@@ -604,7 +604,11 @@ public class ClientStrategy : IStrategy
         {
             Backup();
             if (attemptStore != null)
+            {
                 attemptStore.BindSnapshot(_configInfo.DurableUpdateAttemptId!.Value, _configInfo.BackupDirectory);
+                _configInfo.SnapshotManifestHash = attemptStore.GetAttempt(_configInfo.DurableUpdateAttemptId.Value)
+                    .SnapshotManifestHash ?? throw new InvalidDataException("The durable backup has no content identity.");
+            }
             StorageManager.CleanBackup(_configInfo.InstallPath, keepVersions: 3);
         }
         else
@@ -978,7 +982,8 @@ public class ClientStrategy : IStrategy
             $"ClientStrategy: backing up {_configInfo!.InstallPath} -> {_configInfo.BackupDirectory}");
         StorageManager.Backup(_configInfo.InstallPath, _configInfo.BackupDirectory,
             _configInfo.Directories ?? BlackDefaults.DefaultDirectories,
-            createOnly: _configInfo.DurableUpdateAttemptId.HasValue);
+            createOnly: _configInfo.DurableUpdateAttemptId.HasValue,
+            rejectReparsePoints: _configInfo.DurableUpdateAttemptId.HasValue);
     }
 
     /// <summary>

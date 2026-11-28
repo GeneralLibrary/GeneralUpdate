@@ -526,7 +526,18 @@ namespace GeneralUpdate.Core.FileSystem
             => Backup(sourcePath, backupPath, directoryNames, createOnly: false);
 
         public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames, bool createOnly)
+            => Backup(sourcePath, backupPath, directoryNames, createOnly, rejectReparsePoints: false);
+
+        /// <summary>
+        /// Creates a backup with optional rejection of filesystem reparse points.
+        /// Reparse-point rejection is intended for create-only durable snapshots.
+        /// </summary>
+        public static void Backup(string sourcePath, string backupPath, IReadOnlyList<string> directoryNames,
+            bool createOnly, bool rejectReparsePoints)
         {
+            if (rejectReparsePoints && !createOnly)
+                throw new ArgumentException("Reparse-point rejection is supported only for create-only backups.", nameof(createOnly));
+
             // Merge default backup-exclusion prefixes with user-configured directories.
             // This ensures backup/legacy directories are ALWAYS skipped, preventing
             // infinite recursion even when the user passes an empty skip list.
@@ -535,19 +546,38 @@ namespace GeneralUpdate.Core.FileSystem
 
             if (createOnly)
             {
+                var backupParent = Path.GetDirectoryName(backupPath)!;
+                var attemptDirectory = Path.Combine(backupParent, AttemptDirectoryName);
+                if (rejectReparsePoints)
+                {
+                    DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(sourcePath);
+                    DurableUpdateSnapshotManifest.EnsureNoReparsePointsInExistingPath(backupParent);
+                    Directory.CreateDirectory(attemptDirectory);
+                    DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(attemptDirectory);
+                }
                 var stagingPath = Path.Combine(
-                    Path.GetDirectoryName(backupPath)!,
+                    backupParent,
                     AttemptDirectoryName,
                     ".staging-" + Guid.NewGuid().ToString("N"));
                 try
                 {
                     Directory.CreateDirectory(stagingPath);
-                    CopyDirectory(sourcePath, stagingPath, effectiveDirectories);
+                    if (rejectReparsePoints)
+                        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(stagingPath);
+                    CopyDirectory(sourcePath, stagingPath, effectiveDirectories, rejectReparsePoints);
+                    if (rejectReparsePoints)
+                    {
+                        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(sourcePath);
+                        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(stagingPath);
+                        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInExistingPath(backupParent);
+                    }
                     Directory.Move(stagingPath, backupPath);
+                    if (rejectReparsePoints)
+                        DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(backupPath);
                 }
                 catch
                 {
-                    if (Directory.Exists(stagingPath)) DeleteDirectory(stagingPath);
+                    if (!rejectReparsePoints && Directory.Exists(stagingPath)) DeleteDirectory(stagingPath);
                     throw;
                 }
                 return;
@@ -558,24 +588,49 @@ namespace GeneralUpdate.Core.FileSystem
             CopyDirectory(sourcePath, backupPath, effectiveDirectories);
         }
 
-        private static void CopyDirectory(string sourceDir, string targetDir, IReadOnlyList<string> directoryNames)
+        private static void CopyDirectory(string sourceDir, string targetDir, IReadOnlyList<string> directoryNames,
+            bool rejectReparsePoints = false)
         {
+            if (rejectReparsePoints)
+            {
+                DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(sourceDir);
+                DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(targetDir);
+            }
+
             foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
             {
+                if (rejectReparsePoints) DurableUpdateSnapshotManifest.RejectReparsePoint(dirPath);
                 var dirName = Path.GetFileName(dirPath);
                 if (!directoryNames.Any(name => dirName.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
                 {
                     string newTargetDir = Path.Combine(targetDir, Path.GetFileName(dirPath));
                     Directory.CreateDirectory(newTargetDir);
-                    CopyDirectory(dirPath, newTargetDir, directoryNames);
+                    CopyDirectory(dirPath, newTargetDir, directoryNames, rejectReparsePoints);
+                    if (rejectReparsePoints) DurableUpdateSnapshotManifest.RejectReparsePoint(dirPath);
                 }
             }
 
             foreach (string filePath in Directory.GetFiles(sourceDir, "*.*", SearchOption.TopDirectoryOnly))
             {
+                if (rejectReparsePoints) DurableUpdateSnapshotManifest.RejectReparsePoint(filePath);
                 string newFilePath = Path.Combine(targetDir, Path.GetFileName(filePath));
-                File.Copy(filePath, newFilePath, true);
+                if (rejectReparsePoints)
+                {
+                    using var source = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var target = new FileStream(newFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    source.CopyTo(target);
+                    target.Flush(true);
+                    DurableUpdateSnapshotManifest.RejectReparsePoint(filePath);
+                    if (new FileInfo(filePath).Length != source.Length)
+                        throw new IOException($"A source file changed while its durable snapshot was being copied: {filePath}");
+                }
+                else
+                {
+                    File.Copy(filePath, newFilePath, true);
+                }
             }
+
+            if (rejectReparsePoints) DurableUpdateSnapshotManifest.EnsureNoReparsePointsInPath(sourceDir);
         }
 
         /// <summary>

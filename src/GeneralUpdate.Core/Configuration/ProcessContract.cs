@@ -408,6 +408,10 @@ namespace GeneralUpdate.Core.Configuration
         [JsonPropertyName("DurableUpdateAttemptId")]
         public Guid? DurableUpdateAttemptId { get; set; }
 
+        /// <summary>SHA-256 identity of the bound durable snapshot manifest.</summary>
+        [JsonPropertyName("SnapshotManifestHash")]
+        public string? SnapshotManifestHash { get; set; }
+
         /// <summary>Stable local journal directory for the durable update attempt.</summary>
         [JsonPropertyName("AttemptJournalDirectory")]
         public string? AttemptJournalDirectory { get; set; }
