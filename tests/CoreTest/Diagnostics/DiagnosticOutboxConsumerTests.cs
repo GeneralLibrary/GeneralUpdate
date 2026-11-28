@@ -140,6 +140,8 @@ public sealed class DiagnosticOutboxConsumerTests : IDisposable
     public async Task AnotherProcessHoldingStripeMakesConsumerSkip()
     {
         CreateCase();
+        var tombstone = Path.Combine(_root, "2.0", ".generalupdate-uploaded-" + Id);
+        Directory.CreateDirectory(tombstone);
         Directory.CreateDirectory(Path.Combine(_root, ".locks"));
         var path = Path.Combine(_root, ".locks", "86.lock");
         var start = new ProcessStartInfo
@@ -162,6 +164,15 @@ public sealed class DiagnosticOutboxConsumerTests : IDisposable
             Assert.Equal("ready", await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(15)));
             using var blockedHttp = Http((_, _) => throw new Exception("Unexpected upload"));
             Assert.False(await Consumer(blockedHttp).ProcessCaseAsync("1.0", Id));
+            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var events = new List<DiagnosticOutboxHostEvent>();
+            await Host(blockedHttp, e =>
+            {
+                events.Add(e);
+                if (e.Status == DiagnosticOutboxHostStatus.ScanCompleted) stop.Cancel();
+            }).StartAsync(stop.Token);
+            Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.Deferred);
+            Assert.True(Directory.Exists(tombstone));
             Assert.True(Directory.Exists(CasePath));
         }
         finally
@@ -178,6 +189,9 @@ public sealed class DiagnosticOutboxConsumerTests : IDisposable
         });
         Assert.True(await Consumer(http).ProcessCaseAsync("1.0", Id));
         Assert.False(Directory.Exists(CasePath));
+        var recovered = await ScanOnce(http);
+        Assert.Contains(recovered, e => e.Status == DiagnosticOutboxHostStatus.TombstoneDeleted);
+        Assert.False(Directory.Exists(tombstone));
     }
 
     [Fact]
@@ -193,6 +207,224 @@ public sealed class DiagnosticOutboxConsumerTests : IDisposable
         Assert.False(Directory.Exists(tombstone));
         Assert.True(Directory.Exists(CasePath));
         Assert.False(consumer.CleanupConfirmedCase("1.0", Id));
+    }
+
+    [Fact]
+    public async Task DisabledHostDoesNotRequireConfigurationOrTouchDiskOrNetwork()
+    {
+        using var http = Http((_, _) => throw new Exception("Unexpected upload"));
+        var events = new List<DiagnosticOutboxHostEvent>();
+        var host = new DiagnosticOutboxHost(new DiagnosticOutboxHostOptions
+        {
+            FailDirectory = _root, ScanInterval = TimeSpan.Zero, UploadTimeout = TimeSpan.Zero
+        }, events.Add, http);
+        await host.StartAsync();
+        Assert.False(Directory.Exists(_root));
+        Assert.Equal(DiagnosticOutboxHostStatus.Disabled, Assert.Single(events).Status);
+        Assert.Throws<InvalidOperationException>(() => { _ = host.StartAsync(); });
+    }
+
+    [Theory]
+    [InlineData("endpoint")]
+    [InlineData("tenant")]
+    [InlineData("app")]
+    [InlineData("http")]
+    [InlineData("interval")]
+    [InlineData("timeout")]
+    public void EnabledHostRequiresExplicitTrustedConfiguration(string missing)
+    {
+        using var http = Http((_, _) => throw new Exception("Unexpected upload"));
+        var options = HostOptions();
+        switch (missing)
+        {
+            case "endpoint": options.Endpoint = null; break;
+            case "tenant": options.TenantId = ""; break;
+            case "app": options.AppKey = ""; break;
+            case "interval": options.ScanInterval = TimeSpan.Zero; break;
+            case "timeout": options.UploadTimeout = TimeSpan.FromMinutes(3); break;
+        }
+        Assert.ThrowsAny<ArgumentException>(() =>
+            new DiagnosticOutboxHost(options, _ => { }, missing == "http" ? null : http));
+        Assert.False(Directory.Exists(_root));
+    }
+
+    [Fact]
+    public async Task StartupReplayPreservesBytesAcrossHostRestartAndDoesNotAttributeCrash()
+    {
+        CreateCase();
+        var attempts = new List<byte[]>();
+        using var http = Http(async (request, _) =>
+        {
+            Assert.Equal("tenant", Assert.Single(request.Headers.GetValues("X-Tenant-Id")));
+            var form = (MultipartFormDataContent)request.Content!;
+            Assert.DoesNotContain(form, p => p.Headers.ContentDisposition!.Name is "RecordId" or "RecordType");
+            Assert.Equal("app", await form.Single(p => p.Headers.ContentDisposition!.Name == "AppKey").ReadAsStringAsync());
+            var bytes = await form.Single(p => p.Headers.ContentDisposition!.Name == "file").ReadAsByteArrayAsync();
+            attempts.Add(bytes);
+            return attempts.Count == 1 ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) :
+                Response(Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
+        });
+        var first = await ScanOnce(http);
+        Assert.Contains(first, e => e.Status == DiagnosticOutboxHostStatus.Error && e.Error is HttpRequestException);
+        Assert.True(Directory.Exists(CasePath));
+        var second = await ScanOnce(http);
+        Assert.Contains(second, e => e.Status == DiagnosticOutboxHostStatus.ConfirmedAndDeleted);
+        Assert.False(Directory.Exists(CasePath));
+        Assert.Equal(2, attempts.Count);
+        Assert.Equal(attempts[0], attempts[1]);
+    }
+
+    [Fact]
+    public async Task PeriodicScanFindsNewCaseAndRetriesUnconfirmedSnapshot()
+    {
+        Directory.CreateDirectory(_root);
+        var attempts = 0;
+        var scans = 0;
+        using var http = Http(async (request, _) =>
+        {
+            var file = ((MultipartFormDataContent)request.Content!).Single(p => p.Headers.ContentDisposition!.Name == "file");
+            var bytes = await file.ReadAsByteArrayAsync();
+            return Response(++attempts == 1 ? null : Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
+        });
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var events = new List<DiagnosticOutboxHostEvent>();
+        var host = Host(http, e =>
+        {
+            events.Add(e);
+            if (e.Status != DiagnosticOutboxHostStatus.ScanCompleted) return;
+            if (++scans == 1) CreateCase();
+            if (scans == 3) stop.Cancel();
+        });
+        await host.StartAsync(stop.Token);
+        Assert.Equal(3, scans);
+        Assert.Equal(2, attempts);
+        Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.Deferred);
+        Assert.False(Directory.Exists(CasePath));
+    }
+
+    [Fact]
+    public async Task TombstoneRecoveryAndInvalidCaseAreIsolated()
+    {
+        CreateCase();
+        File.WriteAllText(Path.Combine(CasePath, "manifest.json"), "invalid");
+        var tombstone = Path.Combine(_root, "2.0", ".generalupdate-uploaded-" + Id);
+        Directory.CreateDirectory(tombstone);
+        File.WriteAllText(Path.Combine(tombstone, "remaining.txt"), "confirmed");
+        using var http = Http((_, _) => throw new Exception("Unexpected upload"));
+        var events = await ScanOnce(http);
+        Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.Error && e.Path == CasePath);
+        Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.TombstoneDeleted);
+        Assert.True(Directory.Exists(CasePath));
+        Assert.False(Directory.Exists(tombstone));
+    }
+
+    [Fact]
+    public async Task MissingRootIsObservableAndRecoveredOnNextScan()
+    {
+        using var http = Http((_, _) => throw new Exception("Unexpected upload"));
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var scans = 0;
+        var events = new List<DiagnosticOutboxHostEvent>();
+        await Host(http, e =>
+        {
+            events.Add(e);
+            if (e.Status != DiagnosticOutboxHostStatus.ScanCompleted) return;
+            if (++scans == 1) Directory.CreateDirectory(_root);
+            else stop.Cancel();
+        }).StartAsync(stop.Token);
+        Assert.Equal(2, scans);
+        Assert.Single(events, e => e.Status == DiagnosticOutboxHostStatus.Error);
+    }
+
+    [Fact]
+    public async Task CancellationStopsInFlightUploadWithoutBlockingStartOrDeletingEvidence()
+    {
+        CreateCase();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var http = Http(async (_, token) =>
+        {
+            entered.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            throw new Exception("Unexpected upload completion");
+        });
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var events = new List<DiagnosticOutboxHostEvent>();
+        var completion = Host(http, events.Add).StartAsync(stop.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(completion.IsCompleted);
+        stop.Cancel();
+        await completion.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(DiagnosticOutboxHostStatus.Stopped, events.Last().Status);
+        Assert.DoesNotContain(events, e => e.Status == DiagnosticOutboxHostStatus.Error);
+        Assert.True(Directory.Exists(CasePath));
+        using var stripe = new FileStream(Path.Combine(_root, ".locks", "86.lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    }
+
+    [Fact]
+    public async Task UploadTimeoutIsObservableAndRetainsEvidence()
+    {
+        CreateCase();
+        using var http = Http(async (_, token) =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            throw new Exception("Unexpected upload completion");
+        });
+        var options = HostOptions();
+        options.UploadTimeout = TimeSpan.FromMilliseconds(100);
+        var events = await ScanOnce(http, options);
+        Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.Error && e.Error is OperationCanceledException);
+        Assert.True(Directory.Exists(CasePath));
+    }
+
+    [Fact]
+    public async Task UnsafeVersionAndCaseLinksAreNotFollowed()
+    {
+        if (OperatingSystem.IsWindows()) return; // Windows symlink creation requires deployment-specific privileges.
+        CreateCase();
+        var external = Path.Combine(_root, "external");
+        Directory.CreateDirectory(external);
+        var sentinel = Path.Combine(external, "sentinel");
+        File.WriteAllText(sentinel, "preserve");
+        Directory.CreateSymbolicLink(Path.Combine(_root, "linked-version"), external);
+        Directory.CreateSymbolicLink(Path.Combine(_root, "1.0", "76c1ae61-89e9-450d-93b0-a7f512c06768"), external);
+        using var http = Http((_, _) => Task.FromResult(Response(null)));
+        var events = await ScanOnce(http);
+        Assert.Equal(2, events.Count(e => e.Status == DiagnosticOutboxHostStatus.Error));
+        Assert.Equal("preserve", File.ReadAllText(sentinel));
+    }
+
+    [Fact]
+    public async Task ObserverFailureFaultsCompletionRatherThanBeingTreatedAsCaseError()
+    {
+        Directory.CreateDirectory(_root);
+        using var http = Http((_, _) => throw new Exception("Unexpected upload"));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Host(http, e =>
+        {
+            if (e.Status == DiagnosticOutboxHostStatus.ScanCompleted) throw new ArgumentException("observer failed");
+        }).StartAsync());
+        Assert.IsType<ArgumentException>(error.InnerException);
+    }
+
+    private DiagnosticOutboxHostOptions HostOptions() => new()
+    {
+        Enabled = true, FailDirectory = _root, Endpoint = new Uri("https://example.test/upload"),
+        TenantId = "tenant", AppKey = "app", ScanInterval = TimeSpan.FromMilliseconds(100)
+    };
+
+    private DiagnosticOutboxHost Host(HttpClient http, Action<DiagnosticOutboxHostEvent> notify) =>
+        new(HostOptions(), notify, http);
+
+    private async Task<List<DiagnosticOutboxHostEvent>> ScanOnce(HttpClient http, DiagnosticOutboxHostOptions? options = null)
+    {
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var events = new List<DiagnosticOutboxHostEvent>();
+        await new DiagnosticOutboxHost(options ?? HostOptions(), e =>
+        {
+            events.Add(e);
+            if (e.Status == DiagnosticOutboxHostStatus.ScanCompleted) stop.Cancel();
+        }, http).StartAsync(stop.Token);
+        Assert.Contains(events, e => e.Status == DiagnosticOutboxHostStatus.ScanCompleted);
+        return events;
     }
 
     private void CreateCase(bool marked = true, string evidenceName = "log.txt")

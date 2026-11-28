@@ -290,7 +290,7 @@ public sealed class DiagnosticOutboxConsumer
             throw new InvalidDataException("Outbox links and reparse points are not allowed.");
     }
 
-    private static void CheckDirectoryChain(string path)
+    internal static void CheckDirectoryChain(string path)
     {
         var current = new DirectoryInfo(path);
         while (current != null)
